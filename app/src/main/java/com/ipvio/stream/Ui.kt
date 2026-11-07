@@ -27,7 +27,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -179,6 +186,7 @@ fun Field(
     onDone: (() -> Unit)? = null
 ) {
     var f by remember { mutableStateOf(false) }
+    val focus = LocalFocusManager.current
     val shape = RoundedCornerShape(16.dp)
     Box(
         modifier
@@ -197,7 +205,16 @@ fun Field(
                 else if (onDone != null) KeyboardOptions(imeAction = ImeAction.Done) else KeyboardOptions.Default,
             // Nur mit eigener Aktion überschreiben; sonst bleibt das Standardverhalten (Tastatur schließen)
             keyboardActions = if (onDone != null) KeyboardActions(onDone = { onDone(); defaultKeyboardAction(ImeAction.Done) }) else KeyboardActions.Default,
-            modifier = inner.fillMaxWidth().onFocusChanged { f = it.isFocused }
+            // Einzeilig: Hoch/Runter bewegen sonst nur den Cursor, und mit der TV-Fernbedienung kommt man nicht mehr
+            // aus dem Feld heraus. Links/Rechts bleiben für den Cursor.
+            modifier = inner.fillMaxWidth().onFocusChanged { f = it.isFocused }.onPreviewKeyEvent { e ->
+                if (e.type != KeyEventType.KeyDown) false
+                else when (e.key) {
+                    Key.DirectionDown -> focus.moveFocus(FocusDirection.Down)
+                    Key.DirectionUp -> focus.moveFocus(FocusDirection.Up)
+                    else -> false
+                }
+            }
         )
         if (value.isEmpty()) Text(hint, color = Muted, fontSize = 20.sp)
     }
