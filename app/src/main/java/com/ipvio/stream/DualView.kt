@@ -57,7 +57,7 @@ internal fun SecondStream(item: Item, split: Boolean, audioOn: Boolean, modifier
         val lc = DefaultLoadControl.Builder().setBufferDurationsMs(4_000, 15_000, 1_000, 2_000).build()
         ExoPlayer.Builder(ctx, SoftAudio.factory(ctx))
             .setLoadControl(lc)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(ctx).setDataSourceFactory(DefaultDataSource.Factory(ctx, http)))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(ctx).setDataSourceFactory(HostFailover.DataSourceWrapper.Factory(DefaultDataSource.Factory(ctx, http))))
             .build()
             .also {
                 it.addListener(object : Player.Listener {
