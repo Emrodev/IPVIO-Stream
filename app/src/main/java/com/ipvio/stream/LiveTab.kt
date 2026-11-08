@@ -86,8 +86,12 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
             for ((g, l) in groupsAll) { val f = l.filter { it.src == srcK }; if (f.isNotEmpty()) m[g] = f }
         }
     }
-    // Genres (sports, movies, documentary, kids, news, music) – detected by category and channel name
-    val genres = remember(live) { LiveGenre.split(live) }
+    // Prepare genres off the UI thread; the home-screen prewarm and this screen share one job.
+    val genreState by produceState<Pair<Boolean, Map<String, List<Item>>>>(false to emptyMap(), live) {
+        value = true to LivePreparation.genres(live).await()
+    }
+    val genresReady = genreState.first
+    val genres = genreState.second
     val favs = remember(favsAll, srcK) { if (srcK < 0) favsAll else favsAll.filter { it.src == srcK } }
     CatFavs.init(ctx)
     ChannelLists.init(ctx)
@@ -95,7 +99,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // Last chosen category / list (round 14): the same one again after Back from the player and after a restart
     var sel by remember {
         val saved = LiveMemory.sel(ctx)?.takeIf { k ->
-            (k == FAV_CAT && favs.isNotEmpty()) || k == "ALL" || k == "HOME" || k in groups || (LiveGenre.isGenreKey(k) && genres.containsKey(k)) || ChannelLists.byKey(k) != null || k == "REC"
+            (k == FAV_CAT && favs.isNotEmpty()) || k == "ALL" || k == "HOME" || k in groups || (LiveGenre.isGenreKey(k) && (!genresReady || genres.containsKey(k))) || ChannelLists.byKey(k) != null || k == "REC"
         }
         mutableStateOf(saved ?: if (favs.isNotEmpty()) FAV_CAT else "ALL")
     }
@@ -140,7 +144,10 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     }
     // Quality variants of one channel as a single row (not in favorites, own lists, recordings or while filling a list)
     val bundleOn = General.bundleLive && sel != FAV_CAT && sel != "REC" && curList == null && addTo == null
-    val bundled = remember(rawList, bundleOn) { if (bundleOn) LiveBundleLogic.bundle(rawList) else null }
+    // Bundle asynchronously and reuse the same in-flight work as the home-screen prewarm. Show raw rows immediately.
+    val bundled by produceState<LiveBundleLogic.Result?>(null, rawList, bundleOn) {
+        value = if (bundleOn) LivePreparation.bundle(rawList).await() else null
+    }
     val list = bundled?.list ?: rawList
     val variantsOf = bundled?.variants.orEmpty()
     val firstChan = remember { FocusRequester() }
@@ -164,6 +171,9 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     SideEffect { ContentFocus.tab = 3 }
     // Selection points to a deleted list: back to "All channels"
     LaunchedEffect(sel, myLists.size) { if (ChannelListLogic.idOfKey(sel) != null && curList == null) sel = "ALL" }
+    LaunchedEffect(sel, genresReady, genres) {
+        if (genresReady && LiveGenre.isGenreKey(sel) && sel !in genres) sel = "ALL"
+    }
 
     // Add a channel to an own list: in "All channels"/categories OK adds the channel (instead of starting it)
     val addList = addTo?.let { id -> myLists.firstOrNull { it.id == id } }

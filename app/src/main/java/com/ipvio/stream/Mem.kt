@@ -62,6 +62,7 @@ object Mem {
         runCatching { Coil.imageLoader(ctx).memoryCache?.clear() }
         runCatching { MetaRepo.trim() }
         runCatching { Epg.trim(); EpgFull.trim(); CreditsRepo.trim() }
+        runCatching { LivePreparation.trim() }
     }
 }
 
