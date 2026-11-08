@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
         LiveSettings.init(this)
         Recorder.attach(this)
         MobilePrefs.apply(this)
+        VpnController.maybeConnectAtLaunch(this)
         // Fresh start (not just a rotated/recreated screen): "Resume last watched at start" may apply again.
         // The process often lives on after quitting; the marker flag therefore stayed set from the first start and nothing was opened any more.
         if (savedInstanceState == null) General.startupHandled = false

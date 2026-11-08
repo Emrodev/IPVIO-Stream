@@ -63,6 +63,7 @@ private val CATS = listOf(
     Cat(AIcon.Live, "Boomer Mode", "Ganz einfach: große Kacheln zum Auswählen"),
     Cat(AIcon.Sliders, "Startseite anpassen", "Reihen und Widgets wählen und ordnen"),
     Cat(AIcon.Info, "Über IPVIO Stream", "Version, Quellen, Zurücksetzen"),
+    Cat(AIcon.Lock, "VPN", "WireGuard-Profil, Verbindung und Diagnose"),
     // Donate is always the very last entry
     Cat(AIcon.HeartFilled, "Spende", "Unterstütze IPVIO Stream")
 )
@@ -146,7 +147,8 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 16 -> BoomerPage(ctx) { page = -1 }
                 17 -> HomeLayoutPage(ctx)
                 15 -> ListImportPage(ctx)
-                19 -> DonateSection(ctx)
+                19 -> VpnSettingsPage(ctx)
+                20 -> DonateSection(ctx)
                 else -> AboutPage(ctx)   // 18
             }
             // Every setting page ends with a way back to the defaults
