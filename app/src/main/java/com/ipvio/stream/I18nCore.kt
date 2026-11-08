@@ -6,8 +6,8 @@ package com.ipvio.stream
  * Platzhalter: {0} beliebiger Text, {#0} Zahl. Ein Zeilenumbruch wird als \n geschrieben.
  */
 object I18nCore {
-    val CODES = listOf("de", "en", "tr", "bs", "hr", "sr", "es", "fr", "it", "nl")
-    val NATIVE = listOf("Deutsch", "English", "Türkçe", "Bosanski", "Hrvatski", "Srpski", "Español", "Français", "Italiano", "Nederlands")
+    val CODES = listOf("de", "en", "tr", "bs", "hr", "sr", "es", "fr", "it", "nl", "pl")
+    val NATIVE = listOf("Deutsch", "English", "Türkçe", "Bosanski", "Hrvatski", "Srpski", "Español", "Français", "Italiano", "Nederlands", "Polski")
 
     private class Pat(val src: String, val re: Regex, val tr: Array<String>, val numeric: BooleanArray)
 

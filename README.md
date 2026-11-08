@@ -64,7 +64,7 @@ Allow "Install unknown apps" for Downloader (or your file manager) when asked, t
 - IPVIO green on navy plus 12 colour themes, 5 backgrounds, custom colours
 - Fonts Outfit, Inter or system; adjustable text and display size; animations off/subtle/normal
 - Sidebar left, right or top, icons only or with text; phones: landscape, tap and double-tap controls
-- 10 languages: German, English, Turkish, Bosnian, Croatian, Serbian, Spanish, French, Italian, Dutch
+- 11 languages: German, English, Turkish, Bosnian, Croatian, Serbian, Spanish, French, Italian, Dutch, Polish
 
 ## Screenshots
 
