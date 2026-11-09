@@ -38,9 +38,39 @@ class StalkerLinkTest {
     }
 
     @Test fun nothingPlayable() {
-        assertNull(StalkerLink.address(ep, mac, mapOf("cmd" to "/media/5.mpg"), "vod"))
+        // Portal only echoes the command it was sent
+        assertNull(StalkerLink.address(ep, mac, mapOf("cmd" to "/media/5.mpg"), "vod", "/media/5.mpg"))
         assertNull(StalkerLink.address(ep, mac, mapOf("cmd" to "ffmpeg ", "error" to "nothing_to_play"), "vod"))
         assertNull(StalkerLink.address(ep, mac, mapOf("id" to "55", "play_token" to "abc"), "itv"))
         assertNull(StalkerLink.address(ep, mac, emptyMap(), "vod"))
+    }
+
+    @Test fun relativeAnswerUsesThePortalInstallation() {
+        val lp = "http://p/stalker_portal/server/load.php"
+        assertEquals("http://p/stalker_portal", StalkerLink.installation(lp))
+        assertEquals("http://p:8080", StalkerLink.installation(ep))
+        assertEquals("http://p/stalker_portal/media/file_9.mpg?x=1",
+            StalkerLink.address(lp, mac, mapOf("cmd" to "ffmpeg /media/file_9.mpg?x=1"), "vod", "/media/file_9.mpg"))
+    }
+
+    @Test fun moviesWithOwnFilesAreLookedUpAtPlayTime() {
+        val f = mapOf("id" to "77", "has_files" to "1", "cmd" to "/media/77.mpg")
+        assertTrue(StalkerLogic.needsFileLookup(f, "/media/77.mpg"))
+        assertTrue(!StalkerLogic.needsFileLookup(f - "has_files", "/media/77.mpg"))
+        assertTrue(!StalkerLogic.needsFileLookup(f, "/media/file_5.mpg"))
+        assertTrue(!StalkerLogic.needsFileLookup(f, "eyJ0eXBlIjoibW92aWUifQ=="))
+        val src = StalkerLogic.source("http://p/stalker_portal/c/", mac)!!
+        val entry = StalkerLogic.movieEntry(src, f + ("name" to "Film"), "Cat")!!
+        val r = StalkerLogic.itemRef(entry.lines()[1])!!
+        assertEquals("mfile", r.type); assertEquals("77", r.cmd)
+        assertTrue(StalkerLogic.isItem(entry.lines()[1]))
+    }
+
+    @Test fun maskHidesPrivateDetails() {
+        val m = StalkerLink.mask(
+            """{"cmd":"ffmpeg http:\/\/real.host:8080\/movie\/bob\/secret\/1.mkv?play_token=abc&mac=00:1A:79:AB:CD:EF","token":"T0KEN123"}""",
+            mac, "T0KEN123")
+        for (bad in listOf("real.host", "bob", "secret", "abc", "00:1A:79", "T0KEN123")) assertTrue(m, !m.contains(bad))
+        assertTrue(m, m.contains("http://SERVER/movie/USER/PASS/1.mkv"))
     }
 }

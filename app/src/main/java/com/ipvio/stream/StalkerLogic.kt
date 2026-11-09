@@ -151,8 +151,9 @@ object StalkerLogic {
      * [series] = episode number (episodes of a season share the season's command).
      */
     fun itemUrl(key: Int, kind: String, cmd: String, series: String? = null): String =
-        "stalker://$key/$kind/" + hex(if (series != null) cmd + SEP + series else cmd) + (if (kind == "movie") ".mp4" else ".ts")
+        "stalker://$key/$kind/" + hex(if (series != null) cmd + SEP + series else cmd) + (if (kind == "movie" || kind == "mfile") ".mp4" else ".ts")
 
+    /** [type] = "itv", "vod" or "mfile" (movie whose file is looked up at play time; [cmd] is then the movie ID). */
     class ItemRef(val key: Int, val type: String, val cmd: String, val series: String? = null)
 
     fun itemRef(url: String): ItemRef? {
@@ -160,7 +161,7 @@ object StalkerLogic {
         val rest = url.removePrefix("stalker://").split('/')
         if (rest.size != 3) return null
         val key = rest[0].toIntOrNull() ?: return null
-        val type = when (rest[1]) { "live" -> "itv"; "movie" -> "vod"; else -> return null }
+        val type = when (rest[1]) { "live" -> "itv"; "movie" -> "vod"; "mfile" -> "mfile"; else -> return null }
         val raw = unhex(rest[2].substringBefore('.')) ?: return null
         val p = raw.split(SEP, limit = 2)
         return ItemRef(key, type, p[0], p.getOrNull(1))
@@ -240,18 +241,32 @@ object StalkerLogic {
         val y = f["year"]?.trim()?.takeIf { it.length == 4 && it.all(Char::isDigit) }
         if (y != null && !n.contains("($y)")) n = "$n ($y)"
         val sb = StringBuilder("#EXTINF:-1")
-        attr(f["screenshot_uri"]).takeIf { it.startsWith("http") }?.let { sb.append(" tvg-logo=\"").append(it).append('"') }
+        cover(src, f)?.let { sb.append(" tvg-logo=\"").append(attr(it)).append('"') }
         sb.append(" group-title=\"").append(attr(category.ifBlank { "Filme" })).append('"')
-        return sb.append(',').append(n).append('\n').append(itemUrl(src.key, "movie", cmd)).toString()
+        // Movies with their own files ("has_files", cmd "/media/<id>.mpg"): the file is looked up at play time
+        val url = if (needsFileLookup(f, cmd)) itemUrl(src.key, "mfile", f["id"]!!.trim()) else itemUrl(src.key, "movie", cmd)
+        return sb.append(',').append(n).append('\n').append(url).toString()
     }
+
+    /** Cover of a movie/series; relative paths ("/stalker_portal/screenshots/…") are resolved against the portal. */
+    private fun cover(src: Source, f: Map<String, String>): String? =
+        listOf("screenshot_uri", "cover_big", "cover").firstNotNullOfOrNull { k ->
+            f[k]?.trim()?.takeIf { it.isNotEmpty() && it != "null" }?.let { if (it.startsWith("http")) it else logoUrl(src.portal, it) }
+        }
+
+    /**
+     * Movie whose play command only comes from its file ID: Ministra video club with "has_files" and cmd "/media/<id>.mpg".
+     * create_link with the movie's own cmd returns no address there; it needs "/media/file_<file ID>.mpg".
+     */
+    fun needsFileLookup(f: Map<String, String>, cmd: String): Boolean =
+        f.containsKey("has_files") && !f["id"].isNullOrBlank() && !cmd.contains("://") && cmd.contains("/media/") && !cmd.contains("/media/file_")
 
     /** A series as a placeholder (two M3U lines); the name ends in "S01E01" so parsing recognizes it as a series. */
     fun seriesEntry(src: Source, f: Map<String, String>, catId: String, catName: String, mode: String): String? {
         val id = (f["id"] ?: f["series_id"])?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         val n = name(f["name"] ?: f["title"]).ifEmpty { return null }
         val sb = StringBuilder("#EXTINF:-1")
-        listOf("screenshot_uri", "cover_big", "cover").firstNotNullOfOrNull { k -> attr(f[k]).takeIf { it.startsWith("http") } }
-            ?.let { sb.append(" tvg-logo=\"").append(it).append('"') }
+        cover(src, f)?.let { sb.append(" tvg-logo=\"").append(attr(it)).append('"') }
         sb.append(" group-title=\"").append(attr(catName.ifBlank { "Serien" })).append('"')
         return sb.append(',').append(n).append(" S01E01").append('\n').append(seriesUrl(src.key, id, catId, mode)).toString()
     }

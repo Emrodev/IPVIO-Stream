@@ -50,20 +50,29 @@ object StalkerLink {
     /** "http://host:port" of the portal. */
     fun origin(portal: String): String? = Regex("""^(https?://[^/?#]+)""", RegexOption.IGNORE_CASE).find(portal.trim())?.value
 
+    /** The portal installation: [endpoint] without "/server/load.php" or "/portal.php" ("http://host/stalker_portal"). */
+    fun installation(endpoint: String): String? {
+        val m = Regex("""^(https?://[^/?#]+)([^?#]*)""", RegexOption.IGNORE_CASE).find(endpoint.trim()) ?: return null
+        val path = m.groupValues[2].replace(Regex("""/(?:server/load\.php|[^/]*\.php)$""", RegexOption.IGNORE_CASE), "").trimEnd('/')
+        return m.groupValues[1] + path
+    }
+
     /**
      * Play address from the "js" part of a create_link answer ([f] = its fields; a bare string counts as "cmd").
-     * null = the portal gave nothing playable.
+     * [endpoint] = the portal API that answered, [sent] = the command that was asked for. null = nothing playable.
      */
-    fun address(portal: String, mac: String, f: Map<String, String>, type: String): String? {
-        val host = origin(portal)
+    fun address(endpoint: String, mac: String, f: Map<String, String>, type: String, sent: String = ""): String? {
+        val base = installation(endpoint)
         for (k in listOf("url", "cmd")) {
             val v = f[k]?.trim()?.takeIf { it.isNotEmpty() && it != "null" } ?: continue
             strip(v)?.let { return it }
-            // Relative path to the portal's own player ("/play/movie.php?…"); not an echo of the command ("/media/…")
+            // Path without a server ("/media/…", "/play/movie.php?…"): served by the portal installation.
+            // Not when the portal only echoes the command it was sent (that means: no address).
             val p = v.substringAfterLast(' ')
-            if (host != null && p.startsWith("/") && (p.contains("/play/") || p.contains("play_token="))) return host + p
+            if (base != null && p.startsWith("/") && p != sent.trim().substringAfterLast(' ')) return base + p
         }
         // Only file id + play token: build the address of the portal's movie player
+        val host = origin(endpoint)
         if (type == "vod" && host != null) {
             val token = f["play_token"]?.trim().orEmpty()
             var id = f["id"]?.trim().orEmpty()
@@ -73,5 +82,23 @@ object StalkerLink {
             }
         }
         return null
+    }
+
+    /**
+     * Portal answer made safe to show on screen: MAC, token, server addresses, account names/passwords and
+     * other secrets in addresses are replaced. Only the shape stays (which fields, which kind of path).
+     */
+    fun mask(text: String, mac: String, token: String): String {
+        var t = text
+        if (mac.isNotEmpty()) {
+            t = t.replace(mac, "MAC", ignoreCase = true).replace(enc(mac), "MAC", ignoreCase = true)
+        }
+        if (token.length >= 4) t = t.replace(token, "TOKEN")
+        t = t.replace("\\/", "/")
+        t = Regex("""(?i)(https?://)[^/\s"'?]+""").replace(t, "$1SERVER")
+        t = Regex("""(?i)/(movie|series|live|timeshift)/[^/\s"]+/[^/\s"]+/""").replace(t, "/$1/USER/PASS/")
+        t = Regex("""(?i)\b(play_token|token|password|pass|passwd|username|user|login|mac|sn|key|sig|signature|auth)=([^&\s"']+)""").replace(t, "$1=…")
+        t = Regex("""(?i)"(play_token|token|password|username|login|mac)"\s*:\s*"[^"]*"""").replace(t, "\"$1\":\"…\"")
+        return t
     }
 }
