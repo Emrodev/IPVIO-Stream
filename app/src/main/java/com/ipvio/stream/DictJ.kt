@@ -645,4 +645,8 @@ TD¦GD¦AV¦GR¦¦¦DG¦Diff¦DR
 OTN¦OTL¦UZM¦PNP¦¦¦DPR¦DP¦SS
 Serie¦Streak¦Seri¦Niz¦¦¦Racha¦Série¦Serie
 J.¦yrs¦yaş¦god.¦¦¦años¦ans¦anni
+Inhalt¦Content¦İçerik¦Sadržaj¦Sadržaj¦Sadržaj¦Contenido¦Contenu¦Contenuto¦Inhoud
+Nur Live TV¦Live TV only¦Yalnızca Canlı TV¦Samo TV uživo¦Samo TV uživo¦Samo TV uživo¦Solo TV en directo¦TV en direct uniquement¦Solo TV in diretta¦Alleen live-tv
+Nur VOD¦VOD only¦Yalnızca VOD¦Samo VOD¦Samo VOD¦Samo VOD¦Solo VOD¦VOD uniquement¦Solo VOD¦Alleen VOD
+Inhaltsauswahl wird angewendet …¦Applying content selection …¦İçerik seçimi uygulanıyor …¦Primjenjuje se izbor sadržaja …¦Primjenjuje se izbor sadržaja …¦Primenjuje se izbor sadržaja …¦Aplicando selección de contenido …¦Application du filtre de contenu …¦Applicazione del filtro contenuti …¦Inhoudsselectie toepassen …
 """

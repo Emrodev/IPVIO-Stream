@@ -333,10 +333,10 @@ object PlaylistStore {
         val url = lists[i].url
         lists[i] = lists[i].copy(contentMode = mode)
         persist(c)
-        if (i == active) {
-            setItems(emptyList())
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                load(c, url, false, skipNetworkWhenCached = true)
+        if (i == active) kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+            repeat(60) {
+                if (reapplyContentMode(c, i)) return@launch
+                delay(500)
             }
         } else {
             extras.remove(url)
@@ -1104,6 +1104,36 @@ object PlaylistStore {
                     if (rawChannels.isEmpty()) withContext(Dispatchers.IO) { fromLocal(c, u, allowGz = true, ask = false) }
                     error = msg
                 }
+            }
+            return true
+        } finally {
+            loading = false
+            heavy = false
+            loadStarted = 0L
+            askRequested = false
+            job = null
+            loadLock.unlock()
+        }
+    }
+
+    /** Reparse one playlist after its content mode changes, preserving the current screen and language selection. */
+    private suspend fun reapplyContentMode(c: Context, i: Int): Boolean {
+        val u = lists.getOrNull(i)?.url ?: return true
+        if (!loadLock.tryLock()) return false
+        try {
+            job = currentCoroutineContext()[Job]
+            loading = true; error = null
+            phase = "Inhaltsauswahl wird angewendet …"; bytesRead = 0L; totalBytes = -1L; downloadDone = false
+            val r = withContext(Dispatchers.IO) { fromLocal(c, u, allowGz = true, ask = false) }
+            when (r) {
+                Local.OK -> {
+                    if (i == active) {
+                        extras.clear()
+                        withContext(Dispatchers.IO) { runCatching { loadExtras(c, network = false) }.onFailure { if (it is CancellationException) throw it } }
+                    } else extras.remove(u)
+                }
+                Local.NONE -> return loadInner(c, u, false, false, false, false).let { true }
+                Local.FAILED -> Unit // Keep the previous catalog active; the error is shown if the page supports it.
             }
             return true
         } finally {
