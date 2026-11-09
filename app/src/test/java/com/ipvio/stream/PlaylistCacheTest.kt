@@ -92,6 +92,16 @@ http://h/series/u/p/8.mkv
         assertNull(PlaylistCacheIO.read(ByteArrayInputStream(bad.toByteArray()), "http://a", emptySet()))
     }
 
+    @Test fun cache_contentModeWirdGespeichertUndAbgeglichen() {
+        val p = M3uParser.parseStream(java.io.StringReader(m3u), mode = ContentMode.LIVE_ONLY)
+        val out = ByteArrayOutputStream()
+        PlaylistCacheIO.write(out, "http://a", p.items, emptyList(), emptyMap(), p.counts, p.bytes, emptySet(), ContentMode.LIVE_ONLY)
+        val bytes = out.toByteArray()
+        assertEquals(ContentMode.LIVE_ONLY, PlaylistCacheIO.readHeader(ByteArrayInputStream(bytes), "http://a")!!.contentMode)
+        assertEquals(ContentMode.LIVE_ONLY, PlaylistCacheIO.read(ByteArrayInputStream(bytes), "http://a", emptySet(), contentMode = ContentMode.LIVE_ONLY)!!.contentMode)
+        assertNull(PlaylistCacheIO.read(ByteArrayInputStream(bytes), "http://a", emptySet(), contentMode = ContentMode.VOD_ONLY))
+    }
+
     /** Version 3 (ältere App, ohne Sprache) wird weiter gelesen; die Sprache wird aus Kategorie/Name berechnet. */
     @Test fun cache_version3WirdGelesen() {
         val out = ByteArrayOutputStream()

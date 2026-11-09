@@ -254,7 +254,10 @@ object M3uParser {
             val st = Stats()
             val langOf = LangOf(StringPool())
             var n = 0
-            entries(lines, check) { e -> if (classify(e, st, langOf, mode) != null) n++ }
+            entries(lines, check) { e ->
+                n++ // Keep the scan's raw entry count, including separators; only language stats obey the mode.
+                classify(e, st, langOf, mode)
+            }
             PlaylistScan(st.counts(), st.bytes, n)
         }
 
