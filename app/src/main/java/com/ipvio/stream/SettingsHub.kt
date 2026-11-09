@@ -1155,6 +1155,19 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
                 }
             }
         }
+        val modeLabel = when (pl.contentMode) {
+            ContentMode.LIVE_AND_VOD -> "Live TV + VOD"
+            ContentMode.LIVE_ONLY -> "Nur Live TV"
+            ContentMode.VOD_ONLY -> "Nur VOD"
+        }
+        SmallPill("Inhalt: $modeLabel") {
+            val next = when (pl.contentMode) {
+                ContentMode.LIVE_AND_VOD -> ContentMode.LIVE_ONLY
+                ContentMode.LIVE_ONLY -> ContentMode.VOD_ONLY
+                ContentMode.VOD_ONLY -> ContentMode.LIVE_AND_VOD
+            }
+            PlaylistStore.setContentMode(ctx, i, next)
+        }
     }
     if (PlaylistStore.lists.size > 1) Hint("„Zusätzlich anzeigen“ zeigt eine Playlist zusätzlich zur aktiven: Filme und Serien erscheinen zusammen (doppelte Filme nur einmal, gleiche Serien als eine Serie mit mehreren Quellen). In Filme und Serien filterst du über „Quelle“, im Live TV wechselst du die Quelle mit dem Knopf oben. Jede weitere Playlist braucht zusätzlich Speicher.")
     PlaylistStore.extraError?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 15.sp) }
