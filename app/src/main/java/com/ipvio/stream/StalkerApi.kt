@@ -2,6 +2,7 @@ package com.ipvio.stream
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -22,6 +23,8 @@ object StalkerApi {
     /** Logged-in session: API and token, reused for a few minutes. */
     private class Session(val src: StalkerLogic.Source, val endpoint: String, val token: String, val at: Long)
     private val sessions = HashMap<Int, Session>()
+    /** API address that answered last time, per source: tried first, so a new login costs only a few requests. */
+    private val knownEndpoint = HashMap<Int, String>()
     private const val SESSION_MS = 10 * 60_000L
     /** At most this many movies/series in the list (portals deliver only ~14 per page); distributed over the categories. */
     private const val MAX_MOVIES = 6000
@@ -51,19 +54,37 @@ object StalkerApi {
         return runCatching { JSONObject(body.substring(i)) }.getOrNull()
     }
 
-    /** Response as the "js" part, null on error (the reason is then in [note]). */
-    private fun js(src: StalkerLogic.Source, url: String, token: String?): Any? = try {
-        client.newCall(req(src, url, token)).execute().use { r ->
-            val body = r.body?.string().orEmpty()
-            if (!r.isSuccessful) { note = "HTTP ${r.code}"; null }
-            else {
-                val o = jsonOf(body)
-                if (o == null) { note = "keine gültige Antwort"; null } else { note = ""; o.opt("js") }
+    /**
+     * One request: HTTP code and body. On "429 Too Many Requests" waits as the portal asks (at most a few seconds)
+     * and tries once more – portals that limit requests otherwise lock the box out for a while. null = no connection.
+     */
+    private fun call(src: StalkerLogic.Source, url: String, token: String?): Pair<Int, String>? {
+        for (round in 0 until 2) {
+            val res = try {
+                client.newCall(req(src, url, token)).execute().use { r ->
+                    val wait = if (r.code == 429) (r.header("Retry-After")?.trim()?.toLongOrNull() ?: 2L).coerceIn(1L, 6L) else 0L
+                    Triple(r.code, r.body?.string().orEmpty(), wait)
+                }
+            } catch (e: Exception) {
+                return null
             }
+            if (res.first == 429 && round == 0) { Thread.sleep(res.third * 1000); continue }
+            return res.first to res.second
         }
-    } catch (e: Exception) {
-        note = "keine Verbindung"
-        null
+        return null
+    }
+
+    /** The portal no longer accepts the session (token taken over by another box, expired or locked). */
+    private fun authFailed(body: String) = body.contains("Authorization failed", ignoreCase = true)
+
+    /** Response as the "js" part, null on error (the reason is then in [note]). */
+    private fun js(src: StalkerLogic.Source, url: String, token: String?): Any? {
+        val (code, body) = call(src, url, token) ?: run { note = "keine Verbindung"; return null }
+        if (code !in 200..299) { note = "HTTP $code"; return null }
+        if (authFailed(body)) { note = "Authorization failed"; return null }
+        val o = jsonOf(body) ?: run { note = "keine gültige Antwort"; return null }
+        note = ""
+        return o.opt("js")
     }
 
     /** Log in: find the API, get the token, fetch the profile (some portals only unlock with it). */
@@ -73,18 +94,23 @@ object StalkerApi {
             if (!force && s != null && System.currentTimeMillis() - s.at < SESSION_MS) return s
         }
         var seen = ""
-        for (ep in StalkerLogic.endpoints(src.portal)) {
+        val known = synchronized(sessions) { knownEndpoint[src.key] }
+        val eps = StalkerLogic.endpoints(src.portal).let { l -> if (known != null) listOf(known) + (l - known) else l }
+        for (ep in eps) {
             // First with, then without "prehash" (old portals do not know it)
             var hs: JSONObject? = null
             for (extra in listOf("&token=&prehash=0", "&token=")) {
                 hs = js(src, StalkerLogic.api(ep, "stb", "handshake", extra), null) as? JSONObject
                 if (hs?.optString("token").isNullOrBlank()) hs = null else break
                 if (note.isNotEmpty()) seen = note
+                if (note == "HTTP 429") break
             }
+            // The portal is there but limits requests: the other addresses would only make it worse
+            if (hs == null && seen == "HTTP 429") break
             val token = hs?.optString("token")?.takeIf { it.isNotBlank() } ?: continue
             js(src, StalkerLogic.api(ep, "stb", "get_profile", StalkerLogic.profileExtra(src)), token)
             val s = Session(src, ep, token, System.currentTimeMillis())
-            synchronized(sessions) { sessions[src.key] = s }
+            synchronized(sessions) { sessions[src.key] = s; knownEndpoint[src.key] = ep }
             return s
         }
         throw PlaylistError(
@@ -231,15 +257,14 @@ object StalkerApi {
     @Volatile var lastDetail = ""
 
     /** One create_link request: the "js" part (or null) and a short, masked description for [lastDetail]. */
-    private fun linkCall(src: StalkerLogic.Source, url: String, token: String): Pair<Any?, String> = try {
-        client.newCall(req(src, url, token)).execute().use { r ->
-            val body = r.body?.string().orEmpty()
-            val o = if (r.isSuccessful) jsonOf(body) else null
-            val what = if (!r.isSuccessful) "HTTP ${r.code}" else o?.opt("js")?.toString() ?: ("no JSON: " + body.take(80))
-            o?.opt("js") to StalkerLink.mask(what, src.mac, token)
-        }
-    } catch (e: Exception) {
-        null to (e.javaClass.simpleName)
+    private class LinkAnswer(val js: Any?, val what: String, val authFailed: Boolean)
+
+    private fun linkCall(src: StalkerLogic.Source, url: String, token: String): LinkAnswer {
+        val (code, body) = call(src, url, token) ?: return LinkAnswer(null, "no connection", false)
+        if (authFailed(body)) return LinkAnswer(null, "Authorization failed", true)
+        val o = if (code in 200..299) jsonOf(body) else null
+        val what = if (code !in 200..299) "HTTP $code" else o?.opt("js")?.toString() ?: ("no JSON: " + body.take(80))
+        return LinkAnswer(o?.opt("js"), StalkerLink.mask(what, src.mac, token), false)
     }
 
     /** Real play address for "stalker://…" (freshly generated by the portal). null = not possible. */
@@ -253,23 +278,31 @@ object StalkerApi {
         lastDetail = ""
         val ref = StalkerLogic.itemRef(url) ?: return@withContext fail("bad item address")
         val src = sourceOf(ref.key) ?: return@withContext fail("portal login not found")
-        for (attempt in 0 until 2) {
+        for (attempt in 0 until 3) {
+            // A new login only after the portal rejected the session; short pause so a request limit can recover
+            if (attempt > 0) delay(1500)
             val s = runCatching { login(src, force = attempt > 0) }.getOrNull() ?: return@withContext fail("login failed ($note)")
             // Movie with its own files: ask for its first file ("/media/file_<id>.mpg") instead of the movie itself
             val type = if (ref.type == "mfile") "vod" else ref.type
-            val cmd = if (ref.type == "mfile") movieFileCmd(src, s, ref.cmd) ?: run { trace.add("no file for movie"); null } else ref.cmd
-            if (cmd == null) continue
+            val cmd = if (ref.type == "mfile") movieFileCmd(src, s, ref.cmd) ?: run { trace.add("no file for movie ($note)"); null } else ref.cmd
+            if (cmd == null) { if (note == "Authorization failed") continue else break }
             // Movies/episodes: several request forms, because portals accept different ones (see StalkerLink)
+            var rejected = false
             for ((i, link) in StalkerLink.requests(s.endpoint, type, cmd, ref.series).withIndex()) {
-                val (r, what) = linkCall(src, link, s.token)
-                if (attempt == 0) trace.add("${i + 1}: $what")
-                val f = when (r) {
+                val a = linkCall(src, link, s.token)
+                trace.add("${attempt + 1}.${i + 1}: ${a.what}")
+                // Session no longer accepted: other request forms would fail the same way; log in again
+                if (a.authFailed) { rejected = true; break }
+                val f = when (val r = a.js) {
                     is JSONObject -> fields(r)
                     is String -> mapOf("cmd" to r)
                     else -> continue
                 }
                 StalkerLink.address(s.endpoint, src.mac, f, type, cmd)?.let { lastDetail = ""; return@withContext it }
             }
+            if (!rejected) break
+            // Channels: rather play the address from the list right away than make zapping wait for new logins
+            if (ref.type == "itv") break
         }
         // Some portals already deliver a directly playable address in the channel
         if (ref.type != "mfile") StalkerLogic.stripCmd(ref.cmd)?.takeIf { !it.contains("localhost") }?.let { return@withContext it }

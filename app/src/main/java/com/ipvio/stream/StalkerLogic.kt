@@ -119,6 +119,8 @@ object StalkerLogic {
 
     const val UA = "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3"
     const val X_UA = "Model: MAG250; Link: WiFi"
+    private const val VER = "ImageDescription: 0.2.18-r23-250; ImageDate: Thu Sep 13 11:31:16 EEST 2018; PORTAL version: 5.6.1; " +
+        "API Version: JS API version: 343; STB API version: 146; Player Engine version: 0x58c"
 
     private fun hash(alg: String, s: String) = MessageDigest.getInstance(alg).digest(s.toByteArray()).joinToString("") { "%02X".format(it) }
 
@@ -130,7 +132,10 @@ object StalkerLogic {
         val sn = src.sn.ifEmpty { hash("MD5", src.mac).take(13) }
         val dev = src.id1.ifEmpty { hash("SHA-256", src.mac) }
         val dev2 = src.id2.ifEmpty { dev }
-        return "&hd=1&stb_type=MAG250&client_type=STB&image_version=218&sn=${enc(sn)}&device_id=${enc(dev)}&device_id2=${enc(dev2)}&auth_second_step=1&not_valid_token=0"
+        // As a MAG250 sends it (TiviMate / STB Emu do the same); some portals only accept the token for playback after this
+        return "&hd=1&ver=${enc(VER)}&num_banks=2&sn=${enc(sn)}&stb_type=MAG250&client_type=STB&image_version=218&video_out=hdmi" +
+            "&device_id=${enc(dev)}&device_id2=${enc(dev2)}&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0" +
+            "&api_signature=262"
     }
 
     // ------------------------------------------------------------------ Play addresses in the list
