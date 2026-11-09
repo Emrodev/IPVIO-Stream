@@ -101,9 +101,7 @@ object StalkerLogic {
     fun api(endpoint: String, type: String, action: String, extra: String = ""): String =
         "$endpoint?type=$type&action=$action$extra&JsHttpRequest=1-xml"
 
-    /** Request a play address. [series] = episode number if the command belongs to a whole season. */
-    fun createLink(endpoint: String, type: String, cmd: String, series: String? = null): String =
-        api(endpoint, type, "create_link", "&cmd=" + enc(cmd) + "&series=" + (series?.let { enc(it) } ?: "") + "&forced_storage=undefined&disable_ad=0&download=0")
+    // Requesting a play address ("create_link"): see StalkerLink
 
     /** „ffmpeg http://…“ / „ffrt http://…“ / „auto http://…“ → reine Adresse. */
     fun stripCmd(cmd: String?): String? {

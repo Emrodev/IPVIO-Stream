@@ -222,9 +222,15 @@ object StalkerApi {
         val src = sourceOf(ref.key) ?: return@withContext null
         for (attempt in 0 until 2) {
             val s = runCatching { login(src, force = attempt > 0) }.getOrNull() ?: return@withContext null
-            val r = js(src, StalkerLogic.createLink(s.endpoint, ref.type, ref.cmd, ref.series), s.token) as? JSONObject
-            val u = StalkerLogic.stripCmd(r?.optString("cmd"))
-            if (u != null) return@withContext u
+            // Movies/episodes: several request forms, because portals accept different ones (see StalkerLink)
+            for (link in StalkerLink.requests(s.endpoint, ref.type, ref.cmd, ref.series)) {
+                val f = when (val r = js(src, link, s.token)) {
+                    is JSONObject -> fields(r)
+                    is String -> mapOf("cmd" to r)
+                    else -> continue
+                }
+                StalkerLink.address(src.portal, src.mac, f, ref.type)?.let { return@withContext it }
+            }
         }
         // Some portals already deliver a directly playable address in the channel
         StalkerLogic.stripCmd(ref.cmd)?.takeIf { !it.contains("localhost") }
