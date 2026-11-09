@@ -156,9 +156,12 @@ object StalkerLogic {
      * [series] = episode number (episodes of a season share the season's command).
      */
     fun itemUrl(key: Int, kind: String, cmd: String, series: String? = null): String =
-        "stalker://$key/$kind/" + hex(if (series != null) cmd + SEP + series else cmd) + (if (kind == "movie" || kind == "mfile") ".mp4" else ".ts")
+        "stalker://$key/$kind/" + hex(if (series != null) cmd + SEP + series else cmd) + (if (kind == "movie" || kind == "mfile" || kind == "efile") ".mp4" else ".ts")
 
-    /** [type] = "itv", "vod" or "mfile" (movie whose file is looked up at play time; [cmd] is then the movie ID). */
+    /**
+     * [type] = "itv", "vod", "mfile" (movie whose file is looked up at play time; [cmd] is then the movie ID) or
+     * "efile" (episode of a season; [cmd] also says where it sits, see [StalkerLink.Play.episode]).
+     */
     class ItemRef(val key: Int, val type: String, val cmd: String, val series: String? = null)
 
     fun itemRef(url: String): ItemRef? {
@@ -166,7 +169,7 @@ object StalkerLogic {
         val rest = url.removePrefix("stalker://").split('/')
         if (rest.size != 3) return null
         val key = rest[0].toIntOrNull() ?: return null
-        val type = when (rest[1]) { "live" -> "itv"; "movie" -> "vod"; "mfile" -> "mfile"; else -> return null }
+        val type = when (rest[1]) { "live" -> "itv"; "movie" -> "vod"; "mfile" -> "mfile"; "efile" -> "efile"; else -> return null }
         val raw = unhex(rest[2].substringBefore('.')) ?: return null
         val p = raw.split(SEP, limit = 2)
         return ItemRef(key, type, p[0], p.getOrNull(1))

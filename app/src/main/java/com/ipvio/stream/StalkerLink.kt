@@ -101,4 +101,52 @@ object StalkerLink {
         t = Regex("""(?i)"(play_token|token|password|username|login|mac)"\s*:\s*"[^"]*"""").replace(t, "\"$1\":\"…\"")
         return t
     }
+
+    private val MEDIA_ID = Regex("""^(?:\S+\s+)?/media/(\d+)\.mpg$""")
+
+    /** Movie ID of a video club command "/media/<id>.mpg" (not "/media/file_<id>.mpg"); null otherwise. */
+    fun movieIdOf(cmd: String): String? = MEDIA_ID.find(cmd.trim())?.groupValues?.get(1)
+
+    /**
+     * Play command of a movie's first file from the answer to get_ordered_list with movie_id ([items], [total] = total_items).
+     * Prefers an entry that already carries "/media/file_…". An entry's bare ID only counts if the answer is a short file
+     * list – a portal that ignores movie_id returns a whole category, and its first movie must not be played instead.
+     */
+    fun fileCmd(items: List<Map<String, String>>, total: Int): String? {
+        for (f in items) {
+            val c = f["cmd"]?.trim().orEmpty()
+            val i = c.indexOf("/media/file_")
+            if (i >= 0) return c.substring(i).substringBefore(' ')
+        }
+        if (items.isEmpty() || total > 20 || items.size > 20) return null
+        val id = items[0]["id"]?.trim()?.takeIf { it.isNotEmpty() && it != "null" && it != "0" } ?: return null
+        return "/media/file_$id.mpg"
+    }
+
+    /**
+     * What to ask the portal for one item. [cmd] = command for create_link first (null = go straight to the file),
+     * [lookup] = get_ordered_list parameters that list the item's own files ([lookupType] "vod"/"series"), null = none.
+     */
+    class Play(val linkType: String, val cmd: String?, val series: String?, val lookupType: String, val lookup: String?) {
+        companion object {
+            private const val SEP = '\u0002'
+            private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
+
+            /** Stored command of a single episode: its own command plus list type, series, season and episode ID. */
+            fun episode(cmd: String, listType: String, movieId: String, seasonId: String, episodeId: String): String =
+                listOf(cmd, listType, movieId, seasonId, episodeId).joinToString(SEP.toString())
+
+            fun of(type: String, cmd: String, series: String?): Play = when (type) {
+                "mfile" -> Play("vod", null, null, "vod", "&movie_id=${enc(cmd)}")
+                "efile" -> {
+                    val p = cmd.split(SEP)
+                    if (p.size != 5) Play("vod", p[0], series, "vod", null)
+                    else Play("vod", p[0], series, p[1],
+                        "&movie_id=${enc(p[2])}&season_id=${enc(p[3])}&episode_id=${enc(p[4])}")
+                }
+                "vod" -> Play("vod", cmd, series, "vod", if (series == null) movieIdOf(cmd)?.let { "&movie_id=$it" } else null)
+                else -> Play(type, cmd, series, type, null)
+            }
+        }
+    }
 }

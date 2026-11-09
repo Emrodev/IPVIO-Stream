@@ -73,4 +73,39 @@ class StalkerLinkTest {
         for (bad in listOf("real.host", "bob", "secret", "abc", "00:1A:79", "T0KEN123")) assertTrue(m, !m.contains(bad))
         assertTrue(m, m.contains("http://SERVER/movie/USER/PASS/1.mkv"))
     }
+
+    @Test fun movieFileFallback() {
+        assertEquals("1012490", StalkerLink.movieIdOf("/media/1012490.mpg"))
+        assertEquals("5", StalkerLink.movieIdOf("auto /media/5.mpg"))
+        assertNull(StalkerLink.movieIdOf("/media/file_5.mpg"))
+        assertNull(StalkerLink.movieIdOf("eyJ0eXBlIjoibW92aWUifQ=="))
+        // File entry with its own command
+        assertEquals("/media/file_88.mpg", StalkerLink.fileCmd(listOf(mapOf("id" to "88", "cmd" to "/media/file_88.mpg")), 1))
+        // Only an ID, short list: the file
+        assertEquals("/media/file_88.mpg", StalkerLink.fileCmd(listOf(mapOf("id" to "88")), 1))
+        // Portal ignored movie_id and sent a whole category: no guessing
+        assertNull(StalkerLink.fileCmd(listOf(mapOf("id" to "3", "cmd" to "/media/3.mpg")), 4200))
+        assertNull(StalkerLink.fileCmd(emptyList(), 0))
+    }
+
+    @Test fun whatToAskFor() {
+        // Plain movie "/media/<id>.mpg": its command first, its files as the fallback
+        val m = StalkerLink.Play.of("vod", "/media/1012490.mpg", null)
+        assertEquals("/media/1012490.mpg", m.cmd); assertEquals("&movie_id=1012490", m.lookup)
+        // Xtream-like command: no lookup
+        assertNull(StalkerLink.Play.of("vod", "eyJ0eXBlIjoibW92aWUifQ==", null).lookup)
+        // Season with episode numbers: no lookup
+        assertNull(StalkerLink.Play.of("vod", "/media/7.mpg", "3").lookup)
+        // Known movie with files: straight to the file
+        val f = StalkerLink.Play.of("mfile", "77", null)
+        assertNull(f.cmd); assertEquals("&movie_id=77", f.lookup)
+        // Single episode: own command, then movie/season/episode files
+        val stored = StalkerLink.Play.episode("/media/9.mpg", "series", "5", "6", "9")
+        val e = StalkerLink.Play.of("efile", stored, null)
+        assertEquals("/media/9.mpg", e.cmd); assertEquals("series", e.lookupType)
+        assertEquals("&movie_id=5&season_id=6&episode_id=9", e.lookup)
+        // Survives the item address
+        val r = StalkerLogic.itemRef(StalkerLogic.itemUrl(1, "efile", stored))!!
+        assertEquals("efile", r.type); assertEquals(stored, r.cmd)
+    }
 }

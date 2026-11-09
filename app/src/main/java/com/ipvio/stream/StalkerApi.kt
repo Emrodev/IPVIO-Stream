@@ -242,12 +242,16 @@ object StalkerApi {
     private fun sourceOf(key: Int): StalkerLogic.Source? =
         PlaylistStore.lists.asSequence().mapNotNull { StalkerLogic.parse(it.url) }.firstOrNull { it.key == key }
 
-    /** Play command of a movie with its own files: "/media/file_<file ID>.mpg" of its first file. */
-    private fun movieFileCmd(src: StalkerLogic.Source, s: Session, movieId: String): String? {
-        val o = js(src, StalkerLogic.api(s.endpoint, "vod", "get_ordered_list", "&movie_id=${enc(movieId)}&p=1"), s.token)
+    /**
+     * Play command of the first file of a movie/episode with its own files ("/media/file_<file ID>.mpg"), as the MAG box
+     * asks for it when the title is opened. [listType] "vod" or "series", [extra] = movie_id (+ season_id, episode_id).
+     */
+    private fun fileCmd(src: StalkerLogic.Source, s: Session, listType: String, extra: String): String? {
+        val o = js(src, StalkerLogic.api(s.endpoint, listType, "get_ordered_list", "$extra&p=1"), s.token)
         val a = (o as? JSONObject)?.optJSONArray("data") ?: (o as? JSONArray) ?: return null
-        val id = a.optJSONObject(0)?.opt("id")?.toString()?.trim()?.takeIf { it.isNotEmpty() && it != "null" } ?: return null
-        return "/media/file_$id.mpg"
+        val items = (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::fields) }
+        val total = (o as? JSONObject)?.optInt("total_items", items.size) ?: items.size
+        return StalkerLink.fileCmd(items, total)
     }
 
     /**
@@ -272,42 +276,55 @@ object StalkerApi {
         val trace = ArrayList<String>()
         fun fail(why: String): String? {
             trace.add(why)
-            lastDetail = trace.joinToString(" | ").take(400)
+            lastDetail = trace.joinToString(" | ").take(500)
             return null
         }
         lastDetail = ""
         val ref = StalkerLogic.itemRef(url) ?: return@withContext fail("bad item address")
         val src = sourceOf(ref.key) ?: return@withContext fail("portal login not found")
-        for (attempt in 0 until 3) {
-            // A new login only after the portal rejected the session; short pause so a request limit can recover
-            if (attempt > 0) delay(1500)
-            val s = runCatching { login(src, force = attempt > 0) }.getOrNull() ?: return@withContext fail("login failed ($note)")
-            // Movie with its own files: ask for its first file ("/media/file_<id>.mpg") instead of the movie itself
-            val type = if (ref.type == "mfile") "vod" else ref.type
-            val cmd = if (ref.type == "mfile") movieFileCmd(src, s, ref.cmd) ?: run { trace.add("no file for movie ($note)"); null } else ref.cmd
-            if (cmd == null) { if (note == "Authorization failed") continue else break }
-            // Movies/episodes: several request forms, because portals accept different ones (see StalkerLink)
-            var rejected = false
-            for ((i, link) in StalkerLink.requests(s.endpoint, type, cmd, ref.series).withIndex()) {
+        val item = StalkerLink.Play.of(ref.type, ref.cmd, ref.series)
+
+        /** create_link in its request forms. Address, or null; [rejected] = the portal rejected the session. */
+        var rejected = false
+        fun ask(s: Session, cmd: String, series: String?, tag: String): String? {
+            for ((i, link) in StalkerLink.requests(s.endpoint, item.linkType, cmd, series).withIndex()) {
                 val a = linkCall(src, link, s.token)
-                trace.add("${attempt + 1}.${i + 1}: ${a.what}")
-                // Session no longer accepted: other request forms would fail the same way; log in again
-                if (a.authFailed) { rejected = true; break }
+                trace.add("$tag.${i + 1}: ${a.what}")
+                // Session no longer accepted: other request forms would fail the same way
+                if (a.authFailed) { rejected = true; return null }
                 val f = when (val r = a.js) {
                     is JSONObject -> fields(r)
                     is String -> mapOf("cmd" to r)
                     else -> continue
                 }
-                StalkerLink.address(s.endpoint, src.mac, f, type, cmd)?.let { lastDetail = ""; return@withContext it }
+                StalkerLink.address(s.endpoint, src.mac, f, item.linkType, cmd)?.let { return it }
             }
-            if (!rejected) break
-            // Channels: rather play the address from the list right away than make zapping wait for new logins
-            if (ref.type == "itv") break
+            return null
+        }
+
+        for (attempt in 0 until 3) {
+            // A new login only after the portal rejected the session; short pause so a request limit can recover
+            if (attempt > 0) delay(1500)
+            rejected = false
+            val s = runCatching { login(src, force = attempt > 0) }.getOrNull() ?: return@withContext fail("login failed ($note)")
+            val n = attempt + 1
+            // 1. The command from the list (not for movies that are known to need their file)
+            if (item.cmd != null) {
+                ask(s, item.cmd, item.series, "$n")?.let { lastDetail = ""; return@withContext it }
+                if (rejected) { if (ref.type == "itv") break else continue }
+            }
+            // 2. Movie/episode with its own files (Ministra video club, "nothing_to_play" above): ask for its first file
+            if (item.lookup != null) {
+                val fc = fileCmd(src, s, item.lookupType, item.lookup)
+                trace.add("$n.file: ${fc ?: "none ($note)"}")
+                if (fc != null) ask(s, fc, null, "$n.F")?.let { lastDetail = ""; return@withContext it }
+                if (rejected || note == "Authorization failed") continue
+            }
+            break
         }
         // Some portals already deliver a directly playable address in the channel
-        if (ref.type != "mfile") StalkerLogic.stripCmd(ref.cmd)?.takeIf { !it.contains("localhost") }?.let { return@withContext it }
-        val shown = StalkerLink.mask(ref.cmd.take(60), src.mac, "")
-        fail("item cmd: $shown")
+        if (ref.type == "itv") StalkerLogic.stripCmd(ref.cmd)?.takeIf { !it.contains("localhost") }?.let { return@withContext it }
+        fail("item cmd: " + StalkerLink.mask(ref.cmd.take(80), src.mac, ""))
     }
 
     /**
@@ -323,13 +340,17 @@ object StalkerApi {
         val seen = HashSet<Long>()
         val out = ArrayList<Episode>()
 
-        fun add(season: Int, num: Int, cmd: String, series: String?) {
+        fun add(season: Int, num: Int, cmd: String, series: String?, seasonId: String = "", episodeId: String = "") {
             if (cmd.isBlank() || !seen.add((season.toLong() shl 32) or num.toLong())) return
-            out.add(Episode(season, num, EpTitles.of(num), StalkerLogic.itemUrl(src.key, "movie", cmd, series)))
+            // Single episode of a season: keep where it sits, so its file can be looked up at play time if needed
+            val u = if (series == null && episodeId.isNotEmpty())
+                StalkerLogic.itemUrl(src.key, "efile", StalkerLink.Play.episode(cmd, type, ref.id, seasonId, episodeId))
+            else StalkerLogic.itemUrl(src.key, "movie", cmd, series)
+            out.add(Episode(season, num, EpTitles.of(num), u))
         }
 
         /** Entries of a season: episode numbers or single episodes. true = something found. */
-        fun fill(o: JSONObject, season: Int, fallbackNum: Int): Boolean {
+        fun fill(o: JSONObject, season: Int, fallbackNum: Int, seasonId: String = ""): Boolean {
             val cmd = o.optString("cmd").trim()
             val nums = o.optJSONArray("series")
             if (nums != null && nums.length() > 0) {
@@ -341,7 +362,8 @@ object StalkerApi {
                 if (any) return true
             }
             if (cmd.isNotEmpty() && !isSeason(o)) {
-                add(season, StalkerLogic.episodeNumber(fields(o), fallbackNum), cmd, null)
+                add(season, StalkerLogic.episodeNumber(fields(o), fallbackNum), cmd, null,
+                    seasonId, if (seasonId.isNotEmpty()) o.opt("id")?.toString()?.trim().orEmpty() else "")
                 return true
             }
             return false
@@ -362,7 +384,7 @@ object StalkerApi {
             var k = 0
             paged(s, type, "$base&season_id=${enc(sid)}&episode_id=0", 1000, {}) { e ->
                 k++
-                fill(e, season, k)
+                fill(e, season, k, sid)
             }
         }
         out.sortWith(compareBy({ it.season }, { it.num }))
