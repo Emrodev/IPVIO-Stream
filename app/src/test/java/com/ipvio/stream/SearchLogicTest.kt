@@ -1,6 +1,7 @@
 package com.ipvio.stream
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SearchLogicTest {
@@ -24,4 +25,23 @@ class SearchLogicTest {
     }
 
     @Test fun leer() = assertEquals(0, idx.find("  ").first.size + idx.find("xyz").first.size)
+
+    @Test fun scanSearchCanBeCancelled() {
+        var cancelled = false
+        try {
+            SearchIndex(List(600) { item(it.toString(), Kind.LIVE, "channel $it") }).find("zz") {
+                throw java.util.concurrent.CancellationException()
+            }
+        } catch (_: java.util.concurrent.CancellationException) {
+            cancelled = true
+        }
+        assertTrue(cancelled)
+    }
+
+    @Test fun suggestionsReturnMostFrequentWordsFirst() {
+        val titles = listOf("alfa" to 3, "alpine" to 2, "algae" to 1, "alibi" to 1, "almanac" to 1, "aloft" to 1, "alone" to 1)
+        var id = 0
+        val items = titles.flatMap { (title, count) -> List(count) { item((id++).toString(), Kind.MOVIE, title) } }
+        assertEquals(listOf("alfa", "alpine", "algae", "alibi", "almanac", "aloft"), WordSuggest(items).suggest("al"))
+    }
 }
