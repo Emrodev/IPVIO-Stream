@@ -25,6 +25,18 @@ import kotlinx.coroutines.delay
 @Composable
 fun BoxScope.PTechOverlay(player: ExoPlayer) {
     var lines by remember { mutableStateOf(listOf("…")) }
+    // Name of the video decoder in use: hardware ("c2.….hevc") or software ("ffmpeg") – explains wrong colours with HDR
+    var decoder by remember { mutableStateOf("") }
+    androidx.compose.runtime.DisposableEffect(player) {
+        val l = object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            override fun onVideoDecoderInitialized(
+                eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long
+            ) { decoder = decoderName }
+        }
+        player.addAnalyticsListener(l)
+        onDispose { player.removeAnalyticsListener(l) }
+    }
     LaunchedEffect(player) {
         while (true) {
             val out = ArrayList<String>()
@@ -33,6 +45,7 @@ fun BoxScope.PTechOverlay(player: ExoPlayer) {
                 out.add("Video: " + codecName(vf.sampleMimeType).ifBlank { vf.sampleMimeType ?: "?" } + "  " + vf.width + "×" + vf.height + "  " + TechText.fps(vf.frameRate) + " fps")
                 val br = if (vf.averageBitrate > 0) vf.averageBitrate else vf.bitrate
                 if (br > 0) out.add("Video-Rate (laut Datei): " + TechText.kbps(br))
+                out.add("Farbe: " + TechText.colour(vf.sampleMimeType, vf.codecs, vf.colorInfo?.colorTransfer, vf.colorInfo?.colorSpace))
             } else out.add("Video: –")
             val af = player.audioFormat
             if (af != null) out.add("Ton: " + codecName(af.sampleMimeType).ifBlank { af.sampleMimeType ?: "?" } + "  " + channelLabel(af.channelCount) + "  " + (af.sampleRate / 1000.0) + " kHz")
@@ -41,6 +54,7 @@ fun BoxScope.PTechOverlay(player: ExoPlayer) {
                 dc.ensureUpdated()
                 out.add("Bilder: ${dc.renderedOutputBufferCount} gezeigt · ${dc.droppedBufferCount} verworfen")
             }
+            if (decoder.isNotEmpty()) out.add("Decoder: $decoder")
             out.add("Puffer: " + TechText.secs(player.totalBufferedDuration))
             lines = out
             delay(1000)

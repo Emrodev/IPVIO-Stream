@@ -333,15 +333,41 @@ object StalkerApi {
      * and seasons that deliver their episodes as separate entries.
      */
     fun episodeList(url: String): List<Episode>? {
-        val ref = StalkerLogic.seriesRef(url) ?: return null
-        val src = sourceOf(ref.key) ?: return null
-        val s = runCatching { login(src) }.getOrNull() ?: return null
-        val type = if (ref.mode == "v") "vod" else "series"
+        lastSeriesDetail = ""
+        val trace = ArrayList<String>()
+        fun done(l: List<Episode>?, why: String? = null): List<Episode>? {
+            why?.let { trace.add(it) }
+            if (l.isNullOrEmpty()) lastSeriesDetail = trace.joinToString(" | ").take(500)
+            return l
+        }
+        val ref = StalkerLogic.seriesRef(url) ?: return done(null, "bad series address")
+        val src = sourceOf(ref.key) ?: return done(null, "portal login not found")
+        // Own series area first ("series"), the video club ("vod") as the second try – portals file series differently
+        val types = if (ref.mode == "v") listOf("vod", "series") else listOf("series", "vod")
+        for (attempt in 0 until 2) {
+            val s = runCatching { login(src, force = attempt > 0) }.getOrNull()
+                ?: return done(null, "login failed ($note)")
+            var rejected = false
+            for (type in types) {
+                val l = episodesOf(s, src, ref, type, trace)
+                if (!l.isNullOrEmpty()) return l
+                if (note == "Authorization failed") { rejected = true; break }
+            }
+            // Session no longer accepted (e.g. taken over by another box): log in again once
+            if (!rejected) break
+        }
+        return done(null)
+    }
+
+    /** Episodes of [ref] read as [type] ("series"/"vod"). null = no answer; [trace] gets a masked summary. */
+    private fun episodesOf(s: Session, src: StalkerLogic.Source, ref: StalkerLogic.SeriesRef, type: String, trace: MutableList<String>): List<Episode>? {
         val seen = HashSet<Long>()
         val out = ArrayList<Episode>()
 
         fun add(season: Int, num: Int, cmd: String, series: String?, seasonId: String = "", episodeId: String = "") {
-            if (cmd.isBlank() || !seen.add((season.toLong() shl 32) or num.toLong())) return
+            // Without a command an episode can still be played via its file (needs season and episode ID)
+            if (cmd.isBlank() && episodeId.isEmpty()) return
+            if (!seen.add((season.toLong() shl 32) or num.toLong())) return
             // Single episode of a season: keep where it sits, so its file can be looked up at play time if needed
             val u = if (series == null && episodeId.isNotEmpty())
                 StalkerLogic.itemUrl(src.key, "efile", StalkerLink.Play.episode(cmd, type, ref.id, seasonId, episodeId))
@@ -351,9 +377,9 @@ object StalkerApi {
 
         /** Entries of a season: episode numbers or single episodes. true = something found. */
         fun fill(o: JSONObject, season: Int, fallbackNum: Int, seasonId: String = ""): Boolean {
-            val cmd = o.optString("cmd").trim()
+            val cmd = o.optString("cmd").trim().takeIf { it != "null" }.orEmpty()
             val nums = o.optJSONArray("series")
-            if (nums != null && nums.length() > 0) {
+            if (nums != null && nums.length() > 0 && cmd.isNotEmpty()) {
                 var any = false
                 for (i in 0 until nums.length()) {
                     val n = nums.opt(i)?.toString()?.trim()?.toIntOrNull() ?: continue
@@ -361,17 +387,21 @@ object StalkerApi {
                 }
                 if (any) return true
             }
-            if (cmd.isNotEmpty() && !isSeason(o)) {
-                add(season, StalkerLogic.episodeNumber(fields(o), fallbackNum), cmd, null,
-                    seasonId, if (seasonId.isNotEmpty()) o.opt("id")?.toString()?.trim().orEmpty() else "")
-                return true
+            if (isSeason(o)) return false
+            val eid = if (seasonId.isNotEmpty()) o.opt("id")?.toString()?.trim().orEmpty() else ""
+            if (cmd.isNotEmpty() || eid.isNotEmpty()) {
+                val before = out.size
+                add(season, StalkerLogic.episodeNumber(fields(o), fallbackNum), cmd, null, seasonId, eid)
+                return out.size > before
             }
             return false
         }
 
         val base = "&movie_id=${enc(ref.id)}&category=${enc(ref.cat)}&fav=0&sortby=added&hd=0&not_ended=0"
         val level1 = ArrayList<JSONObject>()
-        if (!paged(s, type, "$base&season_id=0&episode_id=0", 600, {}) { level1.add(it) }) return null
+        val ok = paged(s, type, "$base&season_id=0&episode_id=0", 600, {}) { level1.add(it) }
+        trace.add("$type: " + if (!ok) "no answer ($note)" else "${level1.size} entries" + (level1.firstOrNull()?.let { " e.g. " + StalkerLink.mask(shape(it), src.mac, s.token) } ?: ""))
+        if (!ok) return null
         var idx = 0
         for (o in level1) {
             idx++
@@ -379,17 +409,29 @@ object StalkerApi {
             val season = if (level1.size == 1 && !isSeason(o)) 1 else StalkerLogic.seasonNumber(f, idx)
             if (fill(o, season, idx)) continue
             // Season without own episodes: fetch its episodes individually
-            val sid = o.opt("id")?.toString().orEmpty()
+            val sid = o.opt("id")?.toString()?.trim().orEmpty()
             if (sid.isEmpty()) continue
             var k = 0
+            var first: JSONObject? = null
             paged(s, type, "$base&season_id=${enc(sid)}&episode_id=0", 1000, {}) { e ->
                 k++
+                if (first == null) first = e
                 fill(e, season, k, sid)
             }
+            if (idx == 1) trace.add("season 1: $k entries" + (first?.let { " e.g. " + StalkerLink.mask(shape(it), src.mac, s.token) } ?: " ($note)"))
         }
         out.sortWith(compareBy({ it.season }, { it.num }))
         return out
     }
+
+    /** Short form of a portal entry for [lastSeriesDetail]: the fields that decide how it is read. */
+    private fun shape(o: JSONObject): String {
+        val keys = listOf("id", "name", "cmd", "is_season", "is_episode", "is_file", "is_series", "has_files", "series", "season_id", "series_number")
+        return keys.filter { o.has(it) }.joinToString(",", "{", "}") { k -> "$k=" + o.opt(k).toString().take(40) }
+    }
+
+    /** Why the episodes of a series could not be loaded (masked like [lastDetail]). Empty = nothing. */
+    @Volatile var lastSeriesDetail = ""
 
     private fun isSeason(o: JSONObject): Boolean {
         val v = o.opt("is_season")

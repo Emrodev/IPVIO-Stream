@@ -141,7 +141,7 @@ object StalkerLink {
                 "efile" -> {
                     val p = cmd.split(SEP)
                     if (p.size != 5) Play("vod", p[0], series, "vod", null)
-                    else Play("vod", p[0], series, p[1],
+                    else Play("vod", p[0].ifBlank { null }, series, p[1],
                         "&movie_id=${enc(p[2])}&season_id=${enc(p[3])}&episode_id=${enc(p[4])}")
                 }
                 "vod" -> Play("vod", cmd, series, "vod", if (series == null) movieIdOf(cmd)?.let { "&movie_id=$it" } else null)

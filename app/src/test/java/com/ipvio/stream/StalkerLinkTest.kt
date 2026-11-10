@@ -108,4 +108,11 @@ class StalkerLinkTest {
         val r = StalkerLogic.itemRef(StalkerLogic.itemUrl(1, "efile", stored))!!
         assertEquals("efile", r.type); assertEquals(stored, r.cmd)
     }
+
+    @Test fun colourText() {
+        assertEquals("Dolby Vision Profil 5", TechText.colour("video/dolby-vision", "dvh1.05.06", null, null))
+        assertEquals("HDR10 · BT.2020", TechText.colour("video/hevc", "hvc1.2.4.L150", 6, 6))
+        assertEquals("HLG · BT.2020", TechText.colour("video/hevc", null, 7, 6))
+        assertEquals("SDR", TechText.colour("video/avc", "avc1.640028", 3, 1))
+    }
 }

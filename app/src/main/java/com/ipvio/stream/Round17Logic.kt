@@ -7,6 +7,21 @@ object TechText {
     fun kbps(bps: Int): String = if (bps <= 0) "?" else if (bps >= 1_000_000) "%.1f Mbit/s".format(bps / 1_000_000.0) else "${bps / 1000} kbit/s"
     fun fps(f: Float): String = if (f <= 0f) "?" else if (Math.abs(f - Math.round(f)) < 0.01f) "${Math.round(f)}" else "%.3f".format(f)
     fun secs(ms: Long): String = "%.1f s".format(ms.coerceAtLeast(0L) / 1000.0)
+
+    /**
+     * Colour format of a video for the technical info: Dolby Vision (with profile), HDR10, HLG or SDR, plus BT.2020.
+     * [transfer]/[space] are Media3's C.COLOR_TRANSFER_* / C.COLOR_SPACE_* values (ST2084 = 6, HLG = 7, BT2020 = 6).
+     */
+    fun colour(mime: String?, codecs: String?, transfer: Int?, space: Int?): String {
+        val dv = mime == "video/dolby-vision" || codecs?.let { it.startsWith("dvh") || it.startsWith("dva") } == true
+        val base = when {
+            dv -> "Dolby Vision" + (codecs?.split('.')?.getOrNull(1)?.toIntOrNull()?.let { " Profil $it" } ?: "")
+            transfer == 6 -> "HDR10"
+            transfer == 7 -> "HLG"
+            else -> "SDR"
+        }
+        return base + if (space == 6) " · BT.2020" else ""
+    }
 }
 
 
