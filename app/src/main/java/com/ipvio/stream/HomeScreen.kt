@@ -542,7 +542,10 @@ fun HomeScreen(
                     }
                 }
                 tab == 3 -> LiveTab(live, liveP, favLive, onOpen, onPlayNow)
-                tab == MenuLogic.SPORT -> SportHub(live) { ch, l -> ZapContext.list = l; ZapContext.key = null; onOpen(ch) }
+                // Sports home uses the home screen's rows and cards: same card sizes
+                tab == MenuLogic.SPORT -> CompositionLocalProvider(LocalCardGrid provides grid) {
+                    SportHub(live) { ch, l -> ZapContext.list = l; ZapContext.key = null; onOpen(ch) }
+                }
                 // The selected row stays in the lower half (PivotSpec); rows above are hidden so that at the top
                 // title and info of the selected title are free (billboard)
                 else -> CompositionLocalProvider(

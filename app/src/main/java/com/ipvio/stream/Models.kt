@@ -339,6 +339,19 @@ object M3uParser {
         }
     }
 
+    private val ROUND_THE_CLOCK = Regex("""(?<!\d)24\s*(?:/|x|-|\s)\s*7(?!\d)""", RegexOption.IGNORE_CASE)
+
+    /**
+     * A live channel, so never a film or series: a live stream address (Stalker "stalker://…/live/…", Xtream "…/live/…"),
+     * or a "24/7" / "24x7" channel in its name or category – unless the address itself is a film/episode file.
+     */
+    internal fun isLiveChannel(url: String, name: String, group: String): Boolean {
+        if (url.startsWith("stalker://")) return url.contains("/live/")
+        if (url.contains("/movie/") || url.contains("/series/") || isVideoFile(url)) return false
+        if (url.contains("/live/")) return true
+        return ROUND_THE_CLOCK.containsMatchIn(name) || ROUND_THE_CLOCK.containsMatchIn(group)
+    }
+
     /** The episode pattern needs an "S" directly followed by a digit; names without it skip the regular expression. */
     internal fun mayBeEpisode(name: String): Boolean {
         var i = name.indexOf('S')
@@ -354,10 +367,12 @@ object M3uParser {
     /** Kind and language of an entry; counts it in [st]. null = separator, skipped. */
     private fun classify(e: Entry, st: Stats, langOf: LangOf): Kinded? {
         if (isSeparator(e.name)) return null
-        val m = if (mayBeEpisode(e.name)) SE.find(e.name) else null
+        // Channels stay Live TV even when they show films or series around the clock ("24/7 Movies", "Friends S01-S10 24/7")
+        val live = isLiveChannel(e.url, e.name, e.group)
+        val m = if (!live && mayBeEpisode(e.name)) SE.find(e.name) else null
         val isSeriesUrl = e.url.contains("/series/")
         val isMovie = e.url.contains("/movie/") || isVideoFile(e.url) || langOf.vod(e.group)
-        val kind = if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
+        val kind = if (live) Kind.LIVE else if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
         val lang = langOf.of(e.group, e.name, kind == Kind.LIVE)
         val countKey = if (kind == Kind.SERIES) (m?.groupValues?.get(1) ?: e.name).trim().lowercase() else null
         st.add(lang, e.info.length + e.url.length + 2, countKey)
