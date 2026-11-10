@@ -25,18 +25,6 @@ import kotlinx.coroutines.delay
 @Composable
 fun BoxScope.PTechOverlay(player: ExoPlayer) {
     var lines by remember { mutableStateOf(listOf("…")) }
-    // Name of the video decoder in use: hardware ("c2.….hevc") or software ("ffmpeg") – explains wrong colours with HDR
-    var decoder by remember { mutableStateOf("") }
-    androidx.compose.runtime.DisposableEffect(player) {
-        val l = object : androidx.media3.exoplayer.analytics.AnalyticsListener {
-            override fun onVideoDecoderInitialized(
-                eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
-                decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long
-            ) { decoder = decoderName }
-        }
-        player.addAnalyticsListener(l)
-        onDispose { player.removeAnalyticsListener(l) }
-    }
     LaunchedEffect(player) {
         while (true) {
             val out = ArrayList<String>()
@@ -54,7 +42,7 @@ fun BoxScope.PTechOverlay(player: ExoPlayer) {
                 dc.ensureUpdated()
                 out.add("Bilder: ${dc.renderedOutputBufferCount} gezeigt · ${dc.droppedBufferCount} verworfen")
             }
-            if (decoder.isNotEmpty()) out.add("Decoder: $decoder")
+            VideoDecoderName.of(player)?.let { out.add("Decoder: $it") }
             out.add("Puffer: " + TechText.secs(player.totalBufferedDuration))
             lines = out
             delay(1000)
@@ -65,5 +53,24 @@ fun BoxScope.PTechOverlay(player: ExoPlayer) {
             .background(Color(0xB3000000)).padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         lines.forEach { androidx.compose.foundation.text.BasicText(it, style = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp, fontFamily = FontFamily.Monospace)) }
+    }
+}
+
+/**
+ * Name of the video decoder in use per player: hardware ("c2.….avc", "OMX.…") or software. Registered when the player
+ * is created ([watch]), because the decoder starts before the technical info is opened.
+ */
+object VideoDecoderName {
+    private val names = java.util.WeakHashMap<ExoPlayer, String>()
+
+    fun of(p: ExoPlayer): String? = synchronized(names) { names[p] }
+
+    fun watch(p: ExoPlayer) {
+        p.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            override fun onVideoDecoderInitialized(
+                eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long
+            ) { synchronized(names) { names[p] = decoderName } }
+        })
     }
 }

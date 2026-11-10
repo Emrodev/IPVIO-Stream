@@ -3,6 +3,9 @@ package com.ipvio.stream
 import android.content.Context
 import android.os.Handler
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
@@ -32,7 +35,24 @@ object SoftAudio {
     }
 
     fun factory(ctx: Context): DefaultRenderersFactory =
-        DefaultRenderersFactory(ctx)
+        AudioOnlyExtensions(ctx)
             .setExtensionRendererMode(if (available(ctx)) DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
             .setEnableDecoderFallback(true)
+
+    /**
+     * Extensions for audio only. The FFmpeg library also contains an experimental software VIDEO decoder, which Media3
+     * would otherwise load as well: when the TV's own decoder reports a stream as too big (often 4K H.264), the player
+     * switched to it and showed wrong colours (green/purple tint). Video stays with the device's decoders – like other
+     * players, they are tried even if they report the stream as above their limit.
+     */
+    private class AudioOnlyExtensions(ctx: Context) : DefaultRenderersFactory(ctx) {
+        override fun buildVideoRenderers(
+            context: Context, extensionRendererMode: Int, mediaCodecSelector: MediaCodecSelector,
+            enableDecoderFallback: Boolean, eventHandler: Handler, eventListener: VideoRendererEventListener,
+            allowedVideoJoiningTimeMs: Long, out: ArrayList<Renderer>
+        ) = super.buildVideoRenderers(
+            context, EXTENSION_RENDERER_MODE_OFF, mediaCodecSelector, enableDecoderFallback,
+            eventHandler, eventListener, allowedVideoJoiningTimeMs, out
+        )
+    }
 }

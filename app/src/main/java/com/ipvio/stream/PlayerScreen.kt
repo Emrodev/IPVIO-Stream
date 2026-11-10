@@ -169,6 +169,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             )
             .build()
             .also {
+                VideoDecoderName.watch(it)
                 // Frame rate: only switch if the TV can do it seamlessly (no flashing); can be turned off under Settings > Player
                 it.videoChangeFrameRateStrategy = if (AppSettings.autoFps) C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS else C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF
             }
