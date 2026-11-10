@@ -64,14 +64,22 @@ object Config {
     @Synchronized
     fun initSubs(c: Context) {
         val p = prefs(c)
-        OS_KEY = SubSearchLogic.cleanKey(p.getString("opensubtitles", "").orEmpty())
-        SD_KEY = SubSearchLogic.cleanKey(p.getString("subdl", "").orEmpty())
+        // Entered keys first, otherwise the ones built into the app (secrets.properties)
+        OS_KEY = SubSearchLogic.cleanKey(p.getString("opensubtitles", "").orEmpty()).ifEmpty { SubSearchLogic.cleanKey(BuildConfig.OPENSUBTITLES_KEY) }
+        SD_KEY = SubSearchLogic.cleanKey(p.getString("subdl", "").orEmpty()).ifEmpty { SubSearchLogic.cleanKey(BuildConfig.SUBDL_KEY) }
     }
 
     fun saveSubs(c: Context, os: String, sd: String) {
-        OS_KEY = SubSearchLogic.cleanKey(os); SD_KEY = SubSearchLogic.cleanKey(sd)
-        prefs(c).edit().putString("opensubtitles", OS_KEY).putString("subdl", SD_KEY).apply()
+        val o = SubSearchLogic.cleanKey(os); val d = SubSearchLogic.cleanKey(sd)
+        prefs(c).edit().putString("opensubtitles", o).putString("subdl", d).apply()
+        // Empty = built-in key applies again
+        OS_KEY = o.ifEmpty { SubSearchLogic.cleanKey(BuildConfig.OPENSUBTITLES_KEY) }
+        SD_KEY = d.ifEmpty { SubSearchLogic.cleanKey(BuildConfig.SUBDL_KEY) }
     }
+
+    /** Entered subtitle keys (for the input fields); built-in keys are not shown. */
+    fun ownOs(c: Context): String = SubSearchLogic.cleanKey(prefs(c).getString("opensubtitles", "").orEmpty())
+    fun ownSd(c: Context): String = SubSearchLogic.cleanKey(prefs(c).getString("subdl", "").orEmpty())
 
     /** Entered key (for the input field); keys from secrets.properties are not shown. */
     fun ownTmdb(c: Context): String = clean(prefs(c).getString("tmdb", "").orEmpty())

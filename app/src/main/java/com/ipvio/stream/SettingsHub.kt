@@ -1261,8 +1261,8 @@ private fun ApiKeysPage(ctx: Context) {
     var omdb by remember { mutableStateOf(Config.ownOmdb(ctx)) }
     var tmdbStatus by remember { mutableStateOf("") }
     var omdbStatus by remember { mutableStateOf("") }
-    var osKey by remember { mutableStateOf(Config.OS_KEY) }
-    var sdKey by remember { mutableStateOf(Config.SD_KEY) }
+    var osKey by remember { mutableStateOf(Config.ownOs(ctx)) }
+    var sdKey by remember { mutableStateOf(Config.ownSd(ctx)) }
     var osStatus by remember { mutableStateOf("") }
     var sdStatus by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -1294,7 +1294,7 @@ private fun ApiKeysPage(ctx: Context) {
             busy = true
             Config.save(ctx, tmdb, omdb)
             Config.saveSubs(ctx, osKey, sdKey)
-            tmdb = Config.ownTmdb(ctx); omdb = Config.ownOmdb(ctx); osKey = Config.OS_KEY; sdKey = Config.SD_KEY
+            tmdb = Config.ownTmdb(ctx); omdb = Config.ownOmdb(ctx); osKey = Config.ownOs(ctx); sdKey = Config.ownSd(ctx)
             scope.launch {
                 tmdbStatus = if (tmdb.isEmpty()) "" else KeyCheck.tmdb(tmdb) ?: "Schlüssel gültig"
                 omdbStatus = if (omdb.isEmpty()) "" else KeyCheck.omdb(omdb) ?: "Schlüssel gültig"

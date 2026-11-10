@@ -43,6 +43,9 @@ android {
 
         buildConfigField("String", "TMDB_KEY", "\"${secret("TMDB_KEY")}\"")
         buildConfigField("String", "OMDB_KEY", "\"${secret("OMDB_KEY")}\"")
+        // Subtitle search (OpenSubtitles, SubDL): built-in fallback keys, entered keys in the app take priority
+        buildConfigField("String", "OPENSUBTITLES_KEY", "\"${secretId("OPENSUBTITLES_KEY")}\"")
+        buildConfigField("String", "SUBDL_KEY", "\"${secretId("SUBDL_KEY")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${secretId("GOOGLE_CLIENT_ID")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_SECRET", "\"${secretId("GOOGLE_CLIENT_SECRET")}\"")
     }
