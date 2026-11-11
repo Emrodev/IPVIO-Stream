@@ -35,11 +35,17 @@ class RemoteLogicTest {
             assertTrue(p.startsWith("<!doctype html>"))
             for (a in listOf("'search'", "'cats'", "'channels'", "'eps'", "'play'", "'ctl'", "'state'")) assertTrue("$li $a", p.contains(a))
             assertFalse("Platzhalter offen", p.contains("\${"))
-            // Titel vom Anbieter nie als HTML einsetzen
+            // Never insert the provider's title as HTML
             assertFalse(p.contains("innerHTML=it") || p.contains("innerHTML=a"))
         }
         assertTrue(RemoteLogic.page(0).contains("Pause / Weiter"))
         assertTrue(RemoteLogic.page(1).contains("Pause / Play"))
         assertTrue(RemoteLogic.page(9).contains("lang=\"nl\""))
+    }
+
+    @Test fun page_sends_the_access_code_with_the_list_import() {
+        for (li in listOf(0, 1, 9)) {
+            assertTrue("$li", RemoteLogic.page(li).contains("'/listimport?name='+encodeURIComponent(x.name)+'&code='+encodeURIComponent(code)"))
+        }
     }
 }

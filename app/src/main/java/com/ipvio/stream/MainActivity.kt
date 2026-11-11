@@ -157,6 +157,8 @@ fun App(pick: Boolean = false) {
             LaunchedEffect(Unit) { delay(10_000); runCatching { SportAlerts.run(c.applicationContext) } }   // after the start: the playlist and the home screen come first
             Box(Modifier.fillMaxSize()) { AppContent(); SportAlertHost() }
         }
+        // New version available: dialog with one button (above every screen)
+        UpdatePromptHost()
     }
 }
 
@@ -201,8 +203,8 @@ private fun AppContent() {
 
     // New app version on GitHub? Check silently once a day; a find appears in the bell at the top right.
     LaunchedEffect(Unit) {
-        delay(8_000)   // erst nach dem Start, die Playlist hat Vorrang
-        runCatching { AppUpdate.autoCheck(ctx) }
+        delay(3_000)   // only after the start, the playlist takes priority
+        runCatching { AppUpdate.startCheck(ctx) }
     }
 
     LaunchedEffect(Unit) {
@@ -488,7 +490,7 @@ private fun AppContent() {
             SettingsNav.openPage = 2
             goTab(MenuLogic.SETTINGS)
         }
-        // Genre-Erkennung im Hintergrund: dezent oben rechts, nie im Player
+        // Genre detection in the background: unobtrusive at the top right, never in the player
         if (p == null && !adding) MetaBadge(Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 22.dp))
         remindNow?.let { r ->
             ReminderCard(r, Modifier.align(Alignment.TopCenter).padding(top = 24.dp), onClose = { remindNow = null }) {

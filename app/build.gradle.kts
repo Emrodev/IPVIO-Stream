@@ -36,9 +36,9 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 3
-        versionName = "1.2"
-        // Name unter dem Symbol; der Debug-Build überschreibt ihn (siehe buildTypes)
+        versionCode = 4
+        versionName = "1.3"
+        // Name under the icon; the debug build overrides it (see buildTypes)
         manifestPlaceholders["appLabel"] = "IPVIO Stream"
 
         buildConfigField("String", "TMDB_KEY", "\"${secret("TMDB_KEY")}\"")
@@ -57,8 +57,8 @@ android {
     }
 
     buildTypes {
-        // Test-Build (Run in Android Studio / Debug-APK): eigene App-ID, damit die private IPVIO-App auf dem Fernseher
-        // nicht überschrieben wird. Beide Apps lassen sich parallel installieren (eigene Daten, eigener Name).
+        // Test build (Run in Android Studio / debug APK): own app ID, so the private IPVIO app on the TV
+        // is not overwritten. Both apps can be installed side by side (own data, own name).
         debug {
             applicationIdSuffix = ".test"
             manifestPlaceholders["appLabel"] = "IPVIO Stream"
@@ -107,4 +107,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     testImplementation("junit:junit:4.13.2")
+    // Real JSON implementation for JVM unit tests (the Android android.jar only has stubs that throw).
+    // Needed by ListImportLogic.parseTrakt, which swallows the stub exception and returns an empty list.
+    testImplementation("org.json:json:20250517")
 }

@@ -91,7 +91,7 @@ import androidx.compose.foundation.layout.requiredWidth
 /** Side margin of the rows (design: cards from x 252, i.e. 22–24 px after the sidebar). */
 val RowPadX: Dp get() = dpx(24)
 
-/** Kartenfarben des Entwurfs. */
+/** Card colors of the design draft. */
 private val CardBg = Color(0xFF141418)
 private val CardLine = Tok.Line
 private val SoftInk = Tok.TextLow
@@ -118,11 +118,11 @@ fun cardGrid(contentW: Dp, size: Int = General.cardSize, perRow: Int = 0): CardG
 /** Landscape image from TMDB in a suitable size for cards (w780 instead of w1280). */
 fun cardBackdrop(url: String): String = url.replace("/t/p/w1280/", "/t/p/w780/")
 
-/** „2016 | Abenteuer | 1h 47min | ★ 7.6“ wie im Entwurf. */
+/** "2016 | Abenteuer | 1h 47min | ★ 7.6" as in the design draft. */
 @Composable
 fun HeroMetaLine(item: Item, m: Meta?, dots: Boolean = false) {
-    val parts = ArrayList<Pair<String, Boolean>>()   // Text, roh (nicht übersetzen)
-    // Bild 1: „2016 | Abenteuer | 1h 47min | ★ 7.6“; Bild 2: „Drama · 2023 · 2 Staffeln“
+    val parts = ArrayList<Pair<String, Boolean>>()   // text, raw (do not translate)
+    // Image 1: „2016 | Abenteuer | 1h 47min | ★ 7.6“; image 2: „Drama · 2023 · 2 Staffeln“
     if (dots) m?.genres?.firstOrNull()?.let { parts.add(it to true) }
     (m?.year ?: item.year?.toString())?.let { parts.add(it to true) }
     if (!dots) m?.genres?.firstOrNull()?.let { parts.add(it to true) }
@@ -243,7 +243,7 @@ fun DetailPill(text: String, modifier: Modifier = Modifier, light: Boolean = fal
 @Composable
 fun RowTitle(
     title: String, linkReq: FocusRequester?, firstCard: FocusRequester?, raw: Boolean = false,
-    /** Erste Reihe des Bildschirms: Hoch = Profil (ganz rechts oben), Links = letzter Knopf im Bild oben. */
+    /** First row of the screen: Up = profile (far top right), Left = last button at the top of the picture. */
     upReq: FocusRequester? = null, leftReq: FocusRequester? = null,
     /** State of the card row below: if the first card is shifted/not composed, scroll to the start first */
     rowState: LazyListState? = null,
@@ -327,7 +327,7 @@ class QuickTile(
     val title: String, val sub: String, val icon: Int, val c1: Color, val c2: Color, val iconColor: Color,
     /** Round 15: real image from the own library (scene image of a top title) instead of the drawn shape */
     val image: String? = null,
-    /** Live TV: Senderlogos (Favoriten, zuletzt gesehen) */
+    /** Live TV: channel logos (favorites, recently watched) */
     val logos: List<String> = emptyList(),
     val onClick: () -> Unit
 )
@@ -393,14 +393,14 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.tileArt(id: Int, c:
     val line = Stroke(width = h * 0.045f, cap = StrokeCap.Round)
     val soft = c.copy(alpha = .22f); val mid = c.copy(alpha = .45f); val strong = c.copy(alpha = .7f)
     when (id) {
-        3 -> { // Live TV: Bildschirm mit Sendewellen
+        3 -> { // Live TV: screen with broadcast waves
             drawRoundRect(soft, Offset(w * .38f, h * .22f), Size(w * .5f, h * .62f), CornerRadius(h * .08f))
             drawRoundRect(strong, Offset(w * .38f, h * .22f), Size(w * .5f, h * .62f), CornerRadius(h * .08f), style = line)
             for (k in 1..3) drawArc(mid, -60f, 120f, false, Offset(w * .2f - k * h * .16f, h * .5f - k * h * .16f - h * .06f),
                 Size(k * h * .32f + h * .12f, k * h * .32f + h * .12f), style = line)
             drawCircle(strong, h * .06f, Offset(w * .63f, h * .53f))
         }
-        1 -> { // Filme: Filmrolle und Filmstreifen
+        1 -> { // Movies: film reel and film strip
             val cx = w * .72f; val cy = h * .5f; val r = h * .46f
             drawCircle(soft, r, Offset(cx, cy)); drawCircle(strong, r, Offset(cx, cy), style = line)
             for (k in 0 until 6) {
@@ -410,7 +410,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.tileArt(id: Int, c:
             drawRoundRect(mid, Offset(w * .2f, h * .62f), Size(w * .34f, h * .26f), CornerRadius(h * .04f), style = line)
             for (k in 0 until 5) drawRect(mid, Offset(w * .23f + k * w * .065f, h * .68f), Size(w * .03f, h * .05f))
         }
-        2 -> { // Serien: gestaffelte Bildschirme mit Abspielzeichen
+        2 -> { // Series: staggered screens with play symbol
             for (k in 2 downTo 0) {
                 val o = k * h * .14f
                 drawRoundRect(if (k == 0) soft else c.copy(alpha = .12f), Offset(w * .36f + o, h * .2f - o * .4f), Size(w * .46f, h * .6f), CornerRadius(h * .07f))
@@ -419,7 +419,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.tileArt(id: Int, c:
             val p = Path().apply { moveTo(w * .54f, h * .36f); lineTo(w * .54f, h * .64f); lineTo(w * .54f + h * .26f, h * .5f); close() }
             drawPath(p, strong)
         }
-        7 -> { // Favoriten: großes Herz, kleine Herzen
+        7 -> { // Favorites: large heart, small hearts
             fun heart(cx: Float, cy: Float, r: Float, col: Color, fill: Boolean) {
                 val p = Path().apply {
                     moveTo(cx, cy + r * .9f)
@@ -432,7 +432,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.tileArt(id: Int, c:
             heart(w * .7f, h * .52f, h * .5f, soft, true); heart(w * .7f, h * .52f, h * .5f, strong, false)
             heart(w * .36f, h * .3f, h * .16f, mid, true); heart(w * .45f, h * .78f, h * .11f, mid, true)
         }
-        8 -> { // Meine Liste: Lesezeichen-Stapel
+        8 -> { // My List: bookmark stack
             for (k in 0..2) {
                 val x = w * .44f + k * h * .3f; val top = h * .14f + k * h * .05f
                 val p = Path().apply { moveTo(x, top); lineTo(x + h * .34f, top); lineTo(x + h * .34f, h * .92f); lineTo(x + h * .17f, h * .74f); lineTo(x, h * .92f); close() }
@@ -569,7 +569,7 @@ fun LandscapeCard(item: Item, modifier: Modifier, onClick: () -> Unit) {
     }
 }
 
-/** „2 Staffeln“ (Querformat-Karten haben wenig Platz). */
+/** "2 Staffeln" (landscape cards have little room). */
 fun seasonsText(item: Item): String { val n = seasonCount(item); return if (n == 1) "1 Staffel" else "$n Staffeln" }
 
 const val CARD_POSTER = 0
@@ -693,7 +693,7 @@ fun RowPosterCard(item: Item, baseW: Dp, modifier: Modifier, overlay: Int = 0, a
     val rowF = LocalRowFocus.current
     val dimA by animateFloatAsState(if (rowF && !f) 0.5f else 1f, tween(if (Look.motion == 0) 0 else 320), label = "dim")
     val shape = RoundedCornerShape(dpx(10))
-    // Aufgeklapptes Szenenbild zeichnet seinen Rahmen selbst
+    // The expanded scene image draws its own frame
     // Image only. The focus sits on the poster slot (bottom), not on the wide card: otherwise Right/Left skips
     // the covered neighbor (bug "jumps 2 titles").
     val visual: @Composable (Modifier) -> Unit = { mod ->
@@ -805,7 +805,7 @@ fun PreviewQualityBadge(q: String) {
 fun CardGridRows(list: List<Item>, style: Int, firstReq: FocusRequester?, onOpen: (Item) -> Unit) {
     val g = LocalCardGrid.current
     val live = list.firstOrNull()?.kind == Kind.LIVE
-    // gleiche Spaltenzahl wie cardGrid (Knopf „Ansicht“)
+    // same column count as cardGrid ("Ansicht" button)
     val sz = General.cardSize.coerceIn(0, 2)
     val perRow = if (style == CARD_LAND || live) intArrayOf(8, 6, 5)[sz] else intArrayOf(10, 8, 6)[sz]
     val gap = if (style == CARD_LAND || live) g.gap else g.posterGap

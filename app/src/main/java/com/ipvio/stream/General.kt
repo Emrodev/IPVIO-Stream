@@ -35,12 +35,12 @@ object General {
     var lang by mutableStateOf("")
     /** Time zone: "" = system time of the device */
     var tzId by mutableStateOf("")
-    /** Zeitformat: 0 = System, 1 = 24 Stunden, 2 = 12 Stunden */
+    /** Time format: 0 = system, 1 = 24 hours, 2 = 12 hours */
     var timeFmt by mutableIntStateOf(0)
     var sys24 by mutableStateOf(true)
     var fontIdx by mutableIntStateOf(0)
     var textScaleIdx by mutableIntStateOf(1)
-    /** Standard-Bildformat im Player (Index in [ASPECT_NAMES]). */
+    /** Default aspect ratio in the player (index in [ASPECT_NAMES]). */
     var defaultAspect by mutableIntStateOf(0)
     /**
      * Aspect ratios (round 14). 0–2 differ only if the picture has a different aspect ratio than the TV
@@ -193,7 +193,7 @@ object General {
     /** Asked by the BootReceiver after system start. */
     fun autoStartEnabled(c: Context): Boolean = prefs(c).getBoolean("auto_start", false)
 
-    // ---- Speicher ----
+    // ---- Storage ----
     fun sizeOf(f: File): Long = if (!f.exists()) 0L else if (f.isFile) f.length() else (f.listFiles()?.sumOf { sizeOf(it) } ?: 0L)
 
     class Area(val name: String, val note: String, val files: (Context) -> List<File>)

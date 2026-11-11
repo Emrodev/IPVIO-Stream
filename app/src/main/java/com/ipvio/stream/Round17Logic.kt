@@ -14,7 +14,7 @@ object TechText {
 object UpdateLogic {
     fun isNewer(current: Long, remote: Long): Boolean = remote > current
 
-    /** Zahlen einer Versionsangabe: „v1.2.3“ → [1, 2, 3], „1.1-beta“ → [1, 1]. */
+    /** Numbers of a version string: "v1.2.3" → [1, 2, 3], "1.1-beta" → [1, 1]. */
     fun parts(v: String): List<Int> =
         v.trim().trimStart('v', 'V').split('.', '-', '_', ' ').map { it.takeWhile(Char::isDigit) }.takeWhile { it.isNotEmpty() }.map { it.toIntOrNull() ?: 0 }
 
@@ -35,7 +35,7 @@ object UpdateLogic {
         return (apks.firstOrNull { it.first.equals("IPVIO-Stream.apk", true) } ?: apks.firstOrNull { it.first.contains("ipvio", true) } ?: apks.firstOrNull())?.second
     }
 
-    /** Einmal am Tag automatisch suchen. */
+    /** Check automatically once a day. */
     fun due(lastCheck: Long, now: Long): Boolean = now - lastCheck >= 20 * 3_600_000L || now < lastCheck
 
     /** The APK address may be given relative to the update address. */
@@ -52,6 +52,17 @@ object BufferLogic {
 
     /** Only the automatic mode learns; one level per call, at most 2. */
     fun bump(mode: Int, learned: Int): Int = if (mode == 0) (learned + 1).coerceAtMost(2) else learned
+
+    /**
+     * Byte limit of the buffer. The time targets (20-60 s) only work if the byte limit leaves room for them: a 4K movie
+     * with 40 Mbit/s is 5 MB per second, so 14 MB hold barely 3 s and the player stalls on every small network hiccup.
+     * So the limit grows with the Java heap (12 %, at most 64 MB) but never drops below the planned value. -1 = no limit of our own.
+     */
+    fun byteLimit(planned: Int, maxHeapBytes: Long): Int {
+        if (planned <= 0) return planned
+        val share = minOf(maxHeapBytes / 100 * 12, 64L * 1024 * 1024)
+        return maxOf(planned.toLong(), share).toInt()
+    }
 
     /** [base] = (min ms, max ms, start ms, rebuffer ms, byte limit or -1). */
     fun scale(base: IntArray, level: Int): IntArray {

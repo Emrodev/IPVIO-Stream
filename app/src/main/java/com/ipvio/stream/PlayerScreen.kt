@@ -158,7 +158,12 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             .setLoadControl(Mem.loadControl(ctx))
             .setWakeMode(C.WAKE_MODE_NETWORK)
             // "tap://" = live buffer on the device (rewind, recording), everything else as before
-            .setMediaSourceFactory(DefaultMediaSourceFactory(ctx).setDataSourceFactory(TapAwareDataSource.Factory(DefaultDataSource.Factory(ctx, http))))
+            .setMediaSourceFactory(
+                DefaultMediaSourceFactory(ctx)
+                    .setDataSourceFactory(TapAwareDataSource.Factory(DefaultDataSource.Factory(ctx, http)))
+                    // Short network hiccups are retried inside the player (several times) instead of ending in an error
+                    .setLoadErrorHandlingPolicy(IptvLoadErrorPolicy())
+            )
             .build()
             .also {
                 // Frame rate: only switch if the TV can do it seamlessly (no flashing); can be turned off under Settings > Player
@@ -307,7 +312,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
 
     fun togglePlay() { if (player.isPlaying) player.pause() else player.play() }
 
-    // Springen: Einzeldruck = eingestellte Sprungweite. Halten beschleunigt in Stufen (Schnellspulen).
+    // Seeking: single press = configured jump size. Holding speeds up in levels (fast seeking).
     // Several jumps are collected and executed only after a short pause.
     // fromBar = true: control bar disappears immediately, only the seek display and a thin timeline remain.
     fun stepSeek(d: Int, amount: Long = step, fromBar: Boolean = true) {
@@ -325,7 +330,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
 
     fun repeatSeek(d: Int) {
         val now = System.currentTimeMillis()
-        if (now - lastRepeatT > 700) { holdStartT = now; turbo = 0 }   // neue Haltephase
+        if (now - lastRepeatT > 700) { holdStartT = now; turbo = 0 }   // new hold phase
         lastRepeatT = now
         val lvl = turboLevel(now - holdStartT)
         turbo = lvl
@@ -568,7 +573,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         ping()
     }
 
-    // ---------------------------------------------------------------- Archiv (Catchup)
+    // ---------------------------------------------------------------- Archive (catchup)
     // Schedule of the channel whose archive show is currently playing (for "Previous/Next show" and continued playback)
     var archProg by remember { mutableStateOf<List<EpgEntry>>(emptyList()) }
     LaunchedEffect(cur.archive?.chId) {
@@ -712,7 +717,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     if (cur.archive == null && DeadLinkLogic.counts(status, decoder, DeviceCaps.online(ctx))) DeadLinks.fail(ctx, cur.url, DeadLinkLogic.permanent(status))
                     if (switchSource(if (decoder) "Format nicht abspielbar" else "Quelle gestört", sameFirst = !decoder)) { pError = false; msg = null }
                     else if (cur.archive != null) msg = "Diese Sendung ist im Archiv des Anbieters nicht abrufbar.  Zurück = Live-Sender."
-                    else { msg = Lang.tr(playbackErrorText(e.errorCode, status, cur.live)) + "  " + Lang.tr("Zurück mit der Zurück-Taste."); if (Boomer.enabled) boomerFail = true }
+                    else { msg = Lang.tr(playbackErrorText(e.errorCode, status, cur.live, TlsFallback.isHostMismatch(e))) + "  " + Lang.tr("Zurück mit der Zurück-Taste."); if (Boomer.enabled) boomerFail = true }
                 }
             }
             override fun onPlaybackStateChanged(state: Int) {
@@ -1057,7 +1062,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                         true
                     }
                     !cur.live && !controls && panel == Panel.NONE && !showChannels && !showGuide && digitOf(k) >= 0 && player.duration > 0 -> {
-                        // Zifferntaste springt zu 0–90 % des Films
+                        // Digit key jumps to 0–90 % of the movie
                         val n = digitOf(k)
                         player.seekTo(player.duration * n / 10)
                         flash = Flash(null, (n * 10).toString() + " %")
@@ -1177,7 +1182,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             }
         )
 
-        // ---------------------------------------------------------------- Meldungen
+        // ---------------------------------------------------------------- Messages
         if (buffering && msg == null && !showGuide) {
             Spinner(Accent2, Modifier.align(Alignment.Center).size(48.dp))
         }
@@ -1291,7 +1296,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             }
         }
 
-        // ---------------------------------------------------------------- Steuerleiste
+        // ---------------------------------------------------------------- Control bar
         AnimatedVisibility(
             // No control bar under the TV guide: otherwise focus could slip from the guide into this menu
             visible = controls && !showGuide,
@@ -1335,7 +1340,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     }
                 }
 
-                // Marken oben rechts
+                // Badges top right
                 Row(
                     Modifier.align(Alignment.TopEnd).padding(end = PT.MarginX, top = PT.MarginY),
                     horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically
@@ -1550,7 +1555,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             }
         }
 
-        // ---------------------------------------------------------------- Senderliste & TV-Guide
+        // ---------------------------------------------------------------- Channel list & TV guide
         if (showChannels) {
             ChannelOverlay(
                 liveAll, cur.itemId, curItem,

@@ -22,9 +22,9 @@ object PlaylistLogic {
     fun normalizeUrl(raw: String): String? {
         val u = raw.trim()
         if (u.isEmpty() || u.length > MAX_LEN) return null
-        // Stalker-Portal (Portal-Adresse + MAC), siehe StalkerLogic
+        // Stalker portal (portal address + MAC), see StalkerLogic
         if (StalkerLogic.isSource(u)) return StalkerLogic.parse(u)?.encode()
-        // Hochgeladene Playlist-Datei im App-Ordner
+        // Uploaded playlist file in the app folder
         if (u.startsWith("file:///")) return u.takeIf { it.contains("/files/imports/") && it.endsWith(".m3u", true) && !it.contains("..") }
         val noCred = u.replaceFirst(Regex("""^(https?://)[^/@\s]*@""", RegexOption.IGNORE_CASE), "$1")
         return if (HTTP_URL.matches(noCred)) u else null
@@ -48,6 +48,7 @@ object PlaylistLogic {
         401, 403 -> "Zugang abgelehnt ($code). Benutzername, Passwort oder Abo prüfen."
         404 -> "Playlist nicht gefunden (404). Adresse prüfen."
         429, 458, 509 -> "Der Anbieter begrenzt gerade die Verbindungen ($code). Später erneut versuchen."
+        512 -> "Der Server des Anbieters lehnt die Verbindung ab (512). Meist ist die Server-Adresse nicht mehr aktuell oder gesperrt. Beim Anbieter nach der aktuellen Adresse fragen."
         in 500..599 -> "Der Anbieter hat gerade ein Problem ($code). Später erneut versuchen."
         else -> "Server antwortet mit Fehler $code."
     }
@@ -75,6 +76,7 @@ object PlaylistLogic {
         is java.net.UnknownHostException -> "Server nicht gefunden. Adresse und Internetverbindung prüfen."
         is java.net.SocketTimeoutException -> "Zeitüberschreitung: Der Server antwortet nicht."
         is java.net.ConnectException -> "Keine Verbindung zum Server."
+        is javax.net.ssl.SSLPeerUnverifiedException -> "Das Zertifikat des Anbieters passt nicht zur Server-Adresse. Beim Anbieter nach einer aktuellen Adresse fragen."
         is javax.net.ssl.SSLException -> "Sichere Verbindung fehlgeschlagen (Zertifikat)."
         is IllegalArgumentException -> "Ungültige Adresse."
         is OutOfMemoryError -> "Die Playlist ist zu groß für den Speicher dieses Geräts."

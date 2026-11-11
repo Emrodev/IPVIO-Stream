@@ -13,7 +13,7 @@ import java.util.Locale
  * All names are deliberately "player"-specific so nothing collides with other files.
  */
 
-/** 3725000 ms -> "01:02:05" bzw. "02:05" */
+/** 3725000 ms -> "01:02:05" or "02:05" */
 fun fmtTime(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
     val h = s / 3600
@@ -33,7 +33,7 @@ fun fmtShort(ms: Long): String {
     else String.format(Locale.US, "%d:%02d", m, sec)
 }
 
-/** "+2:40" bzw. "−0:30" */
+/** "+2:40" or "−0:30" */
 fun fmtDelta(ms: Long): String = (if (ms >= 0) "+" else "−") + fmtShort(kotlin.math.abs(ms))
 
 /** Fast seeking: level 0..4 depending on how long a direction key is held. */
@@ -151,7 +151,7 @@ fun xmltvTime(s: String?): Long? {
         val om = rest.substring(3, 5).toIntOrNull() ?: return null
         off = (if (rest[0] == '-') -1 else 1) * (oh * 3600 + om * 60)
     }
-    // Tage seit 1970 (proleptischer gregorianischer Kalender)
+    // Days since 1970 (proleptic Gregorian calendar)
     val yy = if (mo <= 2) y - 1 else y
     val era = (if (yy >= 0) yy else yy - 399) / 400
     val yoe = yy - era * 400
@@ -202,10 +202,12 @@ fun httpStatusOf(e: PlaybackException): Int {
 fun isPermanentHttp(status: Int): Boolean = status == 401 || status == 403 || status == 404 || status == 410 || status == 451
 
 /** Understandable error message with a solution hint. Never shows the address of the stream. */
-fun playbackErrorText(code: Int, status: Int, live: Boolean): String = when {
+fun playbackErrorText(code: Int, status: Int, live: Boolean, tls: Boolean = false): String = when {
+    tls -> "Das Zertifikat des Anbieters passt nicht zur Server-Adresse. Beim Anbieter nach einer aktuellen Adresse fragen."
     status == 401 || status == 403 -> "Zugang abgelehnt ($status). Benutzername, Passwort oder Abo beim Anbieter prüfen."
     status == 404 || status == 410 -> if (live) "Dieser Sender ist beim Anbieter nicht mehr vorhanden." else "Dieser Titel ist beim Anbieter nicht mehr vorhanden."
     status == 429 || status == 458 || status == 509 -> "Maximale Verbindungen des Anbieters erreicht. Anderes Gerät oder Profil beenden und erneut versuchen."
+    status == 512 -> "Der Server des Anbieters lehnt die Verbindung ab (512). Meist ist die Server-Adresse nicht mehr aktuell oder gesperrt."
     status in 500..599 -> "Der Anbieter hat gerade ein Problem ($status). Später erneut versuchen."
     status >= 400 -> "Der Anbieter lehnt die Wiedergabe ab ($status)."
     code == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
