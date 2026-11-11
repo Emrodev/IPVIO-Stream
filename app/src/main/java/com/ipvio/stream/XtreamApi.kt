@@ -13,6 +13,9 @@ import java.io.Writer
  * Loads an Xtream login via player_api.php and writes a list in get.php format from it (see [XtreamLogic]).
  * Large responses (tens of thousands of movies) are read entry by entry and written immediately, never completely in memory.
  */
+/** Most movies that are ordered by their "added" time while loading (see [XtreamApi.writeMovies]). */
+private const val ADDED_SORT_MAX = 80_000
+
 class XtreamApi(private val client: OkHttpClient, private val ua: String) {
 
     /** Progress: text for the loading screen. */
@@ -182,9 +185,22 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
     private fun writeMovies(a: XtreamLogic.Acct, w: Writer): Int {
         var n = 0
         val vodCats = categories(a, "get_vod_categories")
+        // "Recently added" shows the list from the end: many panels send the movies in their own order, not by date.
+        // Order them by the "added" time (oldest first). Above [ADDED_SORT_MAX] titles the lines are written as they
+        // come, so a very large catalog does not have to be held in memory on a small box.
+        val held = ArrayList<Pair<Long, String>>()
+        var direct = false
         stream(XtreamLogic.api(a, "get_vod_streams")) { f ->
-            XtreamLogic.movieEntry(a, f, vodCats)?.let { w.write(it); w.write("\n"); n++ }
+            val line = XtreamLogic.movieEntry(a, f, vodCats) ?: return@stream
+            n++
+            if (direct) { w.write(line); w.write("\n"); return@stream }
+            held.add(XtreamLogic.addedOf(f) to line)
+            if (held.size > ADDED_SORT_MAX) {
+                for (h in held) { w.write(h.second); w.write("\n") }
+                held.clear(); direct = true
+            }
         }
+        for (h in XtreamLogic.byAdded(held)) { w.write(h.second); w.write("\n") }
         check()
         return n
     }
