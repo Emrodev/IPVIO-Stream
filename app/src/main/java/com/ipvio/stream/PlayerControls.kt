@@ -1,5 +1,8 @@
 package com.ipvio.stream
 
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -202,12 +205,16 @@ fun PSeekBar(
     pos: () -> Long, dur: () -> Long, buffered: () -> Long, segs: () -> List<Seg>,
     scrubbing: () -> Boolean,
     onFocus: (Boolean) -> Unit,
-    onDown: () -> Unit, onSeekKey: (Int) -> Unit, onRepeat: (Int) -> Unit
+    onDown: () -> Unit, onSeekKey: (Int) -> Unit, onRepeat: (Int) -> Unit,
+    onTouchSeek: (x: Float, width: Int) -> Unit = { _, _ -> }
 ) {
     var f by remember { mutableStateOf(false) }
     val active = f || scrubbing()
     Box(
         modifier.height(32.dp)
+            // Phones and tablets (#25): tapping or dragging on the timeline jumps to that position
+            .pointerInput(Unit) { detectTapGestures { o -> onTouchSeek(o.x, size.width) } }
+            .pointerInput(Unit) { detectHorizontalDragGestures { ch, _ -> onTouchSeek(ch.position.x, size.width) } }
             .onFocusChanged { f = it.isFocused; onFocus(it.isFocused) }
             .onKeyEvent { e ->
                 if (e.type != KeyEventType.KeyDown) false

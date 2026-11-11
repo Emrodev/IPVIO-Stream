@@ -1486,7 +1486,11 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                             onFocus = { if (it) ctrlLabel = "Zeitleiste  ·  Links/Rechts = $stepS s springen  ·  Halten = weiter springen" },
                             onDown = { runCatching { firstFocus.requestFocus() } },
                             onSeekKey = { stepSeek(it) },
-                            onRepeat = { repeatSeek(it) }
+                            onRepeat = { repeatSeek(it) },
+                            onTouchSeek = { x, w ->
+                                val t = TapSeekLogic.target(x, w, player.duration)
+                                if (t >= 0) { player.seekTo(t); pos = t; scrubTarget = -1L; turbo = 0; ping() }
+                            }
                         )
                         PTimeRow(posNow, durNow)
                         Spacer(Modifier.height(14.dp))
