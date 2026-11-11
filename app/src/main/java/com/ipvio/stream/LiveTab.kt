@@ -165,6 +165,27 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         playedId?.let { id -> list.firstOrNull { it.id == id }?.id ?: variantsOf.entries.firstOrNull { e -> e.value.any { it.id == id } }?.key }
     }
     var restored by remember { mutableStateOf(false) }
+    val chanScope = androidx.compose.runtime.rememberCoroutineScope()
+    // Right from a category: the first channel row only exists while it is on screen (lazy list). When the list is
+    // scrolled down, scroll it back first; otherwise the focus request goes nowhere and Right does nothing.
+    fun focusFirstChan() {
+        // Empty list: the requester sits on the "add channel" button, not on a list row
+        if (list.isEmpty() || chanState.layoutInfo.visibleItemsInfo.any { it.index == 0 }) { runCatching { firstChan.requestFocus() }; return }
+        chanScope.launch {
+            runCatching { chanState.scrollToItem(0) }
+            repeat(10) {
+                kotlinx.coroutines.delay(40)
+                if (chanState.layoutInfo.visibleItemsInfo.any { it.index == 0 }) { runCatching { firstChan.requestFocus() }; return@launch }
+            }
+        }
+    }
+    // Another category: its channels start at the top (the scroll position of the previous category does not fit)
+    var shownSel by remember { mutableStateOf(sel) }
+    LaunchedEffect(sel) {
+        if (sel == shownSel) return@LaunchedEffect
+        shownSel = sel
+        runCatching { chanState.scrollToItem(0) }
+    }
     // Keyed on the row: genres and bundling arrive a moment after the tab opens, the channel is often not in the first list yet
     LaunchedEffect(restoreId) {
         val id = restoreId ?: return@LaunchedEffect
@@ -219,7 +240,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     val ml = ChannelLists.byKey(n)
                     if (n == "GUIDE") {
                         // TV guide as in the design: starts the last watched (otherwise first) channel of the selection and opens the guide
-                        CatRow("TV-Guide", -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Grid) {
+                        CatRow("TV-Guide", -1, false, Modifier, onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Grid) {
                             val src = list.ifEmpty { live }
                             val ch = History.ids.firstNotNullOfOrNull { id -> src.firstOrNull { it.id == id } } ?: src.firstOrNull()
                             if (ch != null) { ZapContext.list = src; ZapContext.key = sel; AppNav.openGuide = true; onOpen(ch) }
@@ -227,7 +248,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "MULTI") {
-                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
+                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
                         return@itemsIndexed
                     }
                     if (n == "SEARCH") {
@@ -254,7 +275,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         }
                         val lbl = Lang.tr("Playlist") + ": " + (opts.getOrNull(curIdx) ?: "")
                         Box {
-                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Download, raw = true) { plOpen = true }
+                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Download, raw = true) { plOpen = true }
                             if (plOpen) OptionPopup(opts, curIdx, { plOpen = false; plBack = true }) { pick ->
                                 plOpen = false; plBack = true
                                 if (multiView && pick == 0) LiveSource.k = -1
@@ -275,7 +296,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     }
                     if (n == "SRC") {
                         val lbl = Lang.tr("Quelle") + ": " + (if (srcK < 0) Lang.tr("Alle") else srcNames[srcK])
-                        CatRow(lbl, -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Sliders, raw = true) {
+                        CatRow(lbl, -1, false, Modifier, onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Sliders, raw = true) {
                             LiveSource.k = if (srcK + 1 >= srcNames.size) -1 else srcK + 1
                             // The chosen category may not exist in the other source: then "All channels"
                             if (sel != FAV_CAT && sel != "ALL" && ChannelLists.byKey(sel) == null) sel = "ALL"
@@ -295,7 +316,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "NEW") {
-                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Plus) { newList(null) }
+                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Plus) { newList(null) }
                         return@itemsIndexed
                     }
                     val label = when {
@@ -331,10 +352,10 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         CatRow(
                             label, count, n == sel,
                             if (n == sel) Modifier.focusRequester(ContentFocus.req) else Modifier,
-                            onFocus = { sel = n }, onRight = { runCatching { firstChan.requestFocus() } },
+                            onFocus = { sel = n }, onRight = { focusFirstChan() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null
-                        ) { runCatching { firstChan.requestFocus() } }
+                        ) { focusFirstChan() }
                         // Menu of a provider category: favorite on/off, hide
                         if (catMenu && plainCat) OptionPopup(listOf(if (n in CatFavs.list) "Aus Favoriten entfernen" else "Zu Favoriten hinzufügen", "Kategorie ausblenden"), -1, { catMenu = false }) { i ->
                             catMenu = false
