@@ -2,6 +2,16 @@ package com.ipvio.stream
 
 enum class Kind { LIVE, MOVIE, SERIES }
 
+/** Content included from a playlist. VOD includes movies and series. */
+enum class ContentMode {
+    LIVE_AND_VOD, LIVE_ONLY, VOD_ONLY;
+    fun includes(kind: Kind): Boolean = when (this) {
+        LIVE_AND_VOD -> true
+        LIVE_ONLY -> kind == Kind.LIVE
+        VOD_ONLY -> kind != Kind.LIVE
+    }
+}
+
 data class Variant(val url: String, val label: String, val quality: String?, val lang: String?)
 
 data class Episode(
@@ -281,17 +291,20 @@ object M3uParser {
     fun parse(text: String): List<Item> = parseLines(text.lineSequence()).items
 
     /** Reads line by line from a Reader. This way the whole list never has to sit in memory as a single String. */
-    fun parseStream(reader: java.io.Reader, hidden: Set<String> = emptySet(), check: (() -> Unit)? = null): ParsedPlaylist =
-        LinePump(reader).use { parseLines(it.lines(), hidden, check) }
+    fun parseStream(reader: java.io.Reader, hidden: Set<String> = emptySet(), mode: ContentMode = ContentMode.LIVE_AND_VOD, check: (() -> Unit)? = null): ParsedPlaylist =
+        LinePump(reader).use { parseLines(it.lines(), hidden, mode, check) }
 
     /** Quick pass without creating titles: how many titles and how much data per language (for the language selection). */
-    fun scanStream(reader: java.io.Reader, check: (() -> Unit)? = null): PlaylistScan =
+    fun scanStream(reader: java.io.Reader, mode: ContentMode = ContentMode.LIVE_AND_VOD, check: (() -> Unit)? = null): PlaylistScan =
         LinePump(reader).use { pump ->
             val lines = pump.lines()
             val st = Stats()
             val langOf = LangOf(StringPool())
             var n = 0
-            entries(lines, check) { e -> n++; classify(e, st, langOf) }
+            entries(lines, check) { e ->
+                n++ // Keep the scan's raw entry count, including separators; only language stats obey the mode.
+                classify(e, st, langOf, mode)
+            }
             PlaylistScan(st.counts(), st.bytes, n)
         }
 
@@ -352,12 +365,13 @@ object M3uParser {
     }
 
     /** Kind and language of an entry; counts it in [st]. null = separator, skipped. */
-    private fun classify(e: Entry, st: Stats, langOf: LangOf): Kinded? {
+    private fun classify(e: Entry, st: Stats, langOf: LangOf, mode: ContentMode = ContentMode.LIVE_AND_VOD): Kinded? {
         if (isSeparator(e.name)) return null
         val m = if (mayBeEpisode(e.name)) SE.find(e.name) else null
         val isSeriesUrl = e.url.contains("/series/")
         val isMovie = e.url.contains("/movie/") || isVideoFile(e.url) || langOf.vod(e.group)
         val kind = if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
+        if (!mode.includes(kind)) return null
         val lang = langOf.of(e.group, e.name, kind == Kind.LIVE)
         val countKey = if (kind == Kind.SERIES) (m?.groupValues?.get(1) ?: e.name).trim().lowercase() else null
         st.add(lang, e.info.length + e.url.length + 2, countKey)
@@ -421,7 +435,7 @@ object M3uParser {
      * so a list with 800,000 entries needs only as much memory as the chosen languages.
      * [check] is called every 2,000 entries (progress, abort, memory guard).
      */
-    fun parseLines(lines: Sequence<String>, hidden: Set<String> = emptySet(), check: (() -> Unit)? = null): ParsedPlaylist {
+    fun parseLines(lines: Sequence<String>, hidden: Set<String> = emptySet(), mode: ContentMode = ContentMode.LIVE_AND_VOD, check: (() -> Unit)? = null): ParsedPlaylist {
         val pool = StringPool()
         val langOf = LangOf(pool)
         val st = Stats()
@@ -432,7 +446,7 @@ object M3uParser {
         val catchup = HashMap<String, CatchupInfo>()
 
         entries(lines, check, onHeader = { header = it; headCu = CatchupLogic.fromInfo(it, "") }) { e ->
-            val kd = classify(e, st, langOf) ?: return@entries
+            val kd = classify(e, st, langOf, mode) ?: return@entries
             if (kd.lang in hidden) return@entries
             val group = pool.of(e.group)
             val q = quality(e.name, e.group)

@@ -1129,6 +1129,7 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
     PlaylistStore.savedUrl(ctx)
     if (Secrets.plainFallback) Hint("Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.")
     Text("Meine Playlists (${PlaylistStore.lists.size})", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+    Hint("Inhalt pro Playlist: Live TV + VOD, nur Live TV oder nur VOD (Filme und Serien). Nach einer Änderung wird die Playlist neu eingelesen.")
     if (PlaylistStore.lists.size > 1) Hint("Die Hauptliste ist die Playlist, mit der die App arbeitet. „Zusätzlich anzeigen“ blendet eine weitere Playlist dazu ein; sie ersetzt die Hauptliste nicht.")
     PlaylistStore.lists.forEachIndexed { i, pl ->
         val isActive = i == PlaylistStore.active
@@ -1168,6 +1169,19 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
                     scope.launch { PlaylistStore.load(ctx, u, false) }
                 }
             }
+        }
+        val modeLabel = when (pl.contentMode) {
+            ContentMode.LIVE_AND_VOD -> "Live TV + VOD"
+            ContentMode.LIVE_ONLY -> "Nur Live TV"
+            ContentMode.VOD_ONLY -> "Nur VOD"
+        }
+        SmallPill("Inhalt: $modeLabel") {
+            val next = when (pl.contentMode) {
+                ContentMode.LIVE_AND_VOD -> ContentMode.LIVE_ONLY
+                ContentMode.LIVE_ONLY -> ContentMode.VOD_ONLY
+                ContentMode.VOD_ONLY -> ContentMode.LIVE_AND_VOD
+            }
+            PlaylistStore.setContentMode(ctx, i, next)
         }
     }
     if (PlaylistStore.lists.size > 1) Hint("„Zusätzlich anzeigen“ zeigt eine Playlist zusätzlich zur aktiven: Filme und Serien erscheinen zusammen (doppelte Filme nur einmal, gleiche Serien als eine Serie mit mehreren Quellen). In Filme und Serien filterst du über „Quelle“, im Live TV wechselst du die Quelle mit dem Knopf oben. Jede weitere Playlist braucht zusätzlich Speicher.")
