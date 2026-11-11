@@ -166,17 +166,22 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     }
     var restored by remember { mutableStateOf(false) }
     val chanScope = androidx.compose.runtime.rememberCoroutineScope()
-    // Right from a category: the first channel row only exists while it is on screen (lazy list), and right after a
-    // category change the list may not have been laid out yet. A failed request only logs a warning, so check that the
-    // channel list really got the focus and try again for a moment (scrolling back to the top first if needed).
+    // Right from a category goes back to the channel last focused in this category (the first one after a category
+    // change). The row only exists while it is on screen (lazy list), and right after a category change the list may
+    // not have been laid out yet. A failed request only logs a warning, so check that the channel list really got the
+    // focus and try again for a moment (scrolling the row into view first if needed).
     var chanHasFocus by remember { mutableStateOf(false) }
+    var lastChanIdx by remember { mutableIntStateOf(0) }
+    val lastChanReq = remember { FocusRequester() }
     fun focusFirstChan() {
         // Empty list: the requester sits on the "add channel" button, not on a list row
         if (list.isEmpty()) { runCatching { firstChan.requestFocus() }; return }
+        val target = lastChanIdx.coerceIn(0, list.lastIndex)
+        if (target != lastChanIdx) lastChanIdx = target
         chanScope.launch {
             repeat(20) {
-                if (chanState.firstVisibleItemIndex != 0 || chanState.firstVisibleItemScrollOffset != 0) runCatching { chanState.scrollToItem(0) }
-                runCatching { firstChan.requestFocus() }
+                if (chanState.layoutInfo.visibleItemsInfo.none { it.index == target }) runCatching { chanState.scrollToItem(maxOf(target - 2, 0)) }
+                runCatching { lastChanReq.requestFocus() }
                 androidx.compose.runtime.withFrameNanos { }
                 if (chanHasFocus) return@launch
                 kotlinx.coroutines.delay(30)
@@ -188,6 +193,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     LaunchedEffect(sel) {
         if (sel == shownSel) return@LaunchedEffect
         shownSel = sel
+        lastChanIdx = 0
         runCatching { chanState.scrollToItem(0) }
     }
     // Keyed on the row: genres and bundling arrive a moment after the tab opens, the channel is often not in the first list yet
@@ -204,6 +210,21 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     }
     var askDelete by remember { mutableStateOf(false) }
     val catState = remember { LazyListState() }
+    // Left from the channels goes to the selected category (not to whichever row happens to be beside the channel)
+    fun focusSelectedCat(): Boolean {
+        val ci = names.indexOf(sel)
+        if (ci < 0) return false
+        chanScope.launch {
+            repeat(20) {
+                if (catState.layoutInfo.visibleItemsInfo.none { it.index == ci }) runCatching { catState.scrollToItem(maxOf(ci - 3, 0)) }
+                runCatching { ContentFocus.req.requestFocus() }
+                androidx.compose.runtime.withFrameNanos { }
+                if (!chanHasFocus) return@launch
+                kotlinx.coroutines.delay(30)
+            }
+        }
+        return true
+    }
     var ask by remember { mutableStateOf<NameAsk?>(null) }
     SideEffect { ContentFocus.tab = 3 }
     // Selection points to a deleted list: back to "All channels"
@@ -423,7 +444,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     state = chanState,
                     // Held Down/Up key: at most ~9 steps per second, so a weak box is not flooded with scroll animations and rebinds
                     modifier = Modifier.onFocusChanged { chanHasFocus = it.hasFocus }.onPreviewKeyEvent { e ->
-                        if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
+                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && e.nativeKeyEvent.repeatCount == 0) focusSelectedCat()
+                        else if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
                             val now = android.os.SystemClock.uptimeMillis()
                             LiveHold.lastRepeat = now
                             if (now - lastRepeat < 110) true else { lastRepeat = now; false }
@@ -433,11 +455,14 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                 ) {
                     // In own lists the focus moves along with the channel when moving it (key = channel)
                     itemsIndexed(list, key = if (curList != null) { ix, ch -> ch.id + "#" + ix } else null, contentType = { _, _ -> "ch" }) { i, ch ->
+                        // derivedStateOf: only the two rows whose flag changes recompose when the focus moves
+                        val isLast by remember(i) { derivedStateOf { lastChanIdx == i } }
                         ChannelLine(
                             ch, (if (i == 0) Modifier.focusRequester(firstChan) else Modifier)
+                                .then(if (isLast) Modifier.focusRequester(lastChanReq) else Modifier)
                                 .then(if (ch.id == restoreId) Modifier.focusRequester(restoreReq) else Modifier), curList,
                             onNewList = { newList(ch.id) },
-                            onFocus = { focusTarget = ch },
+                            onFocus = { focusTarget = ch; lastChanIdx = i },
                             variants = variantsOf[ch.id].orEmpty(),
                             onVariant = { v -> ZapContext.list = list; ZapContext.key = sel; LiveMemory.setSel(ctx, sel); onOpen(v) }
                         ) {
