@@ -23,10 +23,23 @@ object StalkerApi {
     private class Session(val src: StalkerLogic.Source, val endpoint: String, val token: String, val at: Long)
     private val sessions = HashMap<Int, Session>()
     private const val SESSION_MS = 10 * 60_000L
-    /** At most this many movies/series in the list (portals deliver only ~14 per page); distributed over the categories. */
-    private const val MAX_MOVIES = 6000
-    private const val MAX_SERIES = 4000
+    /**
+     * Upper limits for the whole list. Before 1.4 movies/series were capped at 6,000/4,000 and 40–600 per category, so large
+     * portals (100,000 movies) showed only a small part. Now only a safety limit; memory is guarded while parsing.
+     */
+    private const val MAX_MOVIES = 250_000
+    private const val MAX_SERIES = 100_000
     private const val MAX_CHANNELS = 30000
+    /** Most pages of one list (14 items per page on most portals). */
+    private const val MAX_PAGES = 20_000
+
+    /**
+     * List pages are fetched by a few workers at the same time: a portal delivers ~14 titles per page, so 100,000 movies
+     * are ~7,000 requests – one after another that took far too long. A failed page is retried alone.
+     */
+    private const val WORKERS = 4
+    private const val WINDOW = 8
+    private val pool = java.util.concurrent.Executors.newFixedThreadPool(WORKERS) { r -> Thread(r, "stalker-pages").apply { isDaemon = true } }
 
     /** Last response of the portal in short form (only code and kind, never address or MAC) for understandable error texts. */
     @Volatile private var note = ""
@@ -140,6 +153,49 @@ object StalkerApi {
         return ok
     }
 
+    private fun page(s: Session, type: String, extra: String, p: Int): JSONObject? =
+        js(s.src, StalkerLogic.api(s.endpoint, type, "get_ordered_list", "$extra&p=$p"), s.token) as? JSONObject
+
+    private fun firstId(a: JSONArray): String? = a.optJSONObject(0)?.let { it.opt("id")?.toString() ?: it.opt("name")?.toString() }
+
+    /**
+     * Like [paged], but pages 2…n are fetched in parallel ([WORKERS]) and handed to [each] in page order.
+     * Needs the total count from page 1; without it falls back to [paged]. Stops at an empty page, at a page that
+     * repeats page 1 (portal ignores the page number) or at [maxItems].
+     */
+    private fun pagedFast(s: Session, type: String, extra: String, maxItems: Int, check: () -> Unit, each: (JSONObject) -> Unit): Boolean {
+        check()
+        val first = page(s, type, extra, 1) ?: return false
+        val a1 = first.optJSONArray("data") ?: return true
+        val total = first.optInt("total_items", 0)
+        val per = first.optInt("max_page_items", 14).coerceAtLeast(1)
+        if (total <= 0) return paged(s, type, extra, maxItems, check, each)
+        var got = 0
+        for (i in 0 until a1.length()) { if (got >= maxItems) return true; a1.optJSONObject(i)?.let { each(it); got++ } }
+        if (a1.length() == 0) return true
+        val id1 = firstId(a1)
+        val pages = ((total + per - 1) / per).coerceIn(1, MAX_PAGES)
+        var next = 2
+        while (next <= pages && got < maxItems) {
+            check()
+            val end = minOf(next + WINDOW - 1, pages)
+            val batch = (next..end).map { p -> p to pool.submit<JSONObject?> { page(s, type, extra, p) } }
+            try {
+                for ((p, f) in batch) {
+                    check()
+                    val o = runCatching { f.get() }.getOrNull() ?: page(s, type, extra, p)
+                    val a = o?.optJSONArray("data")
+                    if (a == null || a.length() == 0 || (id1 != null && firstId(a) == id1)) return true
+                    for (i in 0 until a.length()) { if (got >= maxItems) return true; a.optJSONObject(i)?.let { each(it); got++ } }
+                }
+            } finally {
+                for ((_, f) in batch) f.cancel(false)
+            }
+            next = end + 1
+        }
+        return true
+    }
+
     /**
      * Write the whole list to [out] (M3U). [onPhase] = progress, [check] throws on abort.
      * Return value: number of entries.
@@ -163,7 +219,7 @@ object StalkerApi {
         }
         if (live == 0) {
             // Fallback: many portals block "all channels at once" and deliver only page by page
-            paged(s, "itv", "&genre=*&force_ch_link_check=&fav=0&sortby=number&hd=0", MAX_CHANNELS, check) { o ->
+            pagedFast(s, "itv", "&genre=*&force_ch_link_check=&fav=0&sortby=number&hd=0", MAX_CHANNELS, check) { o ->
                 StalkerLogic.liveEntry(src, fields(o), genres)?.let { out.write(it); out.write("\n"); n++; live++ }
                 if (live % 400 == 0) onPhase("Sender werden geladen ($live) …")
             }
@@ -172,39 +228,57 @@ object StalkerApi {
 
         // ---- Movies (series in the movie area are marked as series)
         onPhase("Filme werden geladen …")
-        val cats = categories(s, "vod", "get_categories").filterKeys { it != "*" }
-        val perCat = (MAX_MOVIES / cats.size.coerceAtLeast(1)).coerceIn(40, 600)
+        var cats = categories(s, "vod", "get_categories").filterKeys { it != "*" }
+        // No categories delivered: some portals only list everything at once
+        if (cats.isEmpty()) cats = mapOf("*" to "Filme")
         var movies = 0
+        var vodSeries = 0
         for ((cid, cname) in cats) {
             check()
-            paged(s, "vod", "&category=$cid&sortby=added", perCat, check) { o ->
+            if (movies >= MAX_MOVIES) break
+            pagedFast(s, "vod", "&category=$cid&sortby=added", MAX_MOVIES - movies, check) { o ->
                 val f = fields(o)
                 if (o.optString("is_series") == "1") {
                     val nm = (f["name"] ?: "").trim().lowercase()
                     if (nm.isNotEmpty() && seenSeries.add(nm))
-                        StalkerLogic.seriesEntry(src, f, cid, cname, "v")?.let { out.write(it); out.write("\n"); n++ }
+                        StalkerLogic.seriesEntry(src, f, cid, cname, "v")?.let { out.write(it); out.write("\n"); n++; vodSeries++ }
                 } else {
                     StalkerLogic.movieEntry(src, f, cname)?.let { out.write(it); out.write("\n"); n++; movies++ }
                 }
-                if (movies % 200 == 0 && movies > 0) onPhase("Filme werden geladen ($movies) …")
+                if (movies % 500 == 0 && movies > 0) onPhase("Filme werden geladen ($movies) …")
             }
         }
+        val movieNote = note
 
         // ---- Series (own area, placeholders; episodes only on opening)
         onPhase("Serien werden geladen …")
         val sCats = categories(s, "series", "get_categories").filterKeys { it != "*" }
-        val perSer = (MAX_SERIES / sCats.size.coerceAtLeast(1)).coerceIn(40, 400)
+        val catNote = note
         var series = 0
+        var seriesOk = false
+        val addSeries: (JSONObject, String, String) -> Unit = { o, cid, cname ->
+            val f = fields(o)
+            val nm = (f["name"] ?: f["title"] ?: "").trim().lowercase()
+            if (nm.isNotEmpty() && seenSeries.add(nm))
+                StalkerLogic.seriesEntry(src, f, cid, cname, "s")?.let { out.write(it); out.write("\n"); n++; series++ }
+            if (series % 500 == 0 && series > 0) onPhase("Serien werden geladen ($series) …")
+        }
         for ((cid, cname) in sCats) {
             check()
-            paged(s, "series", "&category=$cid&sortby=added", perSer, check) { o ->
-                val f = fields(o)
-                val nm = (f["name"] ?: f["title"] ?: "").trim().lowercase()
-                if (nm.isNotEmpty() && seenSeries.add(nm))
-                    StalkerLogic.seriesEntry(src, f, cid, cname, "s")?.let { out.write(it); out.write("\n"); n++; series++ }
-                if (series % 200 == 0 && series > 0) onPhase("Serien werden geladen ($series) …")
-            }
+            if (series >= MAX_SERIES) break
+            if (pagedFast(s, "series", "&category=$cid&sortby=added", MAX_SERIES - series, check) { addSeries(it, cid, cname) }) seriesOk = true
         }
+        // No series yet: try the whole series area at once (portals without series categories, or categories that fail)
+        if (series == 0) {
+            check()
+            if (pagedFast(s, "series", "&category=*&sortby=added", MAX_SERIES, check) { addSeries(it, "*", "Serien") }) seriesOk = true
+        }
+        // Short note for the diagnostics area (counts only, never address or MAC): makes "no series" explainable
+        if (series == 0 && vodSeries == 0) Diag.report(
+            "Stalker: keine Serien (Kategorien ${sCats.size}" + (if (catNote.isNotEmpty()) ", $catNote" else "") +
+                (if (!seriesOk && note.isNotEmpty()) ", Liste: $note" else "") + ")"
+        )
+        if (movies == 0) Diag.report("Stalker: keine Filme (Kategorien ${cats.size}" + (if (movieNote.isNotEmpty()) ", $movieNote" else "") + ")")
         out.flush()
         if (n == 0) {
             val why = if (note.isNotEmpty()) " ($note)" else ""
