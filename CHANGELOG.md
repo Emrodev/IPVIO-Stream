@@ -22,6 +22,9 @@
 [PENDING: Änderung eintragen]
 **Live TV**
 - Fewer stalls when opening Live TV on Android TV / Fire TV: genres and quality bundling are prepared in the background (PR #8); follow-up fixes make sure a category never shows the rows of the previously selected category while bundling runs, and a failed background preparation falls back to the plain channel rows instead of crashing
+**Playlists**
+- Stalker/Ministra portals: movies and episodes play again. For movies and episodes the app tries several `create_link` request forms, reads the address from `url` and `cmd` (also relative paths and `play_token` answers), looks up the title's own file when needed, and logs in again when the portal rejects the session (PR #19)
+- Stalker: a `create_link` answer with an error (e.g. `nothing_to_play`) or a bare video club command no longer counts as a play address, so the file lookup still runs; a file list that is really a whole category no longer starts another title; after a timeout, "429 Too Many Requests" or the account's stream limit no further request forms are sent; live channels log in again once after a failed start, as before PR #19 (follow-up to PR #19)
 
 ## 1.1
 **Updates and your data**
