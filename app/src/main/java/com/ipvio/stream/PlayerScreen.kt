@@ -162,7 +162,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             .setWakeMode(C.WAKE_MODE_NETWORK)
             // "tap://" = live buffer on the device (rewind, recording), everything else as before
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(ctx)
+                // MKV files without a Cues index stay seekable (#10, see CuelessMkvExtractor)
+                DefaultMediaSourceFactory(ctx, CuelessMkvExtractor.Factory())
                     .setDataSourceFactory(TapAwareDataSource.Factory(HostFailover.DataSourceWrapper.Factory(DefaultDataSource.Factory(ctx, http))))
                     // Short network hiccups are retried inside the player (several times) instead of ending in an error
                     .setLoadErrorHandlingPolicy(IptvLoadErrorPolicy())

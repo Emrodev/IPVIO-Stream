@@ -4,7 +4,7 @@ Last update: 2026-11-11. Read `CLAUDE.md` first, then this file.
 
 ## Current task
 
-**Integration branch `integration/2026-11-11`**: open PRs (#7, #8, #9, #13, #14, #19 Stalker part, #30-#34, #36, #38, #39) merged locally into one branch, plus fixes for reported bugs: Live TV focus (Right/Left keep the spot), #22 Recently added order, #26 language filter icon, #25 tap-to-seek, Stalker loading texts translated. Device test on an NVIDIA SHIELD in progress (results so far: #20 movie playback and #28 resume pass, #22 newest first confirmed). Open: #10 (MKV without Cues, needs a player-core plan), #27 (not reproduced yet), #18 (search; device test pending). Unit tests: all pass except two `PhoneImportTest`/`PhoneTransferTest` socket tests that also fail on `origin/main`.
+**Integration branch `integration/2026-11-11`**: open PRs (#7, #8, #9, #13, #14, #19 Stalker part, #30-#34, #36, #38, #39) merged locally into one branch, plus fixes for reported bugs: Live TV focus (Right/Left keep the spot), #22 Recently added order, #26 language filter icon, #25 tap-to-seek, Stalker loading texts translated. Device test on an NVIDIA SHIELD in progress (results so far: #20 movie playback and #28 resume pass, #22 newest first confirmed). #10 (MKV without Cues) fixed with an estimated seek map and Cluster search, tested on the Android TV emulator with generated MKV files (constant and strongly varying bitrate, 20 MB and 2.7 GB). Open: #27 (not reproduced yet), #18 (search; device test pending). Unit tests: all pass except two `PhoneImportTest`/`PhoneTransferTest` socket tests that also fail on `origin/main`.
 
 ## Earlier task
 

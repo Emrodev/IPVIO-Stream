@@ -19,6 +19,7 @@
 - The language filter has its own speech-bubble icon instead of the country globe (#26)
 **Player**
 - On phones and tablets, tapping or dragging on the timeline jumps to that position (#25)
+- MKV files without a Cues index can be seeked: skip, number-key jump and "Resume" no longer restart the movie at 0:00. The app estimates the byte position, reads the timecode of the next Cluster and corrects the position (up to 10 extra range requests); files with Cues are not affected (#10)
 **Translations**
 - The Stalker loading texts ("Loading channels (N)", "Loading categories (n/m)") are translated instead of always showing German
 
