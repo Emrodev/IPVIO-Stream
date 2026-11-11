@@ -33,7 +33,8 @@ Task IDs follow audit section 14. They replace the IDs in the table of section 1
 | T-005 | Documentation skeleton and CHANGELOG 1.2/1.3 | docs, `CHANGELOG.md`, `CLAUDE.md` section 15 | done (CHANGELOG content PENDING) |
 | T-006 | Add five missing stores to the backup `NAMES` | `Backup.kt` | open (approved) |
 | T-007 | Performance: R8 for libraries again, baseline profile, no per-frame idle animations, cached backdrops, `onPlaced` for cards | `app/build.gradle.kts`, `keepRules/reflection.keep`, `baseline-prof.txt`, `LiveNow.kt`, `HomeScreen.kt`, `HomeParts.kt`, `Billboard.kt` | implemented on branch `perf/T-007`; device test PENDING (see `docs/tasks/T-007-performance.md`) |
-| T-008 ff. | P2, P3 S2/S3/S4, P4, P5 | | open, one approval each |
+| T-008 | Loading progress counts the parallel movie/series downloads of the Xtream API | `XtreamApi.kt`, `PlaylistStore.kt` | implemented on branch `perf/T-007` (separate commit); device test PENDING (see `docs/tasks/T-008-xtream-progress.md`) |
+| T-009 ff. | P2, P3 S2/S3/S4, P4, P5 | | open, one approval each |
 | 1.4 | Google Drive as LiveSync, rebuilt from the `V1.1` code | | after the refactoring |
 
 ## Restructuring plan (U-0, 2026-11-11)

@@ -8,6 +8,9 @@
 - Full-screen backgrounds of Live TV and the home screen are drawn once and reused while lists scroll
 - Home cards no longer run a position callback on every scroll frame
 
+**Playlists (T-008)**
+- Xtream logins loaded via the API: the loading screen now counts movies and series while they download. Before, it stood still at the size of the channel list (often "256 KB") until everything was there
+
 ## 1.3
 [PENDING: Änderung eintragen]
 
