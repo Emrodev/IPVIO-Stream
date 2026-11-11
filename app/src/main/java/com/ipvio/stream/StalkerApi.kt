@@ -601,7 +601,7 @@ object StalkerApi {
             idx++
             val f = fields(o)
             val season = if (level1.size == 1 && !isSeason(o)) 1 else StalkerLogic.seasonNumber(f, idx)
-            if (fill(o, season, idx, null)) continue
+            if (fill(o, season, idx)) continue
             // Season without own episodes: fetch its episodes individually
             val sid = o.opt("id")?.toString()?.trim().orEmpty()
             if (sid.isEmpty()) continue
