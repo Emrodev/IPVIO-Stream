@@ -166,16 +166,20 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     }
     var restored by remember { mutableStateOf(false) }
     val chanScope = androidx.compose.runtime.rememberCoroutineScope()
-    // Right from a category: the first channel row only exists while it is on screen (lazy list). When the list is
-    // scrolled down, scroll it back first; otherwise the focus request goes nowhere and Right does nothing.
+    // Right from a category: the first channel row only exists while it is on screen (lazy list), and right after a
+    // category change the list may not have been laid out yet. A failed request only logs a warning, so check that the
+    // channel list really got the focus and try again for a moment (scrolling back to the top first if needed).
+    var chanHasFocus by remember { mutableStateOf(false) }
     fun focusFirstChan() {
         // Empty list: the requester sits on the "add channel" button, not on a list row
-        if (list.isEmpty() || chanState.layoutInfo.visibleItemsInfo.any { it.index == 0 }) { runCatching { firstChan.requestFocus() }; return }
+        if (list.isEmpty()) { runCatching { firstChan.requestFocus() }; return }
         chanScope.launch {
-            runCatching { chanState.scrollToItem(0) }
-            repeat(10) {
-                kotlinx.coroutines.delay(40)
-                if (chanState.layoutInfo.visibleItemsInfo.any { it.index == 0 }) { runCatching { firstChan.requestFocus() }; return@launch }
+            repeat(20) {
+                if (chanState.firstVisibleItemIndex != 0 || chanState.firstVisibleItemScrollOffset != 0) runCatching { chanState.scrollToItem(0) }
+                runCatching { firstChan.requestFocus() }
+                androidx.compose.runtime.withFrameNanos { }
+                if (chanHasFocus) return@launch
+                kotlinx.coroutines.delay(30)
             }
         }
     }
@@ -418,7 +422,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                 ) else LazyColumn(
                     state = chanState,
                     // Held Down/Up key: at most ~9 steps per second, so a weak box is not flooded with scroll animations and rebinds
-                    modifier = Modifier.onPreviewKeyEvent { e ->
+                    modifier = Modifier.onFocusChanged { chanHasFocus = it.hasFocus }.onPreviewKeyEvent { e ->
                         if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
                             val now = android.os.SystemClock.uptimeMillis()
                             LiveHold.lastRepeat = now
