@@ -930,15 +930,18 @@ private fun Hero(
             horizontalArrangement = Arrangement.spacedBy(dpx(12)), verticalAlignment = Alignment.CenterVertically
         ) {
             // Active dot fills up until the next change (shows when the picture changes)
-            val prog = remember(idx) { androidx.compose.animation.core.Animatable(0f) }
+            // Fills in 40 steps instead of on every frame: a continuous animation redrew the screen 60 times per second
+            // for the whole time the big picture is visible
+            val prog = remember(idx) { mutableFloatStateOf(0f) }
             LaunchedEffect(idx, General.heroSec) {
-                if (General.heroSec > 0) prog.animateTo(1f, tween(General.heroSec * 1000, easing = androidx.compose.animation.core.LinearEasing))
+                val sec = General.heroSec
+                if (sec > 0) for (step in 1..40) { delay(sec * 1000L / 40); prog.floatValue = step / 40f }
             }
             featured.indices.forEach { i ->
                 // 17c: progress only drawn (no rebuild on every frame)
                 if (i == idx) Box(Modifier.width(dpx(40)).height(dpx(7)).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .3f))) {
                     Box(Modifier.fillMaxSize().graphicsLayer {
-                        scaleX = if (General.heroSec > 0) prog.value.coerceIn(0.08f, 1f) else 1f
+                        scaleX = if (General.heroSec > 0) prog.floatValue.coerceIn(0.08f, 1f) else 1f
                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
                     }.background(Accent1))
                 }
@@ -967,6 +970,7 @@ private fun BillboardLayer(fade: () -> Float, item: State<Item?>, infoMod: Modif
     val shown by remember { derivedStateOf { fade() > 0.01f } }
     if (!shown) return
     val bi = item.value
-    BillboardBackdrop(bi, Modifier.fillMaxSize().graphicsLayer { alpha = fade() })
+    // Offscreen: image and gradients are drawn once into a layer and only copied while the rows scroll over them
+    BillboardBackdrop(bi, Modifier.fillMaxSize().graphicsLayer { alpha = fade(); compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen })
     bi?.let { BillboardInfo(it, infoMod.graphicsLayer { alpha = fade(); translationY = (1f - fade()) * 20.dp.toPx() }) }
 }

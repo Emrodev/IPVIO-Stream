@@ -31,7 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
@@ -64,7 +64,9 @@ object Billboard {
 /** Like onFocusChanged for title cards: reports the focus, marks the title for the background and remembers the card's position. */
 fun Modifier.billboardFocus(item: Item, onFocus: (Boolean) -> Unit): Modifier = composed {
     val holder = remember { arrayOfNulls<LayoutCoordinates>(1) }
-    this.onGloballyPositioned { holder[0] = it }.onFocusChanged { s ->
+    // onPlaced instead of onGloballyPositioned: the coordinates object stays the same and is read only when needed.
+    // onGloballyPositioned ran for every card on every scroll frame of the home screen.
+    this.onPlaced { holder[0] = it }.onFocusChanged { s ->
         onFocus(s.isFocused)
         if (s.isFocused) { Billboard.mark(item); Billboard.focusCo = holder[0] }
     }

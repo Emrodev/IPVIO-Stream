@@ -66,9 +66,11 @@ android {
         release {
             if (hasKeystore) signingConfig = signingConfigs.getByName("release")
             optimization {
-                // Off: the shrunk release build (12.7 MB) did not start on the device. Turn back on only together with
-                // keep rules in src/main/keepRules and a test on a real device.
-                enable = false
+                // R8 optimizes the libraries only (Compose, Media3, OkHttp, Kotlin), as in releases 1.0 and 1.1. Without it
+                // Compose runs unoptimized and the UI is noticeably slower. The app's own code (com.ipvio.**) stays out of scope:
+                // during 1.2 a release build with it in scope (12.7 MB) did not start on the device (cause unknown, see ADR 0001/0002).
+                // Keep rules for reflection: src/main/keepRules/reflection.keep.
+                enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }

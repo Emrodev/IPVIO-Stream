@@ -1,10 +1,6 @@
 package com.ipvio.stream
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,13 +16,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
@@ -44,7 +45,9 @@ import coil.compose.AsyncImage
 /** Background of the live page: color and logo of the highlighted channel, softly cross-faded. */
 @Composable
 fun LiveBackdrop(ch: Item?, modifier: Modifier = Modifier) {
-    Box(modifier.background(Bg)) {
+    // Offscreen: the background (color, two radial gradients, logo, two gradients) is drawn once into a layer and only
+    // copied on each frame while the channel list scrolls, instead of filling the full screen six times per frame
+    Box(modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }.background(Bg)) {
         Crossfade(ch, animationSpec = tween(if (Look.motion == 0) 0 else 700), label = "liveBg") { c ->
             if (c != null) {
                 val col = colorFor(c)
@@ -112,8 +115,17 @@ fun LiveNowPanel(ch: Item?, modifier: Modifier = Modifier) {
 /** Red "LIVE" with a pulsing dot (calm without animations). */
 @Composable
 fun LiveBadge() {
-    val t = rememberInfiniteTransition(label = "live")
-    val a by t.animateFloat(1f, 0.3f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "liveA")
+    // The dot pulses in small steps (10 per second) instead of on every frame. The continuous animation made the whole
+    // Live TV screen redraw 60 times per second, also while the channel list scrolls (expensive on Fire TV sticks).
+    var a by remember { mutableFloatStateOf(1f) }
+    if (Look.motion != 0) LaunchedEffect(Unit) {
+        var i = 0
+        while (true) {
+            kotlinx.coroutines.delay(100)
+            i = (i + 1) % 16
+            a = 1f - 0.7f * (if (i <= 8) i / 8f else (16 - i) / 8f)
+        }
+    }
     Row(
         Modifier.clip(RoundedCornerShape(dpx(8))).background(Color(0xFFE11D48)).padding(horizontal = dpx(12), vertical = dpx(4)),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(8))

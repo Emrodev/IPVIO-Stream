@@ -1,0 +1,5 @@
+# The optional FFmpeg audio decoder (org.jellyfin.media3:media3-ffmpeg-decoder) lives in the package
+# androidx.media3.decoder.ffmpeg, which is inside the R8 package scope. SoftAudio.kt and Media3's
+# DefaultRenderersFactory load FfmpegAudioRenderer by reflection, and the native library calls back into
+# the decoder classes by name. Keep the whole (small) package unchanged.
+-keep class androidx.media3.decoder.ffmpeg.** { *; }

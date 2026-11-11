@@ -57,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.foundation.layout.wrapContentSize
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.foundation.gestures.scrollBy
@@ -655,7 +656,7 @@ fun RowPosterCard(item: Item, baseW: Dp, modifier: Modifier, overlay: Int = 0, a
     // overlay 3 = automatic: the middle of the row grows to both sides, left edge to the right, right edge to the left.
     // Position is remembered without state (otherwise all cards would be recomputed on every scroll frame).
     var mode by remember { mutableIntStateOf(3) }
-    val pos = remember { floatArrayOf(0.5f) }
+    val coords = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
     val viewW = androidx.compose.ui.platform.LocalView.current
     // Even with animation "Off" the preview expands (then without motion, see snap below)
     // Preview style (View > Preview on highlight): info on the poster (default) or wide scene image
@@ -676,7 +677,12 @@ fun RowPosterCard(item: Item, baseW: Dp, modifier: Modifier, overlay: Int = 0, a
         if (fx && canOpen) {
             // Expand only after a longer dwell (look at the cover in peace); nothing happens while paging through
             kotlinx.coroutines.delay(if (wide) 1500 else 1300)
-            if (overlay == 3) mode = if (pos[0] < 0.36f) 1 else if (pos[0] > 0.64f) 2 else 3
+            if (overlay == 3) {
+                // Position of the card in the row, read once here instead of on every layout pass
+                val c = coords[0]
+                val pos = if (c != null && c.isAttached) (c.positionInRoot().x + c.size.width / 2f) / viewW.width.coerceAtLeast(1) else 0.5f
+                mode = if (pos < 0.36f) 1 else if (pos > 0.64f) 2 else 3
+            }
             open = true
         } else open = false
     }
@@ -747,7 +753,7 @@ fun RowPosterCard(item: Item, baseW: Dp, modifier: Modifier, overlay: Int = 0, a
         val eff = if (overlay == 3) mode else overlay
         Box(
             modifier.width(baseW).height(h).zIndex(if (fx || p > 0.01f) 1f else 0f)
-                .onGloballyPositioned { c -> pos[0] = (c.positionInRoot().x + c.size.width / 2f) / viewW.width.coerceAtLeast(1) }
+                .onPlaced { c -> coords[0] = c }
                 .then(focusMod)
         ) {
             Box(Modifier.wrapContentSize(align = if (eff == 2) Alignment.CenterEnd else if (eff == 1) Alignment.CenterStart else Alignment.Center, unbounded = true)) {
