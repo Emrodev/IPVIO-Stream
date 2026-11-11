@@ -227,7 +227,8 @@ private fun ListMode(
     }
     Row(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.width(250.dp).fillMaxHeight(), state = catState, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            itemsIndexed(entries) { i, e ->
+            // Keyed: categories appear gradually while genres are detected; the focus stays on its row
+            itemsIndexed(entries, key = { _, e -> e.first }) { i, e ->
                 val all = if (isTopEntry(e.first)) e.second else StalkerMore.withAdded(e.first, e.second)
                 CatListRow(
                     e.first, StalkerMore.total(ctx, e.first, setOfNotNull(e.second.firstOrNull()?.kind)) ?: all.size, i == sel,
@@ -309,7 +310,7 @@ private fun TileMode(entries: List<Pair<String, List<Item>>>, sort: Int, firstFo
         contentPadding = PaddingValues(vertical = 8.dp, horizontal = 4.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        itemsIndexed(entries) { i, e ->
+        itemsIndexed(entries, key = { _, e -> e.first }) { i, e ->
             CatTile(e.first, e.second, if (i == 0) Modifier.focusRequester(firstFocus) else Modifier) { onPick(e.first, e.second, sortFor(e.first, sort)) }
         }
     }

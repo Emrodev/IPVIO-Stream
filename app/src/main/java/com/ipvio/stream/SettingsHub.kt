@@ -295,6 +295,16 @@ internal fun ToggleRow(title: String, desc: String?, checked: Boolean, onChange:
     }
 }
 
+/** Small version of [ConfirmPill] for rows of small buttons. */
+@Composable
+internal fun SmallConfirmPill(label: String, onConfirm: () -> Unit) {
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(armed) { if (armed) { kotlinx.coroutines.delay(4000); armed = false } }
+    SmallPill(if (armed) "Wirklich? OK zum Bestätigen" else label) {
+        if (armed) { armed = false; onConfirm() } else armed = true
+    }
+}
+
 /** Dangerous action with confirmation: the first press asks, the second executes (the question expires after 4 s). */
 @Composable
 internal fun ConfirmPill(label: String, onConfirm: () -> Unit) {
@@ -1152,22 +1162,20 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
             }
             if (!isActive) SmallPill("Zur Hauptliste machen") {
                 PlaylistStore.activate(ctx, i)
-                scope.launch { PlaylistStore.load(ctx, pl.url, false) }
+                PlaylistStore.loadDetached(ctx, pl.url)
             }
             SmallPill("Umbenennen") { editing = i; name = pl.name }
             if (XtreamLogic.fromUrl(pl.url) != null) SmallPill("Backup-Server") {
                 val b = PlaylistStore.backups(ctx, pl.url)
                 editingB = i; backups = backupList(b); backupErr = null
             }
-            SmallPill("Löschen") {
+            // Deleting needs a second OK (a playlist with its login is gone otherwise with one press of the remote)
+            SmallConfirmPill("Löschen") {
                 val wasActive = isActive
                 editingB = -1
                 PlaylistStore.remove(ctx, i)
                 if (PlaylistStore.lists.isEmpty()) onAdd()
-                else if (wasActive) {
-                    val u = PlaylistStore.lists[PlaylistStore.active].url
-                    scope.launch { PlaylistStore.load(ctx, u, false) }
-                }
+                else if (wasActive) PlaylistStore.loadDetached(ctx, PlaylistStore.lists[PlaylistStore.active].url)
             }
         }
         val modeLabel = when (pl.contentMode) {

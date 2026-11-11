@@ -45,6 +45,8 @@ import kotlinx.coroutines.withContext
 
 private const val S_SORT_AZ = 6
 private const val S_SORT_PLAYLIST = 8
+/** Typing pause before the portal is asked (Stalker, see [StalkerMore.search]). */
+private const val PORTAL_SEARCH_DELAY_MS = 1200L
 
 /** Index of the current list – is kept when leaving and coming back. */
 internal object SearchCache {
@@ -118,6 +120,15 @@ fun SearchScreen(
             val uniqueMovies = PlaylistLogic.firstPerKey(movies) { it.mk + "|" + it.lang }
             Triple(uniqueMovies, series, live)
         }
+    }
+    // Stalker portal: titles are loaded on demand, so the search also asks the portal; its hits join the list
+    var portalBusy by remember { mutableStateOf(false) }
+    LaunchedEffect(q) {
+        portalBusy = false
+        if (!StalkerMore.canSearch() || StalkerLogic.searchTerm(q) == null) return@LaunchedEffect
+        delay(PORTAL_SEARCH_DELAY_MS)
+        portalBusy = true
+        try { StalkerMore.search(ctx, q) } finally { portalBusy = false }
     }
     val searching = q.length >= 2 && found.first != q
     val (rm0, rs0, rl0) = if (q.length < 2 || searching) none else found.second
@@ -210,7 +221,10 @@ fun SearchScreen(
             }
             // Right: info panel of the highlighted title on top, the hits below
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: hist.firstOrNull())
+                // While searching only a hit is shown (not a title from history or from an earlier input)
+                val active = q.length >= 2
+                val preview = focusItem?.takeIf { f -> !active || listOf(rm, rs, rl).any { l -> l.any { it.id == f.id } } }
+                    ?: rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: if (active) null else hist.firstOrNull()
                 SearchInfoPanel(preview, Modifier.fillMaxWidth().height(190.dp).padding(start = 24.dp, end = DS.PageX, top = 16.dp))
                 CompositionLocalProvider(LocalSearchFocus provides { focusItem = it }) {
                     LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = state, contentPadding = PaddingValues(bottom = 48.dp)) {
@@ -240,7 +254,7 @@ fun SearchScreen(
                     }
                 } else {
                     val openS: (Item) -> Unit = { i -> AppSettings.addSearch(ctx, q); onOpen(i) }
-                    if (searching) item {
+                    if (searching || (portalBusy && rm.isEmpty() && rs.isEmpty() && rl.isEmpty())) item {
                         Text("Suche …", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(horizontal = DS.PageX, vertical = 16.dp))
                     } else if (rm.isEmpty() && rs.isEmpty() && rl.isEmpty()) item {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -512,7 +526,7 @@ private fun SearchInfoPanel(item: Item?, modifier: Modifier) {
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(raw = true, text = item.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 val parts = ArrayList<String>()
-                parts.add(when (item.kind) { Kind.MOVIE -> "Film"; Kind.SERIES -> "Serie"; else -> "Live" })
+                parts.add(Lang.tr(kindLabel(item.kind)).lowercase(Lang.locale()).replaceFirstChar { it.titlecase(Lang.locale()) })
                 (item.year?.toString() ?: m?.year)?.let { parts.add(it) }
                 m?.runtime?.takeIf { it > 0 }?.let { parts.add("$it Min") }
                 (item.quality)?.let { parts.add(it) }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -42,7 +43,47 @@ object StalkerMore {
     val added = mutableStateMapOf<String, List<Item>>()
 
     /** New list loaded: forget the stored state. */
-    fun reset() { synchronized(lock) { refs.clear(); failedAt.clear() }; Snapshot.withMutableSnapshot { added.clear() } }
+    fun reset() { synchronized(lock) { refs.clear(); failedAt.clear(); searched.clear(); complete.clear() }; Snapshot.withMutableSnapshot { added.clear() } }
+
+    /** Terms already sent to the portal search (playlist + term): each only once per session. */
+    private val searched = HashSet<String>()
+    /** Terms whose hits were complete (playlist + term): a longer term containing one of them cannot find more. */
+    private val complete = HashSet<String>()
+
+    /** true = the shown list comes from a Stalker portal, so the search can also ask the portal ([search]). */
+    fun canSearch(): Boolean = PlaylistStore.shownUrl?.let { StalkerLogic.parse(it) } != null
+
+    /**
+     * Search the portal for [query] and add the hits to the list (titles not loaded yet are found too; the search
+     * screen updates by itself). Number of new titles. Runs alongside [next]; the portal gets two to four requests.
+     */
+    suspend fun search(c: Context, query: String): Int {
+        val u = PlaylistStore.shownUrl ?: return 0
+        val src = StalkerLogic.parse(u) ?: return 0
+        val term = StalkerLogic.searchTerm(query) ?: return 0
+        val low = term.lowercase()
+        val key = u + "\t" + low
+        synchronized(lock) {
+            // Typing with the remote pauses after every letter: "breaking b" after a complete "breaking" asks nothing
+            if (StalkerLogic.coveredBy(low, complete.filter { it.startsWith(u + "\t") }.map { it.substringAfter('\t') })) return 0
+            if (!searched.add(key)) return 0
+        }
+        val ctx = coroutineContext
+        val hits = try {
+            withContext(Dispatchers.IO) { StalkerApi.search(src, term) { if (!ctx.isActive) throw CancellationException("left") } }
+        } catch (e: CancellationException) {
+            synchronized(lock) { searched.remove(key) }; throw e
+        } catch (e: Throwable) {
+            Log.w("StalkerMore", "search failed: ${e.javaClass.simpleName}")
+            StalkerApi.SearchHits("", ok = false, complete = false)
+        }
+        // No answer: may be asked again later
+        synchronized(lock) { if (!hits.ok) searched.remove(key); if (hits.complete) complete.add(key) }
+        val m3u = hits.m3u
+        if (m3u.isBlank() || PlaylistStore.shownUrl != u) return 0
+        val fresh = withContext(Dispatchers.IO) { PlaylistStore.appendItems(c.applicationContext, u, M3uParser.parse("#EXTM3U\n" + m3u)) }
+        return fresh.size
+    }
 
     /** Titles of a category including those loaded on demand (oldest first). */
     fun withAdded(group: String, loaded: List<Item>): List<Item> {

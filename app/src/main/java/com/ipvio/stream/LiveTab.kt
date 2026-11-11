@@ -159,15 +159,22 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // Back from the player: the last watched channel gets the focus (not the sidebar)
     val chanState = remember { LazyListState() }
     val restoreReq = remember { FocusRequester() }
-    val restoreId = remember { LastFocus.pending }
-    LaunchedEffect(Unit) {
+    val playedId = remember { LastFocus.pending }
+    // Row of the watched channel: the channel itself or the bundled row it is a quality variant of
+    val restoreId = remember(playedId, list, variantsOf) {
+        playedId?.let { id -> list.firstOrNull { it.id == id }?.id ?: variantsOf.entries.firstOrNull { e -> e.value.any { it.id == id } }?.key }
+    }
+    var restored by remember { mutableStateOf(false) }
+    // Keyed on the row: genres and bundling arrive a moment after the tab opens, the channel is often not in the first list yet
+    LaunchedEffect(restoreId) {
         val id = restoreId ?: return@LaunchedEffect
+        if (restored) return@LaunchedEffect
         val i = list.indexOfFirst { it.id == id }
         if (i < 0) return@LaunchedEffect
         runCatching { chanState.scrollToItem(maxOf(i - 2, 0)) }
         repeat(15) {
             kotlinx.coroutines.delay(80)
-            if (runCatching { restoreReq.requestFocus() }.isSuccess) { LastFocus.pending = null; return@LaunchedEffect }
+            if (runCatching { restoreReq.requestFocus() }.isSuccess) { restored = true; LastFocus.pending = null; return@LaunchedEffect }
         }
     }
     var askDelete by remember { mutableStateOf(false) }
@@ -207,7 +214,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         FocusedBackdrop(focusedState, Modifier.fillMaxSize())
         Row(Modifier.fillMaxSize().padding(top = 20.dp)) {
             LazyColumn(Modifier.width(270.dp).fillMaxHeight().padding(start = 24.dp, end = 8.dp), state = catState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                itemsIndexed(names) { _, n ->
+                // Keyed: genres are inserted above the categories when detected; the focus stays on its row instead of its position
+                itemsIndexed(names, key = { _, n -> n }) { _, n ->
                     val ml = ChannelLists.byKey(n)
                     if (n == "GUIDE") {
                         // TV guide as in the design: starts the last watched (otherwise first) channel of the selection and opens the guide
@@ -310,7 +318,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     val count = when {
                         n == FAV_CAT -> favs.size
                         n == "ALL" -> live.size
-                        n == "HOME" -> 0
+                        n == "HOME" -> -1
                         n == "REC" -> recs.size
                         LiveGenre.isGenreKey(n) -> genres[n]?.size ?: 0
                         ml != null -> ChannelListLogic.resolve(ml, byIdLazy.value).size
@@ -374,7 +382,10 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     PillButton("Fertig", light = true) { finishAdd() }
                 }
                 if (sel == "SEARCH") Field(query, { query = it.take(40) }, "Sendername eingeben", Modifier.padding(bottom = 12.dp), inner = Modifier.focusRequester(searchReq))
-                if (list.isEmpty()) EmptyState(
+                // Genres are still being prepared: no "No channels" message (it is not true yet)
+                if (list.isEmpty() && LiveGenre.isGenreKey(sel) && !genresReady) Text(
+                    "Genres werden erkannt", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(16.dp)
+                ) else if (list.isEmpty()) EmptyState(
                     if (sel == FAV_CAT) AIcon.Heart else AIcon.Live,
                     if (sel == FAV_CAT) "Noch keine Favoriten" else if (sel == "SEARCH") (if (query.isBlank()) "Sender suchen" else "Keine Treffer") else if (curList != null) "Diese Liste ist noch leer" else "Keine Sender",
                     when {

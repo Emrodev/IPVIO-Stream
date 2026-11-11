@@ -465,7 +465,7 @@ fun HomeScreen(
     val watchK = remember(watchList, vodKind) { watchList.filter { it.kind == vodKind } }
     val histK = remember(hist, vodKind) { hist.filter { it.kind == vodKind } }
     val trendK = remember(trendItems, vodKind) { trendItems.filter { it.kind == vodKind } }
-    val reload: () -> Unit = { PlaylistStore.savedUrl(ctx)?.let { u -> scope.launch { PlaylistStore.load(ctx, u, false) } } }
+    val reload: () -> Unit = { PlaylistStore.savedUrl(ctx)?.let { u -> PlaylistStore.loadDetached(ctx, u) } }
 
     // Round 17b (Cinematic Remake): background and info follow the selected title once the big picture has scrolled away
     val bbTab = tab in 0..2
@@ -623,7 +623,8 @@ fun HomeScreen(
                                     SmallPill("Startseite anpassen", icon = AIcon.Sliders) { HomeEdit.active = true; scope.launch { states[0].animateScrollToItem(0) } }
                                 }
                             }
-                            if (movies.isEmpty() && series.isEmpty()) item { EmptyHint("Diese Playlist enthält keine Filme oder Serien. Live TV findest du links.") }
+                            // Only when the list really has no titles: not while it is (re)loading and only with Live TV to point to
+                            if (movies.isEmpty() && series.isEmpty() && live.isNotEmpty() && !PlaylistStore.loading) item { EmptyHint("Diese Playlist enthält keine Filme oder Serien. Live TV findest du links.") }
                         }
                         1, 2 -> {
                             val isM = tab == 1
@@ -813,7 +814,8 @@ private fun ResumeRow(list: List<Pair<Entry, Item>>, cardW: Int, onResume: (Entr
                 val multi = item.kind == Kind.SERIES && item.episodes.any { it.season != (se?.first ?: 1) }
                 val epText = se?.let { if (multi) "S${it.first} · Folge ${it.second}" else "Folge ${it.second}" }
                 val sub = when {
-                    item.kind != Kind.SERIES -> "bei " + (e.pos / 60000) + " Min"
+                    // Rounded and at least 1 ("at 0 min" looked like nothing was watched; entries start at 30 s)
+                    item.kind != Kind.SERIES -> "bei " + ((e.pos + 30_000) / 60_000).coerceAtLeast(1) + " Min"
                     e.next && epText != null -> "Als Nächstes: $epText"
                     epText != null -> epText
                     else -> e.title.removePrefix(item.title).trim()
@@ -870,8 +872,13 @@ private fun Hero(
 ) {
     val ctx = LocalContext.current
     var idx by remember { mutableIntStateOf(0) }
+    // Buttons focused: no rotation, so "Watch now" plays the title the user is looking at
+    var buttonsFocused by remember { mutableStateOf(false) }
     LaunchedEffect(featured.size, General.heroSec) {
-        while (featured.size > 1 && General.heroSec > 0) { delay(General.heroSec * 1000L); if (!Billboard.active) idx = (idx + 1) % featured.size }
+        while (featured.size > 1 && General.heroSec > 0) {
+            delay(General.heroSec * 1000L)
+            if (!Billboard.active && !buttonsFocused) idx = (idx + 1) % featured.size
+        }
     }
     val item = featured[idx.coerceIn(0, featured.lastIndex)]
 
@@ -913,7 +920,7 @@ private fun Hero(
                 }
             }
             Row(
-                Modifier.padding(top = dpx(if (home) 12 else 8)).onFocusChanged { if (it.hasFocus) onFocusTop() },
+                Modifier.padding(top = dpx(if (home) 12 else 8)).onFocusChanged { buttonsFocused = it.hasFocus; if (it.hasFocus) onFocusTop() },
                 horizontalArrangement = Arrangement.spacedBy(dpx(16))
             ) {
                 val h = if (home) 52 else 46

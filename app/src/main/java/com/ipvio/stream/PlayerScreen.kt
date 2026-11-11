@@ -1109,6 +1109,9 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                         }
                         Key.DirectionUp -> { if (cur.live) zap(-1) else { focusSeek = true; controls = true }; true }
                         Key.DirectionDown -> { if (cur.live) zap(1) else { focusSeek = false; controls = true }; true }
+                        // Remote channel keys: CH+ = next channel number (like Down), CH- = previous
+                        Key.ChannelUp -> { if (cur.live) { zap(1); true } else false }
+                        Key.ChannelDown -> { if (cur.live) { zap(-1); true } else false }
                         Key.Menu -> { focusSeek = false; controls = true; true }
                         else -> false
                     }
