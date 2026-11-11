@@ -4,20 +4,38 @@ package com.ipvio.stream
 class SearchIndex(val all: List<Item>) {
     val keys: Array<String> = Array(all.size) { norm(all[it].title) }
     val byId: Map<String, Item> = all.associateBy { it.id }
-
-    fun find(q: String): Triple<List<Item>, List<Item>, List<Item>> {
+    /**
+     * Exact matches first; if there are few, typo-tolerant matches for movies and series.
+     * [checkCancelled] is called periodically and may throw to abort the scan. The fuzzy scan
+     * stops after [fuzzyBudgetMs] (measured with [nanoClock]) and keeps the hits found so far.
+     */
+    fun find(
+        q: String,
+        fuzzyBudgetMs: Long = FUZZY_BUDGET_MS,
+        nanoClock: () -> Long = System::nanoTime,
+        checkCancelled: () -> Unit = {}
+    ): Triple<List<Item>, List<Item>, List<Item>> {
         val n = norm(q)
         val m = ArrayList<Item>(); val s = ArrayList<Item>(); val l = ArrayList<Item>()
         if (n.isEmpty()) return Triple(m, s, l)
-        for (i in all.indices) if (keys[i].contains(n)) {
-            val it = all[i]
-            when (it.kind) { Kind.MOVIE -> m.add(it); Kind.SERIES -> s.add(it); Kind.LIVE -> l.add(it) }
+        for (i in all.indices) {
+            if ((i and CANCELLATION_CHECK_MASK) == 0) checkCancelled()
+            if (keys[i].contains(n)) {
+                val item = all[i]
+                when (item.kind) { Kind.MOVIE -> m.add(item); Kind.SERIES -> s.add(item); Kind.LIVE -> l.add(item) }
+            }
         }
-        // Few hits: forgive typos (movies and series, not channels)
+        // Fuzzy distance checks are much more expensive than exact matching, so they run
+        // only when there are few exact hits and are limited by a time budget.
         if (m.size + s.size < FUZZY_BELOW && n.length >= 4) {
             val k = maxErrors(n.length)
+            val deadline = nanoClock() + fuzzyBudgetMs * 1_000_000L
             val hits = ArrayList<Pair<Int, Int>>()
             for (i in all.indices) {
+                if ((i and CANCELLATION_CHECK_MASK) == 0) {
+                    checkCancelled()
+                    if (nanoClock() > deadline) break
+                }
                 val kind = all[i].kind
                 if (kind == Kind.LIVE) continue
                 val key = keys[i]
@@ -36,6 +54,8 @@ class SearchIndex(val all: List<Item>) {
     companion object {
         const val FUZZY_BELOW = 3
         const val FUZZY_MAX = 40
+        const val FUZZY_BUDGET_MS = 150L
+        private const val CANCELLATION_CHECK_MASK = 0xFF
 
         /** Allowed typos per search length: 4–5 characters = 1, from 6 = 2. */
         fun maxErrors(len: Int): Int = if (len >= 6) 2 else 1
@@ -85,15 +105,27 @@ class WordSuggest(items: List<Item>) {
     }
 
     /** Up to [n] words starting with [prefix] (at least 2 characters), most common first; the exact word itself is left out. */
-    fun suggest(prefix: String, n: Int = 6): List<String> {
+    fun suggest(prefix: String, n: Int = 6, checkCancelled: () -> Unit = {}): List<String> {
         val p = prefix.lowercase(java.util.Locale.ROOT)
-        if (p.length < 2) return emptyList()
+        if (p.length < 2 || n <= 0) return emptyList()
         var lo = 0; var hi = words.size
         while (lo < hi) { val mid = (lo + hi) ushr 1; if (words[mid] < p) lo = mid + 1 else hi = mid }
-        val hits = ArrayList<Int>()
+        // Retain only the best [n] items; sorting every word under a common prefix is costly.
+        val best = ArrayList<Int>(n)
         var i = lo
-        while (i < words.size && words[i].startsWith(p)) { if (words[i] != p) hits.add(i); i++ }
-        return hits.sortedByDescending { counts[it] }.take(n).map { words[it] }
+        while (i < words.size && words[i].startsWith(p)) {
+            if ((i and 0xFF) == 0) checkCancelled()
+            if (words[i] != p) {
+                var at = 0
+                while (at < best.size && counts[best[at]] >= counts[i]) at++
+                if (at < n) {
+                    best.add(at, i)
+                    if (best.size > n) best.removeAt(n)
+                }
+            }
+            i++
+        }
+        return best.map { words[it] }
     }
 
     companion object {
