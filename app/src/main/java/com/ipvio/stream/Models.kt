@@ -370,7 +370,9 @@ object M3uParser {
         val m = if (mayBeEpisode(e.name)) SE.find(e.name) else null
         val isSeriesUrl = e.url.contains("/series/")
         val isMovie = e.url.contains("/movie/") || isVideoFile(e.url) || langOf.vod(e.group)
-        val kind = if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
+        // Stalker channels are always live, even in groups like "ENGLISH | PREMIUM MOVIES" (movie channels)
+        val stalkerLive = e.url.startsWith("stalker://") && e.url.contains("/live/")
+        val kind = if (stalkerLive) Kind.LIVE else if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
         if (!mode.includes(kind)) return null
         val lang = langOf.of(e.group, e.name, kind == Kind.LIVE)
         val countKey = if (kind == Kind.SERIES) (m?.groupValues?.get(1) ?: e.name).trim().lowercase() else null
