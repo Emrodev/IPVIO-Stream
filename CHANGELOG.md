@@ -15,7 +15,7 @@
 - Right from a category always reaches the channels, also after scrolling a category's channels and switching to another category further down (the first channel row was not laid out yet, so the focus request went nowhere)
 - Right returns to the channel last focused in that category (the first channel after a category change); Left goes to the selected category instead of the row beside the channel
 **Movies and series**
-- "Recently added" shows the newest titles first: Xtream movies are ordered by their "added" time while loading (up to 80,000 titles), Stalker lists keep the portal's newest-first order on the home rows and in Browse (#22)
+- "Recently added" shows the newest titles first: Xtream movies are ordered by their "added" time while loading (up to 80,000 titles) (#22)
 - The language filter has its own speech-bubble icon instead of the country globe (#26)
 **Player**
 - On phones and tablets, tapping or dragging on the timeline jumps to that position (#25)

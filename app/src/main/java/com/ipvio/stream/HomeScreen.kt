@@ -218,8 +218,8 @@ fun HomeScreen(
     val watchList by remember(byId) { derivedStateOf { Library.watch.mapNotNull { byId[it] } } }
     val favLive by remember(byId) { derivedStateOf { Library.favs.mapNotNull { byId[it] }.filter { it.kind == Kind.LIVE } } }
     // Row lists that were built anew inside the rows on every recomposition
-    val newMovies = remember(movies) { RecentLogic.newest(movies, 40) { it.url } }
-    val newSeries = remember(series) { RecentLogic.newest(series, 40) { it.url } }
+    val newMovies = remember(movies) { movies.takeLast(40).reversed() }
+    val newSeries = remember(series) { series.takeLast(40).reversed() }
     val histTop = remember(hist) { hist.take(30) }
     val trendItems = data.trendItems
     val trendTop = remember(trendItems) { trendItems.take(10) }
@@ -262,9 +262,9 @@ fun HomeScreen(
     // i.e. the same empty trend list), the selection stayed empty and the big picture was missing.
     val candidates = remember(all, trendItems, movies.size, series.size, tab) {
         when (tab) {
-            1 -> (trendItems.filter { it.kind == Kind.MOVIE }.take(8) + RecentLogic.newest(movies, 30) { it.url })
-            2 -> (trendItems.filter { it.kind == Kind.SERIES }.take(8) + RecentLogic.newest(series, 30) { it.url })
-            else -> (trendItems.take(8) + RecentLogic.newest(movies, 25) { it.url } + RecentLogic.newest(series, 15) { it.url })
+            1 -> (trendItems.filter { it.kind == Kind.MOVIE }.take(8) + movies.takeLast(30).reversed())
+            2 -> (trendItems.filter { it.kind == Kind.SERIES }.take(8) + series.takeLast(30).reversed())
+            else -> (trendItems.take(8) + movies.takeLast(25).reversed() + series.takeLast(15).reversed())
         }.distinctBy { it.id }
     }
     // Movies/series: tabs at the top next to the search (instead of the big buttons under the picture)

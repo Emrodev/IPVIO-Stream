@@ -150,7 +150,7 @@ private fun filterAndSort(items: List<Item>, k: BrowseKey): List<Item> {
             (k.lang == null || i.lang == k.lang)
     }
     return when (k.sort) {
-        0 -> RecentLogic.newestFirst(f) { it.url }
+        0 -> f.asReversed()
         1 -> f.sortedByCached(true) { MetaRepo.cached(it)?.votes ?: -1 }
         2 -> f.sortedByCached(true) { MetaRepo.cached(it)?.score() ?: -1.0 }
         3 -> f.sortedByCached(false) { MetaRepo.cached(it)?.score() ?: 99.0 }
