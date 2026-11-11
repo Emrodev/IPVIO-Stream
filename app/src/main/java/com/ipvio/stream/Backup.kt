@@ -19,7 +19,9 @@ object Backup {
         // 1.2: sports (teams, notifications, leagues, channel correction), hidden/ignored groups, learned live quality
         "ipvio_sportfavs", "ipvio_sportalerts", "ipvio_sportleagues", "ipvio_sporthub", "ipvio_sportfix", "ipvio_hidecats", "ipvio_browselang", "ipvio_ignored", "ipvio_livequal",
         // Home block builder and Boomer mode
-        "ipvio_homelayout", "ipvio_boomerlayout", "ipvio_boomer"
+        "ipvio_homelayout", "ipvio_boomerlayout", "ipvio_boomer",
+        // 1.4: own order of categories (Live TV, movies, series)
+        "ipvio_catorder"
     )
 
     /** A real backup never gets bigger; larger files are not even read. */
