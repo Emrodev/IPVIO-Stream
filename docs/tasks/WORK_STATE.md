@@ -8,6 +8,10 @@ Last update: 2026-11-11. Read `CLAUDE.md` first, then this file.
 
 None active. **P2 batch 8** (final comment sweep) is done in the working copy; the commit by the maintainer is pending. The restructuring plan U-0 is recorded in `docs/REFACTORING-PROGRESS.md`.
 
+## Issue #18 (search crash on Fire TV)
+
+Cause **unverified** (no stacktrace): memory/CPU load while typing. Changed: `SearchLogic.kt` (`find` takes a cancellation check), `SearchScreen.kt` (lazy word index, dedupe off the UI thread), `SearchLogicTest.kt` (new test), `CHANGELOG.md`. Not compiled, tests not run by the assistant. Device test PENDING; if it still crashes, `adb logcat -b crash` is needed. PR #14 (disables typo search above 12,000 titles) not taken over: visible effect, needs a decision.
+
 ## Completed steps
 
 - P2 batches 1-7 committed. Batch 8: a tokenizer read every comment in all `*.kt` and `*.kts` files (strings and raw strings skipped), plus XML, TOML and the `#` lines in the dictionaries. 57 comment lines in 33 files translated, plus 4 lines in files that were already changed in the working copy. `RemoteUi.kt:39` repaired (the UI key "Beenden" was lost in an earlier edit).

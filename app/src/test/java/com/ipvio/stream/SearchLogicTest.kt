@@ -1,6 +1,7 @@
 package com.ipvio.stream
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SearchLogicTest {
@@ -24,4 +25,12 @@ class SearchLogicTest {
     }
 
     @Test fun leer() = assertEquals(0, idx.find("  ").first.size + idx.find("xyz").first.size)
+
+    @Test fun scanStopsWhenCheckThrows() {
+        val big = SearchIndex(List(5000) { item("$it", Kind.MOVIE, "Title $it") })
+        var calls = 0
+        val stopped = runCatching { big.find("title") { calls++; if (calls == 2) throw IllegalStateException("stop") } }.isFailure
+        assertTrue(stopped)
+        assertEquals(2, calls)
+    }
 }

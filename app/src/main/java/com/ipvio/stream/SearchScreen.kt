@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -67,7 +68,6 @@ fun SearchScreen(
     // Build the index in the background; searches also run in the background and only after a short typing pause
     val index by produceState(SearchCache.get(all), all) { value = withContext(Dispatchers.Default) { SearchCache.build(all) } }
     val byId = index?.byId.orEmpty()
-    val suggestIdx by produceState<WordSuggest?>(null, all) { value = withContext(Dispatchers.Default) { SearchCache.suggest(all) } }
     val firstSugg = remember { FocusRequester() }
     val hist = History.ids.mapNotNull { byId[it] }
     // Smaller cards than elsewhere so more hits are visible next to the keyboard
@@ -102,12 +102,21 @@ fun SearchScreen(
 
     val q = SearchState.query.trim()
     val none = Triple(emptyList<Item>(), emptyList<Item>(), emptyList<Item>())
+    // The word index is only built once the search index is ready and a second character is typed (memory on low-RAM TV boxes)
+    val needSuggest = index != null && q.length >= 2
+    val suggestIdx by produceState<WordSuggest?>(null, all, needSuggest) {
+        if (needSuggest) value = withContext(Dispatchers.Default) { SearchCache.suggest(all) }
+    }
     // A result always belongs to exactly one input: while still searching it says "Searching …" instead of "No hits"
     val found by produceState("" to none, q, index) {
         val idx = index ?: return@produceState
         if (q.length < 2) { value = q to none; return@produceState }
         delay(250)
-        value = q to withContext(Dispatchers.Default) { idx.find(q) }
+        // The same movie in several versions only once (the source is chosen on the detail page) – off the UI thread
+        value = q to withContext(Dispatchers.Default) {
+            val r = idx.find(q) { ensureActive() }
+            Triple(PlaylistLogic.firstPerKey(r.first) { it.mk + "|" + it.lang }, r.second, r.third)
+        }
     }
     val searching = q.length >= 2 && found.first != q
     val (rm0, rs0, rl0) = if (q.length < 2 || searching) none else found.second
@@ -117,9 +126,7 @@ fun SearchScreen(
     // Sports hub filter: live channels that look like sports channels (the hub itself opens with the button)
     val rl = when (fl) { 0, 3 -> rl0; 4 -> rl0.filter { SearchSport.isSport(it) }; else -> emptyList() }
     val rs = if (fl == 0 || fl == 2) rs0 else emptyList()
-    // The same movie in several versions only once (the source is chosen on the detail page)
-    val rmAll: List<Item> = remember(rm0) { PlaylistLogic.firstPerKey(rm0) { it.mk + "|" + it.lang } }
-    val rm = if (fl == 0 || fl == 1) rmAll else emptyList()
+    val rm = if (fl == 0 || fl == 1) rm0 else emptyList()
     val firstKey = when { rm.isNotEmpty() -> "rm"; rs.isNotEmpty() -> "rs"; rl.isNotEmpty() -> "rl"; else -> "" }
     // Back: in the search field (keyboard already closed) first to the recent searches or hits, otherwise into the sidebar
     BackHandler(enabled = !inSidebar) {

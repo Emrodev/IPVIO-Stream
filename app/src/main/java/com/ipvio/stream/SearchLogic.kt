@@ -5,19 +5,27 @@ class SearchIndex(val all: List<Item>) {
     val keys: Array<String> = Array(all.size) { norm(all[it].title) }
     val byId: Map<String, Item> = all.associateBy { it.id }
 
-    fun find(q: String): Triple<List<Item>, List<Item>, List<Item>> {
+    /**
+     * [check] is called every [CHECK_EVERY] items of a catalog scan; a caller that runs the search in a coroutine passes
+     * `ensureActive()` so a scan for an outdated query stops instead of running to the end.
+     */
+    fun find(q: String, check: () -> Unit = {}): Triple<List<Item>, List<Item>, List<Item>> {
         val n = norm(q)
         val m = ArrayList<Item>(); val s = ArrayList<Item>(); val l = ArrayList<Item>()
         if (n.isEmpty()) return Triple(m, s, l)
-        for (i in all.indices) if (keys[i].contains(n)) {
-            val it = all[i]
-            when (it.kind) { Kind.MOVIE -> m.add(it); Kind.SERIES -> s.add(it); Kind.LIVE -> l.add(it) }
+        for (i in all.indices) {
+            if (i % CHECK_EVERY == 0) check()
+            if (keys[i].contains(n)) {
+                val it = all[i]
+                when (it.kind) { Kind.MOVIE -> m.add(it); Kind.SERIES -> s.add(it); Kind.LIVE -> l.add(it) }
+            }
         }
         // Few hits: forgive typos (movies and series, not channels)
         if (m.size + s.size < FUZZY_BELOW && n.length >= 4) {
             val k = maxErrors(n.length)
             val hits = ArrayList<Pair<Int, Int>>()
             for (i in all.indices) {
+                if (i % CHECK_EVERY == 0) check()
                 val kind = all[i].kind
                 if (kind == Kind.LIVE) continue
                 val key = keys[i]
@@ -36,6 +44,7 @@ class SearchIndex(val all: List<Item>) {
     companion object {
         const val FUZZY_BELOW = 3
         const val FUZZY_MAX = 40
+        private const val CHECK_EVERY = 1024
 
         /** Allowed typos per search length: 4–5 characters = 1, from 6 = 2. */
         fun maxErrors(len: Int): Int = if (len >= 6) 2 else 1

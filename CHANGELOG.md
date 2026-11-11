@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+**Search (issue #18)**
+- Series/movie search no longer builds the word-suggestion index when the screen opens, only once two characters are typed; scans for an outdated query stop early; duplicate movie versions are removed off the UI thread. Lowers memory and CPU load on low-RAM Fire TV devices while typing (cause unverified, no stack trace in the issue)
+
 **Playlists (T-009)**
 - Xtream: any number of backup server addresses per login (same username and password). If the main server stops answering, the app switches to the next one by itself, for the playlist, TV guide, catch-up and streams
 - Each server shows whether it is reachable or since when it is not; the playlist row in Settings > Playlists lists servers that are down
