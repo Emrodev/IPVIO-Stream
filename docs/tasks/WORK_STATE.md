@@ -4,6 +4,10 @@ Last update: 2026-11-11. Read `CLAUDE.md` first, then this file.
 
 ## Current task
 
+**Integration branch `integration/2026-11-11`**: open PRs (#7, #8, #9, #13, #14, #19 Stalker part, #30-#34, #36, #38, #39) merged locally into one branch, plus fixes for reported bugs: Live TV focus (Right/Left keep the spot), #22 Recently added order, #26 language filter icon, #25 tap-to-seek, Stalker loading texts translated. Device test on an NVIDIA SHIELD in progress (results so far: #20 movie playback and #28 resume pass, #22 newest first confirmed). Open: #10 (MKV without Cues, needs a player-core plan), #27 (not reproduced yet), #18 (search; device test pending). Unit tests: all pass except two `PhoneImportTest`/`PhoneTransferTest` socket tests that also fail on `origin/main`.
+
+## Earlier task
+
 **T-009 Xtream backup servers** (see `docs/tasks/T-009-xtream-backup-servers.md`): merged into `main` through #37 (#3 rebased with the review fixes from #35, without the commit of #2; #3 and #35 closed). CI passed. Device test PENDING before the next release.
 
 None active. **P2 batch 8** (final comment sweep) is done in the working copy; the commit by the maintainer is pending. The restructuring plan U-0 is recorded in `docs/REFACTORING-PROGRESS.md`.
