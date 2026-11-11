@@ -296,7 +296,7 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
                     if (langOptions.size > 1) item {
                         val lo = listOf("Alle") + langOptions.map { if (it == LangTagLogic.UNKNOWN) Lang.tr("Ohne Kennung") else LangTagLogic.name(it) }
                         DropdownPill("Sprache", lo.getOrElse(langOptions.indexOf(state.lang) + 1) { "Alle" }, lo, langOptions.indexOf(state.lang) + 1,
-                            active = state.lang != null, icon = FIcon.Country) {
+                            active = state.lang != null, icon = FIcon.Language) {
                             state.lang = if (it == 0) null else langOptions[it - 1]
                             BrowseLangPrefs.set(ctx, browseKind, state.lang)
                         }
