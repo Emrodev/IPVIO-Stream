@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+**Performance (T-007)**
+- Release build optimized again with R8 for the libraries (Compose, Media3, OkHttp, Kotlin), as in 1.0 and 1.1; it was off since 1.2
+- The app's own code is precompiled after installation (baseline profile), so screens and lists stutter less on first use
+- Live TV and the home screen no longer redraw 60 times per second while nothing moves (pulsing LIVE dot and slideshow progress now step-based)
+- Full-screen backgrounds of Live TV and the home screen are drawn once and reused while lists scroll
+- Home cards no longer run a position callback on every scroll frame
+
 ## 1.3
 [PENDING: Änderung eintragen]
 

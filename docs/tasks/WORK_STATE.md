@@ -4,7 +4,11 @@ Last update: 2026-11-11. Read `CLAUDE.md` first, then this file.
 
 ## Current task
 
-None active. **P2 batch 8** (final comment sweep) is done in the working copy; the commit by the maintainer is pending. The restructuring plan U-0 is recorded in `docs/REFACTORING-PROGRESS.md`.
+**T-007 Performance** on branch `perf/T-007` (see `docs/tasks/T-007-performance.md`): implemented, CI debug build and unit tests run on the branch, release build and device test PENDING. Not merged into `main`.
+
+## Previous task
+
+None active before T-007. **P2 batch 8** (final comment sweep) is done in the working copy; the commit by the maintainer is pending. The restructuring plan U-0 is recorded in `docs/REFACTORING-PROGRESS.md`.
 
 ## Completed steps
 

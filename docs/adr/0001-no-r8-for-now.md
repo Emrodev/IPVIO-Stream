@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Records the state of release 1.3. Revisit after the refactoring (audit roadmap, "later").
+Superseded by [ADR 0004](0004-r8-for-libraries.md) (T-007). Recorded the state of release 1.3.
 
 ## Context
 

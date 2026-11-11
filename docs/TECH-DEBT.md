@@ -29,7 +29,7 @@ Planned split order (P5, each with tests and approval): `SettingsHub`, `LiveTab`
 | 3 | Scattered storage access | 32 own `prefs(c)` helpers; no central list of store names | later (see [ADR 0003](adr/0003-shared-prefs-no-database.md)) |
 | 4 | Incomplete backup | `ipvio_dual`, `ipvio_live`, `ipvio_newep`, `ipvio_importedlists`, `ipvio_resumelog` are missing in `NAMES` (`Backup.kt:13-23`) | T-006 |
 | 5 | Outdated comment | "9 languages" (`PhoneImport.kt:40`); the app has 10 | P2 |
-| 6 | R8 keep rules in a clean-up folder | `app/src/main/_to_delete_keepRules/` is committed; see [ADR 0001](adr/0001-no-r8-for-now.md) | later |
+| 6 | R8 keep rules in a clean-up folder | `app/src/main/_to_delete_keepRules/` is committed but unused; the active rule is `keepRules/reflection.keep` since T-007, see [ADR 0004](adr/0004-r8-for-libraries.md). The old folder can be deleted after the device test | after T-007 |
 | 7 | German text outside UI strings | about 136 German comment lines in 44 files (many in tests); also `AndroidManifest.xml`, `app/build.gradle.kts:41, 60-61`, `gradle/libs.versions.toml:1`, `res/xml/file_paths.xml:2`; some test names (e.g. `handySeiteInDerSpracheDesHandys`). Heuristic count; full list comes in P4 | P2, P4 |
 | 8 | Global state | 179 `object` singletons in 110 files; global Compose states; no ViewModel, no DI | later (no change planned) |
 | 9 | Flat package | 162 files in one package | later (target structure in [ARCHITECTURE.md](ARCHITECTURE.md)) |
