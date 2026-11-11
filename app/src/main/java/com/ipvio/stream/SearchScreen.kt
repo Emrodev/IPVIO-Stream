@@ -114,13 +114,8 @@ fun SearchScreen(
         delay(250)
         val searchContext = currentCoroutineContext()
         value = q to withContext(Dispatchers.Default) {
-            val (movies, series, live) = idx.find(q) { searchContext.ensureActive() }
-            val seen = HashSet<String>(movies.size * 2)
-            val uniqueMovies = ArrayList<Item>(movies.size)
-            for ((i, item) in movies.withIndex()) {
-                if ((i and 0xFF) == 0) searchContext.ensureActive()
-                if (seen.add(item.mk + "|" + item.lang)) uniqueMovies.add(item)
-            }
+            val (movies, series, live) = idx.find(q, checkCancelled = { searchContext.ensureActive() })
+            val uniqueMovies = PlaylistLogic.firstPerKey(movies) { it.mk + "|" + it.lang }
             Triple(uniqueMovies, series, live)
         }
     }

@@ -4,9 +4,17 @@ package com.ipvio.stream
 class SearchIndex(val all: List<Item>) {
     val keys: Array<String> = Array(all.size) { norm(all[it].title) }
     val byId: Map<String, Item> = all.associateBy { it.id }
-    private val fuzzyItemCount = all.count { it.kind != Kind.LIVE }
-
-    fun find(q: String, checkCancelled: () -> Unit = {}): Triple<List<Item>, List<Item>, List<Item>> {
+    /**
+     * Exact matches first; if there are few, typo-tolerant matches for movies and series.
+     * [checkCancelled] is called periodically and may throw to abort the scan. The fuzzy scan
+     * stops after [fuzzyBudgetMs] (measured with [nanoClock]) and keeps the hits found so far.
+     */
+    fun find(
+        q: String,
+        fuzzyBudgetMs: Long = FUZZY_BUDGET_MS,
+        nanoClock: () -> Long = System::nanoTime,
+        checkCancelled: () -> Unit = {}
+    ): Triple<List<Item>, List<Item>, List<Item>> {
         val n = norm(q)
         val m = ArrayList<Item>(); val s = ArrayList<Item>(); val l = ArrayList<Item>()
         if (n.isEmpty()) return Triple(m, s, l)
@@ -17,13 +25,17 @@ class SearchIndex(val all: List<Item>) {
                 when (item.kind) { Kind.MOVIE -> m.add(item); Kind.SERIES -> s.add(item); Kind.LIVE -> l.add(item) }
             }
         }
-        // Fuzzy distance checks are much more expensive than exact matching. Keep them for
-        // ordinary playlists, but skip them on very large catalogs (exact search still works).
-        if (fuzzyItemCount <= FUZZY_SCAN_ITEM_LIMIT && m.size + s.size < FUZZY_BELOW && n.length >= 4) {
+        // Fuzzy distance checks are much more expensive than exact matching, so they run
+        // only when there are few exact hits and are limited by a time budget.
+        if (m.size + s.size < FUZZY_BELOW && n.length >= 4) {
             val k = maxErrors(n.length)
+            val deadline = nanoClock() + fuzzyBudgetMs * 1_000_000L
             val hits = ArrayList<Pair<Int, Int>>()
             for (i in all.indices) {
-                if ((i and CANCELLATION_CHECK_MASK) == 0) checkCancelled()
+                if ((i and CANCELLATION_CHECK_MASK) == 0) {
+                    checkCancelled()
+                    if (nanoClock() > deadline) break
+                }
                 val kind = all[i].kind
                 if (kind == Kind.LIVE) continue
                 val key = keys[i]
@@ -42,7 +54,7 @@ class SearchIndex(val all: List<Item>) {
     companion object {
         const val FUZZY_BELOW = 3
         const val FUZZY_MAX = 40
-        const val FUZZY_SCAN_ITEM_LIMIT = 12_000
+        const val FUZZY_BUDGET_MS = 150L
         private const val CANCELLATION_CHECK_MASK = 0xFF
 
         /** Allowed typos per search length: 4–5 characters = 1, from 6 = 2. */
