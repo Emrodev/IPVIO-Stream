@@ -4,7 +4,9 @@ Last update: 2026-11-11. Read `CLAUDE.md` first, then this file.
 
 ## Current task
 
-None active. **P2 batch 8** (final comment sweep) is done in the working copy; the commit by the maintainer is pending. The restructuring plan U-0 is recorded in `docs/REFACTORING-PROGRESS.md`.
+Round 28 (maintainer report, 2026-11-11): T-009 refresh default, T-010 Stalker movies/series (stage A), T-011 category sorting, T-012 EPG matching. Branch `fix/round28-major`, one commit per task. Device tests open. T-010 stage B (per-category loading on opening) needs a plan.
+
+Previous state:  **P2 batch 8** (final comment sweep) is done in the working copy; the commit by the maintainer is pending. The restructuring plan U-0 is recorded in `docs/REFACTORING-PROGRESS.md`.
 
 ## Completed steps
 

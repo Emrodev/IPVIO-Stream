@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+**Playlists**
+- Stalker portals: all movies and series are loaded (before at most 6,000 movies / 4,000 series), list pages are fetched in parallel; if a portal delivers no series, a short note appears under Diagnostics (T-010)
+- Playlist refresh defaults to "daily" instead of "at every start" for users who never chose a mode; the first start still loads once (T-009)
+
+**Categories**
+- Live TV, movies and series: sort categories by provider order, A–Z or an own order; move categories with the menu key / long OK (T-011)
+
+**TV guide**
+- Channels without a matching tvg-id are matched by name; Stalker portals show the running shows from the portal (T-012)
+
 ## 1.3
 [PENDING: Änderung eintragen]
 
