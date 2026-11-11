@@ -34,6 +34,8 @@ object LiveGenre {
         return r
     }
 
+    fun trim() = synchronized(this) { last = null }
+
     private var last: Pair<List<Item>, LinkedHashMap<String, List<Item>>>? = null
 
     private fun compute(live: List<Item>): LinkedHashMap<String, List<Item>> {

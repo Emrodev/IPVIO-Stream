@@ -15,6 +15,8 @@
 - Optional backup to Google Drive (sign-in with a code). Planned again for 1.4 as LiveSync. The old code is in tag V1.1
 
 [PENDING: Änderung eintragen]
+**Live TV**
+- Fewer stalls when opening Live TV on Android TV / Fire TV: genres and quality bundling are prepared in the background (PR #8); follow-up fixes make sure a category never shows the rows of the previously selected category while bundling runs, and a failed background preparation falls back to the plain channel rows instead of crashing
 
 ## 1.1
 **Updates and your data**
