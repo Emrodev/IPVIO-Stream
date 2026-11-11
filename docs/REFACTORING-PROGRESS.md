@@ -42,7 +42,7 @@ Each step is one branch `refactor/U-n` with a tag `pre-U-n` before it. Code is m
 | Step | Content | Status |
 |---|---|---|
 | U-0b | P2 batch 8: final comment sweep, fix of `RemoteUi.kt:39` | done (commit pending) |
-| U-1 | Move the Media3-dependent code out of `PlayerLogic.kt` (new `PlayerTracks.kt`; mirrored error codes with a Media3 contract test; `epgSane` and the retry rule into pure code) so `PlayerLogicTest`, `CoreLogicTest` and `PlayerBufferTest` run without Android | done 2026-11-11 (PR open, CI pending) |
+| U-1 | Move the Media3-dependent code out of `PlayerLogic.kt` (new `PlayerTracks.kt`; mirrored error codes with a Media3 contract test; `epgSane` and the retry rule into pure code) so `PlayerLogicTest`, `CoreLogicTest` and `PlayerBufferTest` run without Android | done 2026-11-11 (PR #30 open, CI "Build APK" green on c98e16b, device test open) |
 | U-2 | Inventory of German identifiers (list only) | open |
 | U-3 | Renames: a) test names, b) `Round*` files, c) remaining identifiers in groups | open |
 | U-4 | Split: a) `SettingsHub`, b) `LiveTab`, c) `HomeScreen`/`HomeParts`, d) `PlaylistStore`, e) `PlayerScreen` | open |

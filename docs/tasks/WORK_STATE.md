@@ -4,7 +4,7 @@ Last update: 2026-11-11. Read `CLAUDE.md` first, then this file.
 
 ## Current task
 
-**U-1** (move the Media3-dependent code out of `PlayerLogic.kt`) is done on branch `refactor/U-1`, based on `pre-U-1`. The pull request is open; the CI check "Build APK" decides whether it is merged. The maintainer confirms the merge.
+**U-1** (move the Media3-dependent code out of `PlayerLogic.kt`) is done on branch `refactor/U-1`, based on `pre-U-1`. The pull request (#30) is open; the CI check "Build APK" (unit tests and debug build) passed on commit c98e16b. The device test is still open. The maintainer confirms the merge.
 
 ## Completed steps
 
