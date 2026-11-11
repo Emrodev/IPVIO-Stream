@@ -230,8 +230,8 @@ fun HomeScreen(
         delay(2500)
         val genres = LivePreparation.genres(live)
         val bundled = if (General.bundleLive) LivePreparation.bundle(live) else null
-        runCatching { genres.await() }
-        bundled?.let { runCatching { it.await() } }
+        genres.awaitOrNull()
+        bundled?.awaitOrNull()
         withContext(Dispatchers.Default) { runCatching { SportWatch.prewarm(live) } }
     }
     // "Because you watched X": similar titles (TMDB) of the last started movie/series, matched against the own playlist

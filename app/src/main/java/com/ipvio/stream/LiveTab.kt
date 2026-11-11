@@ -87,11 +87,13 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         }
     }
     // Prepare genres off the UI thread; the home-screen prewarm and this screen share one job.
-    val genreState by produceState<Pair<Boolean, Map<String, List<Item>>>>(false to emptyMap(), live) {
-        value = true to LivePreparation.genres(live).await()
+    // The result is stored together with the list it was computed for, so a result of a previous list
+    // (e.g. after a source switch) is never shown for the current one. A failed job yields no genres.
+    val genreState by produceState<Pair<List<Item>, Map<String, List<Item>>>?>(null, live) {
+        value = live to (LivePreparation.genresOrNull(live) ?: emptyMap())
     }
-    val genresReady = genreState.first
-    val genres = genreState.second
+    val genresReady = genreState?.first === live
+    val genres = if (genresReady) genreState?.second.orEmpty() else emptyMap()
     val favs = remember(favsAll, srcK) { if (srcK < 0) favsAll else favsAll.filter { it.src == srcK } }
     CatFavs.init(ctx)
     ChannelLists.init(ctx)
@@ -145,9 +147,12 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // Quality variants of one channel as a single row (not in favorites, own lists, recordings or while filling a list)
     val bundleOn = General.bundleLive && sel != FAV_CAT && sel != "REC" && curList == null && addTo == null
     // Bundle asynchronously and reuse the same in-flight work as the home-screen prewarm. Show raw rows immediately.
-    val bundled by produceState<LiveBundleLogic.Result?>(null, rawList, bundleOn) {
-        value = if (bundleOn) LivePreparation.bundle(rawList).await() else null
+    // The result is only used for the exact list it was computed for; while another category is being bundled
+    // (or bundling failed or was skipped) the raw rows of the current category are shown, never the previous category.
+    val bundledState by produceState<Pair<List<Item>, LiveBundleLogic.Result?>?>(null, rawList, bundleOn) {
+        value = if (bundleOn) rawList to LivePreparation.bundleOrNull(rawList) else null
     }
+    val bundled = if (bundleOn) bundledState?.takeIf { it.first === rawList }?.second else null
     val list = bundled?.list ?: rawList
     val variantsOf = bundled?.variants.orEmpty()
     val firstChan = remember { FocusRequester() }

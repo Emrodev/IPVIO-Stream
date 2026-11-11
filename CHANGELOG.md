@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+**Live TV**
+- Fewer stalls when opening Live TV on Android TV / Fire TV: genres and quality bundling are prepared in the background (PR #8); follow-up fixes make sure a category never shows the rows of the previously selected category while bundling runs, and a failed background preparation falls back to the plain channel rows instead of crashing
+
 ## 1.1
 **Updates and your data**
 - In-app updates from GitHub Releases: the app checks once a day and shows "Update available" in the bell; one click downloads and installs
