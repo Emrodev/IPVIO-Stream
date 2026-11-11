@@ -372,6 +372,8 @@ object PlaylistStore {
         if (url.startsWith("file://")) runCatching { File(java.net.URI(url)).takeIf { it.path.contains("/imports/") }?.delete() }
         val main = listOf(cacheFile(c, url), gzFile(c, url), rawFile(c, url), partFile(c, url), infoFile(c, url), Catchup.file(c, url))
         (main + main.map { tmp(it) }).forEach { runCatching { it.delete() } }
+        // Channel id table of a Stalker portal (for its TV guide)
+        StalkerLogic.parse(url)?.let { runCatching { File(c.filesDir, "stk_ch_${it.key}.map").delete() } }
     }
 
     private fun writeCache(
@@ -547,6 +549,7 @@ object PlaylistStore {
         raw.delete(); part.delete()
         bytesRead = 0L; totalBytes = -1L; downloadDone = false
         val counter = CountingOut(FileOutputStream(part)) { bytesRead = it }
+        StalkerApi.init(c)
         try {
             OutputStreamWriter(BufferedOutputStream(counter, 1 shl 16), Charsets.UTF_8).use { w ->
                 StalkerApi.write(src, w, { phase = it }, { if (cancelled()) throw CancellationException("abgebrochen") })

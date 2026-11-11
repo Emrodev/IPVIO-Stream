@@ -219,6 +219,19 @@ object StalkerLogic {
         return fallback
     }
 
+    // ------------------------------------------------------------------ TV guide of the portal
+
+    /**
+     * Shows from "get_short_epg": start/stop as Unix seconds ("start_timestamp"/"stop_timestamp"), title in "name",
+     * description in "descr". Broken or implausible entries are skipped; result sorted by start.
+     */
+    fun epgEntries(rows: List<Map<String, String>>): List<EpgEntry> = rows.mapNotNull { f ->
+        val s = f["start_timestamp"]?.trim()?.toLongOrNull() ?: return@mapNotNull null
+        val e = f["stop_timestamp"]?.trim()?.toLongOrNull() ?: return@mapNotNull null
+        val t = f["name"]?.trim().orEmpty()
+        if (e <= s || e - s > 12 * 3600L || t.isEmpty()) null else EpgEntry(t, f["descr"]?.trim().orEmpty(), s, e)
+    }.sortedBy { it.start }
+
     // ------------------------------------------------------------------ Entries of the list
 
     private fun attr(s: String?) = (s ?: "").replace('"', '\'').replace('\n', ' ').trim()

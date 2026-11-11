@@ -72,7 +72,7 @@ fun SportTab(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
     LaunchedEffect(Unit) { while (true) { delay(60_000); tick++ } }
     val slots by produceState<Pair<List<SportLogic.Slot>, List<SportLogic.Slot>>?>(null, live, tick, Xmltv.channelCount) {
         value = withContext(Dispatchers.Default) {
-            SportLogic.slots(live, { Xmltv.forChannel(it.tvgId) }, System.currentTimeMillis() / 1000, 48 * 3600L, 600)
+            SportLogic.slots(live, { Xmltv.forItem(it) }, System.currentTimeMillis() / 1000, 48 * 3600L, 600)
         }
     }
     val allNow = slots?.first.orEmpty()

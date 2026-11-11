@@ -77,7 +77,7 @@ object RemoteHub {
 
     /** Live channel for the phone: like [itemJson] plus favorite flag and the running show (from the loaded XMLTV, no network). */
     private fun liveJson(i: Item): String {
-        val cur = Epg.current(Xmltv.forChannel(i.tvgId))
+        val cur = Epg.current(Xmltv.forItem(i))
         return RemoteLogic.live(itemJson(i), Library.isFav(i.id), cur?.title, cur?.start ?: 0L, cur?.end ?: 0L)
     }
 

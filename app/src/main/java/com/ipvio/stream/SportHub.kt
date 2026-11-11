@@ -153,7 +153,7 @@ fun SportHub(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
     LaunchedEffect(live, Xmltv.channelCount) {
         while (true) {
             val s = withContext(Dispatchers.Default) {
-                SportLogic.slots(live, { Xmltv.forChannel(it.tvgId) }, System.currentTimeMillis() / 1000, 48 * 3600L, 600)
+                SportLogic.slots(live, { Xmltv.forItem(it) }, System.currentTimeMillis() / 1000, 48 * 3600L, 600)
             }
             SportWatch.setSlots(s.first + s.second)
             delay(60_000)

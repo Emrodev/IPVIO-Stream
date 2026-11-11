@@ -41,6 +41,61 @@ object StalkerApi {
     private const val WINDOW = 8
     private val pool = java.util.concurrent.Executors.newFixedThreadPool(WORKERS) { r -> Thread(r, "stalker-pages").apply { isDaemon = true } }
 
+    /** App files folder (for the channel id table), set by [init]. */
+    @Volatile private var dir: java.io.File? = null
+
+    fun init(c: Context) { if (dir == null) dir = c.applicationContext.filesDir }
+
+    /**
+     * The portal's guide asks for the channel id ("ch_id"), the play address in the list only holds the command.
+     * The table "hash of play address → channel id" is written with every list download (file "stk_ch_KEY.map").
+     */
+    private fun chFile(key: Int): java.io.File? = dir?.let { java.io.File(it, "stk_ch_$key.map") }
+    private val chIds = HashMap<Int, Map<Int, String>>()
+
+    private fun saveChannelIds(key: Int, ids: Map<Int, String>) {
+        val f = chFile(key) ?: return
+        runCatching {
+            val t = java.io.File(f.path + ".tmp")
+            t.bufferedWriter().use { w -> for ((h, id) in ids) { w.write(h.toString()); w.write("\t"); w.write(id); w.write("\n") } }
+            f.delete(); t.renameTo(f)
+        }
+        synchronized(chIds) { chIds[key] = ids }
+    }
+
+    private fun channelId(key: Int, url: String): String? {
+        val m = synchronized(chIds) { chIds[key] } ?: run {
+            val f = chFile(key)?.takeIf { it.exists() } ?: return null
+            val read = HashMap<Int, String>()
+            runCatching {
+                f.forEachLine { l ->
+                    val i = l.indexOf('\t')
+                    if (i > 0) l.substring(0, i).toIntOrNull()?.let { read[it] = l.substring(i + 1) }
+                }
+            }
+            synchronized(chIds) { chIds[key] = read }
+            read
+        }
+        return m[url.hashCode()]
+    }
+
+    /** Live channel of a Stalker portal ("stalker://KEY/live/…")? */
+    fun isLive(url: String): Boolean = url.startsWith("stalker://") && url.contains("/live/")
+
+    /**
+     * Running and next shows of a channel from the portal (action get_short_epg). null = not possible (no channel id yet:
+     * list loaded with an older version, until the next refresh).
+     */
+    fun shortEpg(url: String): List<EpgEntry>? {
+        val ref = StalkerLogic.itemRef(url) ?: return null
+        val src = sourceOf(ref.key) ?: return null
+        val ch = channelId(ref.key, url) ?: return null
+        val s = runCatching { login(src) }.getOrNull() ?: return null
+        val r = js(src, StalkerLogic.api(s.endpoint, "itv", "get_short_epg", "&ch_id=" + enc(ch) + "&size=10"), s.token)
+        val a = (r as? JSONArray) ?: (r as? JSONObject)?.optJSONArray("data") ?: return null
+        return StalkerLogic.epgEntries((0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::fields) })
+    }
+
     /** Last response of the portal in short form (only code and kind, never address or MAC) for understandable error texts. */
     @Volatile private var note = ""
 
@@ -210,20 +265,28 @@ object StalkerApi {
         onPhase("Sender werden geladen …")
         val genres = categories(s, "itv", "get_genres")
         var live = 0
+        val ids = HashMap<Int, String>()
+        val addLive: (Map<String, String>) -> Unit = { f ->
+            StalkerLogic.liveEntry(src, f, genres)?.let { e ->
+                out.write(e); out.write("\n"); n++; live++
+                f["id"]?.takeIf { it.isNotBlank() }?.let { ids[e.substringAfterLast('\n').hashCode()] = it }
+            }
+        }
         val all = js(src, StalkerLogic.api(s.endpoint, "itv", "get_all_channels"), s.token)
         val data = (all as? JSONObject)?.optJSONArray("data") ?: (all as? JSONArray)
         if (data != null) for (i in 0 until data.length()) {
             val o = data.optJSONObject(i) ?: continue
-            StalkerLogic.liveEntry(src, fields(o), genres)?.let { out.write(it); out.write("\n"); n++; live++ }
+            addLive(fields(o))
             if (i % 1000 == 0) check()
         }
         if (live == 0) {
             // Fallback: many portals block "all channels at once" and deliver only page by page
             pagedFast(s, "itv", "&genre=*&force_ch_link_check=&fav=0&sortby=number&hd=0", MAX_CHANNELS, check) { o ->
-                StalkerLogic.liveEntry(src, fields(o), genres)?.let { out.write(it); out.write("\n"); n++; live++ }
+                addLive(fields(o))
                 if (live % 400 == 0) onPhase("Sender werden geladen ($live) …")
             }
         }
+        if (ids.isNotEmpty()) saveChannelIds(src.key, ids)
         val seenSeries = HashSet<String>()
 
         // ---- Movies (series in the movie area are marked as series)

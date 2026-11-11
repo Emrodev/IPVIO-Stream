@@ -46,7 +46,7 @@ object GuideSearchLogic {
         for (c in ChannelSearch.filter(channels, query).take(maxChannels)) out.add(Hit(c, null))
         val shows = ArrayList<Hit>()
         for (c in channels) {
-            for (e in Xmltv.forChannel(c.tvgId)) {
+            for (e in Xmltv.forItem(c)) {
                 if (e.end <= nowSec - 3600) continue
                 val t = ChannelSearch.norm(e.title)
                 if (words.all { it in t }) shows.add(Hit(c, e))
