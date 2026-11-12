@@ -36,4 +36,4 @@ Documentation only; no build or test needed. Nothing was run.
 
 ## Status
 
-Done on branch `docs/T-027-release-notes`, PR to `Emrodev/IPVIO-Stream` `main`.
+Done on branch `docs/T-027-release-notes`, PR #66 to `Emrodev/IPVIO-Stream` `main`.
