@@ -667,11 +667,11 @@ object PlaylistStore {
      * it is first counted quickly and then asked ([ask]) – without a question (background) it is aborted.
      * If the user requests the language selection meanwhile, it asks again and parses again.
      */
-    private suspend fun build(c: Context, src: File, gz: Boolean, cs: Charset, ask: Boolean, teeTo: File?, forceAsk: Boolean = false): Built {
+    private suspend fun build(c: Context, url: String, src: File, gz: Boolean, cs: Charset, ask: Boolean, teeTo: File?, forceAsk: Boolean = false): Built {
         var force = forceAsk
         while (true) {
             try {
-                return buildOnce(c, src, gz, cs, ask, teeTo, force)
+                return buildOnce(c, url, src, gz, cs, ask, teeTo, force)
             } catch (e: AskAgain) {
                 if (!ask) throw PlaylistError(MSG_TOO_BIG)
                 force = true
@@ -679,12 +679,13 @@ object PlaylistStore {
         }
     }
 
-    private suspend fun buildOnce(c: Context, src: File, gz: Boolean, cs: Charset, ask: Boolean, teeTo: File?, forceAsk: Boolean): Built {
-        var hidden = LangFilter.hidden
+    private suspend fun buildOnce(c: Context, url: String, src: File, gz: Boolean, cs: Charset, ask: Boolean, teeTo: File?, forceAsk: Boolean): Built {
+        // Hidden languages plus the content mode of this playlist (pseudo codes, never stored in the language filter)
+        var hidden = PlaylistMode.withMode(c, url, LangFilter.hidden)
         val budget = budget()
         val wantAsk = ask && (forceAsk || askRequested)
         askRequested = false
-        val unchosen = hidden.isEmpty() && !LangFilter.allChosen
+        val unchosen = LangFilter.hidden.isEmpty() && !LangFilter.allChosen
         if (wantAsk || unchosen) {
             val size = if (gz) src.length() * 12 else src.length()
             if (wantAsk || size > budget) {
@@ -693,10 +694,10 @@ object PlaylistStore {
                 if (wantAsk || LoadLogic.estimate(scan.bytes, hidden) > budget) {
                     if (!ask) throw PlaylistError(MSG_TOO_BIG)
                     val now = scan.counts.keys - hidden
-                    val pre = if (hidden.isNotEmpty() && now.isNotEmpty()) now else LoadLogic.systemPreselect(scan.counts, systemLang())
+                    val pre = if (LangFilter.hidden.isNotEmpty() && now.isNotEmpty()) now else LoadLogic.systemPreselect(scan.counts, systemLang())
                     val shown = askLanguages(scan.counts, scan.bytes, budget, pre) ?: throw PlaylistError(MSG_CANCEL)
-                    hidden = scan.counts.keys - shown
-                    LangFilter.set(c, hidden)
+                    LangFilter.set(c, scan.counts.keys - shown)
+                    hidden = PlaylistMode.withMode(c, url, scan.counts.keys - shown)
                     loadStarted = System.currentTimeMillis()
                 }
             }
@@ -781,6 +782,13 @@ object PlaylistStore {
         persist(c)
     }
 
+    /** Content mode of a playlist was changed: rebuild the shown list (no new download). */
+    suspend fun applyMode(c: Context) {
+        // While a load runs, it rebuilds at its end anyway and then picks up the new mode
+        if (!loadLock.tryLock()) return
+        try { withContext(Dispatchers.Default) { rebuild(c) } } finally { loadLock.unlock() }
+    }
+
     /** Build and show the list from the active and the loaded further playlists (background thread). */
     private fun rebuild(c: Context) {
         val u = primaryUrl ?: return
@@ -789,7 +797,8 @@ object PlaylistStore {
         extras.keys.retainAll(urls.toSet())
         val ex = urls.mapNotNull { url -> extras[url]?.let { url to it } }
         val names = listOf(nameOf(u)) + ex.map { nameOf(it.first) }
-        val m = MultiLogic.merge(listOf(primaryItems) + ex.map { it.second.items }, names)
+        // Content mode per playlist (Live only / VOD only) is applied here, before merging
+        val m = MultiLogic.merge(listOf(PlaylistMode.filter(c, u, primaryItems)) + ex.map { PlaylistMode.filter(c, it.first, it.second.items) }, names)
         val vis = m.visible()
         val epg = (primaryEpg + ex.flatMap { it.second.epg }).distinct()
         twins = if (m.shadow.isEmpty()) emptyMap() else HashMap<String, Item>().also { t -> for (it in m.items) if (it.id in m.shadow) t.putIfAbsent("${it.src}|" + it.mk, it) }
@@ -856,7 +865,7 @@ object PlaylistStore {
     }
 
     private suspend fun loadExtra(c: Context, u: String, network: Boolean): Extra? {
-        val hidden = LangFilter.hidden
+        val hidden = PlaylistMode.withMode(c, u, LangFilter.hidden)
         if (!network) {
             val head = readHeader(c, u)
             if (head != null && (head.hidden == null || head.hidden == hidden)) {
@@ -864,7 +873,7 @@ object PlaylistStore {
             }
             val gz = gzFile(c, u)
             if (gz.exists()) {
-                val b = build(c, gz, true, Charsets.UTF_8, false, null)
+                val b = build(c, u, gz, true, Charsets.UTF_8, false, null)
                 val p = b.parsed
                 if (p.items.isNotEmpty()) {
                     val epg = head?.epg?.takeIf { it.isNotEmpty() } ?: epgFor(u, p.epgUrls)
@@ -877,7 +886,7 @@ object PlaylistStore {
         }
         val (src, cs) = downloadWithRetry(c, u)
         val gzTmp = tmp(gzFile(c, u))
-        val b = build(c, src, false, cs, false, gzTmp)
+        val b = build(c, u, src, false, cs, false, gzTmp)
         val p = b.parsed
         if (p.counts.isEmpty()) throw PlaylistError("Keine Sender in der Playlist gefunden.")
         val urls = epgFor(u, p.epgUrls)
@@ -914,11 +923,11 @@ object PlaylistStore {
      * stored whole list, read in again ([allowGz]).
      */
     private suspend fun fromLocal(c: Context, u: String, allowGz: Boolean, ask: Boolean): Local {
-        val hidden = LangFilter.hidden
+        val hidden = PlaylistMode.withMode(c, u, LangFilter.hidden)
         val head = readHeader(c, u)
         if (head != null) {
             // Old version (whole list without language counts) with a very large file and no language selection: do not load everything into memory
-            val legacyTooBig = head.hidden == null && hidden.isEmpty() && cacheFile(c, u).length() > budget()
+            val legacyTooBig = head.hidden == null && (hidden - LangTagLogic.PSEUDO).isEmpty() && cacheFile(c, u).length() > budget()
             if (!legacyTooBig && (head.hidden == null || head.hidden == hidden)) {
                 val cached = readCache(c, u, hidden)
                 if (cached != null && cached.counts.isNotEmpty()) {
@@ -932,7 +941,7 @@ object PlaylistStore {
         heavy = true
         if (loadStarted == 0L) loadStarted = System.currentTimeMillis()
         return try {
-            val b = build(c, gz, true, Charsets.UTF_8, ask, null)
+            val b = build(c, u, gz, true, Charsets.UTF_8, ask, null)
             val p = b.parsed
             if (p.counts.isEmpty()) return Local.NONE
             val epg = head?.epg?.takeIf { it.isNotEmpty() } ?: epgFor(u, p.epgUrls)
@@ -1009,7 +1018,7 @@ object PlaylistStore {
             try {
                 val (src, cs) = downloadWithRetry(c, u)
                 val gzTmp = tmp(gzFile(c, u))
-                val b = build(c, src, false, cs, ask, gzTmp, forceAsk)
+                val b = build(c, u, src, false, cs, ask, gzTmp, forceAsk)
                 val parsed = b.parsed
                 if (parsed.counts.isEmpty()) throw PlaylistError("Keine Sender in der Playlist gefunden.")
                 downloadDone = true
@@ -1080,7 +1089,7 @@ object PlaylistStore {
                 Local.FAILED -> {
                     // New selection does not fit: restore the old selection (and, if already released, parse again)
                     val msg = error
-                    LangFilter.set(c, prev)
+                    LangFilter.set(c, prev - LangTagLogic.PSEUDO)
                     if (rawChannels.isEmpty()) withContext(Dispatchers.IO) { fromLocal(c, u, allowGz = true, ask = false) }
                     error = msg
                 }
@@ -1110,7 +1119,7 @@ object PlaylistStore {
                 try {
                     val (src, cs) = downloadWithRetry(c, u)
                     val gzTmp = tmp(gzFile(c, u))
-                    val b = build(c, src, false, cs, false, gzTmp)
+                    val b = build(c, u, src, false, cs, false, gzTmp)
                     if (b.parsed.counts.isEmpty()) return@withContext false
                     writeCache(c, u, b.parsed.items, epgFor(u, b.parsed.epgUrls), fetchOrder(u), b.parsed.counts, b.parsed.bytes, b.hidden)
                     Catchup.saveParsed(c, u, b.parsed.catchup)
