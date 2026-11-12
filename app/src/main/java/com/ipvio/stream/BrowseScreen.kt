@@ -247,7 +247,7 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
         Column(Modifier.fillMaxSize().sidebarPad().padding(horizontal = 32.dp, vertical = DS.PageY)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(req.title, color = Color.White, fontSize = spx(34), fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                Text(if (ready) "${list.size} Titel" else "Lade …", color = Muted, fontSize = 16.sp)
+                Text(if (ready) (if (list.size == 1) "1 Titel" else "${list.size} Titel") else "Lade …", color = Muted, fontSize = 16.sp)
                 // New info from the genre detection: re-sort only on request so nothing shifts under the cursor
                 if (newer && ready) SmallPill("Neue Infos · aktualisieren") {
                     state.ver = Classifier.version; state.focused = 0; restoreIdx = 0; jumpTick++; jumpFirst = true
