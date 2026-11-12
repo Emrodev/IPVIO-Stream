@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- TV guide: channels without archive keep the shows of the last 6 hours (before: 1 hour), so scrolling back shows what ran earlier instead of empty rows
 - Internal: player helper code split from Media3 (no user-visible change).
 - Search: the query box above the app keyboard can now be selected; OK or a tap opens the device keyboard for typing
 - TV guide in the player: a playback error box (for example "check username, password or subscription") no longer sits on top of the guide
