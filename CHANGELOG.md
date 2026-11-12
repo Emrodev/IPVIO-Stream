@@ -22,6 +22,7 @@
 - MKV files without a Cues index can be seeked: skip, number-key jump and "Resume" no longer restart the movie at 0:00. The app estimates the byte position, reads the timecode of the next Cluster and corrects the position (up to 10 extra range requests); files with Cues are not affected (#10)
 **Translations**
 - The Stalker loading texts ("Loading channels (N)", "Loading categories (n/m)") are translated instead of always showing German
+- More texts that showed German in other languages are translated: the Live TV search hint, "Retrying categories", the guide fallback on Favorites ("No guide data available"), the ready-made design and background names, the genre loading progress in Settings, and "1 title" (singular)
 
 ## 1.3
 [PENDING: Änderung eintragen]
