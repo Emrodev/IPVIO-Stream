@@ -122,6 +122,24 @@ object StalkerMore {
         }
     }
 
+    /**
+     * Preview of a category scrolled near its end: fetch the next portion (nothing while a request is running or when
+     * the category is complete). Unlike [prefetch] it does not cancel anything, so quick scrolling sends one request at a time.
+     */
+    fun previewMore(c: Context, group: String, kinds: Set<Kind>) {
+        val ctx = c.applicationContext
+        app = ctx
+        synchronized(lock) {
+            if (job?.isActive == true || view != null) return
+            val myGen = gen
+            job = scope.launch {
+                try { next(ctx, group, kinds, null, myGen) } catch (e: CancellationException) { throw e } catch (e: Throwable) {
+                    Log.w("StalkerMore", "preview load failed: ${e.javaClass.simpleName}")
+                }
+            }
+        }
+    }
+
     private fun refKey(r: StalkerLogic.CatRef) = r.type + "\t" + r.id
 
     private fun refsOf(c: Context, u: String): MutableMap<String, StalkerLogic.CatRef> = synchronized(lock) {
