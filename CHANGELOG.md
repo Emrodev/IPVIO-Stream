@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- TV guide: two new view options for more channels on screen. Preview "Small" shrinks the running picture and the header; row height "Small" shows one line per show. Lists fade at an edge with more to scroll instead of cutting a row in half
 - Internal: player helper code split from Media3 (no user-visible change).
 - Search: the query box above the app keyboard can now be selected; OK or a tap opens the device keyboard for typing
 - TV guide in the player: a playback error box (for example "check username, password or subscription") no longer sits on top of the guide
