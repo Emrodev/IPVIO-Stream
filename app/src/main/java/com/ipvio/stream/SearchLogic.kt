@@ -140,3 +140,25 @@ class WordSuggest(items: List<Item>) {
         fun lastWord(query: String): String = if (query.endsWith(" ")) "" else query.substringAfterLast(' ')
     }
 }
+
+/**
+ * The same movie or series in several languages (or categories) shows as look-alike cards. For each title that occurs
+ * more than once in [list] (same kind, title without punctuation, year), the text under its card: year plus the
+ * language, or the category when the version has no language tag. Titles that occur once get no entry.
+ */
+object SearchVersions {
+    private val PUNCT = Regex("[^\\p{L}\\p{N}]+")
+
+    private fun key(it: Item) = it.kind.name + "|" + SearchIndex.norm(it.title).replace(PUNCT, " ").trim() + "|" + (it.year ?: 0)
+
+    fun labels(list: List<Item>): Map<String, String> {
+        val groups = list.filter { it.kind != Kind.LIVE }.groupBy(::key).values.filter { it.size > 1 }
+        if (groups.isEmpty()) return emptyMap()
+        val out = HashMap<String, String>()
+        for (g in groups) for (it in g) {
+            val where = if (it.lang == LangTagLogic.UNKNOWN) it.group.trim() else LangTagLogic.name(it.lang)
+            out[it.id] = listOfNotNull(it.year?.toString(), where.ifBlank { null }).joinToString(" · ")
+        }
+        return out
+    }
+}

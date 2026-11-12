@@ -194,7 +194,7 @@ fun SearchScreen(
                 if (AppSettings.systemKeyboard) {
                     // The device's own keyboard (e.g. Gboard) in a normal text field: OK or a tap opens it
                     Field(
-                        SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
+                        SearchState.query, { SearchState.query = it.take(60) }, searchHint(SearchState.filter),
                         Modifier.fillMaxWidth(),
                         inner = Modifier.focusRequester(ContentFocus.req).onFocusChanged { fieldFocused = it.isFocused || it.hasFocus },
                         onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
@@ -371,6 +371,8 @@ private fun SearchRow(
     val headerReq = remember { FocusRequester() }
     val firstCard = firstReq ?: remember { FocusRequester() }
     val report = LocalSearchFocus.current
+    // The same title in several languages: say which version each card is
+    val versions = remember(list) { SearchVersions.labels(list.take(60)) }
     Column {
         SearchRowHeader(title, list.size, headerReq, firstCard, rowState, onAll)
         Box(
@@ -388,7 +390,7 @@ private fun SearchRow(
                 itemsIndexed(list.take(60)) { i, x ->
                     val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) report(x) }
                     if (x.kind == Kind.LIVE) LiveCard(x, { onOpen(x) }, Modifier.width((cardW * 4 / 3).dp).then(fr))
-                    else PosterCard(x, { onOpen(x) }, Modifier.width(cardW.dp).restoreFocus(x.id).then(fr))
+                    else PosterCard(x, { onOpen(x) }, Modifier.width(cardW.dp).restoreFocus(x.id).then(fr), subtitle = versions[x.id])
                 }
                 item { SearchAllTile(liveRow, if (liveRow) (cardW * 4 / 3).dp else cardW.dp, onAll) }
             }
@@ -405,10 +407,13 @@ private fun QueryBox(text: String, modifier: Modifier) {
         modifier.height(62.dp).clip(shape).background(Surf).border(DS.Border, Surf2, shape).padding(horizontal = 20.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        if (text.isEmpty()) Text("Filme, Serien oder Sender suchen…", color = Muted, fontSize = 20.sp, maxLines = 1)
+        if (text.isEmpty()) Text(searchHint(SearchState.filter), color = Muted, fontSize = 20.sp, maxLines = 1)
         else Text(text, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, raw = true)
     }
 }
+
+/** Hint in the empty search field: follows the Movies / Series filter (translation keys shared with the header). */
+private fun searchHint(filter: Int): String = when (filter) { 1 -> "Filme suchen …"; 2 -> "Serien suchen …"; else -> "Filme, Serien oder Sender suchen…" }
 
 private val SEARCH_FILTERS = listOf("Alle", "Filme", "Serien", "Live TV", "Sport")
 

@@ -20,6 +20,7 @@
 - Categories view (movies and series): the preview next to the category list shows every title of the category instead of the newest 40, and on a Stalker portal the next portion loads when scrolling near the end
 - Categories view: Right returns to the title last focused in that category; Left from the first column goes to the selected category instead of the row beside the title (which switched the category)
 - The search field on Movies and Series says "Search movies …" / "Search series …" and opens the search filtered to that area, including "Recently watched"
+- Search: when the same movie or series shows more than once (versions in other languages or categories), each card says which version it is, e.g. "2023 · English" / "2023 · Français", or the category for versions without a language tag; the empty search field follows the Movies / Series filter
 **Player**
 - On phones and tablets, tapping or dragging on the timeline jumps to that position (#25)
 - MKV files without a Cues index can be seeked: skip, number-key jump and "Resume" no longer restart the movie at 0:00. The app estimates the byte position, reads the timecode of the next Cluster and corrects the position (up to 10 extra range requests); files with Cues are not affected (#10)
