@@ -410,9 +410,10 @@ fun HomeScreen(
     LaunchedEffect(ready.isNotEmpty(), tab) {
         if (tab != 0 || HomeFlags.heroDone || LastFocus.pending != null) return@LaunchedEffect
         var waited = 0
-        while (waited < 45000) {
+        while (waited < 15000) {
             delay(150); waited += 150
-            if (ready.isEmpty() && waited < 6000) continue
+            // No top picture (yet): nothing to focus. This effect starts again when the picture becomes ready.
+            if (ready.isEmpty()) { if (waited < 6000) continue else return@LaunchedEffect }
             if (waited > 3000 && !inSidebar) return@LaunchedEffect
             if (runCatching { ContentFocus.req.requestFocus() }.getOrDefault(false)) { HomeFlags.heroDone = true; return@LaunchedEffect }
         }
