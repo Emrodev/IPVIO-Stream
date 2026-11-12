@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- TV guide: the time axis stays still when moving Up/Down to another channel; it only scrolls when the selected show is out of view (before, every show was centred, so the whole grid jumped back and forth)
 - Internal: player helper code split from Media3 (no user-visible change).
 - Search: the query box above the app keyboard can now be selected; OK or a tap opens the device keyboard for typing
 - TV guide in the player: a playback error box (for example "check username, password or subscription") no longer sits on top of the guide

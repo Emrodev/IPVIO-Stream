@@ -156,9 +156,10 @@ fun Guide(
         }
     }
 
+    // The time window only scrolls when the focused show is (almost) out of view; before, it re-centred on every show,
+    // so moving Up/Down to another channel moved the whole time axis
     fun shiftFor(e: EpgEntry) {
-        val center = e.start + minOf(e.end - e.start, viewMin * 60L) / 2
-        winStart = (center - viewMin * 30L).coerceIn(minStart, base + maxSpan - viewMin * 60L)
+        winStart = GuideLogic.windowFor(winStart, viewMin * 60L, e.start, e.end, minStart, base + maxSpan - viewMin * 60L)
     }
 
     fun jumpNow() {
