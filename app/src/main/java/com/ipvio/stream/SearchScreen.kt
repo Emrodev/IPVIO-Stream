@@ -234,9 +234,10 @@ fun SearchScreen(
                     }
                 }
                 if (q.length < 2) {
-                    val hm = hist.filter { it.kind == Kind.MOVIE }
-                    val hs = hist.filter { it.kind == Kind.SERIES }
-                    val hl = hist.filter { it.kind == Kind.LIVE }
+                    // Recently watched follows the quick filter too (search opened from Movies shows only movies)
+                    val hm = if (fl == 0 || fl == 1) hist.filter { it.kind == Kind.MOVIE } else emptyList()
+                    val hs = if (fl == 0 || fl == 2) hist.filter { it.kind == Kind.SERIES } else emptyList()
+                    val hl = if (fl == 0 || fl >= 3) hist.filter { it.kind == Kind.LIVE } else emptyList()
                     if (hm.isNotEmpty()) item(key = "hm") {
                         SearchRow("Zuletzt geschaut · Filme", hm.take(30), cardW, onOpen) {
                             onBrowse(BrowseReq("Zuletzt geschaut · Filme", hm, S_SORT_PLAYLIST))

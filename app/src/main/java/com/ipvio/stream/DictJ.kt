@@ -671,4 +671,6 @@ Eisfach¦Freezer¦Dondurucu¦Zamrzivač¦Zamrzivač¦Zamrzivač¦Congelador¦Con
 Tiefsee¦Deep Sea¦Derin Deniz¦Dubine mora¦Dubine mora¦Dubine mora¦Mar profundo¦Abysses¦Abissi¦Diepzee
 Waldboden¦Forest Floor¦Orman Zemini¦Šumsko tlo¦Šumsko tlo¦Šumsko tlo¦Suelo del bosque¦Sous-bois¦Sottobosco¦Bosgrond
 Glut¦Embers¦Kor¦Žar¦Žar¦Žar¦Brasas¦Braises¦Brace¦Gloed
+Filme suchen …¦Search movies …¦Film ara …¦Pretraži filmove …¦Pretraži filmove …¦Pretraži filmove …¦Buscar películas …¦Rechercher des films …¦Cerca film …¦Films zoeken …
+Serien suchen …¦Search series …¦Dizi ara …¦Pretraži serije …¦Pretraži serije …¦Pretraži serije …¦Buscar series …¦Rechercher des séries …¦Cerca serie …¦Series zoeken …
 """

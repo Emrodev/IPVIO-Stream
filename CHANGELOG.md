@@ -17,6 +17,9 @@
 **Movies and series**
 - "Recently added" shows the newest titles first: Xtream movies are ordered by their "added" time while loading (up to 80,000 titles) (#22)
 - The language filter has its own speech-bubble icon instead of the country globe (#26)
+- Categories view (movies and series): the preview next to the category list shows every title of the category instead of the newest 40, and on a Stalker portal the next portion loads when scrolling near the end
+- Categories view: Right returns to the title last focused in that category; Left from the first column goes to the selected category instead of the row beside the title (which switched the category)
+- The search field on Movies and Series says "Search movies …" / "Search series …" and opens the search filtered to that area, including "Recently watched"
 **Player**
 - On phones and tablets, tapping or dragging on the timeline jumps to that position (#25)
 - MKV files without a Cues index can be seeked: skip, number-key jump and "Resume" no longer restart the movie at 0:00. The app estimates the byte position, reads the timecode of the next Cluster and corrects the position (up to 10 extra range requests); files with Cues are not affected (#10)

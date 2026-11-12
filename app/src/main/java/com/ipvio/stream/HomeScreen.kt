@@ -320,7 +320,8 @@ fun HomeScreen(
     val header: @Composable (Modifier) -> Unit = { m ->
         HeaderBar(
             m.onFocusChanged { inHeader = it.hasFocus },
-            onSearch = { onTab(4) },
+            // Search from Movies/Series shows only that area (filter can still be changed there)
+            onSearch = { SearchState.filter = when (tab) { 1 -> 1; 2 -> 2; else -> 0 }; onTab(4) },
             onReminder = { r -> byId[r.chId]?.let(onOpen) },
             onNewEpisode = { id -> byId[id]?.let(onOpen) },
             // Only one profile: go directly to the profile page of settings (before: general settings)

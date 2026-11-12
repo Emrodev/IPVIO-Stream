@@ -70,7 +70,9 @@ fun HeaderBar(
         modifier.fillMaxWidth().padding(start = dpx(38), end = dpx(36), top = dpx(14)).height(dpx(52)),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SearchPill(if (tabs.isEmpty()) 467 else 330, onSearch)
+        // On Movies/Series the search opens filtered to that area, so the field says so
+        val hint = when (areaTab) { 1 -> "Filme suchen …"; 2 -> "Serien suchen …"; else -> "Suche nach Sendern, Filmen, Serien …" }
+        SearchPill(if (tabs.isEmpty()) 467 else 330, hint, onSearch)
         if (tabs.isNotEmpty()) {
             Spacer(Modifier.width(dpx(22)))
             Row(horizontalArrangement = Arrangement.spacedBy(dpx(8)), verticalAlignment = Alignment.CenterVertically) {
@@ -100,7 +102,7 @@ fun HeaderBar(
 }
 
 @Composable
-private fun SearchPill(w: Int, onClick: () -> Unit) {
+private fun SearchPill(w: Int, hint: String, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(50)
     Row(
@@ -115,7 +117,7 @@ private fun SearchPill(w: Int, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(dpx(14))
     ) {
         MenuIcon(4, if (f) DS.FocusInk else Color(0xFFD0D0D6), Modifier.size(dpx(22)))
-        Text("Suche nach Sendern, Filmen, Serien …", color = if (f) DS.FocusInk else Tok.TextLow, fontSize = spx(16), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(hint, color = if (f) DS.FocusInk else Tok.TextLow, fontSize = spx(16), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
