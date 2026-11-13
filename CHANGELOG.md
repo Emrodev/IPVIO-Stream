@@ -2,6 +2,7 @@
 
 ## Unreleased
 **Live TV**
+- Touch screens: tapping a category selects it and lists its channels; before, only the row highlight changed and the channels stayed on the old category (#67)
 - Right from a category always reaches the channels, also after scrolling a category's channels and switching to another category further down (the first channel row was not laid out yet, so the focus request went nowhere)
 - Right returns to the channel last focused in that category (the first channel after a category change); Left goes to the selected category instead of the row beside the channel
 
@@ -16,6 +17,7 @@
 - Search: typing fast cancels the previous search scan, and the typo-tolerant pass stops after 150 ms on very large catalogs (follow-up to PR #14)
 
 **Player**
+- Trailer: Back from the YouTube trailer returns to the movie's detail page instead of YouTube's home screen; YouTube also closes at the end of the trailer (#15)
 - On phones and tablets, tapping or dragging on the timeline jumps to that position (#25)
 - MKV files without a Cues index can be seeked: skip, number-key jump and "Resume" no longer restart the movie at 0:00. The app estimates the byte position, reads the timecode of the next Cluster and corrects the position (up to 10 extra range requests); files with Cues are not affected (#10)
 

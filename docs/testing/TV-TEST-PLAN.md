@@ -58,6 +58,8 @@ Each case lists the bug or feature it protects. "Back" is the remote's Back key.
 | T09 | Search from Series | Series; search pill; type `SERIES_WORD` | Filter "Series"; Recently watched shows only series; only series in the results | Search scoped to the area |
 | T10 | Search from Home | Home; search pill; type `HOME_WORD` (default `news`) | Filter "All"; Movies, Series and Live TV rows | Unscoped search still works |
 | T11 | Settings language | Settings; Playlists | No German text in English mode, e.g. the content-mode button reads "Live TV + movies & series" | Missing dictionary rows |
+| T13 | Live TV categories by tap and by OK | Live TV; tap the 5th category row; Down; OK | The tapped category is highlighted and its channels are listed; then Down + OK moves the focus from the category list into that category's content (the first key after a tap only brings the focus back) | Tapping a category on a tablet did nothing (#67) |
+| T14 | Trailer and Back | Movies search; open the first hit; Trailer; Back (skipped on the emulator: YouTube does not run there) | The trailer plays in YouTube; Back returns to the same detail page | Back from a trailer landed on YouTube's home screen (#15) |
 | T12 | Health | Read the log | `crash=0 anr=0 oom=0 http429=0 focusWarnings=0`; memory (PSS) noted for comparison between runs. On the mock server, focus warnings are expected (see below) | Crashes, rate limiting, focus loops |
 
 **Known mock-only finding.** On the emulator with the mock server, T12 reports focus warnings ("FocusRequester is not initialized", bursts of 8 to 21 lines about 120 ms apart) after Back from a series detail page and after Back from search to Home. The mock has no artwork, so Home has no top picture and the start-up focus retries run without a target. On a real device with artwork the count was 0. Treat a non-zero count on the emulator as expected; on a real device it is a failure.
@@ -91,5 +93,7 @@ Do these by hand before a release; they need a person, a phone or a second devic
 
 | Date | Build | Where | Result |
 |---|---|---|---|
+| 2026-11-13 | fixes for #67 and #15 | NVIDIA SHIELD, Stalker portal | T01-T14 pass; health 0/0/0/0, focus warnings 0 |
+| 2026-11-13 | fixes for #67 and #15 | Android TV emulator, mock server | T01-T13 pass, T14 skipped (no YouTube); focus warnings mock-only |
 | 2026-11-12 | `a485b6f` + translation fix | NVIDIA SHIELD, Stalker portal | T01-T12 pass. Found and fixed: content-mode labels showed German. Note: two different series with the same long title prefix ("Trapped In A Dating Sim …") look alike because the card cuts the title |
 | 2026-11-12 | `a485b6f` + translation fix | Android TV emulator, mock server | T01-T11 pass; T12: crash/ANR/OOM/429 = 0, focus warnings present (mock-only, see section 4). T06 shows no growth (expected without Stalker) |

@@ -6,7 +6,7 @@
 set -u
 DIR=$(cd "$(dirname "$0")" && pwd)
 . "$DIR/lib.sh"
-: "${CASES:=T01 T02 T03 T04 T05 T06 T07 T08 T09 T10 T11 T12}"
+: "${CASES:=T01 T02 T03 T04 T05 T06 T07 T08 T09 T10 T11 T13 T14 T12}"
 : "${DEEP_ROWS:=30}"
 : "${SEARCH_WORD:=batman}"
 : "${SERIES_WORD:=mob}"
@@ -76,6 +76,22 @@ T10() { case_head T10 "Search from Home (all areas)" "Search from Home starts on
 T11() { case_head T11 "Settings in English" "Settings and Settings > Playlists show no German text (the content-mode button reads 'Live TV + movies & series' in English)."
   go_settings; img T11-a "Settings"
   tap 456 658; pause 3; img T11-b "Settings > Playlists"
+  key BACK w; result_line; }
+
+T13() { case_head T13 "Live TV categories by tap and by OK" "A tap on a category (touch screen) selects it and lists its channels (#67). Then the remote: the first key after a tap brings the focus back to the category list (often the first entry), and OK moves the focus into that category's content (channels, or the rows of Home)."
+  go_live; pause 2; img T13-a "Live TV before the tap"
+  tap 300 881; pause 2; img T13-b "after tapping the 5th row: that category is highlighted, its channels are listed"
+  key DPAD_DOWN w DPAD_CENTER w; img T13-c "Down + OK: focus moved from the category list into its content"
+  key BACK w; result_line; }
+
+T14() { case_head T14 "Trailer and Back" "Trailer opens YouTube and plays; Back returns to the same movie's detail page, not to YouTube's home screen (#15). Skipped without a working YouTube app (emulator)."
+  if [ "$(adb -s "$DEVICE" shell getprop ro.kernel.qemu | tr -d '\r')" = 1 ] || ! adb -s "$DEVICE" shell pm list packages | grep -q 'com.google.android.youtube.tv'; then
+    printf '\nSkipped: no working YouTube app on this device.\n' >> "$R"; return 0; fi
+  open_search_in movies; clear_search; type_search "$SEARCH_WORD"; pause 8; tap 1020 600; pause 5; img T14-a "detail page"
+  b=$(adb -s "$DEVICE" exec-out uiautomator dump /dev/tty 2>/dev/null | tr '>' '\n' | grep -o 'text="Trailer"[^/]*bounds="[^"]*"' | grep -o '[0-9][0-9,]*\]\[[0-9,]*')
+  set -- $(echo "$b" | tr '[],' '   ')
+  if [ $# -eq 4 ]; then tap $(( ($1+$3)/2 )) $(( ($2+$4)/2 )); pause 12; img T14-b "trailer playing"; key BACK; pause 5; img T14-c "after Back: the same detail page"
+  else printf '\nTrailer button not found on the detail page.\n' >> "$R"; fi
   key BACK w; result_line; }
 
 T12() { case_head T12 "Health" "health.txt shows crash=0 anr=0 oom=0 http429=0 focusWarnings=0 for the whole run."
