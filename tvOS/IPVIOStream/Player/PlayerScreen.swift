@@ -344,26 +344,7 @@ struct PlayerScreen: View {
             }
 
             if !item.kind.isLive, vm.duration > 0 {
-                VStack(spacing: 2) {
-                    Slider(
-                        value: Binding(
-                            get: { min(max(vm.currentTime, 0), max(vm.duration, 1)) },
-                            set: { vm.scrub(to: $0) }
-                        ),
-                        in: 0...max(vm.duration, 1),
-                        onEditingChanged: { editing in
-                            if editing { vm.beginScrubbing() } else { vm.endScrubbing() }
-                        }
-                    )
-                    .tint(Theme.green)
-                    HStack {
-                        Text(TimeText.clock(vm.currentTime))
-                        Spacer()
-                        Text(TimeText.clock(vm.duration))
-                    }
-                    .font(.system(size: 16, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Theme.textDim)
-                }
+                PlayerScrubber(vm: vm)
             } else if item.kind == .live {
                 HStack(spacing: 12) {
                     liveBadge
@@ -634,5 +615,64 @@ struct PlayerIconButton: View {
         }
         .buttonStyle(.plain)
         .focused($focused)
+    }
+}
+
+/// tvOS-friendly scrubber: focus it and use left/right on the remote to seek.
+/// A native Slider is ambiguous across tvOS SDK versions and is hard to use
+/// with the focus engine, so the player draws its own progress bar.
+struct PlayerScrubber: View {
+    @ObservedObject var vm: PlayerViewModel
+    @FocusState private var focused: Bool
+
+    private var fraction: CGFloat {
+        guard vm.duration > 0 else { return 0 }
+        return CGFloat(min(max(vm.currentTime / vm.duration, 0), 1))
+    }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.20))
+                    Capsule()
+                        .fill(Theme.green)
+                        .frame(width: max(0, proxy.size.width * fraction))
+                }
+            }
+            .frame(height: 12)
+
+            HStack {
+                Text(TimeText.clock(vm.currentTime))
+                Spacer()
+                Text(TimeText.clock(vm.duration))
+            }
+            .font(.system(size: 16, weight: .medium, design: .monospaced))
+            .foregroundStyle(Theme.textDim)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(focused ? Color.white.opacity(0.08) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(focused ? Theme.green.opacity(0.85) : Color.clear, lineWidth: 2)
+        )
+        .focusable()
+        .focused($focused)
+        .onMoveCommand { direction in
+            switch direction {
+            case .left:
+                vm.seek(by: -10)
+            case .right:
+                vm.seek(by: 10)
+            default:
+                break
+            }
+        }
     }
 }
