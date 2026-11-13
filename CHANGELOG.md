@@ -25,7 +25,11 @@
 
 **Translations**
 - The Stalker loading texts ("Loading channels (N)", "Loading categories (n/m)") are translated instead of always showing German
+- The content-mode button in Settings > Playlists ("Live TV + movies & series", "Movies & series only") is translated instead of showing German
 - More texts that showed German in other languages are translated: the Live TV search hint, "Retrying categories", the guide fallback on Favorites ("No guide data available"), the ready-made design and background names, the genre loading progress in Settings, and "1 title" (singular)
+
+**Testing**
+- New repeatable TV test plan with adb scripts and a mock Xtream server for the Android TV emulator (`docs/testing/TV-TEST-PLAN.md`)
 
 ## 1.4.1
 - Fix: 1.4 did not open after the update on user devices. R8 over the whole app (T-024) is switched off again (`enable = false` in app/build.gradle.kts, the rollback from ADR 0005); versionCode 6. Cause not confirmed by a crash log (unverified). Install 1.4.1 over 1.4; data is kept (same signature)
