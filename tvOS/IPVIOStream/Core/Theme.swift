@@ -2,14 +2,14 @@ import SwiftUI
 import UIKit
 
 enum Theme {
-    static let background = Color(hex: 0x0B0F19)
-    static let backgroundElevated = Color(hex: 0x0E1420)
-    static let surface = Color(hex: 0x141B2A)
-    static let surface2 = Color(hex: 0x1C2537)
-    static let surface3 = Color(hex: 0x273247)
-    static let green = Color(hex: 0x4ADE80)
-    static let greenBright = Color(hex: 0x86EFAC)
-    static let greenDark = Color(hex: 0x166534)
+    static let background = Color(hex: 0x0A0B0F)
+    static let backgroundElevated = Color(hex: 0x101116)
+    static let surface = Color(hex: 0x16171D)
+    static let surface2 = Color(hex: 0x1E2027)
+    static let surface3 = Color(hex: 0x2A2C35)
+    static let accent = Color(hex: 0xFF5A1F)
+    static let accentLight = Color(hex: 0xFF8A4C)
+    static let accentDark = Color(hex: 0xB93E12)
     static let text = Color.white.opacity(0.94)
     static let textDim = Color.white.opacity(0.64)
     static let textFaint = Color.white.opacity(0.42)
@@ -42,7 +42,7 @@ struct BrandMark: View {
             RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Theme.greenBright, Theme.green, Color(hex: 0x22C55E)],
+                        colors: [Theme.accentLight, Theme.accent, Theme.accentDark],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -53,7 +53,7 @@ struct BrandMark: View {
                 .offset(x: size * 0.03)
         }
         .frame(width: size, height: size)
-        .shadow(color: Theme.green.opacity(0.35), radius: size * 0.3, y: size * 0.08)
+        .shadow(color: Theme.accent.opacity(0.35), radius: size * 0.3, y: size * 0.08)
     }
 }
 
@@ -82,27 +82,26 @@ struct SectionHeader: View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(.system(size: 25, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.text)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 20))
+                        .font(.system(size: 16))
                         .foregroundStyle(Theme.textDim)
                 }
             }
             Spacer()
             if let actionTitle, let action {
                 Button(action: action) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         Text(actionTitle)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 12, weight: .bold))
                     }
-                    .font(.system(size: 19, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Theme.greenBright)
-                .focusable()
+                .foregroundStyle(Theme.accentLight)
             }
         }
     }
@@ -119,7 +118,7 @@ struct EmptyStateView: View {
         VStack(spacing: 20) {
             Image(systemName: symbol)
                 .font(.system(size: 62, weight: .light))
-                .foregroundStyle(Theme.green.opacity(0.85))
+                .foregroundStyle(Theme.accent.opacity(0.85))
             Text(title)
                 .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.text)
@@ -131,7 +130,7 @@ struct EmptyStateView: View {
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
                     .buttonStyle(.borderedProminent)
-                    .tint(Theme.green)
+                    .tint(Theme.accent)
                     .foregroundStyle(Theme.background)
                     .font(.system(size: 20, weight: .semibold))
                     .padding(.top, 8)
@@ -150,7 +149,7 @@ struct ProgressBadge: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(Color.white.opacity(0.22))
                 Capsule()
-                    .fill(Theme.green)
+                    .fill(Theme.accent)
                     .frame(width: max(4, proxy.size.width * min(max(fraction, 0), 1)))
             }
         }
@@ -210,7 +209,7 @@ struct ToastView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(Theme.green)
+                .foregroundStyle(Theme.accent)
             Text(message)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.white)
@@ -240,7 +239,7 @@ struct LoadingOverlay: View {
                     .foregroundStyle(Theme.textDim)
                 ProgressView(value: min(max(job.progress, 0), 1))
                     .progressViewStyle(.linear)
-                    .tint(Theme.green)
+                    .tint(Theme.accent)
                     .frame(width: 520)
                 Text(job.status)
                     .font(.system(size: 18))
@@ -273,7 +272,7 @@ struct ScreenTitle: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 52, weight: .heavy, design: .rounded))
+                .font(.system(size: 42, weight: .heavy, design: .rounded))
                 .foregroundStyle(Theme.text)
             if let subtitle {
                 Text(subtitle)

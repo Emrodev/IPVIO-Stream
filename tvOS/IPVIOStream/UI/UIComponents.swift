@@ -7,50 +7,84 @@ enum Route: Hashable {
 // MARK: - Cards
 
 struct PosterCard: View {
+    @EnvironmentObject private var app: AppModel
     let item: MediaItem
     var width: CGFloat = 230
+    @FocusState private var focused: Bool
+
+    private var progress: WatchProgress? {
+        app.progress(for: item, episode: nil)
+    }
 
     var body: some View {
         NavigationLink(value: Route.detail(item.id)) {
-            VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .bottomLeading) {
                 RemoteImage(urlString: item.logo, fallbackText: item.title)
-                    .frame(width: width, height: width * 1.48)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                    )
-                Text(item.title)
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1)
-                HStack(spacing: 6) {
+                    .frame(width: width, height: width * 1.45)
+                    .clipped()
+
+                LinearGradient(
+                    colors: [.clear, .clear, .black.opacity(0.35), .black.opacity(0.94)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Spacer()
                     if let quality = item.quality {
                         Text(quality)
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Theme.greenBright)
+                            .font(.system(size: 10, weight: .heavy))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Theme.accent, in: Capsule())
                     }
-                    if let year = item.year {
-                        Text(String(year))
-                            .font(.system(size: 14))
-                            .foregroundStyle(Theme.textDim)
-                    }
-                    if let rating = item.rating, rating > 0 {
-                        HStack(spacing: 3) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 10))
-                            Text(String(format: "%.1f", rating))
-                                .font(.system(size: 13, weight: .semibold))
+                    Text(item.title)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    HStack(spacing: 7) {
+                        if let year = item.year {
+                            Text(String(year))
                         }
-                        .foregroundStyle(Theme.gold)
+                        if let rating = item.rating, rating > 0 {
+                            HStack(spacing: 3) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 9))
+                                Text(String(format: "%.1f", rating))
+                            }
+                            .foregroundStyle(Theme.gold)
+                        }
+                        if progress == nil {
+                            Text(app.displayGroup(item.group))
+                                .lineLimit(1)
+                        }
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.62))
+
+                    if let progress, progress.fraction > 0.01 {
+                        ProgressBadge(fraction: progress.fraction)
+                            .frame(height: 4)
                     }
                 }
-                .frame(height: 18)
+                .padding(12)
+                .frame(width: width, height: width * 1.45, alignment: .bottomLeading)
             }
-            .frame(width: width, alignment: .leading)
-            .padding(10)
+            .frame(width: width, height: width * 1.45)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(focused ? Color.white.opacity(0.9) : Theme.border, lineWidth: focused ? 2.5 : 1)
+            )
+            .scaleEffect(focused ? 1.04 : 1)
+            .shadow(color: .black.opacity(focused ? 0.55 : 0.25), radius: focused ? 20 : 8, y: 10)
+            .animation(.easeOut(duration: 0.14), value: focused)
+            .padding(5)
         }
-        .buttonStyle(.card)
+        .buttonStyle(.plain)
+        .focused($focused)
     }
 }
 
@@ -58,42 +92,65 @@ struct LiveChannelCard: View {
     @EnvironmentObject private var app: AppModel
     let item: MediaItem
     var width: CGFloat = 300
+    @FocusState private var focused: Bool
 
     var body: some View {
         Button {
             app.play(item: item)
         } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Theme.surface2)
-                    RemoteImage(urlString: item.logo, contentMode: .fit, fallbackText: item.title)
-                        .padding(14)
+            ZStack(alignment: .bottomLeading) {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Theme.surface2)
+                RemoteImage(urlString: item.logo, contentMode: .fit, fallbackText: item.title)
+                    .padding(28)
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.88)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Spacer()
+                    Text(item.title)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text(app.displayGroup(item.group))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.58))
+                        .lineLimit(1)
+                }
+                .padding(14)
+
+                VStack {
                     HStack {
                         Spacer()
-                        Text(L.t("live.live"))
-                            .font(.system(size: 11, weight: .heavy))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Theme.red, in: Capsule())
-                            .padding(8)
+                        HStack(spacing: 5) {
+                            Circle().fill(Theme.red).frame(width: 6, height: 6)
+                            Text(L.t("live.live"))
+                                .font(.system(size: 10, weight: .heavy))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.45), in: Capsule())
                     }
+                    Spacer()
                 }
-                .frame(width: width, height: width * 0.56)
-                Text(item.title)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1)
-                Text(app.displayGroup(item.group))
-                    .font(.system(size: 14))
-                    .foregroundStyle(Theme.textDim)
-                    .lineLimit(1)
+                .padding(10)
             }
-            .frame(width: width, alignment: .leading)
-            .padding(10)
+            .frame(width: width, height: width * 0.56)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(focused ? Color.white.opacity(0.9) : Theme.border, lineWidth: focused ? 2.5 : 1)
+            )
+            .scaleEffect(focused ? 1.04 : 1)
+            .animation(.easeOut(duration: 0.14), value: focused)
+            .padding(5)
         }
-        .buttonStyle(.card)
+        .buttonStyle(.plain)
+        .focused($focused)
     }
 }
 
@@ -101,47 +158,63 @@ struct ContinueCard: View {
     @EnvironmentObject private var app: AppModel
     let entry: WatchProgress
     var width: CGFloat = 380
+    @FocusState private var focused: Bool
 
     var body: some View {
         Button {
             Task { await app.resume(entry) }
         } label: {
-            VStack(alignment: .leading, spacing: 9) {
-                ZStack(alignment: .bottom) {
-                    RemoteImage(urlString: entry.artwork, fallbackText: entry.title)
-                        .frame(width: width, height: width * 0.56)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    LinearGradient(colors: [.clear, .black.opacity(0.68)], startPoint: .center, endPoint: .bottom)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    VStack(alignment: .leading, spacing: 7) {
-                        ProgressBadge(fraction: entry.fraction)
-                        HStack {
-                            Text(L.f("time.remaining", TimeText.clock(entry.remaining)))
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.9))
-                            Spacer()
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: 26))
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    .padding(12)
-                }
-                Text(entry.title)
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1)
-                if let subtitle = entry.subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 14))
-                        .foregroundStyle(Theme.textDim)
+            ZStack(alignment: .bottomLeading) {
+                RemoteImage(urlString: entry.artwork, fallbackText: entry.title)
+                    .frame(width: width, height: width * 0.56)
+                    .clipped()
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.2), .black.opacity(0.92)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Spacer()
+                    Text(entry.title)
+                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                         .lineLimit(1)
+                    if let subtitle = entry.subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(1)
+                    }
+                    HStack(spacing: 7) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(L.f("time.remaining", TimeText.clock(entry.remaining)))
+                            .font(.system(size: 12, weight: .semibold))
+                        Spacer()
+                        Text("\(Int(entry.fraction * 100))%")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Theme.accentLight)
+                    }
+                    .foregroundStyle(.white.opacity(0.72))
+                    ProgressBadge(fraction: entry.fraction)
+                        .frame(height: 4)
                 }
+                .padding(14)
+                .frame(width: width, height: width * 0.56, alignment: .bottomLeading)
             }
-            .frame(width: width, alignment: .leading)
-            .padding(10)
+            .frame(width: width, height: width * 0.56)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(focused ? Color.white.opacity(0.9) : Theme.border, lineWidth: focused ? 2.5 : 1)
+            )
+            .scaleEffect(focused ? 1.035 : 1)
+            .animation(.easeOut(duration: 0.14), value: focused)
+            .padding(5)
         }
-        .buttonStyle(.card)
+        .buttonStyle(.plain)
+        .focused($focused)
     }
 }
 
@@ -203,13 +276,13 @@ struct SelectChip: View {
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(focused ? Color.white : (selected ? Theme.green.opacity(0.20) : Theme.surface2))
+                    .fill(focused ? Color.white : (selected ? Theme.accent.opacity(0.20) : Theme.surface2))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(selected && !focused ? Theme.green.opacity(0.75) : Color.clear, lineWidth: 1.5)
+                    .stroke(selected && !focused ? Theme.accent.opacity(0.75) : Color.clear, lineWidth: 1.5)
             )
-            .foregroundStyle(focused ? Color.black : (selected ? Theme.greenBright : Theme.text))
+            .foregroundStyle(focused ? Color.black : (selected ? Theme.accentLight : Theme.text))
         }
         .buttonStyle(.plain)
         .focused($focused)
@@ -242,7 +315,7 @@ struct SettingsCard<Content: View>: View {
                 if let symbol {
                     Image(systemName: symbol)
                         .font(.system(size: 21, weight: .semibold))
-                        .foregroundStyle(Theme.green)
+                        .foregroundStyle(Theme.accent)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)

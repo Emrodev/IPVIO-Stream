@@ -57,7 +57,7 @@ struct SplashView: View {
                     .font(.system(size: 46, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.text)
                 ProgressView()
-                    .tint(Theme.green)
+                    .tint(Theme.accent)
                     .scaleEffect(1.2)
             }
         }
@@ -69,8 +69,8 @@ struct MainShell: View {
     @State private var path = NavigationPath()
 
     var body: some View {
-        HStack(spacing: 0) {
-            Sidebar(path: $path)
+        VStack(spacing: 0) {
+            TopBar(path: $path)
             ZStack {
                 Theme.background.ignoresSafeArea()
                 NavigationStack(path: $path) {
@@ -106,107 +106,138 @@ struct MainShell: View {
     }
 }
 
-struct Sidebar: View {
+/// Top navigation inspired by modern Apple TV IPTV apps: a compact brand mark,
+/// pill-shaped tabs in the centre, and search/account controls on the right.
+struct TopBar: View {
     @EnvironmentObject private var app: AppModel
     @Binding var path: NavigationPath
-    @FocusState private var focused: AppSection?
+    @FocusState private var focusedTab: AppSection?
+
+    private let tabs: [AppSection] = [.home, .live, .movies, .series, .settings]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 14) {
-                BrandMark(size: 46)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("IPVIO")
-                        .font(.system(size: 22, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Theme.text)
-                    Text("STREAM")
-                        .font(.system(size: 11, weight: .bold))
-                        .tracking(3)
-                        .foregroundStyle(Theme.green)
+        HStack(spacing: 18) {
+            Button {
+                path = NavigationPath()
+                app.setSection(.home)
+            } label: {
+                HStack(spacing: 12) {
+                    BrandMark(size: 38)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("IPVIO")
+                            .font(.system(size: 21, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Theme.text)
+                        Text("STREAM")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(2.6)
+                            .foregroundStyle(Theme.accent)
+                    }
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
             }
-            .padding(.bottom, 40)
+            .buttonStyle(.plain)
 
-            VStack(spacing: 8) {
-                ForEach(AppSection.allCases, id: \.self) { section in
-                    navButton(section)
+            Spacer(minLength: 8)
+
+            HStack(spacing: 4) {
+                ForEach(tabs, id: \.self) { section in
+                    tabButton(section)
                 }
             }
+            .padding(5)
+            .background(Theme.surface.opacity(0.92), in: Capsule())
+            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
             .focusSection()
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            VStack(alignment: .leading, spacing: 7) {
-                Text(L.t("nav.sources"))
-                    .font(.system(size: 12, weight: .bold))
-                    .tracking(1.5)
-                    .foregroundStyle(Theme.textFaint)
-                Text("\(app.playlists.filter(\.isEnabled).count) / \(app.playlists.count)")
-                    .font(.system(size: 19, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Theme.text)
-                Text(app.playlists.filter(\.isEnabled).map(\.name).joined(separator: " · "))
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.textDim)
-                    .lineLimit(3)
+            HStack(spacing: 10) {
+                TopBarIcon(symbol: "magnifyingglass", label: L.t("nav.search"), active: app.selectedSection == .search) {
+                    path = NavigationPath()
+                    app.setSection(.search)
+                }
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Theme.accent, Theme.accentDark],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Text("IP")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.black)
+                }
+                .frame(width: 42, height: 42)
+                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
             }
-            .padding(.bottom, 26)
-
-            Text("v\(AppInfo.version)")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(Theme.textFaint)
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 42)
-        .padding(.bottom, 30)
-        .frame(width: 280)
-        .background(
-            LinearGradient(
-                colors: [Color(hex: 0x0D1422), Theme.background],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
-        .overlay(alignment: .trailing) {
+        .padding(.horizontal, 44)
+        .frame(height: 92)
+        .background(Theme.backgroundElevated)
+        .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Theme.border)
-                .frame(width: 1)
-                .ignoresSafeArea()
+                .frame(height: 1)
         }
     }
 
-    private func navButton(_ section: AppSection) -> some View {
+    private func tabButton(_ section: AppSection) -> some View {
         let selected = app.selectedSection == section
-        let isFocused = focused == section
+        let isFocused = focusedTab == section
         return Button {
             path = NavigationPath()
             app.setSection(section)
         } label: {
-            HStack(spacing: 14) {
-                Image(systemName: section.symbol)
-                    .font(.system(size: 19, weight: .semibold))
-                    .frame(width: 26)
-                Text(L.t(section.titleKey))
-                    .font(.system(size: 19, weight: selected ? .bold : .medium))
-                Spacer()
-                if selected {
-                    Circle()
-                        .fill(isFocused ? Color.black.opacity(0.65) : Theme.green)
-                        .frame(width: 7, height: 7)
-                }
-            }
-            .padding(.horizontal, 15)
-            .padding(.vertical, 13)
-            .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(isFocused ? Color.white : (selected ? Theme.green.opacity(0.13) : Color.clear))
-            )
-            .foregroundStyle(isFocused ? Color.black : (selected ? Theme.greenBright : Theme.textDim))
-            .scaleEffect(isFocused ? 1.02 : 1)
-            .animation(.easeOut(duration: 0.13), value: isFocused)
+            Text(L.t(section.titleKey))
+                .font(.system(size: 17, weight: selected ? .bold : .medium))
+                .padding(.horizontal, 19)
+                .padding(.vertical, 9)
+                .background(
+                    Capsule()
+                        .fill(isFocused ? Color.white : (selected ? Theme.accent.opacity(0.15) : Color.clear))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(selected && !isFocused ? Theme.accent.opacity(0.65) : Color.clear, lineWidth: 1)
+                )
+                .foregroundStyle(isFocused ? Color.black : (selected ? Theme.accentLight : Theme.textDim))
+                .scaleEffect(isFocused ? 1.04 : 1)
+                .animation(.easeOut(duration: 0.12), value: isFocused)
         }
         .buttonStyle(.plain)
-        .focused($focused, equals: section)
+        .focused($focusedTab, equals: section)
+    }
+}
+
+private struct TopBarIcon: View {
+    let symbol: String
+    let label: String
+    var active: Bool = false
+    let action: () -> Void
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 19, weight: .semibold))
+                .frame(width: 42, height: 42)
+                .background(
+                    focused ? Color.white : (active ? Theme.accent.opacity(0.16) : Theme.surface2),
+                    in: Circle()
+                )
+                .overlay(
+                    Circle().stroke(active && !focused ? Theme.accent.opacity(0.55) : Color.clear, lineWidth: 1)
+                )
+                .foregroundStyle(focused ? Color.black : (active ? Theme.accentLight : Theme.text))
+                .scaleEffect(focused ? 1.06 : 1)
+                .animation(.easeOut(duration: 0.12), value: focused)
+        }
+        .buttonStyle(.plain)
+        .focused($focused)
+        .accessibilityLabel(label)
     }
 }
 
@@ -217,7 +248,7 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(hex: 0x0B1220), Theme.background, Color(hex: 0x071B12)],
+                colors: [Color(hex: 0x160D08), Theme.background, Color(hex: 0x1A0C05)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -256,7 +287,7 @@ struct OnboardingView: View {
                         .padding(.vertical, 15)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Theme.green)
+                    .tint(Theme.accent)
                     .foregroundStyle(Theme.background)
                     .padding(.top, 8)
 
@@ -279,7 +310,7 @@ struct OnboardingView: View {
                         VStack(spacing: 18) {
                             Image(systemName: "play.tv.fill")
                                 .font(.system(size: 96, weight: .thin))
-                                .foregroundStyle(Theme.green)
+                                .foregroundStyle(Theme.accent)
                             Text("Xtream · M3U")
                                 .font(.system(size: 22, weight: .bold, design: .rounded))
                                 .foregroundStyle(Theme.text)
@@ -306,7 +337,7 @@ struct OnboardingView: View {
         HStack(spacing: 12) {
             Image(systemName: symbol)
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Theme.green)
+                .foregroundStyle(Theme.accent)
                 .frame(width: 26)
             Text(text)
                 .font(.system(size: 18))

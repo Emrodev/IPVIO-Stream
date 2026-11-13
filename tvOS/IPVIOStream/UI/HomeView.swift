@@ -1,249 +1,147 @@
-import Combine
 import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var app: AppModel
     @Binding var path: NavigationPath
 
-    @State private var heroIndex = 0
-    @State private var heroMetadata: EnrichedMetadata?
-
-    private let rotation = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
-
-    private var heroes: [MediaItem] { app.heroItems }
-    private var hero: MediaItem? {
-        guard !heroes.isEmpty else { return nil }
-        return heroes[heroIndex % heroes.count]
+    private var featured: [MediaItem] {
+        Array(app.heroItems.prefix(8))
     }
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
-                if let hero {
-                    heroSection(hero)
-                } else {
-                    emptyHero
+            VStack(alignment: .leading, spacing: 34) {
+                featuredRow
+                quickRow
+
+                if !app.continueItems.isEmpty {
+                    continueRow
+                }
+                if !app.liveItems.isEmpty {
+                    liveRow
                 }
 
-                VStack(alignment: .leading, spacing: 44) {
-                    if !app.continueItems.isEmpty {
-                        continueRow
-                    }
-                    if !app.liveItems.isEmpty {
-                        liveRow
-                    }
-                    PosterRow(
-                        title: L.t("home.movies"),
-                        items: Array(app.movies.prefix(20)),
-                        onSeeAll: { app.setSection(.movies) }
-                    )
-                    PosterRow(
-                        title: L.t("home.series"),
-                        items: Array(app.seriesItems.prefix(20)),
-                        onSeeAll: { app.setSection(.series) }
-                    )
-                    PosterRow(
-                        title: L.t("home.topRated"),
-                        items: app.topRated,
-                        onSeeAll: nil
-                    )
-                    PosterRow(
-                        title: L.t("home.favorites"),
-                        items: Array(app.favoriteItems.prefix(20)),
-                        onSeeAll: nil
-                    )
-                    PosterRow(
-                        title: L.t("home.myList"),
-                        items: Array(app.myListItems.prefix(20)),
-                        onSeeAll: nil
-                    )
-                }
-                .padding(.horizontal, Theme.pagePadding)
-                .padding(.top, 8)
-                .padding(.bottom, 70)
+                PosterRow(
+                    title: L.t("home.movies"),
+                    items: Array(app.movies.prefix(20)),
+                    onSeeAll: { app.setSection(.movies) }
+                )
+                PosterRow(
+                    title: L.t("home.series"),
+                    items: Array(app.seriesItems.prefix(20)),
+                    onSeeAll: { app.setSection(.series) }
+                )
+                PosterRow(
+                    title: L.t("home.topRated"),
+                    items: app.topRated
+                )
+                PosterRow(
+                    title: L.t("home.favorites"),
+                    items: Array(app.favoriteItems.prefix(20))
+                )
+                PosterRow(
+                    title: L.t("home.myList"),
+                    items: Array(app.myListItems.prefix(20))
+                )
             }
+            .padding(.horizontal, 52)
+            .padding(.top, 26)
+            .padding(.bottom, 70)
         }
         .background(Theme.background)
-        .ignoresSafeArea(edges: .top)
-        .onReceive(rotation) { _ in
-            guard heroes.count > 1 else { return }
-            withAnimation(.easeInOut(duration: 0.5)) {
-                heroIndex = (heroIndex + 1) % heroes.count
-            }
-        }
-        .task(id: hero?.id) {
-            guard let hero else { return }
-            heroMetadata = app.metadataByItem[hero.id]
-            if heroMetadata == nil {
-                heroMetadata = nil
-                heroMetadata = await app.metadata(for: hero)
-            }
-        }
     }
 
-    // MARK: Hero
+    // MARK: - Featured carousel
 
-    private func heroSection(_ item: MediaItem) -> some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .bottomLeading) {
-                RemoteImage(
-                    urlString: heroMetadata?.backdropURL ?? item.logo,
-                    fallbackText: item.title
+    private var featuredRow: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(L.t("home.featured"))
+                    .font(.system(size: 27, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.text)
+                Spacer()
+                Text(app.activeSourceSummary)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Theme.textFaint)
+                    .lineLimit(1)
+            }
+
+            if featured.isEmpty {
+                EmptyStateView(
+                    symbol: "play.rectangle.on.rectangle",
+                    title: L.t("home.emptyTitle"),
+                    message: L.t("home.emptyMessage")
                 )
-                .frame(width: proxy.size.width, height: 660)
-                .blur(radius: heroMetadata?.backdropURL == nil ? 18 : 0)
-                .scaleEffect(heroMetadata?.backdropURL == nil ? 1.1 : 1)
-                .clipped()
-
-                LinearGradient(
-                    colors: [
-                        .black.opacity(0.05),
-                        Theme.background.opacity(0.55),
-                        Theme.background,
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-
-                LinearGradient(
-                    colors: [Theme.background.opacity(0.92), .clear],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(width: proxy.size.width * 0.68)
-
-                HStack(alignment: .bottom, spacing: 34) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 12, weight: .black))
-                            Text("IPVIO")
-                                .font(.system(size: 14, weight: .heavy, design: .rounded))
-                                .tracking(2)
+                .frame(height: 360)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 20) {
+                        ForEach(featured) { item in
+                            FeaturedCard(item: item) {
+                                open(item)
+                            }
                         }
-                        .foregroundStyle(Theme.green)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Theme.green.opacity(0.12), in: Capsule())
-
-                        Text(item.title)
-                            .font(.system(size: 62, weight: .heavy, design: .rounded))
-                            .foregroundStyle(.white)
-                            .lineLimit(2)
-                            .shadow(color: .black.opacity(0.4), radius: 20, y: 6)
-
-                        HStack(spacing: 14) {
-                            if let rating = heroMetadata?.imdbRating ?? item.rating {
-                                ratingBadge("IMDb", String(format: "%.1f", rating), Theme.gold)
-                            }
-                            if let rotten = heroMetadata?.rottenRating {
-                                ratingBadge("RT", "\(Int(rotten))%", Theme.red)
-                            }
-                            if let year = item.year {
-                                InfoPill(symbol: "calendar", text: String(year), tint: .white.opacity(0.78))
-                            }
-                            if let quality = item.quality {
-                                InfoPill(symbol: "4k.tv", text: quality, tint: Theme.greenBright)
-                            }
-                            if item.kind == .series {
-                                InfoPill(
-                                    symbol: "rectangle.stack",
-                                    text: L.f("detail.seasonCount", max(1, Set(item.episodes.map(\.season)).count)),
-                                    tint: .white.opacity(0.78)
-                                )
-                            }
-                            Text(app.displayGroup(item.group))
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.7))
-                                .lineLimit(1)
-                        }
-
-                        Text(heroMetadata?.overview ?? item.displayPlot ?? L.t("detail.noOverview"))
-                            .font(.system(size: 19))
-                            .foregroundStyle(.white.opacity(0.76))
-                            .lineLimit(3)
-                            .frame(maxWidth: 760, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        HStack(spacing: 16) {
-                            Button {
-                                play(item)
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: playSymbol(item))
-                                    Text(playTitle(item))
-                                }
-                                .font(.system(size: 20, weight: .bold))
-                                .padding(.horizontal, 26)
-                                .padding(.vertical, 13)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Theme.green)
-                            .foregroundStyle(Theme.background)
-
-                            Button {
-                                path.append(Route.detail(item.id))
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "info.circle")
-                                    Text(L.t("common.details"))
-                                }
-                                .font(.system(size: 19, weight: .semibold))
-                                .padding(.horizontal, 22)
-                                .padding(.vertical, 12)
-                            }
-                            .buttonStyle(.bordered)
-
-                            Button {
-                                app.toggleMyList(item.id)
-                            } label: {
-                                Image(systemName: app.isInMyList(item.id) ? "bookmark.fill" : "bookmark")
-                                    .font(.system(size: 21, weight: .semibold))
-                                    .frame(width: 48, height: 48)
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        .padding(.top, 4)
                     }
-                    Spacer()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 14)
                 }
-                .padding(.horizontal, Theme.pagePadding)
-                .padding(.bottom, 54)
+                .scrollClipDisabled()
             }
-            .frame(width: proxy.size.width, height: 660)
         }
-        .frame(height: 660)
-        .clipped()
     }
 
-    private var emptyHero: some View {
-        VStack(spacing: 20) {
-            BrandMark(size: 84)
-            Text(L.t("home.emptyTitle"))
-                .font(.system(size: 44, weight: .heavy, design: .rounded))
-                .foregroundStyle(Theme.text)
-            Text(L.t("home.emptyMessage"))
-                .font(.system(size: 21))
-                .foregroundStyle(Theme.textDim)
+    // MARK: - Quick tiles
+
+    private var quickRow: some View {
+        HStack(spacing: 16) {
+            QuickTile(
+                symbol: "dot.radiowaves.left.and.right",
+                title: L.t("nav.live"),
+                subtitle: L.f("live.channelCount", app.liveItems.count),
+                tint: Theme.accent
+            ) {
+                app.setSection(.live)
+            }
+            QuickTile(
+                symbol: "film.fill",
+                title: L.t("nav.movies"),
+                subtitle: L.f("browse.count", app.movies.count),
+                tint: Color(hex: 0x5B8DEF)
+            ) {
+                app.setSection(.movies)
+            }
+            QuickTile(
+                symbol: "rectangle.stack.fill",
+                title: L.t("nav.series"),
+                subtitle: L.f("browse.count", app.seriesItems.count),
+                tint: Color(hex: 0xA78BFA)
+            ) {
+                app.setSection(.series)
+            }
+            QuickTile(
+                symbol: "magnifyingglass",
+                title: L.t("nav.search"),
+                subtitle: L.t("search.hint"),
+                tint: Theme.accentLight
+            ) {
+                app.setSection(.search)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 420)
-        .padding(.top, 60)
     }
 
-    // MARK: Rows
+    // MARK: - Rows
 
     private var continueRow: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: L.t("home.continue"), subtitle: nil)
+            SectionHeader(title: L.t("home.continue"))
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 20) {
+                LazyHStack(spacing: 18) {
                     ForEach(app.continueItems, id: \.key) { entry in
                         ContinueCard(entry: entry)
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 18)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 14)
             }
             .scrollClipDisabled()
         }
@@ -257,53 +155,203 @@ struct HomeView: View {
                 action: { app.setSection(.live) }
             )
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 20) {
+                LazyHStack(spacing: 18) {
                     ForEach(Array(app.liveItems.prefix(20))) { item in
                         LiveChannelCard(item: item)
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 18)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 14)
             }
             .scrollClipDisabled()
         }
     }
 
-    // MARK: Helpers
+    // MARK: - Actions
 
-    private func play(_ item: MediaItem) {
+    private func open(_ item: MediaItem) {
         if item.kind == .series {
             path.append(Route.detail(item.id))
         } else {
             app.play(item: item)
         }
     }
+}
 
-    private func playTitle(_ item: MediaItem) -> String {
-        if item.kind == .series {
-            return L.t("common.details")
-        }
-        if app.resumePosition(for: item, episode: nil) != nil {
-            return L.t("common.resume")
-        }
-        return item.kind == .live ? L.t("common.play") : L.t("detail.playMovie")
+// MARK: - Featured card
+
+private struct FeaturedCard: View {
+    @EnvironmentObject private var app: AppModel
+    let item: MediaItem
+    let action: () -> Void
+    @FocusState private var focused: Bool
+
+    private var progress: WatchProgress? {
+        app.progress(for: item, episode: nil)
     }
 
-    private func playSymbol(_ item: MediaItem) -> String {
-        if item.kind == .series { return "chevron.right" }
-        return "play.fill"
-    }
+    var body: some View {
+        Button(action: action) {
+            ZStack(alignment: .bottomLeading) {
+                RemoteImage(urlString: item.logo, fallbackText: item.title)
+                    .frame(width: 560, height: 322)
+                    .clipped()
 
-    private func ratingBadge(_ label: String, _ value: String, _ tint: Color) -> some View {
-        HStack(spacing: 5) {
-            Text(label)
-                .font(.system(size: 12, weight: .heavy))
-            Text(value)
-                .font(.system(size: 16, weight: .bold))
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.18), .black.opacity(0.92)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+
+                LinearGradient(
+                    colors: [.black.opacity(0.6), .clear],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: 260)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Spacer()
+                    HStack(spacing: 8) {
+                        if let quality = item.quality {
+                            Text(quality)
+                                .font(.system(size: 10, weight: .heavy))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Theme.accent, in: Capsule())
+                        }
+                        if let year = item.year {
+                            Text(String(year))
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.75))
+                        }
+                        if let rating = item.rating, rating > 0 {
+                            HStack(spacing: 3) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 10))
+                                Text(String(format: "%.1f", rating))
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                            .foregroundStyle(Theme.gold)
+                        }
+                    }
+
+                    Text(item.title)
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    Text(item.displayPlot ?? app.displayGroup(item.group))
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white.opacity(0.66))
+                        .lineLimit(1)
+
+                    HStack(spacing: 8) {
+                        Image(systemName: item.kind == .series ? "rectangle.stack.fill" : "play.fill")
+                            .font(.system(size: 11, weight: .bold))
+                        Text(item.kind == .series ? L.t("detail.episodes") : L.t("common.play"))
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("·")
+                            .foregroundStyle(.white.opacity(0.35))
+                        Text(app.sourceName(for: item.playlistID))
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(.white.opacity(0.9))
+
+                    if let progress, progress.fraction > 0.01 {
+                        ProgressBadge(fraction: progress.fraction)
+                            .frame(height: 4)
+                            .padding(.top, 4)
+                    }
+                }
+                .padding(22)
+                .frame(width: 560, height: 322, alignment: .bottomLeading)
+
+                VStack {
+                    HStack {
+                        Spacer()
+                        Text(app.sourceName(for: item.playlistID).prefix(1).uppercased())
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.black)
+                            .frame(width: 30, height: 30)
+                            .background(Theme.accent, in: Circle())
+                            .overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
+                    }
+                    Spacer()
+                }
+                .padding(14)
+            }
+            .frame(width: 560, height: 322)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(focused ? Color.white.opacity(0.9) : Color.white.opacity(0.08), lineWidth: focused ? 2.5 : 1)
+            )
+            .scaleEffect(focused ? 1.035 : 1)
+            .shadow(color: .black.opacity(focused ? 0.6 : 0.3), radius: focused ? 26 : 12, y: 12)
+            .animation(.easeOut(duration: 0.16), value: focused)
+            .padding(6)
         }
-        .foregroundStyle(tint)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(.black.opacity(0.35), in: Capsule())
+        .buttonStyle(.plain)
+        .focused($focused)
+    }
+}
+
+// MARK: - Quick tile
+
+private struct QuickTile: View {
+    let symbol: String
+    let title: String
+    let subtitle: String
+    let tint: Color
+    let action: () -> Void
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(focused ? Color.black.opacity(0.12) : tint.opacity(0.15))
+                    Image(systemName: symbol)
+                        .font(.system(size: 21, weight: .semibold))
+                        .foregroundStyle(focused ? Color.black : tint)
+                }
+                .frame(width: 48, height: 48)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(focused ? Color.black : Theme.text)
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(.system(size: 13))
+                        .foregroundStyle(focused ? Color.black.opacity(0.6) : Theme.textFaint)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(focused ? Color.black.opacity(0.45) : Theme.textFaint)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 13)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                    .fill(focused ? Color.white : Theme.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                    .stroke(focused ? Color.clear : Theme.border, lineWidth: 1)
+            )
+            .scaleEffect(focused ? 1.025 : 1)
+            .animation(.easeOut(duration: 0.13), value: focused)
+        }
+        .buttonStyle(.plain)
+        .focused($focused)
     }
 }

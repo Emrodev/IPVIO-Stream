@@ -117,7 +117,7 @@ struct DetailView: View {
                                 InfoPill(symbol: "calendar", text: String(year), tint: .white.opacity(0.78))
                             }
                             if let quality = item.quality {
-                                TagBadge(text: quality, tint: Theme.background, background: Theme.green)
+                                TagBadge(text: quality, tint: Theme.background, background: Theme.accent)
                             }
                             if let duration = durationText(item) {
                                 InfoPill(symbol: "clock", text: duration, tint: .white.opacity(0.78))
@@ -138,7 +138,7 @@ struct DetailView: View {
                                     ratingRow(label: "IMDb", value: String(format: "%.1f", imdb), tint: Theme.gold)
                                 }
                                 if let tmdb = ratings.tmdbRating, ratings.imdbRating == nil {
-                                    ratingRow(label: "TMDB", value: String(format: "%.1f", tmdb), tint: Theme.greenBright)
+                                    ratingRow(label: "TMDB", value: String(format: "%.1f", tmdb), tint: Theme.accentLight)
                                 }
                                 if let rotten = ratings.rottenRating {
                                     ratingRow(label: "RT", value: "\(Int(rotten))%", tint: Theme.red)
@@ -174,7 +174,7 @@ struct DetailView: View {
                                 .padding(.vertical, 12)
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(Theme.green)
+                            .tint(Theme.accent)
                             .foregroundStyle(Theme.background)
 
                             Button {
@@ -214,7 +214,6 @@ struct DetailView: View {
         }
         .frame(height: 600)
         .clipped()
-        .ignoresSafeArea(edges: .top)
     }
 
     private func ratingRow(label: String, value: String, tint: Color) -> some View {
@@ -308,7 +307,7 @@ struct DetailView: View {
             if loadingEpisodes {
                 HStack(spacing: 12) {
                     ProgressView()
-                        .tint(Theme.green)
+                        .tint(Theme.accent)
                     Text(L.t("detail.loadingEpisodes"))
                         .font(.system(size: 17))
                         .foregroundStyle(Theme.textDim)
@@ -376,7 +375,7 @@ struct DetailView: View {
                     HStack(spacing: 10) {
                         Text("E\(episode.number)")
                             .font(.system(size: 13, weight: .heavy, design: .rounded))
-                            .foregroundStyle(Theme.greenBright)
+                            .foregroundStyle(Theme.accentLight)
                         Text(episode.displayTitle)
                             .font(.system(size: 19, weight: .semibold))
                             .foregroundStyle(Theme.text)
@@ -396,7 +395,7 @@ struct DetailView: View {
                     if let progress = app.progress(for: item, episode: episode), !progress.isFinished {
                         Text(L.f("detail.episodeProgress", TimeText.clock(progress.remaining)))
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Theme.greenBright)
+                            .foregroundStyle(Theme.accentLight)
                     }
                 }
                 Spacer()

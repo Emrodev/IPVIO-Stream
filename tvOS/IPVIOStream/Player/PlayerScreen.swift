@@ -195,9 +195,9 @@ struct PlayerScreen: View {
             guard !vm.showControls, vm.errorMessage == nil, !vm.ended else { return }
             switch direction {
             case .left:
-                vm.seek(by: -15)
+                vm.seek(by: -10)
             case .right:
-                vm.seek(by: 15)
+                vm.seek(by: 10)
             case .up, .down:
                 vm.revealControls()
             default:
@@ -240,53 +240,43 @@ struct PlayerScreen: View {
                 Spacer()
                 bottomControls
             }
-            .padding(.horizontal, 64)
-            .padding(.vertical, 40)
+            .padding(.horizontal, 48)
+            .padding(.vertical, 34)
         }
     }
 
     private var topBar: some View {
-        HStack(alignment: .center, spacing: 18) {
-            PlayerCircleButton(symbol: "xmark", action: { dismiss() })
-            VStack(alignment: .leading, spacing: 3) {
-                Text(vm.title)
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                if let subtitle = vm.subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Theme.textDim)
-                        .lineLimit(1)
-                }
+        HStack(spacing: 12) {
+            PlayerGlassButton(symbol: "xmark", label: L.t("player.close"), size: 48) {
+                dismiss()
             }
             Spacer()
             if item.kind == .live {
                 liveBadge
             }
-            if let quality = vm.selectedVariant?.quality, !quality.isEmpty {
-                TagBadge(text: quality, tint: .black, background: Theme.green)
+            PlayerGlassButton(symbol: "waveform", label: L.t("player.audio")) {
+                showOptions = true
             }
-            if let rating = metadata?.bestRating {
-                TagBadge(text: String(format: "★ %.1f", rating), tint: .black, background: Theme.gold)
+            PlayerGlassButton(symbol: "captions.bubble", label: L.t("player.subtitles")) {
+                showOptions = true
             }
-            Text(Date(), style: .time)
-                .font(.system(size: 18, weight: .semibold, design: .monospaced))
-                .foregroundStyle(Theme.textDim)
+            PlayerGlassButton(symbol: "ellipsis", label: L.t("player.info")) {
+                showOptions = true
+            }
         }
     }
 
     private var centerControls: some View {
-        HStack(spacing: 28) {
+        HStack(spacing: 22) {
             if vm.hasPrevious {
-                PlayerIconButton(symbol: "backward.end.fill", label: "") {
+                PlayerGlassButton(symbol: "backward.end.fill", label: L.t("player.previousEpisode"), size: 52) {
                     vm.playPrevious()
                 }
             }
 
             if !item.kind.isLive {
-                PlayerIconButton(symbol: "gobackward.15", label: L.t("player.back15")) {
-                    vm.seek(by: -15)
+                PlayerGlassButton(symbol: "gobackward.10", label: "10", size: 62) {
+                    vm.seek(by: -10)
                 }
                 .disabled(vm.duration <= 0)
             }
@@ -295,11 +285,12 @@ struct PlayerScreen: View {
                 vm.togglePlayback()
             } label: {
                 Image(systemName: iconForPlayState)
-                    .font(.system(size: 38, weight: .bold))
-                    .foregroundStyle(Theme.background)
-                    .frame(width: 96, height: 96)
-                    .background(Theme.green, in: Circle())
-                    .shadow(color: Theme.green.opacity(0.45), radius: 22)
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(focus == .play ? Color.black : Color.white)
+                    .frame(width: 88, height: 88)
+                    .background(focus == .play ? Color.white : Color.white.opacity(0.16), in: Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.22), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
             }
             .buttonStyle(.plain)
             .focused($focus, equals: .play)
@@ -307,14 +298,14 @@ struct PlayerScreen: View {
             .animation(.easeOut(duration: 0.15), value: focus)
 
             if !item.kind.isLive {
-                PlayerIconButton(symbol: "goforward.15", label: L.t("player.forward15")) {
-                    vm.seek(by: 15)
+                PlayerGlassButton(symbol: "goforward.10", label: "10", size: 62) {
+                    vm.seek(by: 10)
                 }
                 .disabled(vm.duration <= 0)
             }
 
             if vm.hasNext {
-                PlayerIconButton(symbol: "forward.end.fill", label: L.t("player.nextEpisode")) {
+                PlayerGlassButton(symbol: "forward.end.fill", label: L.t("player.nextEpisode"), size: 52) {
                     vm.playNext()
                 }
             }
@@ -322,85 +313,106 @@ struct PlayerScreen: View {
     }
 
     private var bottomControls: some View {
-        VStack(spacing: 18) {
+        VStack(alignment: .leading, spacing: 14) {
             if let segment = vm.currentSegment {
                 HStack {
                     Spacer()
                     Button {
                         vm.skipCurrentSegment()
                     } label: {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             Image(systemName: "forward.fill")
+                                .font(.system(size: 13, weight: .bold))
                             Text(L.t(segment.kind.titleKey))
-                                .font(.system(size: 19, weight: .bold))
+                                .font(.system(size: 15, weight: .semibold))
                         }
-                        .padding(.horizontal, 22)
-                        .padding(.vertical, 12)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .background(.black.opacity(0.55), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.18), lineWidth: 1))
+                        .foregroundStyle(.white)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.green)
-                    .foregroundStyle(Theme.background)
+                    .buttonStyle(.plain)
+                }
+            }
+
+            HStack(alignment: .center, spacing: 20) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(vm.title)
+                        .font(.system(size: 27, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    if let subtitle = vm.subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .lineLimit(1)
+                    }
+
+                    HStack(spacing: 7) {
+                        if item.kind == .live {
+                            liveBadge
+                        }
+                        if let quality = vm.selectedVariant?.quality, !quality.isEmpty {
+                            playerBadge(quality)
+                        }
+                        if let episode = vm.currentEpisode {
+                            playerBadge(L.f("player.episodeOf", episode.season, episode.number))
+                        }
+                        if let rating = metadata?.bestRating {
+                            playerBadge(String(format: "★ %.1f", rating), tint: Theme.gold)
+                        }
+                        Text(app.sourceName(for: item.playlistID))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.42))
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 16)
+
+                HStack(spacing: 9) {
+                    PlayerGlassButton(symbol: "waveform", label: L.t("player.audio")) {
+                        showOptions = true
+                    }
+                    PlayerGlassButton(symbol: "captions.bubble", label: L.t("player.subtitles")) {
+                        showOptions = true
+                    }
+                    if vm.variants.count > 1 {
+                        PlayerGlassButton(symbol: "arrow.up.arrow.down", label: L.t("player.quality")) {
+                            showOptions = true
+                        }
+                    }
+                    PlayerGlassButton(symbol: "rectangle.arrowtriangle.2.outward", label: L.t("player.aspect")) {
+                        vm.toggleAspect()
+                    }
+                    PlayerGlassButton(symbol: "info.circle", label: L.t("player.info")) {
+                        showOptions = true
+                    }
                 }
             }
 
             if !item.kind.isLive, vm.duration > 0 {
                 PlayerScrubber(vm: vm)
             } else if item.kind == .live {
-                HStack(spacing: 12) {
-                    liveBadge
+                HStack(spacing: 8) {
+                    Circle().fill(Theme.red).frame(width: 7, height: 7)
                     Text(L.t("player.liveHint"))
-                        .font(.system(size: 17))
-                        .foregroundStyle(Theme.textDim)
-                    Spacer()
-                }
-            }
-
-            HStack(spacing: 10) {
-                PlayerIconButton(symbol: "waveform", label: vm.selectedAudioName) {
-                    showOptions = true
-                }
-                PlayerIconButton(symbol: "captions.bubble", label: vm.selectedSubtitleName) {
-                    showOptions = true
-                }
-                if vm.variants.count > 1 {
-                    PlayerIconButton(symbol: "arrow.up.arrow.down.circle", label: vm.selectedVariant?.quality ?? L.t("player.quality")) {
-                        showOptions = true
-                    }
-                }
-                PlayerIconButton(symbol: "rectangle.arrowtriangle.2.outward", label: L.t("player.aspect")) {
-                    vm.toggleAspect()
-                }
-                PlayerIconButton(symbol: "gauge.with.dots.needle.67percent", label: String(format: "%.2g×", vm.playbackRate)) {
-                    vm.cycleSpeed()
-                }
-                PlayerIconButton(symbol: "speaker.wave.2", label: L.t("player.audio")) {
-                    vm.toggleMute()
-                }
-                PlayerIconButton(symbol: "info.circle", label: L.t("player.info")) {
-                    showOptions = true
-                }
-                PlayerIconButton(symbol: "moon.zzz", label: L.t("player.sleepTimer")) {
-                    showOptions = true
-                }
-                Spacer()
-                if vm.hasNext {
-                    Button {
-                        vm.playNext()
-                    } label: {
-                        HStack(spacing: 10) {
-                            Text(L.t("player.nextEpisode"))
-                            Image(systemName: "forward.fill")
-                        }
-                        .font(.system(size: 18, weight: .bold))
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.white)
-                    .foregroundStyle(Theme.background)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.5))
                 }
             }
         }
+    }
+
+    private func playerBadge(_ text: String, tint: Color = .white) -> some View {
+        Text(text.uppercased())
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(tint.opacity(0.85))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 
     // MARK: Overlays
@@ -474,7 +486,7 @@ struct PlayerScreen: View {
                         vm.retry()
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Theme.green)
+                    .tint(Theme.accent)
                     .foregroundStyle(Theme.background)
                     .focused($focus, equals: .error)
 
@@ -526,7 +538,7 @@ struct PlayerScreen: View {
                 if let countdown = vm.nextCountdown {
                     Text(L.f("player.autoNext", countdown))
                         .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Theme.greenBright)
+                        .foregroundStyle(Theme.accentLight)
                 }
                 HStack(spacing: 16) {
                     if vm.hasNext {
@@ -534,7 +546,7 @@ struct PlayerScreen: View {
                             vm.playNext()
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(Theme.green)
+                        .tint(Theme.accent)
                         .foregroundStyle(Theme.background)
                         .focused($focus, equals: .ended)
                     }
@@ -565,6 +577,30 @@ extension MediaKind {
 }
 
 // MARK: - Small player buttons
+
+struct PlayerGlassButton: View {
+    let symbol: String
+    var label: String = ""
+    var size: CGFloat = 44
+    let action: () -> Void
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: size > 54 ? 24 : 17, weight: .semibold))
+                .frame(width: size, height: size)
+                .background(focused ? Color.white : Color.black.opacity(0.42), in: Circle())
+                .overlay(Circle().stroke(Color.white.opacity(focused ? 0 : 0.16), lineWidth: 1))
+                .foregroundStyle(focused ? Color.black : Color.white)
+                .scaleEffect(focused ? 1.07 : 1)
+                .animation(.easeOut(duration: 0.13), value: focused)
+        }
+        .buttonStyle(.plain)
+        .focused($focused)
+        .accessibilityLabel(label)
+    }
+}
 
 struct PlayerCircleButton: View {
     let symbol: String
@@ -637,30 +673,30 @@ struct PlayerScrubber: View {
                     Capsule()
                         .fill(Color.white.opacity(0.20))
                     Capsule()
-                        .fill(Theme.green)
+                        .fill(Theme.accent)
                         .frame(width: max(0, proxy.size.width * fraction))
                 }
             }
-            .frame(height: 12)
+            .frame(height: 4)
 
             HStack {
                 Text(TimeText.clock(vm.currentTime))
                 Spacer()
                 Text(TimeText.clock(vm.duration))
             }
-            .font(.system(size: 16, weight: .medium, design: .monospaced))
-            .foregroundStyle(Theme.textDim)
+            .font(.system(size: 12, weight: .medium, design: .monospaced))
+            .foregroundStyle(.white.opacity(0.48))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(focused ? Color.white.opacity(0.08) : Color.clear)
+                .fill(focused ? Color.white.opacity(0.06) : Color.clear)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(focused ? Theme.green.opacity(0.85) : Color.clear, lineWidth: 2)
+                .stroke(focused ? Color.white.opacity(0.35) : Color.clear, lineWidth: 1.5)
         )
         .focusable()
         .focused($focused)

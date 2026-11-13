@@ -86,7 +86,7 @@ struct AddPlaylistView: View {
                             .padding(.vertical, 13)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(Theme.green)
+                        .tint(Theme.accent)
                         .foregroundStyle(Theme.background)
                         .disabled(busy)
 
@@ -100,7 +100,7 @@ struct AddPlaylistView: View {
                     if busy {
                         VStack(alignment: .leading, spacing: 8) {
                             ProgressView(value: app.job?.progress ?? 0)
-                                .tint(Theme.green)
+                                .tint(Theme.accent)
                             Text(app.job?.status ?? L.t("add.connecting"))
                                 .font(.system(size: 14))
                                 .foregroundStyle(Theme.textDim)

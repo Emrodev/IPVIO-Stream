@@ -14,7 +14,7 @@ struct SearchView: View {
             HStack(spacing: 14) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(searchFocused ? Theme.green : Theme.textDim)
+                    .foregroundStyle(searchFocused ? Theme.accent : Theme.textDim)
                 TextField(L.t("browse.searchPlaceholder"), text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 24, weight: .medium))
@@ -35,7 +35,7 @@ struct SearchView: View {
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(searchFocused ? Theme.green.opacity(0.7) : Theme.border, lineWidth: 1.5)
+                    .stroke(searchFocused ? Theme.accent.opacity(0.7) : Theme.border, lineWidth: 1.5)
             )
 
             content

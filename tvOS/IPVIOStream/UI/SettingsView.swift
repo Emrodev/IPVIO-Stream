@@ -97,7 +97,7 @@ struct SettingsView: View {
                         .font(.system(size: 17, weight: .semibold))
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Theme.green)
+                .tint(Theme.accent)
                 .foregroundStyle(Theme.background)
 
                 Button {
@@ -247,12 +247,12 @@ struct SettingsView: View {
                         app.showToast(L.t("settings.keysSaved"))
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Theme.green)
+                    .tint(Theme.accent)
                     .foregroundStyle(Theme.background)
                     if !app.settings.tmdbKey.isEmpty || !app.settings.omdbKey.isEmpty {
                         Text(L.t("settings.keySaved"))
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Theme.greenBright)
+                            .foregroundStyle(Theme.accentLight)
                     }
                 }
             }
@@ -317,7 +317,7 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Text(L.t("settings.ksplayer"))
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Theme.greenBright)
+                    .foregroundStyle(Theme.accentLight)
                 Text(L.t("settings.gpl"))
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.textFaint)
@@ -367,7 +367,7 @@ struct SettingsView: View {
             Spacer()
             Toggle("", isOn: binding)
                 .labelsHidden()
-                .tint(Theme.green)
+                .tint(Theme.accent)
         }
     }
 
@@ -408,7 +408,7 @@ private struct PlaylistSettingsRow: View {
                     .fill(Theme.surface2)
                 Image(systemName: playlist.source.isXtream ? "server.rack" : "list.bullet.rectangle")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(playlist.isEnabled ? Theme.green : Theme.textFaint)
+                    .foregroundStyle(playlist.isEnabled ? Theme.accent : Theme.textFaint)
             }
             .frame(width: 48, height: 48)
 

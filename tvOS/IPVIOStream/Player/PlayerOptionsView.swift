@@ -135,7 +135,7 @@ struct PlayerOptionsView: View {
                 dismiss()
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.green)
+            .tint(Theme.accent)
             .foregroundStyle(Theme.background)
             .font(.system(size: 18, weight: .bold))
         }
@@ -156,7 +156,7 @@ struct PlayerOptionsView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 Image(systemName: symbol)
-                    .foregroundStyle(Theme.green)
+                    .foregroundStyle(Theme.accent)
                 Text(title)
                     .font(.system(size: 25, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.text)
@@ -191,7 +191,7 @@ private struct PlayerOptionRow: View {
                 Spacer()
                 if selected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(focused ? Color.black : Theme.green)
+                        .foregroundStyle(focused ? Color.black : Theme.accent)
                 }
             }
             .padding(.horizontal, 18)
@@ -221,13 +221,13 @@ private struct PlayerChoiceChip: View {
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(focused ? Color.white : (selected ? Theme.green.opacity(0.20) : Theme.surface2))
+                        .fill(focused ? Color.white : (selected ? Theme.accent.opacity(0.20) : Theme.surface2))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(selected && !focused ? Theme.green : Color.clear, lineWidth: 1.5)
+                        .stroke(selected && !focused ? Theme.accent : Color.clear, lineWidth: 1.5)
                 )
-                .foregroundStyle(focused ? Color.black : (selected ? Theme.greenBright : Theme.text))
+                .foregroundStyle(focused ? Color.black : (selected ? Theme.accentLight : Theme.text))
         }
         .buttonStyle(.plain)
         .focused($focused)

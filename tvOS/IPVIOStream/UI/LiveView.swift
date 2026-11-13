@@ -165,9 +165,9 @@ private struct LiveCategoryRow: View {
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(focused ? Color.white : (selected ? Theme.green.opacity(0.14) : Color.clear))
+                    .fill(focused ? Color.white : (selected ? Theme.accent.opacity(0.14) : Color.clear))
             )
-            .foregroundStyle(focused ? Color.black : (selected ? Theme.greenBright : Theme.textDim))
+            .foregroundStyle(focused ? Color.black : (selected ? Theme.accentLight : Theme.textDim))
         }
         .buttonStyle(.plain)
         .focused($focused)
@@ -205,7 +205,7 @@ private struct LiveChannelRow: View {
                         if let quality = item.quality {
                             Text(quality)
                                 .font(.system(size: 10, weight: .heavy))
-                                .foregroundStyle(Theme.greenBright)
+                                .foregroundStyle(Theme.accentLight)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
                                 .background(Theme.surface2, in: Capsule())
@@ -258,7 +258,7 @@ private struct LiveChannelRow: View {
                     .foregroundStyle(Theme.textDim)
                 Text(now.title)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Theme.greenBright)
+                    .foregroundStyle(Theme.accentLight)
                     .lineLimit(1)
                 Text(now.timeRange)
                     .font(.system(size: 13))

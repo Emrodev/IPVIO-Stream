@@ -100,6 +100,13 @@ final class AppModel: ObservableObject {
 
     var interfaceLanguage: Lang { settings.resolvedLanguage }
 
+    var activeSourceSummary: String {
+        let active = playlists.filter(\.isEnabled)
+        if active.isEmpty { return L.t("error.noPlaylist") }
+        if active.count == 1 { return active[0].name }
+        return "\(active.count) \(L.t("common.sources"))"
+    }
+
     func item(id: String) -> MediaItem? { indexByID[id] }
 
     func sourceName(for playlistID: UUID) -> String {
