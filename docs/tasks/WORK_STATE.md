@@ -2,7 +2,9 @@ Last update: 2026-11-12 (release 1.4 prepared). Read `CLAUDE.md` first, then thi
 
 ## Current task (13 Nov 2026)
 
-T-026 (Live TV only some categories, cut-off playlist kept as cache): implemented on branch `fix/playlist-cache` from `62846c7` (1.4.1). Task file `docs/tasks/T-026-playlist-cache-incomplete.md`. JVM tests ran (see task file); not built, not device tested. Next: maintainer builds, tests with "Playlist komplett neu laden", sends `adb logcat -s IPVIO-PL` if categories are still missing.
+T-026 (Live TV only some categories, cut-off playlist kept as cache): implemented on branch `fix/playlist-cache` from `62846c7` (1.4.1). Task file `docs/tasks/T-026-playlist-cache-incomplete.md`. Status: **done, open for device test** (PR #71, CI green; the maintainer could not test on 13 Nov 2026). JVM tests ran (see task file). Do not merge before the device test. Next: maintainer builds, tests with "Playlist komplett neu laden" (steps in the task file), sends `adb logcat -d -s IPVIO-PL` if categories are still missing; then merge #71 into `main` and create the 1.4.2 branch from `main`.
+
+Workflow agreed on 13 Nov 2026: one branch and PR per change; merge into `main` after CI is green and a short device test of that change; a full device test of `main` before every release.
 
 ## Previous task
 

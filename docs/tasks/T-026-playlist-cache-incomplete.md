@@ -49,4 +49,12 @@ the playlist seems to do nothing.
 - **Not run:** Gradle build (`PlaylistStore.kt`, `SettingsHub.kt`, `PlaylistDiag.kt` use Android/Compose and were not compiled), device test.
 
 ## Status
-Implemented on branch `fix/playlist-cache`, not built, not device tested.
+**Done, open for device test.** Implemented on branch `fix/playlist-cache`, PR #71. CI (unit tests and debug build) green on 13 Nov 2026.
+The maintainer could not test yet (13 Nov 2026). Merge into `main` only after the device test.
+
+## Open: device test steps for the maintainer
+1. Build the release APK from `fix/playlist-cache` (copy `keystore.properties` and `local.properties` from `ipvio-release`), install over 1.4.1.
+2. Settings > Playlists > "Playlist komplett neu laden", confirm.
+3. Live TV: categories after "AS" are there, "EU | DE | Movies and Series" is in Live TV.
+4. If categories are still missing: `adb logcat -d -s IPVIO-PL` and send the output.
+5. Optional: refresh with no network; the line "Aktualisierung fehlgeschlagen: …" appears in Settings > Playlists and the old list stays.
