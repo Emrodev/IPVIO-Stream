@@ -58,6 +58,14 @@ jobs:
             TVOS_DEPLOYMENT_TARGET=18.0 \
             build 2>&1 | tee "$RUNNER_TEMP/build.log"
 
+      - name: Verify app bundle
+        working-directory: tvOS
+        run: |
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 3 -name "IPVIOStream.app" -type d | head -1)
+          echo "APP=$APP"
+          test -n "$APP"
+          python3 tools/verify_app.py "$APP" --require-release
+
       - name: Package unsigned .app
         if: success()
         run: |

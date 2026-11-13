@@ -278,6 +278,22 @@ KSPlayer نسخة GPL-3.0 (النسخة المجانية) وFFmpegKit تحت ت�
 
 ---
 
+### التحقق من حزمة `.app`
+
+قبل التوقيع يمكن فحص البناء محلياً:
+
+```bash
+python3 tools/verify_app.py /path/to/IPVIOStream.app --require-release
+```
+
+يفحص السكربت:
+- `CFBundleIdentifier` و`MinimumOSVersion` و`CFBundleSupportedPlatforms`.
+- أن الملف التنفيذي **Mach-O arm64** وليس محاكياً.
+- وجود `KSPlayer.framework` و22 إطار FFmpeg داخلياً.
+- خلو نسخة Release من `IPVIOStream.debug.dylib` و`__preview.dylib`.
+
+هذا هو نفس الفحص الذي يشغّله CI قبل نشر الـ Artifact.
+
 ## اختبارات مقترحة بعد البناء
 
 1. **Xtream**: استيراد حساب، التأكد من ظهور القنوات والأفلام والمسلسلات.
