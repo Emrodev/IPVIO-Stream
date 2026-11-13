@@ -111,7 +111,7 @@ actor XMLTVService {
 
 private enum XMLTVDateParser {
     private static let formatters: [DateFormatter] = {
-        ["yyyyMMddHHmmss Z", "yyyyMMddHHmmss"].map { format in
+        ["yyyyMMddHHmmss Z", "yyyyMMddHHmmssZ", "yyyyMMddHHmmss"].map { format in
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "en_US_POSIX")
             formatter.timeZone = TimeZone(secondsFromGMT: 0)

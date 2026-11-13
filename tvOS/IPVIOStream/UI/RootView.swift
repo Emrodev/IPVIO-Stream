@@ -17,6 +17,7 @@ struct RootView: View {
                     .id(app.interfaceLanguage)
             }
         }
+        .disabled(showIntro)
         .environment(\.layoutDirection, app.interfaceLanguage.layoutDirection)
         .environment(\.locale, app.interfaceLanguage.locale)
         .task {
@@ -235,7 +236,7 @@ struct LaunchIntroView: View {
             progress = 1
         }
 
-        Task {
+        Task { @MainActor in
             try? await Task.sleep(nanoseconds: 2_750_000_000)
             finish()
         }

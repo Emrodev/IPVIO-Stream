@@ -247,6 +247,7 @@ private struct LiveChannelRow: View {
         .contextMenu {
             Button {
                 app.toggleFavorite(item.id)
+                app.showToast(app.isFavorite(item.id) ? L.t("favorites.added") : L.t("favorites.removed"))
             } label: {
                 Label(
                     app.isFavorite(item.id) ? L.t("detail.removeFavorite") : L.t("detail.addFavorite"),
@@ -700,6 +701,7 @@ struct TVGuideView: View {
     private func loadGuide() async {
         let generation = loadGeneration + 1
         loadGeneration = generation
+        windowStart = TVGuideView.initialWindowStart()
 
         let group = selectedGroup
         var values = app.items(kind: .live, group: group == MenuSentinel.allGroups ? nil : group)

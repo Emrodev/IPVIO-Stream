@@ -260,7 +260,7 @@ struct PlayerScreen: View {
             ) {
                 app.toggleFavorite(item.id)
                 app.showToast(
-                    app.isFavorite(item.id) ? L.t("detail.addFavorite") : L.t("detail.removeFavorite")
+                    app.isFavorite(item.id) ? L.t("favorites.added") : L.t("favorites.removed")
                 )
             }
             PlayerGlassButton(symbol: "waveform", label: L.t("player.audio")) {

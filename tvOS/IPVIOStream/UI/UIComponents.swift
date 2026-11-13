@@ -164,6 +164,7 @@ struct LiveChannelCard: View {
         .contextMenu {
             Button {
                 app.toggleFavorite(item.id)
+                app.showToast(app.isFavorite(item.id) ? L.t("favorites.added") : L.t("favorites.removed"))
             } label: {
                 Label(
                     app.isFavorite(item.id) ? L.t("detail.removeFavorite") : L.t("detail.addFavorite"),
