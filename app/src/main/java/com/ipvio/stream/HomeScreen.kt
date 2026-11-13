@@ -231,9 +231,10 @@ fun HomeScreen(
     val topS = data.topS
     val byId = data.byId
     val cardW = AppSettings.cardW
+    // Adult titles never show up in the history rows (home, movie/series tab, history page), independent of the parental switch
     // derivedStateOf: the lists are rebuilt only when history / favorites / My list really change, not on every
     // recomposition; the same list object lets the rows below skip instead of recomposing all their cards
-    val hist by remember(byId) { derivedStateOf { History.ids.mapNotNull { byId[it] } } }
+    val hist by remember(byId) { derivedStateOf { Parental.filter(History.ids.mapNotNull { byId[it] }) } }
     val watchList by remember(byId) { derivedStateOf { Library.watch.mapNotNull { byId[it] } } }
     val favLive by remember(byId) { derivedStateOf { Library.favs.mapNotNull { byId[it] }.filter { it.kind == Kind.LIVE } } }
     // Row lists that were built anew inside the rows on every recomposition

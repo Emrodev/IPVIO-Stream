@@ -26,6 +26,8 @@ object General {
     var confirmExit by mutableStateOf(true)
     /** Live TV: show the quality variants of one channel (8K/4K/FHD/HD/SD) as a single row. */
     var bundleLive by mutableStateOf(true)
+    /** Live TV channel row size: 0 = small, 1 = normal (default), 2 = large. */
+    var channelRowSize by mutableIntStateOf(1)
     /** Playlist refresh: 0 = at every start, 1 = every X hours, 2 = daily, 3 = weekly, 4 = by hand only */
     var refreshMode by mutableIntStateOf(DEFAULT_REFRESH_MODE)
     var refreshInterval by mutableIntStateOf(12)
@@ -119,6 +121,7 @@ object General {
         resumeVod = p.getBoolean("resume_vod", false)
         confirmExit = p.getBoolean("confirm_exit", true)
         bundleLive = p.getBoolean("bundle_live", true)
+        channelRowSize = p.getInt("channel_row_size", 1).coerceIn(0, 2)
         // Users who never chose a mode get "daily": the first start still loads the list once (lastRefresh = 0),
         // later starts use the cache. Before 1.4 the default was "at every start", which re-downloaded the whole line each time.
         // One-time switch for existing installs: "at every start" (0, the old default) becomes "daily" (maintainer decision,
@@ -163,6 +166,7 @@ object General {
     fun setResumeLive(c: Context, v: Boolean) { resumeLive = v; prefs(c).edit().putBoolean("resume_live", v).apply() }
     fun setResumeVod(c: Context, v: Boolean) { resumeVod = v; prefs(c).edit().putBoolean("resume_vod", v).apply() }
     fun setBundleLive(c: Context, v: Boolean) { bundleLive = v; prefs(c).edit().putBoolean("bundle_live", v).apply() }
+    fun setChannelRowSize(c: Context, v: Int) { channelRowSize = v.coerceIn(0, 2); prefs(c).edit().putInt("channel_row_size", channelRowSize).apply() }
     fun setConfirmExit(c: Context, v: Boolean) { confirmExit = v; prefs(c).edit().putBoolean("confirm_exit", v).apply() }
     fun setPlan(c: Context, mode: Int = refreshMode, interval: Int = refreshInterval, hour: Int = refreshHour, minute: Int = refreshMinute, dow: Int = refreshDow) {
         refreshMode = mode.coerceIn(0, 4); refreshInterval = interval.coerceIn(1, 168)

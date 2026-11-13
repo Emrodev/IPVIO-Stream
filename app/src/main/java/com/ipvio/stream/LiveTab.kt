@@ -28,6 +28,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.shadow
@@ -223,7 +225,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         // TV guide as in the design: starts the last watched (otherwise first) channel of the selection and opens the guide
                         CatRow("TV-Guide", -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Grid) {
                             val src = list.ifEmpty { live }
-                            val ch = History.ids.firstNotNullOfOrNull { id -> src.firstOrNull { it.id == id } } ?: src.firstOrNull()
+                            val ch = History.ids.firstNotNullOfOrNull { id -> src.firstOrNull { it.id == id && !ParentalLogic.isAdult(it.group, it.title) } } ?: src.firstOrNull()
                             if (ch != null) { ZapContext.list = src; ZapContext.key = sel; AppNav.openGuide = true; onOpen(ch) }
                         }
                         return@itemsIndexed
@@ -525,6 +527,15 @@ private fun CatRow(
     }
 }
 
+/** Dimensions of a channel row for the three sizes of the setting "Senderzeilen" (normal = the former fixed layout). */
+private class RowDims(val height: Dp, val pad: Dp, val logo: Dp, val title: TextUnit, val epg: TextUnit, val badge: TextUnit, val gap: Dp, val bar: Dp, val icon: Dp)
+
+private val ROW_DIMS = arrayOf(
+    RowDims(72.dp, 8.dp, 40.dp, 16.sp, 11.sp, 10.sp, 1.dp, 2.dp, 16.dp),    // small
+    RowDims(100.dp, 12.dp, 56.dp, 19.sp, 13.sp, 11.sp, 3.dp, 3.dp, 20.dp),  // normal
+    RowDims(116.dp, 12.dp, 64.dp, 21.sp, 14.sp, 12.sp, 4.dp, 3.dp, 22.dp)   // large
+)
+
 @Composable
 private fun ChannelLine(item: Item, modifier: Modifier, inList: ChList?, onNewList: () -> Unit, onFocus: () -> Unit = {}, variants: List<Item> = emptyList(), onVariant: (Item) -> Unit = {}, favShown: List<Item>? = null, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
@@ -546,8 +557,9 @@ private fun ChannelLine(item: Item, modifier: Modifier, inList: ChList?, onNewLi
     }
     // Round 17b: the selected channel floats forward as light glass with a shadow (instead of a frame)
     val sc by androidx.compose.animation.core.animateFloatAsState(if (f) focusScale(1.03f) else 1f, label = "chl")
+    val dims = ROW_DIMS[General.channelRowSize.coerceIn(0, 2)]
     Row(
-        modifier.fillMaxWidth().height(100.dp)   // fixed height: rows no longer grow when guide data arrives, so the list never re-measures while scrolling
+        modifier.fillMaxWidth().height(dims.height)   // fixed height: rows no longer grow when guide data arrives, so the list never re-measures while scrolling
             .graphicsLayer { scaleX = sc; scaleY = sc; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f) }
             .clip(shape)
             .background(if (f) Color(0x29FFFFFF) else Color(0x0AFFFFFF))
@@ -555,11 +567,11 @@ private fun ChannelLine(item: Item, modifier: Modifier, inList: ChList?, onNewLi
             .onFocusChanged { f = it.isFocused; if (it.isFocused) onFocus() }
             .menuKeys(onMenu = { menu = true }, onLong = { menu = true })
             .clickable(onClick = onClick)
-            .padding(12.dp),
+            .padding(dims.pad),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        ChannelLineContent(item, epg, variants.size)
+        ChannelLineContent(item, epg, variants.size, dims)
     }
     }
 }
@@ -570,41 +582,41 @@ private fun ChannelLine(item: Item, modifier: Modifier, inList: ChList?, onNewLi
  * formatting and the favorite, catch-up and dead-link checks do not run again on every focus move.
  */
 @Composable
-private fun RowScope.ChannelLineContent(item: Item, epg: List<EpgEntry>, variantCount: Int) {
+private fun RowScope.ChannelLineContent(item: Item, epg: List<EpgEntry>, variantCount: Int, dims: RowDims) {
     val nowE = Epg.current(epg)
     val nextE = epg.firstOrNull { nowE != null && it.start >= nowE.end }
-    ChannelLogo(item.logo, item.title)
-    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    ChannelLogo(item.logo, item.title, dims.logo)
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(dims.gap)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(raw = true, text = item.title, color = Tok.TextHi, fontSize = 19.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            Text(raw = true, text = item.title, color = Tok.TextHi, fontSize = dims.title, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             val lq = remember(item.id) { LiveQuality.get(item.id) ?: item.quality }
             if (lq != null) Box(Modifier.clip(RoundedCornerShape(DS.RadiusXs)).background(Color(0x26FFFFFF)).padding(horizontal = 6.dp, vertical = 1.dp)) {
-                Text(raw = true, text = lq, color = Accent2, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(raw = true, text = lq, color = Accent2, fontSize = dims.badge, fontWeight = FontWeight.Bold, maxLines = 1)
             }
             // Bundled channel: show how many quality variants are behind this row
             if (variantCount > 1) Box(Modifier.clip(RoundedCornerShape(DS.RadiusXs)).background(Color(0x26FFFFFF)).padding(horizontal = 6.dp, vertical = 1.dp)) {
-                Text(raw = true, text = "+" + (variantCount - 1), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(raw = true, text = "+" + (variantCount - 1), color = Muted, fontSize = dims.badge, fontWeight = FontWeight.Bold, maxLines = 1)
             }
         }
         if (nowE != null) {
             val frac = ((System.currentTimeMillis() / 1000 - nowE.start).toFloat() / (nowE.end - nowE.start)).coerceIn(0f, 1f)
-            Text(raw = true, text = "${hhmm(nowE.start)}–${hhmm(nowE.end)}  ${nowE.title}", color = Accent2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(50)).background(DS.Overlay3)) {
+            Text(raw = true, text = "${hhmm(nowE.start)}–${hhmm(nowE.end)}  ${nowE.title}", color = Accent2, fontSize = dims.epg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Box(Modifier.fillMaxWidth().height(dims.bar).clip(RoundedCornerShape(50)).background(DS.Overlay3)) {
                 Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(Accent2))
             }
-            if (nextE != null) Text(raw = true, text = "${hhmm(nextE.start)}  ${nextE.title}", color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        } else Text(raw = true, text = item.group, color = Muted, fontSize = 13.sp, maxLines = 1)
+            if (nextE != null) Text(raw = true, text = "${hhmm(nextE.start)}  ${nextE.title}", color = Muted, fontSize = dims.epg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        } else Text(raw = true, text = item.group, color = Muted, fontSize = dims.epg, maxLines = 1)
     }
-    if (Catchup.version >= 0 && Catchup.has(item)) AppIcon(AIcon.Catchup, Accent2, size = 20.dp)
+    if (Catchup.version >= 0 && Catchup.has(item)) AppIcon(AIcon.Catchup, Accent2, size = dims.icon)
     // DeadLinks.count is read as a change signal (same pattern as Catchup.version): isDead itself is a plain map lookup
-    if (DeadLinks.count >= 0 && DeadLinks.isDead(item.url)) AppIcon(AIcon.Warning, DS.Gold, size = 20.dp)
-    if (Library.isFav(item.id)) AppIcon(AIcon.Star, DS.Gold, size = 20.dp)
+    if (DeadLinks.count >= 0 && DeadLinks.isDead(item.url)) AppIcon(AIcon.Warning, DS.Gold, size = dims.icon)
+    if (Library.isFav(item.id)) AppIcon(AIcon.Star, DS.Gold, size = dims.icon)
 }
 
 /** Logo of a channel row. Own composable with plain String parameters, so a focus change of the row skips it (no new image request). */
 @Composable
-private fun ChannelLogo(logo: String?, title: String) {
-    Box(Modifier.size(56.dp).clip(RoundedCornerShape(DS.RadiusS)).background(DS.Overlay2), contentAlignment = Alignment.Center) {
+private fun ChannelLogo(logo: String?, title: String, size: Dp) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(DS.RadiusS)).background(DS.Overlay2), contentAlignment = Alignment.Center) {
         if (logo != null) AsyncImage(logo, null, Modifier.fillMaxSize().padding(6.dp), contentScale = ContentScale.Fit)
         else Text(raw = true, text = title.take(2).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
     }
@@ -674,7 +686,7 @@ fun ReminderCard(r: Reminder, modifier: Modifier, onClose: () -> Unit, onSwitch:
 @Composable
 private fun LiveHome(live: List<Item>, genres: Map<String, List<Item>>, favs: List<Item>, firstReq: FocusRequester, onOpen: (Item, List<Item>) -> Unit) {
     val byId = remember(live) { live.associateBy { it.id } }
-    val recent = remember(live, History.ids.size) { History.ids.mapNotNull { byId[it] }.take(24) }
+    val recent = remember(live, History.ids.size) { Parental.filter(History.ids.mapNotNull { byId[it] }).take(24) }
     val rows = ArrayList<Pair<String, List<Item>>>()
     if (recent.isNotEmpty()) rows.add("Zuletzt gesehen" to recent)
     if (favs.isNotEmpty()) rows.add("Favoriten" to favs.take(40))
