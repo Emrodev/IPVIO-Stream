@@ -127,6 +127,13 @@ struct LiveChannelCard: View {
 
                 VStack {
                     HStack {
+                        if app.isFavorite(item.id) {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Theme.accent)
+                                .padding(6)
+                                .background(.black.opacity(0.45), in: Circle())
+                        }
                         Spacer()
                         HStack(spacing: 5) {
                             Circle().fill(Theme.red).frame(width: 6, height: 6)
@@ -154,6 +161,16 @@ struct LiveChannelCard: View {
         }
         .buttonStyle(.plain)
         .focused($focused)
+        .contextMenu {
+            Button {
+                app.toggleFavorite(item.id)
+            } label: {
+                Label(
+                    app.isFavorite(item.id) ? L.t("detail.removeFavorite") : L.t("detail.addFavorite"),
+                    systemImage: app.isFavorite(item.id) ? "heart.slash" : "heart"
+                )
+            }
+        }
     }
 }
 

@@ -254,6 +254,15 @@ struct PlayerScreen: View {
             if item.kind == .live {
                 liveBadge
             }
+            PlayerGlassButton(
+                symbol: app.isFavorite(item.id) ? "heart.fill" : "heart",
+                label: L.t("player.favorite")
+            ) {
+                app.toggleFavorite(item.id)
+                app.showToast(
+                    app.isFavorite(item.id) ? L.t("detail.addFavorite") : L.t("detail.removeFavorite")
+                )
+            }
             PlayerGlassButton(symbol: "waveform", label: L.t("player.audio")) {
                 showOptions = true
             }

@@ -413,6 +413,17 @@ final class AppModel: ObservableObject {
         return await EPGService.shared.programs(item: item, account: account)
     }
 
+    /// Full XMLTV guide for a playlist, limited to the channels currently on
+    /// screen. The service caches the parsed result and streams the download.
+    func guidePrograms(for playlist: Playlist, channelIDs: Set<String>) async -> [String: [EPGProgram]] {
+        guard settings.showLiveEPG,
+              let epgURL = playlist.epgURL?.trimmed,
+              !epgURL.isEmpty else {
+            return [:]
+        }
+        return await XMLTVService.shared.programs(epgURL: epgURL, channelIDs: channelIDs)
+    }
+
     // MARK: - Metadata
 
     func metadata(for item: MediaItem, refresh: Bool = false) async -> EnrichedMetadata? {

@@ -271,6 +271,8 @@ struct PlaybackRequest: Identifiable, Sendable {
 enum AppSection: String, CaseIterable, Hashable, Sendable {
     case home
     case live
+    case guide
+    case favorites
     case movies
     case series
     case search
@@ -282,6 +284,8 @@ enum AppSection: String, CaseIterable, Hashable, Sendable {
         switch self {
         case .home: return "house.fill"
         case .live: return "dot.radiowaves.left.and.right"
+        case .guide: return "calendar"
+        case .favorites: return "heart.fill"
         case .movies: return "film.fill"
         case .series: return "rectangle.stack.fill"
         case .search: return "magnifyingglass"

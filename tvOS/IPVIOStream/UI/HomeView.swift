@@ -20,6 +20,9 @@ struct HomeView: View {
                 if !app.liveItems.isEmpty {
                     liveRow
                 }
+                if !favoriteLiveItems.isEmpty {
+                    favoriteLiveRow
+                }
 
                 PosterRow(
                     title: L.t("home.movies"),
@@ -37,7 +40,7 @@ struct HomeView: View {
                 )
                 PosterRow(
                     title: L.t("home.favorites"),
-                    items: Array(app.favoriteItems.prefix(20))
+                    items: Array(favoriteVideoItems.prefix(20))
                 )
                 PosterRow(
                     title: L.t("home.myList"),
@@ -120,6 +123,14 @@ struct HomeView: View {
                 app.setSection(.series)
             }
             QuickTile(
+                symbol: "heart.fill",
+                title: L.t("nav.favorites"),
+                subtitle: L.f("browse.count", app.favorites.count),
+                tint: Theme.accent
+            ) {
+                app.setSection(.favorites)
+            }
+            QuickTile(
                 symbol: "magnifyingglass",
                 title: L.t("nav.search"),
                 subtitle: L.t("search.hint"),
@@ -172,6 +183,35 @@ struct HomeView: View {
     }
 
     // MARK: - Actions
+
+    private var favoriteLiveItems: [MediaItem] {
+        app.favoriteItems.filter { $0.kind == .live }
+    }
+
+    private var favoriteVideoItems: [MediaItem] {
+        app.favoriteItems.filter { $0.kind != .live }
+    }
+
+    private var favoriteLiveRow: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(
+                title: L.t("favorites.live"),
+                actionTitle: L.t("common.seeAll"),
+                action: { app.setSection(.favorites) }
+            )
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 18) {
+                    ForEach(Array(favoriteLiveItems.prefix(20))) { item in
+                        LiveChannelCard(item: item)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 14)
+            }
+            .scrollClipDisabled()
+            .focusSection()
+        }
+    }
 
     private func open(_ item: MediaItem) {
         if item.kind == .series {
@@ -357,5 +397,123 @@ private struct QuickTile: View {
         }
         .buttonStyle(.plain)
         .focused($focused)
+    }
+}
+
+// MARK: - Favourites
+
+struct FavoritesView: View {
+    @EnvironmentObject private var app: AppModel
+    @State private var filter: FavoritesFilter = .all
+
+    private var allItems: [MediaItem] {
+        app.favorites
+            .compactMap { app.item(id: $0) }
+            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    }
+
+    private var items: [MediaItem] {
+        guard let kind = filter.kind else { return allItems }
+        return allItems.filter { $0.kind == kind }
+    }
+
+    private var liveItems: [MediaItem] { items.filter { $0.kind == .live } }
+    private var vodItems: [MediaItem] { items.filter { $0.kind != .live } }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                ScreenTitle(
+                    title: L.t("nav.favorites"),
+                    subtitle: L.f("browse.count", allItems.count)
+                )
+
+                HStack(spacing: 9) {
+                    ForEach(FavoritesFilter.allCases) { option in
+                        SelectChip(
+                            title: L.t(option.titleKey),
+                            selected: filter == option
+                        ) {
+                            filter = option
+                        }
+                    }
+                }
+                .focusSection()
+
+                if items.isEmpty {
+                    EmptyStateView(
+                        symbol: "heart",
+                        title: L.t("favorites.empty"),
+                        message: L.t("favorites.emptyHint")
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 420)
+                } else {
+                    if !liveItems.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            SectionHeader(title: L.t("favorites.live"))
+                            LazyVGrid(
+                                columns: [GridItem(.adaptive(minimum: 300, maximum: 330), spacing: 18)],
+                                alignment: .leading,
+                                spacing: 22
+                            ) {
+                                ForEach(liveItems) { item in
+                                    LiveChannelCard(item: item, width: 300)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                            .focusSection()
+                        }
+                    }
+
+                    if !vodItems.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            SectionHeader(title: L.t("favorites.vod"))
+                            LazyVGrid(
+                                columns: [GridItem(.adaptive(minimum: 200, maximum: 240), spacing: 22)],
+                                alignment: .leading,
+                                spacing: 30
+                            ) {
+                                ForEach(vodItems) { item in
+                                    PosterCard(item: item, width: 210)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                            .focusSection()
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, Theme.pagePadding)
+            .padding(.top, 32)
+            .padding(.bottom, 70)
+        }
+        .background(Theme.background)
+    }
+}
+
+private enum FavoritesFilter: String, CaseIterable, Identifiable {
+    case all
+    case live
+    case movies
+    case series
+
+    var id: String { rawValue }
+
+    var titleKey: String {
+        switch self {
+        case .all: return "common.all"
+        case .live: return "nav.live"
+        case .movies: return "nav.movies"
+        case .series: return "nav.series"
+        }
+    }
+
+    var kind: MediaKind? {
+        switch self {
+        case .all: return nil
+        case .live: return .live
+        case .movies: return .movie
+        case .series: return .series
+        }
     }
 }

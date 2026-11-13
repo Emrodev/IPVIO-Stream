@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var app: AppModel
     @Environment(\.scenePhase) private var scenePhase
+    @State private var showIntro = true
 
     var body: some View {
         Group {
@@ -39,6 +40,17 @@ struct RootView: View {
                 LoadingOverlay(job: job)
             }
         }
+        .overlay {
+            if showIntro {
+                LaunchIntroView {
+                    withAnimation(.easeInOut(duration: 0.65)) {
+                        showIntro = false
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(20)
+            }
+        }
         .fullScreenCover(item: $app.playback) { request in
             PlayerContainer(request: request)
                 .environmentObject(app)
@@ -47,10 +59,206 @@ struct RootView: View {
     }
 }
 
+struct LaunchIntroView: View {
+    var onFinished: () -> Void
+
+    @State private var started = false
+    @State private var finished = false
+
+    @State private var glowOpacity: Double = 0
+    @State private var logoScale: CGFloat = 0.62
+    @State private var logoOpacity: Double = 0
+    @State private var logoRotation: Double = -10
+    @State private var haloRotation: Double = 0
+    @State private var ringScale: CGFloat = 0.92
+    @State private var ringOpacity: Double = 0.55
+    @State private var ring2Scale: CGFloat = 0.92
+    @State private var ring2Opacity: Double = 0.42
+    @State private var titleOpacity: Double = 0
+    @State private var titleOffset: CGFloat = 26
+    @State private var titleTracking: CGFloat = 22
+    @State private var subtitleOpacity: Double = 0
+    @State private var subtitleOffset: CGFloat = 16
+    @State private var chipsOpacity: Double = 0
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            Theme.background.ignoresSafeArea()
+
+            RadialGradient(
+                colors: [Theme.accent.opacity(0.24), Theme.accent.opacity(0.06), .clear],
+                center: .center,
+                startRadius: 30,
+                endRadius: 640
+            )
+            .opacity(glowOpacity)
+            .ignoresSafeArea()
+            .blur(radius: 20)
+
+            VStack(spacing: 24) {
+                ZStack {
+                    Circle()
+                        .stroke(Theme.accent.opacity(0.30), lineWidth: 1)
+                        .frame(width: 308, height: 308)
+                        .scaleEffect(ringScale)
+                        .opacity(ringOpacity)
+
+                    Circle()
+                        .stroke(Theme.accentLight.opacity(0.22), lineWidth: 1)
+                        .frame(width: 308, height: 308)
+                        .scaleEffect(ring2Scale)
+                        .opacity(ring2Opacity)
+
+                    Circle()
+                        .stroke(
+                            AngularGradient(
+                                colors: [
+                                    .clear,
+                                    Theme.accent.opacity(0.85),
+                                    Theme.accentLight.opacity(0.25),
+                                    .clear,
+                                    Theme.accent.opacity(0.45),
+                                    .clear
+                                ],
+                                center: .center
+                            ),
+                            lineWidth: 2
+                        )
+                        .frame(width: 286, height: 286)
+                        .rotationEffect(.degrees(haloRotation))
+                        .opacity(logoOpacity * 0.9)
+
+                    BrandMark(size: 202)
+                        .scaleEffect(logoScale)
+                        .rotationEffect(.degrees(logoRotation))
+                        .opacity(logoOpacity)
+                        .shadow(color: Theme.accent.opacity(0.55), radius: 60, y: 12)
+                }
+                .frame(height: 320)
+                .padding(.bottom, 6)
+
+                VStack(spacing: 10) {
+                    Text("IPVIO")
+                        .font(.system(size: 78, weight: .black, design: .rounded))
+                        .tracking(titleTracking)
+                        .foregroundStyle(Theme.text)
+                        .opacity(titleOpacity)
+                        .offset(y: titleOffset)
+
+                    Text("STREAM")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .tracking(13)
+                        .foregroundStyle(Theme.accent)
+                        .opacity(subtitleOpacity)
+                        .offset(y: subtitleOffset)
+                }
+
+                HStack(spacing: 15) {
+                    introLabel("LIVE TV")
+                    introDot
+                    introLabel("4K HDR")
+                    introDot
+                    introLabel("MOVIES & SERIES")
+                }
+                .opacity(chipsOpacity)
+
+                Capsule()
+                    .fill(Color.white.opacity(0.10))
+                    .frame(width: 300, height: 4)
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Theme.accent, Theme.accentLight],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: max(4, 300 * progress), height: 4)
+                    }
+                    .padding(.top, 10)
+            }
+        }
+        .onAppear(perform: playIntro)
+    }
+
+    private var introDot: some View {
+        Circle()
+            .fill(Theme.textFaint)
+            .frame(width: 3, height: 3)
+    }
+
+    private func introLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 14, weight: .semibold, design: .rounded))
+            .tracking(1.6)
+            .foregroundStyle(Theme.textDim)
+    }
+
+    private func playIntro() {
+        guard !started else { return }
+        started = true
+
+        withAnimation(.easeOut(duration: 0.6)) {
+            glowOpacity = 1
+        }
+        withAnimation(.spring(response: 0.85, dampingFraction: 0.68)) {
+            logoScale = 1
+            logoOpacity = 1
+            logoRotation = 0
+        }
+        withAnimation(.linear(duration: 6).repeatForever(autoreverses: false)) {
+            haloRotation = 360
+        }
+        withAnimation(.easeOut(duration: 1.5).delay(0.15)) {
+            ringScale = 1.55
+            ringOpacity = 0
+        }
+        withAnimation(.easeOut(duration: 1.5).delay(0.55)) {
+            ring2Scale = 1.72
+            ring2Opacity = 0
+        }
+        withAnimation(.easeOut(duration: 0.9).delay(0.28)) {
+            titleOpacity = 1
+            titleOffset = 0
+            titleTracking = 7
+        }
+        withAnimation(.easeOut(duration: 0.8).delay(0.52)) {
+            subtitleOpacity = 1
+            subtitleOffset = 0
+        }
+        withAnimation(.easeOut(duration: 0.8).delay(0.78)) {
+            chipsOpacity = 1
+        }
+        withAnimation(.easeInOut(duration: 1.9).delay(0.22)) {
+            progress = 1
+        }
+
+        Task {
+            try? await Task.sleep(nanoseconds: 2_750_000_000)
+            finish()
+        }
+    }
+
+    private func finish() {
+        guard !finished else { return }
+        finished = true
+        onFinished()
+    }
+}
+
 struct SplashView: View {
     var body: some View {
         ZStack {
             Theme.background.ignoresSafeArea()
+            RadialGradient(
+                colors: [Theme.accent.opacity(0.16), .clear],
+                center: .center,
+                startRadius: 20,
+                endRadius: 520
+            )
+            .ignoresSafeArea()
             VStack(spacing: 24) {
                 BrandMark(size: 96)
                 Text("IPVIO Stream")
@@ -108,6 +316,10 @@ struct MainShell: View {
             HomeView()
         case .live:
             LiveView()
+        case .guide:
+            TVGuideView()
+        case .favorites:
+            FavoritesView()
         case .movies:
             BrowseView(kind: .movie)
         case .series:
@@ -127,7 +339,7 @@ struct TopBar: View {
     @EnvironmentObject private var router: Router
     @FocusState private var focusedTab: AppSection?
 
-    private let tabs: [AppSection] = [.home, .live, .movies, .series, .settings]
+    private let tabs: [AppSection] = [.home, .live, .guide, .movies, .series, .settings]
 
     var body: some View {
         HStack(spacing: 18) {
@@ -170,6 +382,14 @@ struct TopBar: View {
                 TopBarIcon(symbol: "magnifyingglass", label: L.t("nav.search"), active: app.selectedSection == .search) {
                     router.reset()
                     app.setSection(.search)
+                }
+                TopBarIcon(
+                    symbol: app.favorites.isEmpty ? "heart" : "heart.fill",
+                    label: L.t("nav.favorites"),
+                    active: app.selectedSection == .favorites
+                ) {
+                    router.reset()
+                    app.setSection(.favorites)
                 }
                 ZStack {
                     Circle()
