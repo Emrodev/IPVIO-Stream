@@ -74,7 +74,7 @@ android {
                 // kotlin.text class, in androidx.startup.InitializationProvider); during 1.2 a build with com.ipvio.** in the
                 // scope (12.7 MB) did not start either (cause unknown, see ADR 0001).
                 // Rollback: set enable = false (this one line).
-                enable = false
+                enable = true
             }
         }
     }
