@@ -83,6 +83,15 @@ object XtreamLogic {
         return sb.append(',').append(n).append('\n').append(liveUrl(a, id)).toString()
     }
 
+    /** Time the provider added a movie (Unix seconds from "added"); 0 = unknown. */
+    fun addedOf(f: Map<String, String>): Long = f["added"]?.trim()?.toLongOrNull()?.coerceAtLeast(0L) ?: 0L
+
+    /**
+     * Movies ordered by [addedOf], oldest first; the list is read from the end for "recently added". Stable: titles with
+     * the same time (or none) keep the provider's order. Titles without a time stay in front (treated as oldest).
+     */
+    fun <T> byAdded(l: List<Pair<Long, T>>): List<Pair<Long, T>> = l.sortedBy { it.first }
+
     /** A movie from get_vod_streams; if the year is missing in the name, it is added from "year" or "releaseDate". */
     fun movieEntry(a: Acct, f: Map<String, String>, cats: Map<String, String>): String? {
         val id = idOf(f, "stream_id") ?: return null

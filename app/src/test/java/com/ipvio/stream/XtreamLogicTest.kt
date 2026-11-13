@@ -82,4 +82,16 @@ class XtreamLogicTest {
         assertTrue(XtreamLogic.looksLikeM3u("﻿#EXTM3U x"))
         assertFalse(XtreamLogic.looksLikeM3u("<html>884</html>"))
     }
+
+    // Issue #22: movies are ordered by their "added" time while loading (oldest first; the app reads new from the end)
+    @Test fun xtreamAddedTimeOrdersOldestFirst() {
+        assertEquals(1700000000L, XtreamLogic.addedOf(mapOf("added" to " 1700000000 ")))
+        assertEquals(0L, XtreamLogic.addedOf(mapOf("added" to "abc")))
+        assertEquals(0L, XtreamLogic.addedOf(mapOf("added" to "-5")))
+        assertEquals(0L, XtreamLogic.addedOf(emptyMap()))
+        val sorted = XtreamLogic.byAdded(listOf(30L to "c", 10L to "a", 0L to "none", 20L to "b"))
+        assertEquals(listOf("none", "a", "b", "c"), sorted.map { it.second })
+        // Stable: equal times keep the provider order
+        assertEquals(listOf("x", "y"), XtreamLogic.byAdded(listOf(5L to "x", 5L to "y")).map { it.second })
+    }
 }

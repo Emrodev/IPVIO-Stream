@@ -28,7 +28,7 @@ CI (`.github/workflows/build.yml`) runs unit tests and a debug build on every pu
 
 ## Only meaningful on a device
 
-Unit tests cannot cover these. Each needs a test step for the maintainer after a change:
+Unit tests cannot cover these. Each needs a test step for the maintainer after a change. The scripted end-to-end check for focus, scrolling, search, playback and settings on a TV or the Android TV emulator is in [testing/TV-TEST-PLAN.md](testing/TV-TEST-PLAN.md).
 
 | Area | Why | Source |
 |---|---|---|

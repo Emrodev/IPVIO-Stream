@@ -37,12 +37,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val S_SORT_AZ = 6
 private const val S_SORT_PLAYLIST = 8
+/** Typing pause before the portal is asked (Stalker, see [StalkerMore.search]). */
+private const val PORTAL_SEARCH_DELAY_MS = 1200L
 
 /** Index of the current list – is kept when leaving and coming back. */
 internal object SearchCache {
@@ -132,17 +136,37 @@ fun SearchScreen(
         val idx = index ?: return@produceState
         if (q.length < 2) { value = q to none; return@produceState }
         delay(250)
+        val searchContext = currentCoroutineContext()
         // Also the de-duplication of movie versions runs here in the background (for short queries it can be tens of
         // thousands of hits, before it ran on the main thread while typing)
         value = q to withContext(Dispatchers.Default) {
-            idx.find(q).let { (m, s, l) -> Triple(PlaylistLogic.firstPerKey(m) { it.mk + "|" + it.lang }, s, l) }
+            idx.find(q, checkCancelled = { searchContext.ensureActive() })
+                .let { (m, s, l) -> Triple(PlaylistLogic.firstPerKey(m) { it.mk + "|" + it.lang }, s, l) }
         }
+    }
+    // Stalker portal: titles are loaded on demand, so the search also asks the portal; its hits join the list
+    var portalBusy by remember { mutableStateOf(false) }
+    LaunchedEffect(q) {
+        portalBusy = false
+        if (!StalkerMore.canSearch() || StalkerLogic.searchTerm(q) == null) return@LaunchedEffect
+        delay(PORTAL_SEARCH_DELAY_MS)
+        portalBusy = true
+        try { StalkerMore.search(ctx, q) } finally { portalBusy = false }
     }
     val searching = q.length >= 2 && found.first != q
     val (rm0, rs0, rl0) = if (q.length < 2 || searching) none else found.second
     val fl = SearchState.filter
     // Word suggestions for the word being typed
-    val sugg = remember(SearchState.query, suggestIdx) { suggestIdx?.suggest(WordSuggest.lastWord(SearchState.query)).orEmpty() }
+    val sugg by produceState(emptyList<String>(), SearchState.query, suggestIdx) {
+        val suggest = suggestIdx ?: run { value = emptyList(); return@produceState }
+        val prefix = WordSuggest.lastWord(SearchState.query)
+        if (prefix.length < 2) { value = emptyList(); return@produceState }
+        delay(100)
+        val searchContext = currentCoroutineContext()
+        value = withContext(Dispatchers.Default) {
+            suggest.suggest(prefix) { searchContext.ensureActive() }
+        }
+    }
     // Sports hub filter: live channels that look like sports channels (the hub itself opens with the button)
     val rlSport = remember(rl0, fl == 4) { if (fl == 4) rl0.filter { SearchSport.isSport(it) } else emptyList() }
     val rl = when (fl) { 0, 3 -> rl0; 4 -> rlSport; else -> emptyList() }
@@ -189,7 +213,7 @@ fun SearchScreen(
                 if (AppSettings.systemKeyboard) {
                     // The device's own keyboard (e.g. Gboard) in a normal text field: OK or a tap opens it
                     Field(
-                        SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
+                        SearchState.query, { SearchState.query = it.take(60) }, searchHint(SearchState.filter),
                         Modifier.fillMaxWidth(),
                         inner = Modifier.focusRequester(ContentFocus.req).onFocusChanged { fieldFocused = it.isFocused || it.hasFocus },
                         onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
@@ -198,7 +222,7 @@ fun SearchScreen(
                 // Tappable: OK or a tap opens the device keyboard for typing (the app keyboard below stays available).
                 // Deliberately not wired to fieldFocused: that flag belongs to the BackHandler and tracks the app keyboard only.
                 Field(
-                    SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
+                    SearchState.query, { SearchState.query = it.take(60) }, searchHint(SearchState.filter),
                     Modifier.fillMaxWidth(),
                     onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
                 )
@@ -222,7 +246,10 @@ fun SearchScreen(
             }
             // Right: info panel of the highlighted title on top, the hits below
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: hist.firstOrNull())
+                // While searching only a hit is shown (not a title from history or from an earlier input)
+                val active = q.length >= 2
+                val preview = focusItem?.takeIf { f -> !active || listOf(rm, rs, rl).any { l -> l.any { it.id == f.id } } }
+                    ?: rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: if (active) null else hist.firstOrNull()
                 SearchInfoPanel(preview, Modifier.fillMaxWidth().height(190.dp).padding(start = 24.dp, end = DS.PageX, top = 16.dp))
                 CompositionLocalProvider(LocalSearchFocus provides { focusItem = it }) {
                     LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = state, contentPadding = PaddingValues(bottom = 48.dp)) {
@@ -232,9 +259,10 @@ fun SearchScreen(
                     }
                 }
                 if (q.length < 2) {
-                    val hm = hist.filter { it.kind == Kind.MOVIE }
-                    val hs = hist.filter { it.kind == Kind.SERIES }
-                    val hl = hist.filter { it.kind == Kind.LIVE }
+                    // Recently watched follows the quick filter too (search opened from Movies shows only movies)
+                    val hm = if (fl == 0 || fl == 1) hist.filter { it.kind == Kind.MOVIE } else emptyList()
+                    val hs = if (fl == 0 || fl == 2) hist.filter { it.kind == Kind.SERIES } else emptyList()
+                    val hl = if (fl == 0 || fl >= 3) hist.filter { it.kind == Kind.LIVE } else emptyList()
                     if (hm.isNotEmpty()) item(key = "hm") {
                         SearchRow("Zuletzt geschaut · Filme", hm.take(30), cardW, onOpen) {
                             onBrowse(BrowseReq("Zuletzt geschaut · Filme", hm, S_SORT_PLAYLIST))
@@ -252,7 +280,7 @@ fun SearchScreen(
                     }
                 } else {
                     val openS: (Item) -> Unit = { i -> AppSettings.addSearch(ctx, q); onOpen(i) }
-                    if (searching) item {
+                    if (searching || (portalBusy && rm.isEmpty() && rs.isEmpty() && rl.isEmpty())) item {
                         Text("Suche …", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(horizontal = DS.PageX, vertical = 16.dp))
                     } else if (rm.isEmpty() && rs.isEmpty() && rl.isEmpty()) item {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -368,6 +396,8 @@ private fun SearchRow(
     val headerReq = remember { FocusRequester() }
     val firstCard = firstReq ?: remember { FocusRequester() }
     val report = LocalSearchFocus.current
+    // The same title in several languages: say which version each card is
+    val versions = remember(list) { SearchVersions.labels(list.take(60)) }
     Column {
         SearchRowHeader(title, list.size, headerReq, firstCard, rowState, onAll)
         Box(
@@ -385,7 +415,7 @@ private fun SearchRow(
                 itemsIndexed(list.take(60)) { i, x ->
                     val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) report(x) }
                     if (x.kind == Kind.LIVE) LiveCard(x, { onOpen(x) }, Modifier.width((cardW * 4 / 3).dp).then(fr))
-                    else PosterCard(x, { onOpen(x) }, Modifier.width(cardW.dp).restoreFocus(x.id).then(fr))
+                    else PosterCard(x, { onOpen(x) }, Modifier.width(cardW.dp).restoreFocus(x.id).then(fr), subtitle = versions[x.id])
                 }
                 item { SearchAllTile(liveRow, if (liveRow) (cardW * 4 / 3).dp else cardW.dp, onAll) }
             }
@@ -393,6 +423,9 @@ private fun SearchRow(
     }
 }
 
+
+/** Hint in the empty search field: follows the Movies / Series filter (translation keys shared with the header). */
+private fun searchHint(filter: Int): String = when (filter) { 1 -> "Filme suchen …"; 2 -> "Serien suchen …"; else -> "Filme, Serien oder Sender suchen…" }
 
 private val SEARCH_FILTERS = listOf("Alle", "Filme", "Serien", "Live TV", "Sport")
 
@@ -511,7 +544,7 @@ private fun SearchInfoPanel(item: Item?, modifier: Modifier) {
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(raw = true, text = item.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 val parts = ArrayList<String>()
-                parts.add(when (item.kind) { Kind.MOVIE -> "Film"; Kind.SERIES -> "Serie"; else -> "Live" })
+                parts.add(Lang.tr(kindLabel(item.kind)).lowercase(Lang.locale()).replaceFirstChar { it.titlecase(Lang.locale()) })
                 (item.year?.toString() ?: m?.year)?.let { parts.add(it) }
                 m?.runtime?.takeIf { it > 0 }?.let { parts.add("$it Min") }
                 (item.quality)?.let { parts.add(it) }

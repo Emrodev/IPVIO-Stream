@@ -1,6 +1,35 @@
 # Changelog
 
 ## Unreleased
+**Live TV**
+- Right from a category always reaches the channels, also after scrolling a category's channels and switching to another category further down (the first channel row was not laid out yet, so the focus request went nowhere)
+- Right returns to the channel last focused in that category (the first channel after a category change); Left goes to the selected category instead of the row beside the channel
+
+**Movies and series**
+- "Recently added" shows the newest titles first: Xtream movies are ordered by their "added" time while loading (up to 80,000 titles) (#22)
+- The language filter has its own speech-bubble icon instead of the country globe (#26)
+- Stalker lists keep the app's newest-from-the-end order: titles loaded on demand and search hits no longer show up as "Recently added"
+- Categories view (movies and series): the preview next to the category list shows every title of the category instead of the newest 40, and on a Stalker portal the next portion loads when scrolling near the end
+- Categories view: Right returns to the title last focused in that category; Left from the first column goes to the selected category instead of the row beside the title (which switched the category)
+- The search field on Movies and Series says "Search movies …" / "Search series …" and opens the search filtered to that area, including "Recently watched"
+- Search: when the same movie or series shows more than once (versions in other languages or categories), each card says which version it is, e.g. "2023 · English" / "2023 · Français", or the category for versions without a language tag; the empty search field follows the Movies / Series filter
+- Search: typing fast cancels the previous search scan, and the typo-tolerant pass stops after 150 ms on very large catalogs (follow-up to PR #14)
+
+**Player**
+- On phones and tablets, tapping or dragging on the timeline jumps to that position (#25)
+- MKV files without a Cues index can be seeked: skip, number-key jump and "Resume" no longer restart the movie at 0:00. The app estimates the byte position, reads the timecode of the next Cluster and corrects the position (up to 10 extra range requests); files with Cues are not affected (#10)
+
+**Home and settings**
+- The start-up focus retries on Home stop when there is no top picture (before, they logged focus warnings in a loop)
+- Deleting a playlist needs a second OK; switching or deleting a playlist keeps loading when you leave the settings page
+
+**Translations**
+- The Stalker loading texts ("Loading channels (N)", "Loading categories (n/m)") are translated instead of always showing German
+- The content-mode button in Settings > Playlists ("Live TV + movies & series", "Movies & series only") is translated instead of showing German
+- More texts that showed German in other languages are translated: the Live TV search hint, "Retrying categories", the guide fallback on Favorites ("No guide data available"), the ready-made design and background names, the genre loading progress in Settings, and "1 title" (singular)
+
+**Testing**
+- New repeatable TV test plan with adb scripts and a mock Xtream server for the Android TV emulator (`docs/testing/TV-TEST-PLAN.md`)
 
 ## 1.4.1
 - Fix: 1.4 did not open after the update on user devices. R8 over the whole app (T-024) is switched off again (`enable = false` in app/build.gradle.kts, the rollback from ADR 0005); versionCode 6. Cause not confirmed by a crash log (unverified). Install 1.4.1 over 1.4; data is kept (same signature)

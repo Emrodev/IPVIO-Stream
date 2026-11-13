@@ -908,7 +908,7 @@ fun ChannelDetailCard(item: Item, modifier: Modifier, reorder: List<Item>? = nul
                         modifier = Modifier.clip(RoundedCornerShape(dpx(4))).background(Accent1).padding(horizontal = dpx(6), vertical = dpx(1)))
                 }
                 Text(
-                    raw = true, text = nowE?.title ?: if (epg == null) "" else "Kein Programm verfügbar",
+                    raw = true, text = nowE?.title ?: if (epg == null) "" else Lang.tr("Kein Programm verfügbar"),
                     color = Color.White, fontSize = spx(21), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
                 if (nowE != null) Text(raw = true, text = hhmm(nowE.start) + " – " + hhmm(nowE.end) + "  ·  " + ((nowE.end - nowE.start) / 60) + " Min", color = Tok.TextLow, fontSize = spx(14), maxLines = 1)

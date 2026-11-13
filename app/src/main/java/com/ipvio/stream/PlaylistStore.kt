@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import okhttp3.Call
@@ -1092,6 +1093,15 @@ object PlaylistStore {
             error = MSG_TOO_BIG
             Local.FAILED
         }
+    }
+
+    /** Lives as long as the app: a load started from a settings page keeps running when the user leaves the page. */
+    private val appScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** Load [url] as the active list in the background (switch, delete, reload) – not tied to the screen that started it. */
+    fun loadDetached(c: Context, url: String) {
+        val app = c.applicationContext
+        appScope.launch { load(app, url, false) }
     }
 
     /**

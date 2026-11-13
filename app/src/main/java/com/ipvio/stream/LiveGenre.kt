@@ -35,6 +35,8 @@ object LiveGenre {
         return r
     }
 
+    fun trim() = synchronized(this) { last.clear() }
+
     private val last = ArrayList<Pair<List<Item>, LinkedHashMap<String, List<Item>>>>()
 
     private fun compute(live: List<Item>): LinkedHashMap<String, List<Item>> {

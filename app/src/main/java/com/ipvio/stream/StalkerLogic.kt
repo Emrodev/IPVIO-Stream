@@ -28,8 +28,11 @@ object StalkerLogic {
             (if (sn.isNotEmpty()) "#sn=$sn" else "") + (if (id1.isNotEmpty()) "#id1=$id1" else "") + (if (id2.isNotEmpty()) "#id2=$id2" else "")
     }
 
-    /** Serial number / device ID as typed: only letters and digits (no separators, nothing that could break the stored text). */
-    fun cleanId(raw: String): String = raw.trim().filter { it in '0'..'9' || it in 'a'..'z' || it in 'A'..'Z' }.take(64)
+    /**
+     * Serial number / device ID as typed: letters, digits, ":" and "-" (some portals bind the account to the MAC typed
+     * as device ID). Nothing that could break the stored text ("#", "&", "=").
+     */
+    fun cleanId(raw: String): String = raw.trim().filter { it in '0'..'9' || it in 'a'..'z' || it in 'A'..'Z' || it == ':' || it == '-' }.take(64)
 
     private val MAC = Regex("""^([0-9A-F]{2}[:-]){5}[0-9A-F]{2}$""")
 
@@ -178,6 +181,54 @@ object StalkerLogic {
     fun isItem(url: String): Boolean = url.startsWith("stalker://") && !url.contains("/series/")
 
     // ------------------------------------------------------------------ Series (placeholder, episodes only on opening)
+
+    /** Yes/no fields of a portal: "1", "true" and also "True" (Ministra sends Python-style booleans). */
+    /** Minimum length of a term sent to the portal search (shorter terms find thousands of titles). */
+    const val MIN_SEARCH = 3
+
+    /** Term for the portal search: spaces collapsed, at most 60 characters; null if too short. */
+    fun searchTerm(raw: String): String? {
+        val t = raw.trim().replace(Regex("""\s+"""), " ").take(60).trim()
+        return t.takeIf { it.length >= MIN_SEARCH }
+    }
+
+    /** true = [term] contains one of the [done] terms whose portal hits were complete, so it cannot find anything new. */
+    fun coveredBy(term: String, done: Collection<String>): Boolean = done.any { it.isNotEmpty() && term.contains(it) }
+
+    fun truthy(v: String?): Boolean = v?.trim()?.lowercase() in setOf("1", "true")
+
+    /** A single episode in a season list (its "series" field then lists all numbers of the season, not its own). */
+    fun isEpisodeRow(f: Map<String, String>): Boolean = truthy(f["is_episode"])
+
+    /**
+     * Episode without its own play command (the portal only says "series_files"): the file is looked up when it is
+     * played – one request per started episode instead of one per episode when opening the series.
+     */
+    fun episodeFileUrl(key: Int, movie: String, season: String, episode: String, cat: String): String =
+        itemUrl(key, "efile", listOf(movie, season, episode, cat).joinToString("/"))
+
+    /** List parameters for the files of an [episodeFileUrl] command; null if the command is broken. */
+    fun episodeFileQuery(cmd: String): String? {
+        val p = cmd.split('/')
+        if (p.size != 4 || p.take(3).any { it.isBlank() }) return null
+        return "&movie_id=${enc(p[0])}&season_id=${enc(p[1])}&episode_id=${enc(p[2])}&category=${enc(p[3])}&p=1"
+    }
+
+    private val EPISODE_PREFIX = Regex("""(?i)^\s*(episode|folge|ep|bölüm|épisode|episodio|epizoda|aflevering)\s*\.?\s*\d{1,4}\s*[.:\-]?\s*""")
+
+    /** Name of an episode as the portal gives it ("series_name", otherwise "name" without "Episode 10."); else "Episode N". */
+    fun episodeTitle(f: Map<String, String>, num: Int): String {
+        val raw = f["series_name"]?.trim()?.takeIf { it.isNotEmpty() } ?: f["name"]?.trim().orEmpty()
+        val t = raw.replace(EPISODE_PREFIX, "").trim()
+        return if (t.isEmpty() || t.all { it.isDigit() }) EpTitles.of(num) else t
+    }
+
+    /** Play command of a file entry: the portal's own command, otherwise "/media/file_<id>.mpg". */
+    fun fileCmd(f: Map<String, String>): String? {
+        f["cmd"]?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
+        val id = f["id"]?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return "/media/file_$id.mpg"
+    }
 
     /** A series of the portal: [id], [cat] (category), [mode] "s" = own series area, "v" = series in the movie area. */
     class SeriesRef(val key: Int, val id: String, val cat: String, val mode: String)

@@ -162,7 +162,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             .setWakeMode(C.WAKE_MODE_NETWORK)
             // "tap://" = live buffer on the device (rewind, recording), everything else as before
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(ctx)
+                // MKV files without a Cues index stay seekable (#10, see CuelessMkvExtractor)
+                DefaultMediaSourceFactory(ctx, CuelessMkvExtractor.Factory())
                     .setDataSourceFactory(TapAwareDataSource.Factory(HostFailover.DataSourceWrapper.Factory(DefaultDataSource.Factory(ctx, http))))
                     // Short network hiccups are retried inside the player (several times) instead of ending in an error
                     .setLoadErrorHandlingPolicy(IptvLoadErrorPolicy())
@@ -1109,6 +1110,9 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                         }
                         Key.DirectionUp -> { if (cur.live) zap(-1) else { focusSeek = true; controls = true }; true }
                         Key.DirectionDown -> { if (cur.live) zap(1) else { focusSeek = false; controls = true }; true }
+                        // Remote channel keys: CH+ = next channel number (like Down), CH- = previous
+                        Key.ChannelUp -> { if (cur.live) { zap(1); true } else false }
+                        Key.ChannelDown -> { if (cur.live) { zap(-1); true } else false }
                         Key.Menu -> { focusSeek = false; controls = true; true }
                         else -> false
                     }
@@ -1486,7 +1490,11 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                             onFocus = { if (it) ctrlLabel = "Zeitleiste  ·  Links/Rechts = $stepS s springen  ·  Halten = weiter springen" },
                             onDown = { runCatching { firstFocus.requestFocus() } },
                             onSeekKey = { stepSeek(it) },
-                            onRepeat = { repeatSeek(it) }
+                            onRepeat = { repeatSeek(it) },
+                            onTouchSeek = { x, w ->
+                                val t = TapSeekLogic.target(x, w, player.duration)
+                                if (t >= 0) { player.seekTo(t); pos = t; scrubTarget = -1L; turbo = 0; ping() }
+                            }
                         )
                         PTimeRow(posNow, durNow)
                         Spacer(Modifier.height(14.dp))

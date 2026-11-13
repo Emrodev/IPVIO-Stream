@@ -19,5 +19,8 @@ secrets.properties
 keystore.properties
 *.apk
 
+# Output of docs/testing/scripts (screenshots of a real device can show provider and channel names)
+tv-test-out/
+
 # Full-size screenshot originals (the repository uses the smaller .jpg copies)
 docs/screenshots/*.png

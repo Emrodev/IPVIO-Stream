@@ -247,11 +247,11 @@ fun HomeScreen(
     LaunchedEffect(live) {
         if (live.isEmpty()) return@LaunchedEffect
         delay(2500)
-        withContext(Dispatchers.Default) {
-            runCatching { LiveGenre.split(live) }
-            if (General.bundleLive) runCatching { LiveBundleLogic.bundle(live) }
-            runCatching { SportWatch.prewarm(live) }
-        }
+        val genres = LivePreparation.genres(live)
+        val bundled = if (General.bundleLive) LivePreparation.bundle(live) else null
+        genres.awaitOrNull()
+        bundled?.awaitOrNull()
+        withContext(Dispatchers.Default) { runCatching { SportWatch.prewarm(live) } }
     }
     // "Because you watched X": similar titles (TMDB) of the last started movie/series, matched against the own playlist
     val becauseSrc = hist.firstOrNull { it.kind != Kind.LIVE }
@@ -339,7 +339,8 @@ fun HomeScreen(
     val header: @Composable (Modifier) -> Unit = { m ->
         HeaderBar(
             m.onFocusChanged { inHeader = it.hasFocus },
-            onSearch = { onTab(4) },
+            // Search from Movies/Series shows only that area (filter can still be changed there)
+            onSearch = { SearchState.filter = when (tab) { 1 -> 1; 2 -> 2; else -> 0 }; onTab(4) },
             onReminder = { r -> byId[r.chId]?.let(onOpen) },
             onNewEpisode = { id -> byId[id]?.let(onOpen) },
             // Only one profile: go directly to the profile page of settings (before: general settings)
@@ -429,9 +430,10 @@ fun HomeScreen(
     LaunchedEffect(ready.isNotEmpty(), tab) {
         if (tab != 0 || HomeFlags.heroDone || LastFocus.pending != null) return@LaunchedEffect
         var waited = 0
-        while (waited < 45000) {
+        while (waited < 15000) {
             delay(150); waited += 150
-            if (ready.isEmpty() && waited < 6000) continue
+            // No top picture (yet): nothing to focus. This effect starts again when the picture becomes ready.
+            if (ready.isEmpty()) { if (waited < 6000) continue else return@LaunchedEffect }
             if (waited > 3000 && !inSidebar) return@LaunchedEffect
             if (runCatching { ContentFocus.req.requestFocus() }.getOrDefault(false)) { HomeFlags.heroDone = true; return@LaunchedEffect }
         }
@@ -484,7 +486,7 @@ fun HomeScreen(
     val watchK = remember(watchList, vodKind) { watchList.filter { it.kind == vodKind } }
     val histK = remember(hist, vodKind) { hist.filter { it.kind == vodKind } }
     val trendK = remember(trendItems, vodKind) { trendItems.filter { it.kind == vodKind } }
-    val reload: () -> Unit = { PlaylistStore.savedUrl(ctx)?.let { u -> scope.launch { PlaylistStore.load(ctx, u, false) } } }
+    val reload: () -> Unit = { PlaylistStore.savedUrl(ctx)?.let { u -> PlaylistStore.loadDetached(ctx, u) } }
 
     // Round 17b (Cinematic Remake): background and info follow the selected title once the big picture has scrolled away
     val bbTab = tab in 0..2
@@ -647,7 +649,8 @@ fun HomeScreen(
                                     SmallPill("Startseite anpassen", icon = AIcon.Sliders) { HomeEdit.active = true; scope.launch { states[0].animateScrollToItem(0) } }
                                 }
                             }
-                            if (movies.isEmpty() && series.isEmpty()) {
+                            // Only when the list really has no titles: not while it is (re)loading and only with Live TV to point to
+                            if (movies.isEmpty() && series.isEmpty() && live.isNotEmpty() && !PlaylistStore.loading) {
                                 item { EmptyHint("Diese Playlist enthält keine Filme oder Serien. Live TV findest du links.") }
                                 item { EmptyHint(CONTENT_MODE_HINT.format("movies or series", "live TV only")) }
                             }
@@ -846,7 +849,8 @@ private fun ResumeRow(list: List<Pair<Entry, Item>>, cardW: Int, onResume: (Entr
                 val multi = item.kind == Kind.SERIES && item.episodes.any { it.season != (se?.first ?: 1) }
                 val epText = se?.let { if (multi) "S${it.first} · Folge ${it.second}" else "Folge ${it.second}" }
                 val sub = when {
-                    item.kind != Kind.SERIES -> "bei " + (e.pos / 60000) + " Min"
+                    // Rounded and at least 1 ("at 0 min" looked like nothing was watched; entries start at 30 s)
+                    item.kind != Kind.SERIES -> "bei " + ((e.pos + 30_000) / 60_000).coerceAtLeast(1) + " Min"
                     e.next && epText != null -> "Als Nächstes: $epText"
                     epText != null -> epText
                     else -> e.title.removePrefix(item.title).trim()
@@ -903,8 +907,13 @@ private fun Hero(
 ) {
     val ctx = LocalContext.current
     var idx by remember { mutableIntStateOf(0) }
+    // Buttons focused: no rotation, so "Watch now" plays the title the user is looking at
+    var buttonsFocused by remember { mutableStateOf(false) }
     LaunchedEffect(featured.size, General.heroSec) {
-        while (featured.size > 1 && General.heroSec > 0) { delay(General.heroSec * 1000L); if (!Billboard.active) idx = (idx + 1) % featured.size }
+        while (featured.size > 1 && General.heroSec > 0) {
+            delay(General.heroSec * 1000L)
+            if (!Billboard.active && !buttonsFocused) idx = (idx + 1) % featured.size
+        }
     }
     val item = featured[idx.coerceIn(0, featured.lastIndex)]
 
@@ -946,7 +955,7 @@ private fun Hero(
                 }
             }
             Row(
-                Modifier.padding(top = dpx(if (home) 12 else 8)).onFocusChanged { if (it.hasFocus) onFocusTop() },
+                Modifier.padding(top = dpx(if (home) 12 else 8)).onFocusChanged { buttonsFocused = it.hasFocus; if (it.hasFocus) onFocusTop() },
                 horizontalArrangement = Arrangement.spacedBy(dpx(16))
             ) {
                 val h = if (home) 52 else 46
