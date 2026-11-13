@@ -24,10 +24,10 @@ object SubSearchLogic {
         val isEpisode get() = season > 0 && episode > 0
     }
 
-    /** One hit. [ref] = OpenSubtitles file ID or SubDL download path (without key). */
+    /** One hit. [ref] = OpenSubtitles file ID or SubDL download path (without key). [pack] = season pack (SubDL). */
     data class Hit(
         val provider: String, val ref: String, val lang: String, val release: String,
-        val hi: Boolean, val downloads: Int, val format: String
+        val hi: Boolean, val downloads: Int, val format: String, val pack: Boolean = false
     )
 
     /** API keys may contain letters, digits, "_" and "-" (SubDL: "subdl_…"), never characters that change an address. */
@@ -114,11 +114,63 @@ object SubSearchLogic {
         for (i in 0 until a.length()) {
             val s = a.optJSONObject(i) ?: continue
             val path = sdPath(s.optString("url")) ?: continue
-            // Episode search: only the wanted episode, no whole-season packs
-            if (q.isEpisode && (s.optBoolean("full_season") || s.optInt("episode", -1) != q.episode)) continue
-            out.add(Hit(SD, path, s.optString("language").lowercase().take(5), s.optString("release_name").trim(), s.optBoolean("hi"), 0, "zip"))
+            val release = s.optString("release_name").trim()
+            val pack = if (q.isEpisode) sdEpisode(s, release, q) ?: continue else false
+            out.add(Hit(SD, path, sdLang(s), release, s.optBoolean("hi"), 0, "zip", pack))
         }
         return SdParse(out, a.length(), null)
+    }
+
+    /**
+     * Does SubDL subtitle [s] cover the wanted episode? false = exactly this episode, true = a pack that contains it
+     * ([fromZip] picks the episode file later), null = another episode or season. SubDL often leaves "episode"
+     * empty or gives a range ("episode_from"/"episode_end"), so the release name decides when the fields are missing.
+     */
+    fun sdEpisode(s: JSONObject, release: String, q: Query): Boolean? {
+        val season = s.optInt("season", 0)
+        if (season > 0 && season != q.season) return null
+        val ep = s.optInt("episode", 0)
+        if (ep > 0 && !s.optBoolean("full_season")) return if (ep == q.episode) false else null
+        val from = s.optInt("episode_from", 0)
+        val end = s.optInt("episode_end", 0)
+        if (from > 0 && end >= from) return if (q.episode in from..end) (from != end) else null
+        val tag = TAG_SE.find(release)
+        if (tag != null) {
+            val ts = tag.groupValues[1].toInt()
+            val te = tag.groupValues[2].toInt()
+            return if (ts == q.season && te == q.episode) false else null
+        }
+        // No episode in fields or name: a season pack (or unknown) – keep it, the ZIP is searched for the episode
+        return true
+    }
+
+    private val TAG_SE = Regex("""(?i)\bS(\d{1,3})\s*E(\d{1,4})\b""")
+
+    /**
+     * Language code of a SubDL subtitle, ISO 639-1 lowercase. "language" is mostly a code ("EN"), sometimes with a
+     * region ("BR_PT"); otherwise the English name in "lang" ("english", "brazillian portuguese") is used.
+     */
+    fun sdLang(s: JSONObject): String {
+        val code = s.optString("language").trim().lowercase()
+        val parts = code.split('_', '-').filter { it.length == 2 && it.all(Char::isLetter) }
+        // "br_pt" (Brazilian Portuguese) → "pt"; "br" alone would read as Breton
+        if (parts.size == 2 && parts[0] == "br") return parts[1]
+        parts.firstOrNull { it in ISO }?.let { return it }
+        return byName(s.optString("lang")) ?: code.take(5)
+    }
+
+    private val ISO by lazy { java.util.Locale.getISOLanguages().toSet() }
+
+    private val NAMES by lazy {
+        java.util.Locale.getISOLanguages().associateBy { java.util.Locale.forLanguageTag(it).getDisplayLanguage(java.util.Locale.ENGLISH).lowercase() }
+    }
+
+    /** "english" → "en", "brazillian portuguese" → "pt" (last word that is a language name). */
+    private fun byName(name: String): String? {
+        val n = name.trim().lowercase()
+        if (n.isEmpty()) return null
+        NAMES[n]?.let { return it }
+        return n.split(Regex("""[^a-z]+""")).asReversed().firstNotNullOfOrNull { NAMES[it] }
     }
 
     /** Error text from a SubDL answer ("error" or "message"), at most 80 characters, never anything that looks like a key. */
@@ -142,13 +194,14 @@ object SubSearchLogic {
     }
 
     /**
-     * Only wanted languages, best first: language order, release name fits the title ([q]), not for the hard of
+     * Only wanted languages, best first: language order, release name fits the title ([q]), single episode before
+     * season pack, not for the hard of
      * hearing unless [ccPref], more downloads, OpenSubtitles before SubDL.
      */
     fun rank(hits: List<Hit>, q: Query, ccPref: Boolean): List<Hit> {
         fun li(h: Hit) = q.langs.indexOf(h.lang.take(2))
         return hits.distinctBy { it.provider + it.ref }.filter { li(it) >= 0 }.sortedWith(
-            compareBy<Hit>({ li(it) }, { if (fits(it.release, q)) 0 else 1 }, { if (FORCED.containsMatchIn(it.release)) 1 else 0 }, { if (it.hi == ccPref) 0 else 1 }, { -it.downloads }, { if (it.provider == OS) 0 else 1 })
+            compareBy<Hit>({ li(it) }, { if (fits(it.release, q)) 0 else 1 }, { if (it.pack) 1 else 0 }, { if (FORCED.containsMatchIn(it.release)) 1 else 0 }, { if (it.hi == ccPref) 0 else 1 }, { -it.downloads }, { if (it.provider == OS) 0 else 1 })
         )
     }
 
