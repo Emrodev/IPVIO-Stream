@@ -978,8 +978,38 @@ private fun FilterPage(ctx: Context, onLanguages: () -> Unit) {
     SectionTitle("Sprachen der Inhalte")
     Hint("Welche Sprachen geladen werden, stellst du unter „Playlists“ ein – das bestimmt, was aus der Playlist geladen wird.")
     PillButton("Sprachen der Inhalte öffnen", icon = AIcon.Globe) { onLanguages() }
-    IgnoredGroupsSection(ctx)
-    CategoryFilterSection(ctx)
+    // Switches below only change a draft; it is saved once with "Apply" (or when leaving the page), so the playlist
+    // is not filtered again after every single tick.
+    IgnoredGroups.init(ctx)
+    val ver = IgnoredGroups.version
+    val base = remember(ver) { IgnoredGroups.snapshot() }
+    var draft by remember(base) { mutableStateOf(base) }
+    val d = IgnoreDraft(draft, draft != base, { draft = it }, { IgnoredGroups.applyDraft(ctx, draft - base, base - draft) }, { draft = base })
+    val latest by rememberUpdatedState(base to draft)
+    DisposableEffect(Unit) {
+        onDispose { val (b, dr) = latest; IgnoredGroups.applyDraft(ctx, dr - b, b - dr) }
+    }
+    IgnoredGroupsSection(d)
+    CategoryFilterSection(d)
+}
+
+/** Unsaved "ignore" switches of the filter page, shared by both sections. */
+private class IgnoreDraft(
+    val keys: Set<String>,
+    val pending: Boolean,
+    val onEdit: (Set<String>) -> Unit,
+    val onApply: () -> Unit,
+    val onDiscard: () -> Unit,
+)
+
+@Composable
+private fun IgnoreDraftBar(d: IgnoreDraft) {
+    if (!d.pending) return
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        PillButton("Übernehmen", light = true, icon = AIcon.Check) { d.onApply() }
+        PillButton("Verwerfen") { d.onDiscard() }
+        Text(Lang.tr("Ignoriert") + ": " + d.keys.size, color = Muted, fontSize = 14.sp, raw = true)
+    }
 }
 
 /**
@@ -988,11 +1018,10 @@ private fun FilterPage(ctx: Context, onLanguages: () -> Unit) {
  * Each type is collapsed at first: a playlist can have hundreds of categories.
  */
 @Composable
-private fun CategoryFilterSection(ctx: Context) {
-    IgnoredGroups.init(ctx)
-    val ver = IgnoredGroups.version
-    val all = PlaylistStore.channels
-    val groups by produceState<Map<Kind, List<Pair<String, Int>>>>(emptyMap(), all.size, PlaylistStore.langCounts) {
+private fun CategoryFilterSection(d: IgnoreDraft) {
+    // Keyed on the unfiltered list: switching categories must not start a new count over the whole playlist
+    val rawAll = PlaylistStore.unfilteredChannels()
+    val groups by produceState<Map<Kind, List<Pair<String, Int>>>>(emptyMap(), rawAll, PlaylistStore.langCounts) {
         value = withContext(Dispatchers.Default) {
             val raw = PlaylistStore.unfilteredChannels()
             val out = LinkedHashMap<Kind, List<Pair<String, Int>>>()
@@ -1007,28 +1036,28 @@ private fun CategoryFilterSection(ctx: Context) {
     if (groups.values.all { it.isEmpty() }) return
     SectionTitle("Kategorien ein- und ausblenden")
     Hint("Blende einzelne Kategorien aus oder schalte alle aus und nur die gewünschten wieder ein. Ausgeblendete Kategorien verschwinden sofort überall, ohne die Playlist neu zu laden.")
+    IgnoreDraftBar(d)
     val names = mapOf(Kind.MOVIE to "Filme", Kind.SERIES to "Serien", Kind.LIVE to "Live-TV")
     var open by remember { mutableStateOf<Kind?>(null) }
     for ((kind, list) in groups) {
         if (list.isEmpty()) continue
         val keys = remember(list) { list.map { IgnoredGroups.groupKey(kind, it.first) } }
-        val off = remember(keys, ver) { keys.count { IgnoredGroups.has(it) } }
+        val off = remember(keys, d.keys) { keys.count { it in d.keys } }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PillButton(
                 Lang.tr(names.getValue(kind)) + ": " + (list.size - off) + " / " + list.size,
                 icon = if (open == kind) AIcon.Up else AIcon.Down, raw = true
             ) { open = if (open == kind) null else kind }
             if (open == kind) {
-                PillButton("Alle aus") { IgnoredGroups.setMany(ctx, keys, true) }
-                PillButton("Alle ein") { IgnoredGroups.setMany(ctx, keys, false) }
+                PillButton("Alle aus") { d.onEdit(d.keys + keys) }
+                PillButton("Alle ein") { d.onEdit(d.keys - keys.toSet()) }
             }
         }
         if (open == kind) for ((g, n) in list) {
             val key = IgnoredGroups.groupKey(kind, g)
-            ToggleRow(g, n.toString() + " " + Lang.tr("Titel"), !IgnoredGroups.has(key)) { on -> IgnoredGroups.set(ctx, key, !on) }
+            ToggleRow(g, n.toString() + " " + Lang.tr("Titel"), key !in d.keys) { on -> d.onEdit(if (on) d.keys - key else d.keys + key) }
         }
     }
-    if (ver < 0) Spacer(Modifier.height(0.dp))
 }
 
 /**
@@ -1036,12 +1065,10 @@ private fun CategoryFilterSection(ctx: Context) {
  * Switched-off bundles disappear everywhere, the playlist does not have to be reloaded for that. Complements the language filter.
  */
 @Composable
-private fun IgnoredGroupsSection(ctx: Context) {
-    IgnoredGroups.init(ctx)
-    val ver = IgnoredGroups.version
-    val all = PlaylistStore.channels
-    // Counting over the whole (unfiltered) list in the background
-    val stats by produceState<Map<Kind, List<Pair<String, Int>>>>(emptyMap(), all.size, PlaylistStore.langCounts) {
+private fun IgnoredGroupsSection(d: IgnoreDraft) {
+    // Counting over the whole (unfiltered) list in the background, keyed on that list (not on the filtered one)
+    val rawAll = PlaylistStore.unfilteredChannels()
+    val stats by produceState<Map<Kind, List<Pair<String, Int>>>>(emptyMap(), rawAll, PlaylistStore.langCounts) {
         value = withContext(Dispatchers.Default) {
             val raw = PlaylistStore.unfilteredChannels()
             val out = LinkedHashMap<Kind, List<Pair<String, Int>>>()
@@ -1056,10 +1083,11 @@ private fun IgnoredGroupsSection(ctx: Context) {
     SectionTitle("Gruppen ignorieren")
     Hint("Titel und Sender sind nach der Kennung deines Anbieters gebündelt (z. B. „TR |“, „[EN]“, „AR:“). Schalte Bündel aus, die du nicht brauchst: Sie verschwinden sofort überall, ohne die Playlist neu zu laden. Ausgeschaltet heißt ignoriert. Hilft dort, wo der Sprachfilter eine Kennung nicht erkennt.")
     if (stats.isEmpty() || stats.values.all { it.isEmpty() }) { Hint("Noch keine Playlist geladen."); return }
-    if (!IgnoredGroups.isEmpty) {
+    IgnoreDraftBar(d)
+    if (d.keys.isNotEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PillButton("Alle wieder einschalten", icon = AIcon.Check) { IgnoredGroups.clear(ctx) }
-            Text(Lang.tr("Ignoriert") + ": " + IgnoredGroups.size, color = Muted, fontSize = 14.sp, raw = true)
+            PillButton("Alle wieder einschalten", icon = AIcon.Check) { d.onEdit(emptySet()) }
+            if (!d.pending) Text(Lang.tr("Ignoriert") + ": " + d.keys.size, color = Muted, fontSize = 14.sp, raw = true)
         }
     }
     val names = mapOf(Kind.MOVIE to "Filme", Kind.SERIES to "Serien", Kind.LIVE to "Live-TV")
@@ -1071,11 +1099,10 @@ private fun IgnoredGroupsSection(ctx: Context) {
             ToggleRow(
                 if (tag.isEmpty()) "Ohne Kennung" else tag,
                 n.toString() + " Titel",
-                !IgnoredGroups.has(key)
-            ) { on -> IgnoredGroups.set(ctx, key, !on) }
+                key !in d.keys
+            ) { on -> d.onEdit(if (on) d.keys - key else d.keys + key) }
         }
     }
-    if (ver < 0) Spacer(Modifier.height(0.dp))
 }
 
 /**
