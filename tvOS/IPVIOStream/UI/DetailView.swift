@@ -30,7 +30,7 @@ struct DetailView: View {
                 dismiss()
             } label: {
                 Image(systemName: "chevron.backward")
-                    .font(.system(size: 19, weight: .bold))
+                    .font(.system(size: 22.4, weight: .bold))
                     .frame(width: 46, height: 46)
             }
             .buttonStyle(.bordered)
@@ -107,7 +107,7 @@ struct DetailView: View {
 
                     VStack(alignment: .leading, spacing: 16) {
                         Text(item.title)
-                            .font(.system(size: 52, weight: .heavy, design: .rounded))
+                            .font(.system(size: 61.4, weight: .heavy, design: .rounded))
                             .foregroundStyle(.white)
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
@@ -150,13 +150,13 @@ struct DetailView: View {
 
                         HStack(spacing: 12) {
                             Text(app.displayGroup(item.group))
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: 17.7, weight: .semibold))
                                 .foregroundStyle(.white.opacity(0.62))
                                 .lineLimit(1)
                             Text("·")
                                 .foregroundStyle(.white.opacity(0.35))
                             Text(app.sourceName(for: item.playlistID))
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: 17.7, weight: .semibold))
                                 .foregroundStyle(.white.opacity(0.62))
                                 .lineLimit(1)
                         }
@@ -169,7 +169,7 @@ struct DetailView: View {
                                     Image(systemName: "play.fill")
                                     Text(playTitle(item))
                                 }
-                                .font(.system(size: 19, weight: .bold))
+                                .font(.system(size: 22.4, weight: .bold))
                                 .padding(.horizontal, 24)
                                 .padding(.vertical, 12)
                             }
@@ -184,7 +184,7 @@ struct DetailView: View {
                                     app.isFavorite(item.id) ? L.t("detail.removeFavorite") : L.t("detail.addFavorite"),
                                     systemImage: app.isFavorite(item.id) ? "heart.fill" : "heart"
                                 )
-                                .font(.system(size: 17, weight: .semibold))
+                                .font(.system(size: 20.1, weight: .semibold))
                                 .padding(.horizontal, 18)
                                 .padding(.vertical, 11)
                             }
@@ -197,7 +197,7 @@ struct DetailView: View {
                                     app.isInMyList(item.id) ? L.t("detail.removeList") : L.t("detail.addList"),
                                     systemImage: app.isInMyList(item.id) ? "bookmark.fill" : "bookmark"
                                 )
-                                .font(.system(size: 17, weight: .semibold))
+                                .font(.system(size: 20.1, weight: .semibold))
                                 .padding(.horizontal, 18)
                                 .padding(.vertical, 11)
                             }
@@ -219,9 +219,9 @@ struct DetailView: View {
     private func ratingRow(label: String, value: String, tint: Color) -> some View {
         HStack(spacing: 6) {
             Text(label)
-                .font(.system(size: 12, weight: .heavy))
+                .font(.system(size: 14.2, weight: .heavy))
             Text(value)
-                .font(.system(size: 16, weight: .bold))
+                .font(.system(size: 18.9, weight: .bold))
         }
         .foregroundStyle(tint)
         .padding(.horizontal, 10)
@@ -234,10 +234,10 @@ struct DetailView: View {
     private func overviewSection(_ item: MediaItem) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(L.t("detail.overview"))
-                .font(.system(size: 27, weight: .bold, design: .rounded))
+                .font(.system(size: 31.9, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.text)
             Text(metadata?.overview ?? item.displayPlot ?? L.t("detail.noOverview"))
-                .font(.system(size: 19))
+                .font(.system(size: 22.4))
                 .foregroundStyle(Theme.textDim)
                 .lineSpacing(5)
                 .frame(maxWidth: 1150, alignment: .leading)
@@ -254,10 +254,10 @@ struct DetailView: View {
             if let cast = metadata?.cast, !cast.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.t("detail.cast"))
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 23.6, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.text)
                     Text(cast.prefix(8).joined(separator: " · "))
-                        .font(.system(size: 17))
+                        .font(.system(size: 20.1))
                         .foregroundStyle(Theme.textDim)
                         .lineLimit(2)
                 }
@@ -269,7 +269,7 @@ struct DetailView: View {
     private func movieInfo(_ item: MediaItem) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L.t("detail.overview"))
-                .font(.system(size: 27, weight: .bold, design: .rounded))
+                .font(.system(size: 31.9, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.text)
             HStack(spacing: 40) {
                 infoBlock(label: L.t("detail.sourceLabel"), value: app.sourceName(for: item.playlistID))
@@ -284,10 +284,10 @@ struct DetailView: View {
     private func infoBlock(label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 16.5, weight: .semibold))
                 .foregroundStyle(Theme.textFaint)
             Text(value)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 21.2, weight: .semibold))
                 .foregroundStyle(Theme.text)
         }
     }
@@ -296,10 +296,10 @@ struct DetailView: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline) {
                 Text(L.t("detail.episodes"))
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.system(size: 35.4, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.text)
                 Text(L.f("detail.episodeCount", episodes.count))
-                    .font(.system(size: 17))
+                    .font(.system(size: 20.1))
                     .foregroundStyle(Theme.textDim)
                 Spacer()
             }
@@ -309,14 +309,14 @@ struct DetailView: View {
                     ProgressView()
                         .tint(Theme.accent)
                     Text(L.t("detail.loadingEpisodes"))
-                        .font(.system(size: 17))
+                        .font(.system(size: 20.1))
                         .foregroundStyle(Theme.textDim)
                 }
                 .padding(.vertical, 20)
             } else if let episodeError {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(episodeError)
-                        .font(.system(size: 17))
+                        .font(.system(size: 20.1))
                         .foregroundStyle(Theme.textDim)
                     Button(L.t("common.retry")) {
                         Task { await loadEpisodes(item) }
@@ -325,7 +325,7 @@ struct DetailView: View {
                 }
             } else if episodes.isEmpty {
                 Text(L.t("detail.noEpisodes"))
-                    .font(.system(size: 17))
+                    .font(.system(size: 20.1))
                     .foregroundStyle(Theme.textDim)
                     .padding(.vertical, 20)
             } else {
@@ -335,6 +335,7 @@ struct DetailView: View {
                         episodeRow(item, episode)
                     }
                 }
+                .focusSection()
             }
         }
     }
@@ -374,15 +375,15 @@ struct DetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 10) {
                         Text("E\(episode.number)")
-                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                            .font(.system(size: 15.3, weight: .heavy, design: .rounded))
                             .foregroundStyle(Theme.accentLight)
                         Text(episode.displayTitle)
-                            .font(.system(size: 19, weight: .semibold))
+                            .font(.system(size: 22.4, weight: .semibold))
                             .foregroundStyle(Theme.text)
                             .lineLimit(1)
                         if let quality = episode.quality {
                             Text(quality)
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                                 .foregroundStyle(Theme.textDim)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
@@ -390,17 +391,17 @@ struct DetailView: View {
                         }
                     }
                     Text("S\(episode.season) · \(L.f("detail.episodeN", episode.number))")
-                        .font(.system(size: 14))
+                        .font(.system(size: 16.5))
                         .foregroundStyle(Theme.textFaint)
                     if let progress = app.progress(for: item, episode: episode), !progress.isFinished {
                         Text(L.f("detail.episodeProgress", TimeText.clock(progress.remaining)))
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 16.5, weight: .semibold))
                             .foregroundStyle(Theme.accentLight)
                     }
                 }
                 Spacer()
                 Image(systemName: "play.circle.fill")
-                    .font(.system(size: 30))
+                    .font(.system(size: 35.4))
                     .foregroundStyle(Theme.textDim)
                     .padding(.top, 10)
             }

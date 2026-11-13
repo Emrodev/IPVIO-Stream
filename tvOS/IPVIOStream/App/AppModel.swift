@@ -200,35 +200,69 @@ final class AppModel: ObservableObject {
                 $0.language == ContentLanguage.unknown || settings.languageFilter.contains($0.language)
             }
         }
-        items = merged
-        indexByID = Dictionary(merged.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        movies = merged.filter { $0.kind == .movie }
-        seriesItems = merged.filter { $0.kind == .series }
-        liveItems = merged.filter { $0.kind == .live }
 
+        var movies: [MediaItem] = []
+        var series: [MediaItem] = []
+        var live: [MediaItem] = []
+        var index: [String: MediaItem] = [:]
         var groups: [MediaKind: [String: Int]] = [:]
+        var top: [MediaItem] = []
+        var hero: [MediaItem] = []
+        var ratedHero: [MediaItem] = []
+
         for item in merged {
+            switch item.kind {
+            case .movie: movies.append(item)
+            case .series: series.append(item)
+            case .live: live.append(item)
+            }
+
+            index[item.id] = item
             groups[item.kind, default: [:]][item.group, default: 0] += 1
+
+            if item.kind != .live, let rating = item.rating, rating > 0 {
+                insertTopRated(item, into: &top, limit: 24)
+            }
+            if item.kind != .live, item.logo?.isEmpty == false {
+                if hero.count < 12 { hero.append(item) }
+                if (item.rating ?? 0) >= 6, ratedHero.count < 12 { ratedHero.append(item) }
+            }
         }
+
+        items = merged
+        self.movies = movies
+        seriesItems = series
+        liveItems = live
+        indexByID = index
         groupCache = groups.mapValues { values in
             values.map { GroupCount(name: $0.key, count: $0.value) }
                 .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         }
 
-        topRated = Array(
-            merged.filter { ($0.rating ?? 0) > 0 && $0.kind != .live }
-                .sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
-                .prefix(24)
-        )
-        recentItems = Array(merged.filter { $0.kind != .live }.suffix(24).reversed())
-
-        let heroCandidates = merged.filter {
-            ($0.kind == .movie || $0.kind == .series) && $0.logo?.isEmpty == false
+        topRated = top
+        if ratedHero.isEmpty {
+            heroItems = hero
+        } else {
+            heroItems = ratedHero.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
         }
-        let ratedHeroes = heroCandidates.filter { ($0.rating ?? 0) >= 6 }
-        heroItems = Array((ratedHeroes.isEmpty ? heroCandidates : ratedHeroes).prefix(12))
+
+        var recent: [MediaItem] = []
+        for item in merged.reversed() where item.kind != .live {
+            recent.append(item)
+            if recent.count == 24 { break }
+        }
+        recentItems = recent
 
         rebuildContinue()
+    }
+
+    /// Keeps only the best 24 rated items without sorting the whole catalog.
+    private func insertTopRated(_ item: MediaItem, into list: inout [MediaItem], limit: Int) {
+        let rating = item.rating ?? 0
+        if list.count == limit, let last = list.last, rating <= (last.rating ?? 0) { return }
+        let index = list.firstIndex { ($0.rating ?? 0) < rating } ?? list.endIndex
+        list.insert(item, at: index)
+        if list.count > limit { list.removeLast() }
     }
 
     private func rebuildContinue() {

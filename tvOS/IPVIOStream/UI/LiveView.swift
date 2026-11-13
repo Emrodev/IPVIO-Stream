@@ -27,7 +27,7 @@ struct LiveView: View {
     private var categorySidebar: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L.t("live.categories"))
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.system(size: 30.7, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.text)
                 .padding(.bottom, 4)
 
@@ -52,6 +52,7 @@ struct LiveView: View {
                 }
                 .padding(.vertical, 4)
                 .padding(.trailing, 8)
+                .focusSection()
             }
         }
         .padding(.top, 36)
@@ -77,7 +78,7 @@ struct LiveView: View {
                     .foregroundStyle(Theme.textDim)
                 TextField(L.t("live.searchChannels"), text: $query)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 17))
+                    .font(.system(size: 20.1))
                     .frame(width: 300)
             }
             .padding(.horizontal, 16)
@@ -108,6 +109,7 @@ struct LiveView: View {
                     .padding(.bottom, 50)
                 }
                 .scrollClipDisabled()
+                .focusSection()
             }
         }
         .frame(maxHeight: .infinity)
@@ -149,11 +151,11 @@ private struct LiveCategoryRow: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Text(title)
-                    .font(.system(size: 16, weight: selected ? .bold : .medium))
+                    .font(.system(size: 18.9, weight: selected ? .bold : .medium))
                     .lineLimit(1)
                 Spacer()
                 Text("\(count)")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 14.2, weight: .bold))
                     .foregroundStyle(focused ? Color.black.opacity(0.65) : Theme.textFaint)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
@@ -199,12 +201,12 @@ private struct LiveChannelRow: View {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 8) {
                         Text(item.title)
-                            .font(.system(size: 19, weight: .semibold))
+                            .font(.system(size: 22.4, weight: .semibold))
                             .foregroundStyle(Theme.text)
                             .lineLimit(1)
                         if let quality = item.quality {
                             Text(quality)
-                                .font(.system(size: 10, weight: .heavy))
+                                .font(.system(size: 11.8, weight: .heavy))
                                 .foregroundStyle(Theme.accentLight)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
@@ -224,7 +226,7 @@ private struct LiveChannelRow: View {
                         .fill(Theme.red)
                         .frame(width: 7, height: 7)
                     Text(L.t("live.live"))
-                        .font(.system(size: 12, weight: .heavy))
+                        .font(.system(size: 14.2, weight: .heavy))
                         .foregroundStyle(Theme.red)
                 }
                 .padding(.horizontal, 10)
@@ -249,25 +251,25 @@ private struct LiveChannelRow: View {
     private var epgLine: some View {
         if loadingEPG {
             Text(L.t("common.loading"))
-                .font(.system(size: 14))
+                .font(.system(size: 16.5))
                 .foregroundStyle(Theme.textFaint)
         } else if let now = programs.now() {
             HStack(spacing: 6) {
                 Text(L.t("live.nowPlaying") + ":")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16.5, weight: .semibold))
                     .foregroundStyle(Theme.textDim)
                 Text(now.title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16.5, weight: .semibold))
                     .foregroundStyle(Theme.accentLight)
                     .lineLimit(1)
                 Text(now.timeRange)
-                    .font(.system(size: 13))
+                    .font(.system(size: 15.3))
                     .foregroundStyle(Theme.textFaint)
                 if let next = programs.next() {
                     Text("·")
                         .foregroundStyle(Theme.textFaint)
                     Text(L.t("live.upNext") + ": " + next.title)
-                        .font(.system(size: 13))
+                        .font(.system(size: 15.3))
                         .foregroundStyle(Theme.textDim)
                         .lineLimit(1)
                 }
@@ -275,12 +277,12 @@ private struct LiveChannelRow: View {
         } else {
             HStack(spacing: 6) {
                 Text(app.displayGroup(item.group))
-                    .font(.system(size: 14))
+                    .font(.system(size: 16.5))
                     .foregroundStyle(Theme.textDim)
                     .lineLimit(1)
                 if !app.settings.showLiveEPG {
                     Text("· \(L.t("live.noEPG"))")
-                        .font(.system(size: 13))
+                        .font(.system(size: 15.3))
                         .foregroundStyle(Theme.textFaint)
                 }
             }

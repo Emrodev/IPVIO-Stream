@@ -64,7 +64,7 @@ struct TagBadge: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 17, weight: .semibold, design: .rounded))
+            .font(.system(size: 20.1, weight: .semibold, design: .rounded))
             .foregroundStyle(tint)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
@@ -82,11 +82,11 @@ struct SectionHeader: View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 25, weight: .bold, design: .rounded))
+                    .font(.system(size: 29.5, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.text)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 16))
+                        .font(.system(size: 18.9))
                         .foregroundStyle(Theme.textDim)
                 }
             }
@@ -96,9 +96,9 @@ struct SectionHeader: View {
                     HStack(spacing: 5) {
                         Text(actionTitle)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 14.2, weight: .bold))
                     }
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 17.7, weight: .semibold))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Theme.accentLight)
@@ -117,13 +117,13 @@ struct EmptyStateView: View {
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: symbol)
-                .font(.system(size: 62, weight: .light))
+                .font(.system(size: 73.2, weight: .light))
                 .foregroundStyle(Theme.accent.opacity(0.85))
             Text(title)
-                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .font(.system(size: 37.8, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.text)
             Text(message)
-                .font(.system(size: 21))
+                .font(.system(size: 24.8))
                 .foregroundStyle(Theme.textDim)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 680)
@@ -132,7 +132,7 @@ struct EmptyStateView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(Theme.accent)
                     .foregroundStyle(Theme.background)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 23.6, weight: .semibold))
                     .padding(.top, 8)
             }
         }
@@ -192,11 +192,11 @@ struct RemoteImage: View {
             )
             if let fallbackText, !fallbackText.isEmpty {
                 Text(fallbackText.prefix(1).uppercased())
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .font(.system(size: 51.9, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.textFaint)
             } else {
                 Image(systemName: fallbackSymbol)
-                    .font(.system(size: 38, weight: .light))
+                    .font(.system(size: 44.8, weight: .light))
                     .foregroundStyle(Theme.textFaint)
             }
         }
@@ -211,7 +211,7 @@ struct ToastView: View {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(Theme.accent)
             Text(message)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 23.6, weight: .semibold))
                 .foregroundStyle(.white)
         }
         .padding(.horizontal, 24)
@@ -232,24 +232,24 @@ struct LoadingOverlay: View {
             VStack(spacing: 22) {
                 BrandMark(size: 72)
                 Text(L.t("load.title"))
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.system(size: 37.8, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.text)
                 Text(job.playlistName)
-                    .font(.system(size: 20))
+                    .font(.system(size: 23.6))
                     .foregroundStyle(Theme.textDim)
                 ProgressView(value: min(max(job.progress, 0), 1))
                     .progressViewStyle(.linear)
                     .tint(Theme.accent)
                     .frame(width: 520)
                 Text(job.status)
-                    .font(.system(size: 18))
+                    .font(.system(size: 21.2))
                     .foregroundStyle(Theme.textDim)
                     .lineLimit(2)
                     .frame(width: 560)
                 if let onCancel {
                     Button(L.t("common.cancel"), action: onCancel)
                         .buttonStyle(.bordered)
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.system(size: 21.2, weight: .medium))
                         .padding(.top, 4)
                 }
             }
@@ -272,11 +272,11 @@ struct ScreenTitle: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 42, weight: .heavy, design: .rounded))
+                .font(.system(size: 49.6, weight: .heavy, design: .rounded))
                 .foregroundStyle(Theme.text)
             if let subtitle {
                 Text(subtitle)
-                    .font(.system(size: 21))
+                    .font(.system(size: 24.8))
                     .foregroundStyle(Theme.textDim)
             }
         }

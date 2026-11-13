@@ -94,7 +94,7 @@ struct SettingsView: View {
                     showAddPlaylist = true
                 } label: {
                     Label(L.t("settings.addPlaylist"), systemImage: "plus")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 20.1, weight: .semibold))
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.accent)
@@ -104,14 +104,14 @@ struct SettingsView: View {
                     Task { await app.refreshAll() }
                 } label: {
                     Label(L.t("common.refresh"), systemImage: "arrow.clockwise")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 20.1, weight: .semibold))
                 }
                 .buttonStyle(.bordered)
                 .disabled(app.job != nil)
 
                 Spacer()
                 Text(L.t("settings.secure"))
-                    .font(.system(size: 13))
+                    .font(.system(size: 15.3))
                     .foregroundStyle(Theme.textFaint)
             }
             .padding(.top, 4)
@@ -214,7 +214,7 @@ struct SettingsView: View {
                         app.updateSettings { $0.languageFilter = [] }
                     }
                     .buttonStyle(.bordered)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 17.7, weight: .semibold))
                 }
                 toggleRow(L.t("settings.liveEPG"), binding: app.binding(\.showLiveEPG))
             }
@@ -251,7 +251,7 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.background)
                     if !app.settings.tmdbKey.isEmpty || !app.settings.omdbKey.isEmpty {
                         Text(L.t("settings.keySaved"))
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 16.5, weight: .semibold))
                             .foregroundStyle(Theme.accentLight)
                     }
                 }
@@ -285,7 +285,7 @@ struct SettingsView: View {
                     Task { await app.clearMetadataCache() }
                 } label: {
                     Label(L.t("settings.clearMetadata"), systemImage: "photo.on.rectangle.angled")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 18.9, weight: .semibold))
                 }
                 .buttonStyle(.bordered)
 
@@ -293,7 +293,7 @@ struct SettingsView: View {
                     showClearAll = true
                 } label: {
                     Label(L.t("settings.clearAll"), systemImage: "trash")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 18.9, weight: .semibold))
                 }
                 .buttonStyle(.bordered)
                 .tint(Theme.red)
@@ -301,7 +301,7 @@ struct SettingsView: View {
                 Spacer()
             }
             Text(L.t("settings.clearAllHint"))
-                .font(.system(size: 14))
+                .font(.system(size: 16.5))
                 .foregroundStyle(Theme.textFaint)
         }
     }
@@ -312,14 +312,14 @@ struct SettingsView: View {
                 aboutLine(L.t("settings.version"), AppInfo.version)
                 aboutLine(L.t("settings.device"), L.t("settings.device"))
                 Text(L.t("settings.aboutText"))
-                    .font(.system(size: 15))
+                    .font(.system(size: 17.7))
                     .foregroundStyle(Theme.textDim)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(L.t("settings.ksplayer"))
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16.5, weight: .semibold))
                     .foregroundStyle(Theme.accentLight)
                 Text(L.t("settings.gpl"))
-                    .font(.system(size: 13))
+                    .font(.system(size: 15.3))
                     .foregroundStyle(Theme.textFaint)
             }
         }
@@ -330,11 +330,11 @@ struct SettingsView: View {
     private func aboutLine(_ label: String, _ value: String) -> some View {
         HStack(spacing: 14) {
             Text(label)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 17.7, weight: .semibold))
                 .foregroundStyle(Theme.textDim)
                 .frame(width: 120, alignment: .leading)
             Text(value)
-                .font(.system(size: 15, design: .monospaced))
+                .font(.system(size: 17.7, design: .monospaced))
                 .foregroundStyle(Theme.text)
         }
     }
@@ -342,11 +342,11 @@ struct SettingsView: View {
     private func settingLabel(_ text: String, hint: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(text)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 21.2, weight: .semibold))
                 .foregroundStyle(Theme.text)
             if let hint {
                 Text(hint)
-                    .font(.system(size: 13))
+                    .font(.system(size: 15.3))
                     .foregroundStyle(Theme.textFaint)
             }
         }
@@ -356,11 +356,11 @@ struct SettingsView: View {
         HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: 21.2, weight: .medium))
                     .foregroundStyle(Theme.text)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 13))
+                        .font(.system(size: 15.3))
                         .foregroundStyle(Theme.textFaint)
                 }
             }
@@ -384,7 +384,7 @@ struct SettingsView: View {
                 selection.isEmpty ? L.t("common.none") : ContentLanguage.displayName(selection),
                 systemImage: "globe"
             )
-            .font(.system(size: 17, weight: .semibold))
+            .font(.system(size: 20.1, weight: .semibold))
         }
         .buttonStyle(.bordered)
     }
@@ -407,7 +407,7 @@ private struct PlaylistSettingsRow: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(Theme.surface2)
                 Image(systemName: playlist.source.isXtream ? "server.rack" : "list.bullet.rectangle")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 23.6, weight: .semibold))
                     .foregroundStyle(playlist.isEnabled ? Theme.accent : Theme.textFaint)
             }
             .frame(width: 48, height: 48)
@@ -415,22 +415,22 @@ private struct PlaylistSettingsRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
                     Text(playlist.name)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 21.2, weight: .semibold))
                         .foregroundStyle(Theme.text)
                     Text(playlist.source.typeLabel)
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 11.8, weight: .bold))
                         .foregroundStyle(Theme.textFaint)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Theme.surface2, in: Capsule())
                     if !playlist.isEnabled {
                         Text(L.t("common.disable"))
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 11.8, weight: .bold))
                             .foregroundStyle(Theme.gold)
                     }
                 }
                 Text(playlist.lastError.map { L.f("settings.sourceError", $0) } ?? summary)
-                    .font(.system(size: 13))
+                    .font(.system(size: 15.3))
                     .foregroundStyle(playlist.lastError == nil ? Theme.textDim : Theme.red.opacity(0.85))
                     .lineLimit(1)
             }
@@ -439,7 +439,7 @@ private struct PlaylistSettingsRow: View {
 
             if playlist.lastUpdated != nil {
                 Text(TimeText.relative(playlist.lastUpdated!, lang: L.current))
-                    .font(.system(size: 12))
+                    .font(.system(size: 14.2))
                     .foregroundStyle(Theme.textFaint)
             }
 

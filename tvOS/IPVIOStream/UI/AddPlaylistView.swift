@@ -41,17 +41,17 @@ struct AddPlaylistView: View {
                             LabeledTextField(title: L.t("add.username"), placeholder: "username", text: $username)
                             LabeledTextField(title: L.t("add.password"), placeholder: "••••••••", text: $password, isSecure: true)
                             Text(L.t("add.helpXtream"))
-                                .font(.system(size: 14))
+                                .font(.system(size: 16.5))
                                 .foregroundStyle(Theme.textDim)
                         } else {
                             LabeledTextField(title: L.t("add.url"), placeholder: L.t("add.urlPlaceholder"), text: $m3uURL)
                             Text(L.t("add.helpM3u"))
-                                .font(.system(size: 14))
+                                .font(.system(size: 16.5))
                                 .foregroundStyle(Theme.textDim)
                         }
 
                         Text(L.t("add.credentialsNote"))
-                            .font(.system(size: 13))
+                            .font(.system(size: 15.3))
                             .foregroundStyle(Theme.textFaint)
                     }
                     .padding(24)
@@ -62,7 +62,7 @@ struct AddPlaylistView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(Theme.gold)
                             Text(errorMessage)
-                                .font(.system(size: 16))
+                                .font(.system(size: 18.9))
                                 .foregroundStyle(Theme.text)
                         }
                         .padding(14)
@@ -81,7 +81,7 @@ struct AddPlaylistView: View {
                                 }
                                 Text(busy ? L.t("add.connecting") : L.t("add.test"))
                             }
-                            .font(.system(size: 19, weight: .bold))
+                            .font(.system(size: 22.4, weight: .bold))
                             .padding(.horizontal, 26)
                             .padding(.vertical, 13)
                         }
@@ -102,7 +102,7 @@ struct AddPlaylistView: View {
                             ProgressView(value: app.job?.progress ?? 0)
                                 .tint(Theme.accent)
                             Text(app.job?.status ?? L.t("add.connecting"))
-                                .font(.system(size: 14))
+                                .font(.system(size: 16.5))
                                 .foregroundStyle(Theme.textDim)
                         }
                         .padding(.top, 4)
@@ -121,10 +121,10 @@ struct AddPlaylistView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(L.t("add.title"))
-                    .font(.system(size: 42, weight: .heavy, design: .rounded))
+                    .font(.system(size: 49.6, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.text)
                 Text(L.t("welcome.legal"))
-                    .font(.system(size: 15))
+                    .font(.system(size: 17.7))
                     .foregroundStyle(Theme.textFaint)
             }
             Spacer()
@@ -132,7 +132,7 @@ struct AddPlaylistView: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 21.2, weight: .bold))
                     .frame(width: 42, height: 42)
             }
             .buttonStyle(.bordered)

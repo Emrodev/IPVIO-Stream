@@ -54,7 +54,7 @@ struct SplashView: View {
             VStack(spacing: 24) {
                 BrandMark(size: 96)
                 Text("IPVIO Stream")
-                    .font(.system(size: 46, weight: .heavy, design: .rounded))
+                    .font(.system(size: 54.3, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.text)
                 ProgressView()
                     .tint(Theme.accent)
@@ -64,17 +64,30 @@ struct SplashView: View {
     }
 }
 
+final class Router: ObservableObject {
+    @Published var path = NavigationPath()
+
+    func reset() {
+        path = NavigationPath()
+    }
+
+    func detail(_ id: String) {
+        path.append(Route.detail(id))
+    }
+}
+
 struct MainShell: View {
     @EnvironmentObject private var app: AppModel
-    @State private var path = NavigationPath()
+    @StateObject private var router = Router()
 
     var body: some View {
         VStack(spacing: 0) {
-            TopBar(path: $path)
+            TopBar()
             ZStack {
                 Theme.background.ignoresSafeArea()
-                NavigationStack(path: $path) {
+                NavigationStack(path: $router.path) {
                     sectionContent
+                        .focusSection()
                         .navigationDestination(for: Route.self) { route in
                             switch route {
                             case let .detail(id):
@@ -84,6 +97,7 @@ struct MainShell: View {
                 }
             }
         }
+        .environmentObject(router)
         .background(Theme.background)
     }
 
@@ -91,7 +105,7 @@ struct MainShell: View {
     private var sectionContent: some View {
         switch app.selectedSection {
         case .home:
-            HomeView(path: $path)
+            HomeView()
         case .live:
             LiveView()
         case .movies:
@@ -110,7 +124,7 @@ struct MainShell: View {
 /// pill-shaped tabs in the centre, and search/account controls on the right.
 struct TopBar: View {
     @EnvironmentObject private var app: AppModel
-    @Binding var path: NavigationPath
+    @EnvironmentObject private var router: Router
     @FocusState private var focusedTab: AppSection?
 
     private let tabs: [AppSection] = [.home, .live, .movies, .series, .settings]
@@ -118,17 +132,17 @@ struct TopBar: View {
     var body: some View {
         HStack(spacing: 18) {
             Button {
-                path = NavigationPath()
+                router.reset()
                 app.setSection(.home)
             } label: {
                 HStack(spacing: 12) {
                     BrandMark(size: 38)
                     VStack(alignment: .leading, spacing: 0) {
                         Text("IPVIO")
-                            .font(.system(size: 21, weight: .heavy, design: .rounded))
+                            .font(.system(size: 24.8, weight: .heavy, design: .rounded))
                             .foregroundStyle(Theme.text)
                         Text("STREAM")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 10.6, weight: .bold))
                             .tracking(2.6)
                             .foregroundStyle(Theme.accent)
                     }
@@ -154,7 +168,7 @@ struct TopBar: View {
 
             HStack(spacing: 10) {
                 TopBarIcon(symbol: "magnifyingglass", label: L.t("nav.search"), active: app.selectedSection == .search) {
-                    path = NavigationPath()
+                    router.reset()
                     app.setSection(.search)
                 }
                 ZStack {
@@ -167,7 +181,7 @@ struct TopBar: View {
                             )
                         )
                     Text("IP")
-                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .font(.system(size: 15.3, weight: .heavy, design: .rounded))
                         .foregroundStyle(.black)
                 }
                 .frame(width: 42, height: 42)
@@ -188,11 +202,11 @@ struct TopBar: View {
         let selected = app.selectedSection == section
         let isFocused = focusedTab == section
         return Button {
-            path = NavigationPath()
+            router.reset()
             app.setSection(section)
         } label: {
             Text(L.t(section.titleKey))
-                .font(.system(size: 17, weight: selected ? .bold : .medium))
+                .font(.system(size: 20.1, weight: selected ? .bold : .medium))
                 .padding(.horizontal, 19)
                 .padding(.vertical, 9)
                 .background(
@@ -222,7 +236,7 @@ private struct TopBarIcon: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 19, weight: .semibold))
+                .font(.system(size: 22.4, weight: .semibold))
                 .frame(width: 42, height: 42)
                 .background(
                     focused ? Color.white : (active ? Theme.accent.opacity(0.16) : Theme.surface2),
@@ -258,11 +272,11 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     BrandMark(size: 76)
                     Text(L.t("welcome.title"))
-                        .font(.system(size: 62, weight: .heavy, design: .rounded))
+                        .font(.system(size: 73.2, weight: .heavy, design: .rounded))
                         .foregroundStyle(Theme.text)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(L.t("welcome.subtitle"))
-                        .font(.system(size: 23))
+                        .font(.system(size: 27.1))
                         .foregroundStyle(Theme.textDim)
                         .frame(maxWidth: 760, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
@@ -282,7 +296,7 @@ struct OnboardingView: View {
                             Image(systemName: "plus")
                             Text(L.t("welcome.start"))
                         }
-                        .font(.system(size: 21, weight: .bold))
+                        .font(.system(size: 24.8, weight: .bold))
                         .padding(.horizontal, 28)
                         .padding(.vertical, 15)
                     }
@@ -292,7 +306,7 @@ struct OnboardingView: View {
                     .padding(.top, 8)
 
                     Text(L.t("welcome.legal"))
-                        .font(.system(size: 14))
+                        .font(.system(size: 16.5))
                         .foregroundStyle(Theme.textFaint)
                         .padding(.top, 12)
                 }
@@ -309,19 +323,19 @@ struct OnboardingView: View {
                             )
                         VStack(spacing: 18) {
                             Image(systemName: "play.tv.fill")
-                                .font(.system(size: 96, weight: .thin))
+                                .font(.system(size: 113.3, weight: .thin))
                                 .foregroundStyle(Theme.accent)
                             Text("Xtream · M3U")
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
                                 .foregroundStyle(Theme.text)
                             Text("4K · HDR · AC3")
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: 17.7, weight: .semibold))
                                 .tracking(2)
                                 .foregroundStyle(Theme.textDim)
                         }
                     }
                     Text(L.t("misc.poweredBy"))
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 15.3, weight: .semibold))
                         .foregroundStyle(Theme.textFaint)
                 }
             }
@@ -336,11 +350,11 @@ struct OnboardingView: View {
     private func feature(_ symbol: String, _ text: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: symbol)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 20.1, weight: .semibold))
                 .foregroundStyle(Theme.accent)
                 .frame(width: 26)
             Text(text)
-                .font(.system(size: 18))
+                .font(.system(size: 21.2))
                 .foregroundStyle(Theme.textDim)
         }
     }

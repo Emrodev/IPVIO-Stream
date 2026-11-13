@@ -61,6 +61,7 @@ struct BrowseView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.bottom, 50)
+                    .focusSection()
                 }
             }
             .padding(.horizontal, Theme.pagePadding)
@@ -96,7 +97,7 @@ struct BrowseView: View {
                         selectedSource.flatMap { app.sourceName(for: $0) } ?? L.t("nav.allSources"),
                         systemImage: "externaldrive"
                     )
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 18.9, weight: .semibold))
                 }
                 .buttonStyle(.bordered)
             }
@@ -107,7 +108,7 @@ struct BrowseView: View {
                 }
             } label: {
                 Label(L.t(sort.titleKey), systemImage: "arrow.up.arrow.down")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 18.9, weight: .semibold))
             }
             .buttonStyle(.bordered)
 

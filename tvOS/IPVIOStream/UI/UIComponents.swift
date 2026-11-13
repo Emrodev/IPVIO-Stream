@@ -8,6 +8,7 @@ enum Route: Hashable {
 
 struct PosterCard: View {
     @EnvironmentObject private var app: AppModel
+    @EnvironmentObject private var router: Router
     let item: MediaItem
     var width: CGFloat = 230
     @FocusState private var focused: Bool
@@ -17,7 +18,9 @@ struct PosterCard: View {
     }
 
     var body: some View {
-        NavigationLink(value: Route.detail(item.id)) {
+        Button {
+            router.detail(item.id)
+        } label: {
             ZStack(alignment: .bottomLeading) {
                 RemoteImage(urlString: item.logo, fallbackText: item.title)
                     .frame(width: width, height: width * 1.45)
@@ -33,14 +36,14 @@ struct PosterCard: View {
                     Spacer()
                     if let quality = item.quality {
                         Text(quality)
-                            .font(.system(size: 10, weight: .heavy))
+                            .font(.system(size: 11.8, weight: .heavy))
                             .foregroundStyle(.black)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Theme.accent, in: Capsule())
                     }
                     Text(item.title)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .font(.system(size: 21.2, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
@@ -51,7 +54,7 @@ struct PosterCard: View {
                         if let rating = item.rating, rating > 0 {
                             HStack(spacing: 3) {
                                 Image(systemName: "star.fill")
-                                    .font(.system(size: 9))
+                                    .font(.system(size: 10.6))
                                 Text(String(format: "%.1f", rating))
                             }
                             .foregroundStyle(Theme.gold)
@@ -61,7 +64,7 @@ struct PosterCard: View {
                                 .lineLimit(1)
                         }
                     }
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 14.2, weight: .medium))
                     .foregroundStyle(.white.opacity(0.62))
 
                     if let progress, progress.fraction > 0.01 {
@@ -112,11 +115,11 @@ struct LiveChannelCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Spacer()
                     Text(item.title)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .font(.system(size: 21.2, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                     Text(app.displayGroup(item.group))
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 14.2, weight: .medium))
                         .foregroundStyle(.white.opacity(0.58))
                         .lineLimit(1)
                 }
@@ -128,7 +131,7 @@ struct LiveChannelCard: View {
                         HStack(spacing: 5) {
                             Circle().fill(Theme.red).frame(width: 6, height: 6)
                             Text(L.t("live.live"))
-                                .font(.system(size: 10, weight: .heavy))
+                                .font(.system(size: 11.8, weight: .heavy))
                         }
                         .foregroundStyle(.white)
                         .padding(.horizontal, 8)
@@ -177,23 +180,23 @@ struct ContinueCard: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Spacer()
                     Text(entry.title)
-                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .font(.system(size: 22.4, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                     if let subtitle = entry.subtitle {
                         Text(subtitle)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14.2, weight: .medium))
                             .foregroundStyle(.white.opacity(0.6))
                             .lineLimit(1)
                     }
                     HStack(spacing: 7) {
                         Image(systemName: "play.fill")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 10.6, weight: .bold))
                         Text(L.f("time.remaining", TimeText.clock(entry.remaining)))
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 14.2, weight: .semibold))
                         Spacer()
                         Text("\(Int(entry.fraction * 100))%")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 14.2, weight: .bold))
                             .foregroundStyle(Theme.accentLight)
                     }
                     .foregroundStyle(.white.opacity(0.72))
@@ -245,6 +248,7 @@ struct PosterRow: View {
                     .padding(.vertical, 18)
                 }
                 .scrollClipDisabled()
+                .focusSection()
             }
         }
     }
@@ -263,10 +267,10 @@ struct SelectChip: View {
         Button(action: action) {
             HStack(spacing: 7) {
                 Text(title)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 20.1, weight: .semibold))
                 if let count {
                     Text("\(count)")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 14.2, weight: .bold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(focused ? Color.black.opacity(0.12) : Color.white.opacity(0.10), in: Capsule())
@@ -314,16 +318,16 @@ struct SettingsCard<Content: View>: View {
             HStack(spacing: 10) {
                 if let symbol {
                     Image(systemName: symbol)
-                        .font(.system(size: 21, weight: .semibold))
+                        .font(.system(size: 24.8, weight: .semibold))
                         .foregroundStyle(Theme.accent)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 25, weight: .bold, design: .rounded))
+                        .font(.system(size: 29.5, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.text)
                     if let subtitle {
                         Text(subtitle)
-                            .font(.system(size: 15))
+                            .font(.system(size: 17.7))
                             .foregroundStyle(Theme.textDim)
                     }
                 }
@@ -344,7 +348,7 @@ struct LabeledTextField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 17.7, weight: .semibold))
                 .foregroundStyle(Theme.textDim)
             Group {
                 if isSecure {
@@ -354,7 +358,7 @@ struct LabeledTextField: View {
                 }
             }
             .textFieldStyle(.plain)
-            .font(.system(size: 19))
+            .font(.system(size: 22.4))
             .foregroundStyle(Theme.text)
             .padding(.horizontal, 14)
             .padding(.vertical, 11)
@@ -376,9 +380,9 @@ struct InfoPill: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: symbol)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 15.3, weight: .semibold))
             Text(text)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 17.7, weight: .medium))
         }
         .foregroundStyle(tint)
     }

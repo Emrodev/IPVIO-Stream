@@ -2,7 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var app: AppModel
-    @Binding var path: NavigationPath
+    @EnvironmentObject private var router: Router
 
     private var featured: [MediaItem] {
         Array(app.heroItems.prefix(8))
@@ -57,11 +57,11 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 Text(L.t("home.featured"))
-                    .font(.system(size: 27, weight: .bold, design: .rounded))
+                    .font(.system(size: 31.9, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.text)
                 Spacer()
                 Text(app.activeSourceSummary)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 16.5, weight: .medium))
                     .foregroundStyle(Theme.textFaint)
                     .lineLimit(1)
             }
@@ -86,6 +86,7 @@ struct HomeView: View {
                     .padding(.vertical, 14)
                 }
                 .scrollClipDisabled()
+                .focusSection()
             }
         }
     }
@@ -127,6 +128,7 @@ struct HomeView: View {
                 app.setSection(.search)
             }
         }
+        .focusSection()
     }
 
     // MARK: - Rows
@@ -144,6 +146,7 @@ struct HomeView: View {
                 .padding(.vertical, 14)
             }
             .scrollClipDisabled()
+                .focusSection()
         }
     }
 
@@ -164,6 +167,7 @@ struct HomeView: View {
                 .padding(.vertical, 14)
             }
             .scrollClipDisabled()
+                .focusSection()
         }
     }
 
@@ -171,7 +175,7 @@ struct HomeView: View {
 
     private func open(_ item: MediaItem) {
         if item.kind == .series {
-            path.append(Route.detail(item.id))
+            router.detail(item.id)
         } else {
             app.play(item: item)
         }
@@ -215,7 +219,7 @@ private struct FeaturedCard: View {
                     HStack(spacing: 8) {
                         if let quality = item.quality {
                             Text(quality)
-                                .font(.system(size: 10, weight: .heavy))
+                                .font(.system(size: 11.8, weight: .heavy))
                                 .foregroundStyle(.black)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
@@ -223,39 +227,39 @@ private struct FeaturedCard: View {
                         }
                         if let year = item.year {
                             Text(String(year))
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 15.3, weight: .semibold))
                                 .foregroundStyle(.white.opacity(0.75))
                         }
                         if let rating = item.rating, rating > 0 {
                             HStack(spacing: 3) {
                                 Image(systemName: "star.fill")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 11.8))
                                 Text(String(format: "%.1f", rating))
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 15.3, weight: .semibold))
                             }
                             .foregroundStyle(Theme.gold)
                         }
                     }
 
                     Text(item.title)
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .font(.system(size: 35.4, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
                     Text(item.displayPlot ?? app.displayGroup(item.group))
-                        .font(.system(size: 15))
+                        .font(.system(size: 17.7))
                         .foregroundStyle(.white.opacity(0.66))
                         .lineLimit(1)
 
                     HStack(spacing: 8) {
                         Image(systemName: item.kind == .series ? "rectangle.stack.fill" : "play.fill")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 13, weight: .bold))
                         Text(item.kind == .series ? L.t("detail.episodes") : L.t("common.play"))
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 16.5, weight: .semibold))
                         Text("·")
                             .foregroundStyle(.white.opacity(0.35))
                         Text(app.sourceName(for: item.playlistID))
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 15.3, weight: .medium))
                             .foregroundStyle(.white.opacity(0.55))
                             .lineLimit(1)
                     }
@@ -274,7 +278,7 @@ private struct FeaturedCard: View {
                     HStack {
                         Spacer()
                         Text(app.sourceName(for: item.playlistID).prefix(1).uppercased())
-                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                            .font(.system(size: 14.2, weight: .heavy, design: .rounded))
                             .foregroundStyle(.black)
                             .frame(width: 30, height: 30)
                             .background(Theme.accent, in: Circle())
@@ -317,24 +321,24 @@ private struct QuickTile: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(focused ? Color.black.opacity(0.12) : tint.opacity(0.15))
                     Image(systemName: symbol)
-                        .font(.system(size: 21, weight: .semibold))
+                        .font(.system(size: 24.8, weight: .semibold))
                         .foregroundStyle(focused ? Color.black : tint)
                 }
                 .frame(width: 48, height: 48)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 21.2, weight: .semibold))
                         .foregroundStyle(focused ? Color.black : Theme.text)
                         .lineLimit(1)
                     Text(subtitle)
-                        .font(.system(size: 13))
+                        .font(.system(size: 15.3))
                         .foregroundStyle(focused ? Color.black.opacity(0.6) : Theme.textFaint)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 15.3, weight: .bold))
                     .foregroundStyle(focused ? Color.black.opacity(0.45) : Theme.textFaint)
             }
             .padding(.horizontal, 16)

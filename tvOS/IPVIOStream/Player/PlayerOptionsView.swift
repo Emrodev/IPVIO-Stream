@@ -35,7 +35,7 @@ struct PlayerOptionsView: View {
                     section(title: L.t("player.audio"), symbol: "waveform") {
                         if vm.audioTracks.isEmpty {
                             Text(L.t("player.noTracks"))
-                                .font(.system(size: 18))
+                                .font(.system(size: 21.2))
                                 .foregroundStyle(Theme.textDim)
                         } else {
                             ForEach(vm.audioTracks, id: \.trackID) { track in
@@ -124,10 +124,10 @@ struct PlayerOptionsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 5) {
                 Text(L.t("player.info"))
-                    .font(.system(size: 40, weight: .heavy, design: .rounded))
+                    .font(.system(size: 47.2, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.text)
                 Text(vm.title)
-                    .font(.system(size: 20))
+                    .font(.system(size: 23.6))
                     .foregroundStyle(Theme.textDim)
             }
             Spacer()
@@ -137,7 +137,7 @@ struct PlayerOptionsView: View {
             .buttonStyle(.borderedProminent)
             .tint(Theme.accent)
             .foregroundStyle(Theme.background)
-            .font(.system(size: 18, weight: .bold))
+            .font(.system(size: 21.2, weight: .bold))
         }
     }
 
@@ -158,7 +158,7 @@ struct PlayerOptionsView: View {
                 Image(systemName: symbol)
                     .foregroundStyle(Theme.accent)
                 Text(title)
-                    .font(.system(size: 25, weight: .bold, design: .rounded))
+                    .font(.system(size: 29.5, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.text)
             }
             VStack(alignment: .leading, spacing: 8) {
@@ -179,11 +179,11 @@ private struct PlayerOptionRow: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Text(title)
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: 23.6, weight: .medium))
                     .lineLimit(1)
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 16.5, weight: .bold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(focused ? Color.black.opacity(0.12) : Color.white.opacity(0.08), in: Capsule())
@@ -216,7 +216,7 @@ private struct PlayerChoiceChip: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 21.2, weight: .semibold))
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
                 .background(
@@ -241,11 +241,11 @@ private struct InfoLine: View {
     var body: some View {
         HStack(alignment: .top, spacing: 18) {
             Text(label)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 20.1, weight: .semibold))
                 .foregroundStyle(Theme.textDim)
                 .frame(width: 180, alignment: .leading)
             Text(value)
-                .font(.system(size: 17, design: .monospaced))
+                .font(.system(size: 20.1, design: .monospaced))
                 .foregroundStyle(Theme.text)
                 .lineLimit(2)
             Spacer()

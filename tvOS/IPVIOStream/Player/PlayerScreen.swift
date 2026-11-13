@@ -285,7 +285,7 @@ struct PlayerScreen: View {
                 vm.togglePlayback()
             } label: {
                 Image(systemName: iconForPlayState)
-                    .font(.system(size: 34, weight: .bold))
+                    .font(.system(size: 40.1, weight: .bold))
                     .foregroundStyle(focus == .play ? Color.black : Color.white)
                     .frame(width: 88, height: 88)
                     .background(focus == .play ? Color.white : Color.white.opacity(0.16), in: Circle())
@@ -322,9 +322,9 @@ struct PlayerScreen: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "forward.fill")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 15.3, weight: .bold))
                             Text(L.t(segment.kind.titleKey))
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: 17.7, weight: .semibold))
                         }
                         .padding(.horizontal, 18)
                         .padding(.vertical, 10)
@@ -339,13 +339,13 @@ struct PlayerScreen: View {
             HStack(alignment: .center, spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(vm.title)
-                        .font(.system(size: 27, weight: .bold, design: .rounded))
+                        .font(.system(size: 31.9, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
                     if let subtitle = vm.subtitle {
                         Text(subtitle)
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 17.7, weight: .medium))
                             .foregroundStyle(.white.opacity(0.55))
                             .lineLimit(1)
                     }
@@ -364,7 +364,7 @@ struct PlayerScreen: View {
                             playerBadge(String(format: "★ %.1f", rating), tint: Theme.gold)
                         }
                         Text(app.sourceName(for: item.playlistID))
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14.2, weight: .medium))
                             .foregroundStyle(.white.opacity(0.42))
                             .lineLimit(1)
                     }
@@ -399,7 +399,7 @@ struct PlayerScreen: View {
                 HStack(spacing: 8) {
                     Circle().fill(Theme.red).frame(width: 7, height: 7)
                     Text(L.t("player.liveHint"))
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 15.3, weight: .medium))
                         .foregroundStyle(.white.opacity(0.5))
                 }
             }
@@ -408,7 +408,7 @@ struct PlayerScreen: View {
 
     private func playerBadge(_ text: String, tint: Color = .white) -> some View {
         Text(text.uppercased())
-            .font(.system(size: 10, weight: .bold))
+            .font(.system(size: 11.8, weight: .bold))
             .foregroundStyle(tint.opacity(0.85))
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
@@ -423,7 +423,7 @@ struct PlayerScreen: View {
                 .controlSize(.large)
                 .tint(.white)
             Text(L.t("player.buffering"))
-                .font(.system(size: 17, weight: .medium))
+                .font(.system(size: 20.1, weight: .medium))
                 .foregroundStyle(Theme.textDim)
         }
         .padding(26)
@@ -433,7 +433,7 @@ struct PlayerScreen: View {
 
     private func seekFeedback(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 30, weight: .bold, design: .rounded))
+            .font(.system(size: 35.4, weight: .bold, design: .rounded))
             .foregroundStyle(.white)
             .padding(.horizontal, 22)
             .padding(.vertical, 12)
@@ -456,7 +456,7 @@ struct PlayerScreen: View {
                 .fill(Theme.red)
                 .frame(width: 8, height: 8)
             Text(L.t("player.live"))
-                .font(.system(size: 15, weight: .heavy))
+                .font(.system(size: 17.7, weight: .heavy))
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 12)
@@ -470,13 +470,13 @@ struct PlayerScreen: View {
             Color.black.opacity(0.82).ignoresSafeArea()
             VStack(spacing: 20) {
                 Image(systemName: "wifi.exclamationmark")
-                    .font(.system(size: 48, weight: .light))
+                    .font(.system(size: 56.6, weight: .light))
                     .foregroundStyle(Theme.gold)
                 Text(L.t("player.error"))
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(.system(size: 40.1, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                 Text(message)
-                    .font(.system(size: 19))
+                    .font(.system(size: 22.4))
                     .foregroundStyle(Theme.textDim)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 720)
@@ -502,7 +502,7 @@ struct PlayerScreen: View {
                     }
                     .buttonStyle(.bordered)
                 }
-                .font(.system(size: 19, weight: .semibold))
+                .font(.system(size: 22.4, weight: .semibold))
             }
             .padding(44)
             .background(Theme.surface.opacity(0.95), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -517,7 +517,7 @@ struct PlayerScreen: View {
                 ProgressView()
                     .controlSize(.large)
                 Text(L.t("live.retry"))
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(.white)
             }
             .padding(32)
@@ -530,14 +530,14 @@ struct PlayerScreen: View {
             Color.black.opacity(0.78).ignoresSafeArea()
             VStack(spacing: 18) {
                 Text(L.t("player.ended"))
-                    .font(.system(size: 38, weight: .heavy, design: .rounded))
+                    .font(.system(size: 44.8, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                 Text(vm.title)
-                    .font(.system(size: 21))
+                    .font(.system(size: 24.8))
                     .foregroundStyle(Theme.textDim)
                 if let countdown = vm.nextCountdown {
                     Text(L.f("player.autoNext", countdown))
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.system(size: 21.2, weight: .medium))
                         .foregroundStyle(Theme.accentLight)
                 }
                 HStack(spacing: 16) {
@@ -559,7 +559,7 @@ struct PlayerScreen: View {
                     }
                     .buttonStyle(.bordered)
                 }
-                .font(.system(size: 19, weight: .semibold))
+                .font(.system(size: 22.4, weight: .semibold))
             }
             .padding(40)
             .background(Theme.surface.opacity(0.95), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -610,7 +610,7 @@ struct PlayerCircleButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 23.6, weight: .bold))
                 .frame(width: 48, height: 48)
                 .background(focused ? Color.white : Color.black.opacity(0.35), in: Circle())
                 .foregroundStyle(focused ? Color.black : Color.white)
@@ -630,11 +630,11 @@ struct PlayerIconButton: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: symbol)
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 26, weight: .semibold))
                     .frame(height: 24)
                 if !label.isEmpty {
                     Text(label)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 13, weight: .medium))
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                 }
@@ -684,7 +684,7 @@ struct PlayerScrubber: View {
                 Spacer()
                 Text(TimeText.clock(vm.duration))
             }
-            .font(.system(size: 12, weight: .medium, design: .monospaced))
+            .font(.system(size: 14.2, weight: .medium, design: .monospaced))
             .foregroundStyle(.white.opacity(0.48))
         }
         .padding(.horizontal, 10)
