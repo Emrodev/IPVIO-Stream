@@ -1375,6 +1375,16 @@ private fun ApiKeysPage(ctx: Context) {
     if (sdStatus.isNotBlank()) Text(sdStatus, color = if (sdStatus == "Schlüssel gültig") Accent2 else Muted, fontSize = 16.sp)
 
     Hint("Die Schlüssel bleiben nur auf diesem Gerät. Nach dem Eintragen die App einmal neu starten, damit alle Bereiche die Infos laden. Intro- und Abspann-Zeiten kommen von TheIntroDB und brauchen keinen Schlüssel.")
+    ApiKeysPhoneEntry(ctx) { got ->
+        // Keep the keys the phone did not send, store the rest; "Speichern und prüfen" then checks them as usual
+        got["tmdb"]?.let { tmdb = Config.clean(it); tmdbStatus = "" }
+        got["omdb"]?.let { omdb = Config.clean(it); omdbStatus = "" }
+        got["os"]?.let { osKey = it; osStatus = "" }
+        got["sd"]?.let { sdKey = it; sdStatus = "" }
+        Config.save(ctx, tmdb, omdb)
+        Config.saveSubs(ctx, osKey, sdKey)
+        tmdb = Config.ownTmdb(ctx); omdb = Config.ownOmdb(ctx); osKey = Config.OS_KEY; sdKey = Config.SD_KEY
+    }
     // Buttons last: text below the last focusable element was cut off at the bottom of the page
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton(if (busy) "Bitte warten …" else "Speichern und prüfen", light = true, icon = AIcon.Check) {
@@ -1394,6 +1404,47 @@ private fun ApiKeysPage(ctx: Context) {
         if (tmdb.isNotEmpty() || omdb.isNotEmpty() || osKey.isNotEmpty() || sdKey.isNotEmpty()) ConfirmPill("Schlüssel entfernen") {
             tmdb = ""; omdb = ""; tmdbStatus = ""; omdbStatus = ""; Config.save(ctx, "", "")
             osKey = ""; sdKey = ""; osStatus = ""; sdStatus = ""; Config.saveSubs(ctx, "", "")
+        }
+    }
+}
+
+/**
+ * "Enter on phone" for the API keys: reuses the local phone server ([PhoneImport]) with its /keys page.
+ * [onKeys] runs on the main thread with the non-blank keys ("tmdb", "omdb", "os", "sd").
+ */
+@Composable
+private fun ApiKeysPhoneEntry(ctx: Context, onKeys: (Map<String, String>) -> Unit) {
+    var serving by remember { mutableStateOf(false) }
+    var received by remember { mutableStateOf(false) }
+    val ip = remember { PhoneImport.localIp() }
+    val latest by rememberUpdatedState(onKeys)
+    val server = remember {
+        PhoneImport { }.apply {
+            this.onKeys = { keys ->
+                android.os.Handler(android.os.Looper.getMainLooper()).post { latest(keys); received = true }
+            }
+        }
+    }
+    DisposableEffect(Unit) { onDispose { server.stop() } }
+    if (!serving) PillButton("Am Handy eingeben", icon = AIcon.Phone) { received = false; serving = server.start() }
+    else {
+        Column(
+            Modifier.clip(RoundedCornerShape(DS.RadiusM)).background(Color(0x14FFFFFF)).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (ip == null) Text("Das Gerät ist nicht mit einem WLAN verbunden.", color = Color(0xFFFFB86B), fontSize = 16.sp)
+            else {
+                Text("Am Handy (im selben WLAN) öffnen:", color = Muted, fontSize = 15.sp)
+                val addr = "http://$ip:${server.port}/keys"
+                Text(addr, color = Accent2, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                QrWithLabel(addr)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Code", color = Muted, fontSize = 16.sp)
+                    Text(server.code, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                }
+                if (received) Text("Schlüssel vom Handy erhalten und gespeichert. Jetzt „Speichern und prüfen“ drücken.", color = Accent2, fontSize = 16.sp)
+            }
+            PillButton("Eingabe am Handy beenden") { server.stop(); serving = false }
         }
     }
 }
