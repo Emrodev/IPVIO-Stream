@@ -75,12 +75,27 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "$APP" "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip"
           ls -lh "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip"
 
+      - name: Package unsigned .ipa
+        if: success()
+        run: |
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 3 -name "IPVIOStream.app" -type d | head -1)
+          test -n "$APP"
+          rm -rf "$RUNNER_TEMP/ipa"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          ditto "$APP" "$RUNNER_TEMP/ipa/Payload/IPVIOStream.app"
+          cd "$RUNNER_TEMP/ipa"
+          zip -qry -y "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.ipa" Payload
+          unzip -l "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.ipa" | head -12
+          ls -lh "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.ipa"
+
       - name: Upload unsigned app
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: IPVIOStream-tvOS-unsigned
-          path: ${{ runner.temp }}/IPVIOStream-tvOS-unsigned.zip
+          path: |
+            ${{ runner.temp }}/IPVIOStream-tvOS-unsigned.zip
+            ${{ runner.temp }}/IPVIOStream-tvOS-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
 
@@ -104,11 +119,15 @@ jobs:
           cat > "$RUNNER_TEMP/release-notes.md" <<'EOF'
           Unsigned tvOS build compiled successfully by GitHub Actions.
 
-          This .app is NOT code-signed and cannot be installed on Apple TV until it is signed with an Apple Developer team. See tvOS/SIGNING.md.
+          Assets: IPVIOStream-tvOS-unsigned.ipa and the .app zip.
+
+          This IPA/.app is NOT code-signed and cannot be installed on Apple TV until it is signed with an Apple Developer team. See tvOS/SIGNING.md.
 
           KSPlayer 5.6.2 is pinned in the project.
           EOF
-          gh release create "$TAG" "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip" \
+          gh release create "$TAG" \
+            "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip" \
+            "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.ipa" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "tvOS unsigned build ${GITHUB_RUN_NUMBER}" \
