@@ -2,11 +2,19 @@ name: Build tvOS
 
 on:
   push:
-    branches: [tvos-ci]
+    branches: [main, tvos-ci]
+    paths:
+      - "tvOS/**"
+      - "TVOS_PORT.md"
+      - ".github/workflows/tvos-build.yml"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: tvos-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-tvos:
@@ -65,6 +73,7 @@ jobs:
           name: IPVIOStream-tvOS-unsigned
           path: ${{ runner.temp }}/IPVIOStream-tvOS-unsigned.zip
           if-no-files-found: error
+          retention-days: 30
 
       - name: Upload logs
         if: always()
@@ -75,3 +84,19 @@ jobs:
             ${{ runner.temp }}/resolve.log
             ${{ runner.temp }}/build.log
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish unsigned build to Releases
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="tvos-build-${GITHUB_RUN_ID}"
+          NOTES="Unsigned tvOS build from commit ${GITHUB_SHA:0:7}.
+          
+          This .app was compiled successfully by GitHub Actions but is NOT code-signed and cannot be installed on Apple TV until it is signed with an Apple Developer team.
+          
+          KSPlayer 5.6.2 is pinned in the project."
+          gh release create "$TAG" "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "tvOS unsigned build ${GITHUB_RUN_NUMBER}" \            --notes "$NOTES"

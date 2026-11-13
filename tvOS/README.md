@@ -84,7 +84,31 @@ xcodebuild \
 
 استبدل `XXXXXXXXXX` بمعرّف فريقك. الناتج في `~/Library/Developer/Xcode/DerivedData/.../Build/Products/`.
 
-### إعادة توليد المشروع
+### الطريقة 3: GitHub Actions (بدون Mac)
+
+النسخة مرفوعة في Fork داخل الحساب:
+
+- **المستودع:** https://github.com/GpGp700/IPVIO-Stream
+- **Workflow:** https://github.com/GpGp700/IPVIO-Stream/actions/workflows/tvos-build.yml
+- **الفرع:** `tvos-ci`
+
+[![Build tvOS](https://github.com/GpGp700/IPVIO-Stream/actions/workflows/tvos-build.yml/badge.svg?branch=tvos-ci)](https://github.com/GpGp700/IPVIO-Stream/actions/workflows/tvos-build.yml)
+
+يشغّل الـ Workflow بناءً حقيقياً على `macos-26` مع Xcode 26.6 وtvOS SDK 26.5. لأن هدف المشروع المحلي هو tvOS 27، يمرّر CI تجاوزاً آمناً:
+
+```text
+TVOS_DEPLOYMENT_TARGET=18.0
+```
+
+الكود لا يستخدم أي API أحدث من tvOS 18، لذلك يعمل البناء على SDK 26 ويظل التطبيق قابلاً للتشغيل على tvOS 27. الناتج يُرفع كـ **Artifact باسم `IPVIOStream-tvOS-unsigned`** (ملف `.app` غير موقّع). هذا يثبت أن المشروع يُبنى، لكنه **غير قابل للتثبيت** على Apple TV قبل توقيعه بحسابك.
+
+> لتوقيع تلقائي في CI تحتاج إضافة شهادة Apple Distribution وProvisioning Profile إلى GitHub Secrets؛ راجع قسم «التوقيع» أدناه.
+
+عند نجاح البناء ينشر الـ Workflow أيضاً **GitHub Release** باسم `tvOS unsigned build N` مع ملف `.zip`؛ ستجده هنا:
+
+- https://github.com/GpGp700/IPVIO-Stream/releases
+
+
 
 المشروع مولّد بسكربت Python ولا يعتمد على XcodeGen:
 
