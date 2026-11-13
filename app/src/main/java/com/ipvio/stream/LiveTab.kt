@@ -404,7 +404,11 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             onFocus = { sel = n }, onRight = { focusFirstChan() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null
-                        ) { focusFirstChan() }
+                        ) {
+                            // A tap on a touch screen does not focus the row, so select the category here (#67);
+                            // with a remote the focus has already selected it and OK moves to the channels.
+                            if (sel != n) sel = n else focusFirstChan()
+                        }
                         // Menu of a provider category: favorite on/off, hide, move, sorting of all categories
                         var sortMenu by remember { mutableStateOf(false) }
                         if (catMenu && plainCat) OptionPopup(
