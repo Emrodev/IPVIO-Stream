@@ -116,12 +116,8 @@ final class AppModel: ObservableObject {
 
     func items(kind: MediaKind, group: String? = nil, playlistID: UUID? = nil) -> [MediaItem] {
         var result = items.filter { $0.kind == kind }
-        if let group, !group.isEmpty {
-            if group == MenuSentinel.allGroups {
-                result = result
-            } else {
-                result = result.filter { $0.group == group }
-            }
+        if let group, !group.isEmpty, group != MenuSentinel.allGroups {
+            result = result.filter { $0.group == group }
         }
         if let playlistID {
             result = result.filter { $0.playlistID == playlistID }
