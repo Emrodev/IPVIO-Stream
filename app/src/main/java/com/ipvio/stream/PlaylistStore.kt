@@ -9,10 +9,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import okhttp3.Call
@@ -63,12 +66,42 @@ object PlaylistStore {
      */
     private fun setItems(l: List<Item>, shown: List<Item>? = null) {
         LibMatch.reset()
-        filtered = shown ?: shownOf(l); filteredFor = l; filteredVer = filterVer()
+        filtered = shown ?: shownOf(l); filteredFor = l; filteredVer = filterVer(); filteredBase = baseVer()
         rawChannels = l
     }
 
     /** State of the filters (parental control, "hide broken titles"): when it changes, the shown list is rebuilt. */
     private fun filterVer(): Int = Parental.version * 10_000 + (if (DeadLinks.hide) DeadLinks.version else 0) + IgnoredGroups.version * 1_000_000
+
+    /** Filter state without the "ignore" part: a change here (e.g. parental control) is applied at once. */
+    private fun baseVer(): Int = Parental.version * 10_000 + (if (DeadLinks.hide) DeadLinks.version else 0)
+
+    /** Increased when a background refilter has finished, so readers of [channels] see the new list. */
+    private var refilterTick by mutableIntStateOf(0)
+    @Volatile private var filteredBase = -1
+    @Volatile private var pendingVer = -1
+    private var refilterJob: Job? = null
+    private val refilterScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * Only the "ignore" filter changed (categories or bundles switched in settings): filter the whole list in the background
+     * instead of on the main thread while drawing. Until it is done, readers keep the previous list.
+     */
+    @Synchronized private fun refilterLater(raw: List<Item>, ver: Int) {
+        if (pendingVer == ver) return
+        pendingVer = ver
+        refilterJob?.cancel()
+        refilterJob = refilterScope.launch {
+            val r = shownOf(raw)
+            withContext(Dispatchers.Main) {
+                if (rawChannels === raw && filterVer() == ver) {
+                    filtered = r; filteredFor = raw; filteredVer = ver; filteredBase = baseVer()
+                    refilterTick++
+                }
+                if (pendingVer == ver) pendingVer = -1
+            }
+        }
+    }
 
     private fun shownOf(l: List<Item>): List<Item> {
         var r = if (Parental.hideAdult) Parental.filter(l) else l
@@ -94,9 +127,15 @@ object PlaylistStore {
         get() {
             val raw = rawChannels
             val ver = filterVer()
+            @Suppress("UNUSED_VARIABLE") val tick = refilterTick
             if (!Parental.hideAdult && !DeadLinks.hide && IgnoredGroups.isEmpty) return raw
+            if (raw === filteredFor && ver != filteredVer && baseVer() == filteredBase) {
+                // Only "ignore" changed: keep the previous list for a moment, filter in the background
+                refilterLater(raw, ver)
+                return filtered
+            }
             if (raw !== filteredFor || ver != filteredVer) {
-                filtered = shownOf(raw); filteredFor = raw; filteredVer = ver
+                filtered = shownOf(raw); filteredFor = raw; filteredVer = ver; filteredBase = baseVer()
             }
             return filtered
         }
