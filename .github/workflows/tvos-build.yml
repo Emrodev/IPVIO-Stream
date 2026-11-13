@@ -47,13 +47,14 @@ jobs:
           set -o pipefail
           xcodebuild -project IPVIOStream.xcodeproj \
             -scheme IPVIOStream \
-            -configuration Debug \
+            -configuration Release \
             -destination 'generic/platform=tvOS' \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
             -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
+            ENABLE_PREVIEWS=NO \
             TVOS_DEPLOYMENT_TARGET=18.0 \
             build 2>&1 | tee "$RUNNER_TEMP/build.log"
 
