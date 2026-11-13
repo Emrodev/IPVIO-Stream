@@ -36,8 +36,8 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 6
-        versionName = "1.4.1"
+        versionCode = 7
+        versionName = "1.4.2-test"
         // Name under the icon; the debug build overrides it (see buildTypes)
         manifestPlaceholders["appLabel"] = "IPVIO Stream"
 
