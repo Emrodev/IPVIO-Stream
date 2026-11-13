@@ -1,0 +1,64 @@
+name: IPVIOStream
+options:
+  bundleIdPrefix: com.ipvio.stream
+  deploymentTarget:
+    tvOS: "27.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  xcodeVersion: "27.0"
+
+packages:
+  KSPlayer:
+    url: https://github.com/kingslay/KSPlayer.git
+    exactVersion: 5.6.2
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+    CLANG_ENABLE_MODULES: YES
+    TVOS_DEPLOYMENT_TARGET: "27.0"
+    SUPPORTED_PLATFORMS: appletvos
+    TARGETED_DEVICE_FAMILY: "3"
+
+targets:
+  IPVIOStream:
+    type: application
+    platform: tvOS
+    deploymentTarget: "27.0"
+    sources:
+      - path: IPVIOStream
+        excludes:
+          - "Resources/Info.plist"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ipvio.stream.tv
+        PRODUCT_NAME: IPVIOStream
+        INFOPLIST_FILE: IPVIOStream/Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        ENABLE_PREVIEWS: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/Frameworks"
+    dependencies:
+      - package: KSPlayer
+        product: KSPlayer
+      - package: KSPlayer
+        product: KSPlayerUI
+
+schemes:
+  IPVIOStream:
+    build:
+      targets:
+        IPVIOStream: all
+    run:
+      config: Debug
+    archive:
+      config: Release

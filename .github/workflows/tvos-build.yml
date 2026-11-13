@@ -1,0 +1,77 @@
+name: Build tvOS
+
+on:
+  push:
+    branches: [tvos-ci]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-tvos:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcode-select -p
+          ls -1 /Applications | grep -E '^Xcode' || true
+          xcodebuild -showsdks | sed -n '1,120p'
+          echo "tvOS SDK: $(xcrun --sdk appletvos --show-sdk-version)"
+
+      - name: Resolve packages
+        working-directory: tvOS
+        run: |
+          set -o pipefail
+          xcodebuild -project IPVIOStream.xcodeproj \
+            -scheme IPVIOStream \
+            -resolvePackageDependencies \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" 2>&1 | tee "$RUNNER_TEMP/resolve.log"
+
+      - name: Build tvOS app
+        working-directory: tvOS
+        run: |
+          set -o pipefail
+          xcodebuild -project IPVIOStream.xcodeproj \
+            -scheme IPVIOStream \
+            -configuration Debug \
+            -destination 'generic/platform=tvOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            TVOS_DEPLOYMENT_TARGET=18.0 \
+            build 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Package unsigned .app
+        if: success()
+        run: |
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 3 -name "IPVIOStream.app" -type d | head -1)
+          echo "APP=$APP"
+          test -n "$APP"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip"
+          ls -lh "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip"
+
+      - name: Upload unsigned app
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: IPVIOStream-tvOS-unsigned
+          path: ${{ runner.temp }}/IPVIOStream-tvOS-unsigned.zip
+          if-no-files-found: error
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvos-build-logs
+          path: |
+            ${{ runner.temp }}/resolve.log
+            ${{ runner.temp }}/build.log
+          if-no-files-found: warn
