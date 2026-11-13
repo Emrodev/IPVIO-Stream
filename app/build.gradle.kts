@@ -36,8 +36,8 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 6
+        versionName = "1.4.1"
         // Name under the icon; the debug build overrides it (see buildTypes)
         manifestPlaceholders["appLabel"] = "IPVIO Stream"
 
@@ -66,10 +66,15 @@ android {
         release {
             if (hasKeystore) signingConfig = signingConfigs.getByName("release")
             optimization {
-                // Off: the shrunk release build (12.7 MB) did not start on the device. Turn back on only together with
-                // keep rules in src/main/keepRules and a test on a real device.
+                // R8 runs over the whole app in the classic way, without packageScope (T-024, ADR 0005). The libraries (Compose,
+                // Media3, OkHttp, Kotlin) are shrunk and optimized; without that Compose runs unoptimized and the UI is noticeably
+                // slower. The app's own code (com.ipvio.**) is kept unchanged by a keep rule, and renaming and repackaging of
+                // classes are switched off. Rules: src/main/keepRules/reflection.keep. This also turns on resource shrinking.
+                // History: the library-only packageScope crashed the release at start with AGP 9.x (IllegalAccessError: renamed
+                // kotlin.text class, in androidx.startup.InitializationProvider); during 1.2 a build with com.ipvio.** in the
+                // scope (12.7 MB) did not start either (cause unknown, see ADR 0001).
+                // Rollback: set enable = false (this one line).
                 enable = false
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
     }

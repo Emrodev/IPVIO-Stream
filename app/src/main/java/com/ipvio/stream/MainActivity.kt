@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Load settings early so colors and size are right in the very first frame.
         Profiles.init(this)
+        Profiles.prewarm(this)
         val pick = Profiles.needsPicker(this)
         if (!pick) AppSettings.init(this)
         General.init(this)
@@ -60,6 +61,7 @@ class MainActivity : ComponentActivity() {
             ImageLoader.Builder(this)
                 .memoryCache { MemoryCache.Builder(this).maxSizePercent(Mem.imageCachePercent(Mem.tier(this))).build() }
                 .allowRgb565(true)
+                .bitmapFactoryMaxParallelism(Mem.imageDecoders(Mem.tier(this)))
                 .crossfade(false)
                 .build()
         )
@@ -160,6 +162,8 @@ fun App(pick: Boolean = false) {
         }
         // New version available: dialog with one button (above every screen)
         UpdatePromptHost()
+        // First start without a playlist: one non-blocking card that checks for updates (T-014)
+        if (picked) UpdateCardHost()
     }
 }
 
@@ -230,10 +234,11 @@ private fun AppContent() {
         }
     }
 
-    // Left the add screen without anything loaded (e.g. resuming cancelled): load the saved playlist
+    // Left the add screen without anything loaded (e.g. resuming cancelled): load the saved playlist.
+    // Not when a list was already shown and is only empty because of the playlist mode (see AddFlowLogic).
     var wasAdding by remember { mutableStateOf(adding) }
     LaunchedEffect(adding) {
-        if (wasAdding && !adding && PlaylistStore.channels.isEmpty() && !PlaylistStore.loading) {
+        if (AddFlowLogic.shouldReloadAfterAddClosed(wasAdding, adding, PlaylistStore.channels.isEmpty(), PlaylistStore.loading, PlaylistStore.shownUrl != null)) {
             PlaylistStore.savedUrl(ctx)?.let { PlaylistStore.load(ctx, it, false, true) }
         }
         wasAdding = adding
@@ -244,9 +249,10 @@ private fun AppContent() {
     // Do not fall into the screensaver while downloading and parsing the playlist
     KeepScreenOn("playlist", PlaylistStore.loading)
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)
-    LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); Classifier.restart(ctx, all) }   // after the first screen is up, and debounced while the list is still changing
+    LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); if (!DemoMode.active) Classifier.restart(ctx, all) }   // after the first screen is up, and debounced while the list is still changing
 
     fun start(item: Item, title: String, url: String, startMs: Long = 0L) {
+        if (DemoMode.active) return   // sample entries have no stream address
         History.add(ctx, item.id)
         val sm = SE_RE.find(title)
         val season = sm?.groupValues?.get(1)?.toIntOrNull() ?: 0
@@ -483,7 +489,7 @@ private fun AppContent() {
                 },
                 onBrowse = { browse = BrowseState(it) },
                 onCategories = { cats = it },
-                onAdd = { adding = true }
+                onAdd = { DemoMode.exit(); adding = true }
             ) }
         }
         if (RemoteUi.show) RemoteOverlay(Modifier.align(Alignment.Center))

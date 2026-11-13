@@ -8,14 +8,13 @@ import java.io.OutputStream
 
 /**
  * Binary cache of the playlist (without Android, testable).
- * Version 6: records the per-playlist content mode as well as the language selection used. Version 5 contained
- * only the shown languages (large providers: 800,000 entries → e.g. 120,000) and in the head
+ * Version 5: contains only the shown languages (large providers: 800,000 entries → e.g. 120,000) and in the head
  * the count and amount of data per language of the whole list as well as the languages hidden at that time.
  * The whole list is additionally stored compressed on the device (pl_*.m3u.gz); with a different language selection it is parsed again from it.
  * Version 4 (whole list, language at the front of each entry) and 3 (without language) are still read.
  */
 object PlaylistCacheIO {
-    const val VERSION = 6
+    const val VERSION = 5
     private const val MAX_STR = 1 shl 20      // 1 MB per text: anything larger can only be a corrupt file
     private const val MAX_COUNT = 2_000_000
 
@@ -25,8 +24,7 @@ object PlaylistCacheIO {
      */
     class Cached(
         val items: List<Item>, val epg: List<String>, val order: Map<String, Int>, val counts: Map<String, Int>,
-        val bytes: Map<String, Long> = emptyMap(), val hidden: Set<String>? = null,
-        val contentMode: ContentMode = ContentMode.LIVE_AND_VOD
+        val bytes: Map<String, Long> = emptyMap(), val hidden: Set<String>? = null
     )
 
     /**
@@ -35,8 +33,7 @@ object PlaylistCacheIO {
      */
     fun write(
         out: OutputStream, url: String, list: List<Item>, epg: List<String>, order: Map<String, Int>,
-        counts: Map<String, Int>? = null, bytes: Map<String, Long> = emptyMap(), hidden: Set<String> = emptySet(),
-        contentMode: ContentMode = ContentMode.LIVE_AND_VOD
+        counts: Map<String, Int>? = null, bytes: Map<String, Long> = emptyMap(), hidden: Set<String> = emptySet()
     ) {
         val o = DataOutputStream(out)
         o.writeInt(VERSION)
@@ -44,7 +41,6 @@ object PlaylistCacheIO {
         o.writeInt(epg.size); epg.forEach { o.str(it) }
         o.writeInt(order.size); order.forEach { (k, v) -> o.str(k); o.writeInt(v) }
         o.str(LangTagLogic.encode(hidden))
-        o.writeInt(contentMode.ordinal)
         val c = counts ?: HashMap<String, Int>().also { m -> for (i in list) m[i.lang] = (m[i.lang] ?: 0) + 1 }
         o.writeInt(c.size); c.forEach { (k, v) -> o.str(k); o.writeInt(v) }
         o.writeInt(bytes.size); bytes.forEach { (k, v) -> o.str(k); o.writeLong(v) }
@@ -56,12 +52,12 @@ object PlaylistCacheIO {
     /** Head of the cache (address checked); the entries follow afterwards in the data stream. */
     private class Head(
         val version: Int, val epg: List<String>, val order: Map<String, Int>,
-        val hidden: Set<String>?, val counts: Map<String, Int>?, val bytes: Map<String, Long>, val contentMode: ContentMode
+        val hidden: Set<String>?, val counts: Map<String, Int>?, val bytes: Map<String, Long>
     )
 
     private fun DataInputStream.head(url: String): Head? {
         val version = readInt()
-        if (version !in 3..6) return null
+        if (version !in 3..5) return null
         if (str() != url.trim()) return null
         val ne = count()
         val epg = ArrayList<String>(ne)
@@ -69,16 +65,15 @@ object PlaylistCacheIO {
         val no = count()
         val order = LinkedHashMap<String, Int>()
         for (k in 0 until no) { val key = str() ?: ""; order[key] = readInt() }
-        if (version < 5) return Head(version, epg, order, null, null, emptyMap(), ContentMode.LIVE_AND_VOD)
+        if (version < 5) return Head(version, epg, order, null, null, emptyMap())
         val stored = LangTagLogic.decode(str())
-        val mode = if (version >= 6) ContentMode.entries.getOrNull(readInt()) ?: return null else ContentMode.LIVE_AND_VOD
         val nc = count()
         val counts = HashMap<String, Int>()
         for (k in 0 until nc) { val key = str() ?: ""; counts[key] = readInt() }
         val nb = count()
         val bytes = HashMap<String, Long>()
         for (k in 0 until nb) { val key = str() ?: ""; bytes[key] = readLong() }
-        return Head(version, epg, order, stored, counts, bytes, mode)
+        return Head(version, epg, order, stored, counts, bytes)
     }
 
     /**
@@ -87,17 +82,16 @@ object PlaylistCacheIO {
      */
     fun readHeader(input: InputStream, url: String): Cached? {
         val h = DataInputStream(input).head(url) ?: return null
-        return Cached(emptyList(), h.epg, h.order, h.counts ?: emptyMap(), h.bytes, h.hidden, h.contentMode)
+        return Cached(emptyList(), h.epg, h.order, h.counts ?: emptyMap(), h.bytes, h.hidden)
     }
 
     /**
      * Reads the cache; null if it belongs to a different address or has an unknown version. Damaged → exception.
      * [check] is called every 2,000 entries (memory guard, abort).
      */
-    fun read(input: InputStream, url: String, hidden: Set<String>, check: (() -> Unit)? = null, contentMode: ContentMode = ContentMode.LIVE_AND_VOD): Cached? {
+    fun read(input: InputStream, url: String, hidden: Set<String>, check: (() -> Unit)? = null): Cached? {
         val i = DataInputStream(input)
         val h = i.head(url) ?: return null
-        if (h.contentMode != contentMode) return null
         val n = i.count()
         val pool = StringPool()
         val counts = HashMap<String, Int>()
@@ -107,7 +101,7 @@ object PlaylistCacheIO {
             if (check != null && k % 2000 == 1999) check()
         }
         items.trimToSize()
-        return Cached(items, h.epg, h.order, h.counts ?: counts, h.bytes, h.hidden, h.contentMode)
+        return Cached(items, h.epg, h.order, h.counts ?: counts, h.bytes, h.hidden)
     }
 
     private fun DataInputStream.count(): Int {
@@ -159,7 +153,7 @@ object PlaylistCacheIO {
         var lang: String? = if (version >= 4) pool.of(str() ?: LangTagLogic.UNKNOWN) else null
         if (lang != null) {
             counts[lang] = (counts[lang] ?: 0) + 1
-            if (lang in hidden) { skipItemRest(); return null }
+            if (LangTagLogic.hides(hidden, lang, kind)) { skipItemRest(); return null }
         }
         // Older caches: titles still with "&amp;" or "|EN|" – clean up while reading (fast, mostly unchanged)
         val rawTitle = str() ?: ""
@@ -188,7 +182,7 @@ object PlaylistCacheIO {
         if (lang == null) {
             lang = pool.of(LangTagLogic.of(group, rawTitle, kind == Kind.LIVE))
             counts[lang] = (counts[lang] ?: 0) + 1
-            if (lang in hidden) return null
+            if (LangTagLogic.hides(hidden, lang, kind)) return null
         }
         return Item(
             id = id, kind = kind, title = title, year = if (y < 0) null else y, url = url, logo = logo,

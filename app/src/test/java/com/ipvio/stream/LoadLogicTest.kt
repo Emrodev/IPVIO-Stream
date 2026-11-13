@@ -61,23 +61,6 @@ http://h/x
         assertEquals(8, s.entries + 0 - 1)   // 9 entries incl. separator
     }
 
-    @Test fun contentMode_filtersDuringScanAndParse() {
-        for (mode in listOf(ContentMode.LIVE_ONLY, ContentMode.VOD_ONLY)) {
-            val scan = M3uParser.scanStream(StringReader(m3u), mode)
-            val parsed = M3uParser.parseStream(StringReader(m3u), mode = mode)
-            assertEquals(parsed.counts, scan.counts)
-            assertEquals(parsed.bytes, scan.bytes)
-            assertTrue(parsed.items.all { mode.includes(it.kind) })
-        }
-        val live = M3uParser.parseStream(StringReader(m3u), mode = ContentMode.LIVE_ONLY)
-        val vod = M3uParser.parseStream(StringReader(m3u), mode = ContentMode.VOD_ONLY)
-        assertTrue(live.items.isNotEmpty())
-        assertTrue(live.items.all { it.kind == Kind.LIVE })
-        assertTrue(vod.items.any { it.kind == Kind.MOVIE })
-        assertTrue(vod.items.any { it.kind == Kind.SERIES })
-        assertTrue(vod.items.none { it.kind == Kind.LIVE })
-    }
-
     @Test fun waecheKannAbbrechen() {
         val big = StringBuilder("#EXTM3U\n")
         repeat(5000) { big.append("#EXTINF:-1 group-title=\"DE | TV\",Sender $it\nhttp://h/live/$it\n") }

@@ -16,7 +16,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.launch
 import okhttp3.Call
 import okhttp3.Request
 import org.json.JSONArray
@@ -40,7 +39,7 @@ import java.util.zip.Deflater
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
-data class PL(val name: String, val url: String, val contentMode: ContentMode = ContentMode.LIVE_AND_VOD)
+data class PL(val name: String, val url: String)
 
 /**
  * Playlists: list of saved logins, loading, cache.
@@ -231,7 +230,7 @@ object PlaylistStore {
             val a = JSONArray(json)
             for (i in 0 until a.length()) {
                 val o = a.getJSONObject(i)
-                lists.add(PL(o.getString("name"), o.getString("url"), runCatching { ContentMode.valueOf(o.optString("contentMode")) }.getOrDefault(ContentMode.LIVE_AND_VOD)))
+                lists.add(PL(o.getString("name"), o.getString("url")))
             }
         } catch (e: Exception) {
         }
@@ -256,7 +255,7 @@ object PlaylistStore {
 
     private fun persist(c: Context) {
         val a = JSONArray()
-        for (l in lists) a.put(JSONObject().put("name", l.name).put("url", l.url).put("contentMode", l.contentMode.name))
+        for (l in lists) a.put(JSONObject().put("name", l.name).put("url", l.url))
         val e = prefs(c).edit().putInt("active", active).putString("multi", MultiLogic.encodeKeys(multi)).remove("url")
         val token = Secrets.encrypt(a.toString())
         if (token != null) e.putString("lists_enc", token).remove("lists")
@@ -298,7 +297,7 @@ object PlaylistStore {
         ensure(c)
         val a = JSONArray()
         for (l in lists) {
-            val o = JSONObject().put("name", l.name).put("url", l.url).put("contentMode", l.contentMode.name)
+            val o = JSONObject().put("name", l.name).put("url", l.url)
             backups(c, l.url).takeIf { it.isNotEmpty() }?.let { o.put("backups", JSONArray(it)) }
             a.put(o)
         }
@@ -313,8 +312,7 @@ object PlaylistStore {
             val u = PlaylistLogic.normalizeUrl(o.optString("url")) ?: continue
             if (u.startsWith("file://")) continue   // files exist only on the old device
             if (lists.none { it.url == u }) {
-                val mode = runCatching { ContentMode.valueOf(o.optString("contentMode")) }.getOrDefault(ContentMode.LIVE_AND_VOD)
-                lists.add(PL(o.optString("name").ifBlank { hostOf(u) }, u, mode))
+                lists.add(PL(o.optString("name").ifBlank { hostOf(u) }, u))
                 o.optJSONArray("backups")?.let { b -> setBackups(c, u, (0 until b.length()).map { b.optString(it) }) }
             }
         }
@@ -413,34 +411,8 @@ object PlaylistStore {
 
     fun rename(c: Context, i: Int, name: String) {
         ensure(c)
-        if (i in lists.indices && name.isNotBlank()) { lists[i] = lists[i].copy(name = name.trim()); persist(c) }
+        if (i in lists.indices && name.isNotBlank()) { lists[i] = PL(name.trim(), lists[i].url); persist(c) }
     }
-
-    fun setContentMode(c: Context, i: Int, mode: ContentMode) {
-        ensure(c)
-        if (i !in lists.indices || lists[i].contentMode == mode) return
-        val url = lists[i].url
-        val previous = lists[i].contentMode
-        lists[i] = lists[i].copy(contentMode = mode)
-        persist(c)
-        if (i == active) kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-            repeat(60) {
-                if (reapplyContentMode(c, i, previous)) return@launch
-                delay(500)
-            }
-        } else {
-            extras.remove(url)
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch { applyMulti(c) }
-        }
-    }
-
-    private fun contentMode(url: String): ContentMode = lists.firstOrNull { it.url == url }?.contentMode ?: ContentMode.LIVE_AND_VOD
-
-    /** Error for a parse result without any entries; names the content selection when it is the likely cause. */
-    private fun emptyResult(mode: ContentMode) = PlaylistError(
-        if (mode == ContentMode.LIVE_AND_VOD) "Keine Sender in der Playlist gefunden."
-        else "Keine Inhalte für diese Auswahl gefunden. Wähle unter Einstellungen > Playlists einen anderen Inhalt."
-    )
 
     fun remove(c: Context, i: Int) {
         ensure(c)
@@ -497,12 +469,12 @@ object PlaylistStore {
 
     private fun writeCache(
         c: Context, url: String, list: List<Item>, epg: List<String>, order: Map<String, Int>,
-        counts: Map<String, Int>, bytes: Map<String, Long>, hidden: Set<String>, mode: ContentMode
+        counts: Map<String, Int>, bytes: Map<String, Long>, hidden: Set<String>
     ) {
         try {
             val f = cacheFile(c, url)
             val t = tmp(f)
-            BufferedOutputStream(FileOutputStream(t), 1 shl 16).use { PlaylistCacheIO.write(it, url, list, epg, order, counts, bytes, hidden, mode) }
+            BufferedOutputStream(FileOutputStream(t), 1 shl 16).use { PlaylistCacheIO.write(it, url, list, epg, order, counts, bytes, hidden) }
             f.delete()
             t.renameTo(f)
         } catch (e: Exception) {
@@ -520,11 +492,11 @@ object PlaylistStore {
         }
     }
 
-    private fun readCache(c: Context, url: String, hidden: Set<String>, mode: ContentMode = contentMode(url)): PlaylistCacheIO.Cached? {
+    private fun readCache(c: Context, url: String, hidden: Set<String>): PlaylistCacheIO.Cached? {
         val f = cacheFile(c, url)
         if (!f.exists()) return null
         return try {
-            BufferedInputStream(FileInputStream(f), 1 shl 16).use { PlaylistCacheIO.read(it, url, hidden, guard(askable = false), mode) }
+            BufferedInputStream(FileInputStream(f), 1 shl 16).use { PlaylistCacheIO.read(it, url, hidden, guard(askable = false)) }
         } catch (e: ParseStop) {
             null
         } catch (e: CancellationException) {
@@ -645,7 +617,14 @@ object PlaylistStore {
         val api = XtreamApi(client, UA)
         api.onPhase = { phase = it }
         api.check = { if (cancelled()) throw CancellationException("abgebrochen") }
-        val counter = CountingOut(FileOutputStream(part)) { bytesRead = it }
+        // Shown bytes = written list + movies/series still in temporary files (fetched in parallel). Never goes backwards:
+        // when a temporary file is appended to the list, its part moves from one counter to the other.
+        val lock = Any()
+        var listN = 0L
+        var tempN = 0L
+        fun show() { val v = listN + tempN; if (v > bytesRead) bytesRead = v }
+        api.onTempBytes = { k -> synchronized(lock) { tempN += k; show() } }
+        val counter = CountingOut(FileOutputStream(part)) { k -> synchronized(lock) { listN = k; show() } }
         try {
             val n = OutputStreamWriter(BufferedOutputStream(counter, 1 shl 16), Charsets.UTF_8).use { w -> api.write(acct, w) }
             if (n == 0) throw PlaylistError("Keine Sender in der Playlist gefunden.")
@@ -760,7 +739,7 @@ object PlaylistStore {
 
     // ------------------------------------------------------------------ Reading
 
-    private class Built(val parsed: ParsedPlaylist, val hidden: Set<String>, val mode: ContentMode)
+    private class Built(val parsed: ParsedPlaylist, val hidden: Set<String>)
 
     /** Reads a file (downloaded or stored compressed) with progress; [teeTo] = store compressed at the same time. */
     private fun <T> readFile(src: File, gz: Boolean, cs: Charset, teeTo: File?, body: (Reader) -> T): T {
@@ -792,11 +771,11 @@ object PlaylistStore {
      * it is first counted quickly and then asked ([ask]) – without a question (background) it is aborted.
      * If the user requests the language selection meanwhile, it asks again and parses again.
      */
-    private suspend fun build(c: Context, src: File, gz: Boolean, cs: Charset, ask: Boolean, teeTo: File?, forceAsk: Boolean = false, mode: ContentMode = ContentMode.LIVE_AND_VOD): Built {
+    private suspend fun build(c: Context, url: String, src: File, gz: Boolean, cs: Charset, ask: Boolean, teeTo: File?, forceAsk: Boolean = false): Built {
         var force = forceAsk
         while (true) {
             try {
-                return buildOnce(c, src, gz, cs, ask, teeTo, force, mode)
+                return buildOnce(c, url, src, gz, cs, ask, teeTo, force)
             } catch (e: AskAgain) {
                 if (!ask) throw PlaylistError(MSG_TOO_BIG)
                 force = true
@@ -804,31 +783,32 @@ object PlaylistStore {
         }
     }
 
-    private suspend fun buildOnce(c: Context, src: File, gz: Boolean, cs: Charset, ask: Boolean, teeTo: File?, forceAsk: Boolean, mode: ContentMode): Built {
-        var hidden = LangFilter.hidden
+    private suspend fun buildOnce(c: Context, url: String, src: File, gz: Boolean, cs: Charset, ask: Boolean, teeTo: File?, forceAsk: Boolean): Built {
+        // Hidden languages plus the content mode of this playlist (pseudo codes, never stored in the language filter)
+        var hidden = PlaylistMode.withMode(c, url, LangFilter.hidden)
         val budget = budget()
         val wantAsk = ask && (forceAsk || askRequested)
         askRequested = false
-        val unchosen = hidden.isEmpty() && !LangFilter.allChosen
+        val unchosen = LangFilter.hidden.isEmpty() && !LangFilter.allChosen
         if (wantAsk || unchosen) {
             val size = if (gz) src.length() * 12 else src.length()
             if (wantAsk || size > budget) {
                 phase = "Playlist wird geprüft …"
-                val scan = readFile(src, gz, cs, null) { r -> M3uParser.scanStream(r, mode, guard()) }
+                val scan = readFile(src, gz, cs, null) { r -> M3uParser.scanStream(r, guard()) }
                 if (wantAsk || LoadLogic.estimate(scan.bytes, hidden) > budget) {
                     if (!ask) throw PlaylistError(MSG_TOO_BIG)
                     val now = scan.counts.keys - hidden
-                    val pre = if (hidden.isNotEmpty() && now.isNotEmpty()) now else LoadLogic.systemPreselect(scan.counts, systemLang())
+                    val pre = if (LangFilter.hidden.isNotEmpty() && now.isNotEmpty()) now else LoadLogic.systemPreselect(scan.counts, systemLang())
                     val shown = askLanguages(scan.counts, scan.bytes, budget, pre) ?: throw PlaylistError(MSG_CANCEL)
-                    hidden = scan.counts.keys - shown
-                    LangFilter.set(c, hidden)
+                    LangFilter.set(c, scan.counts.keys - shown)
+                    hidden = PlaylistMode.withMode(c, url, scan.counts.keys - shown)
                     loadStarted = System.currentTimeMillis()
                 }
             }
         }
         phase = "Titel werden eingelesen …"
-        val parsed = readFile(src, gz, cs, teeTo) { r -> M3uParser.parseStream(r, hidden, mode, guard()) }
-        return Built(parsed, hidden, mode)
+        val parsed = readFile(src, gz, cs, teeTo) { r -> M3uParser.parseStream(r, hidden, guard()) }
+        return Built(parsed, hidden)
     }
 
     private suspend fun askLanguages(counts: Map<String, Int>, bytes: Map<String, Long>, budget: Long, preselect: Set<String>): Set<String>? {
@@ -906,6 +886,13 @@ object PlaylistStore {
         persist(c)
     }
 
+    /** Content mode of a playlist was changed: rebuild the shown list (no new download). */
+    suspend fun applyMode(c: Context) {
+        // While a load runs, it rebuilds at its end anyway and then picks up the new mode
+        if (!loadLock.tryLock()) return
+        try { withContext(Dispatchers.Default) { rebuild(c) } } finally { loadLock.unlock() }
+    }
+
     /**
      * Add titles of a category loaded on demand (Stalker portal, see [StalkerMore]) to the active playlist [u].
      * IDs already present and hidden languages are skipped. Return value: the titles that are really new.
@@ -942,7 +929,8 @@ object PlaylistStore {
         extras.keys.retainAll(urls.toSet())
         val ex = urls.mapNotNull { url -> extras[url]?.let { url to it } }
         val names = listOf(nameOf(u)) + ex.map { nameOf(it.first) }
-        val m = MultiLogic.merge(listOf(primaryItems) + ex.map { it.second.items }, names)
+        // Content mode per playlist (Live only / VOD only) is applied here, before merging
+        val m = MultiLogic.merge(listOf(PlaylistMode.filter(c, u, primaryItems)) + ex.map { PlaylistMode.filter(c, it.first, it.second.items) }, names)
         val vis = m.visible()
         val epg = (primaryEpg + ex.flatMap { it.second.epg }).distinct()
         twins = if (m.shadow.isEmpty()) emptyMap() else HashMap<String, Item>().also { t -> for (it in m.items) if (it.id in m.shadow) t.putIfAbsent("${it.src}|" + it.mk, it) }
@@ -1009,7 +997,7 @@ object PlaylistStore {
     }
 
     private suspend fun loadExtra(c: Context, u: String, network: Boolean): Extra? {
-        val hidden = LangFilter.hidden
+        val hidden = PlaylistMode.withMode(c, u, LangFilter.hidden)
         if (!network) {
             val head = readHeader(c, u)
             if (head != null && (head.hidden == null || head.hidden == hidden)) {
@@ -1017,12 +1005,12 @@ object PlaylistStore {
             }
             val gz = gzFile(c, u)
             if (gz.exists()) {
-                val b = build(c, gz, true, Charsets.UTF_8, false, null, mode = contentMode(u))
+                val b = build(c, u, gz, true, Charsets.UTF_8, false, null)
                 val p = b.parsed
                 if (p.items.isNotEmpty()) {
                     val epg = head?.epg?.takeIf { it.isNotEmpty() } ?: epgFor(u, p.epgUrls)
                     val order = head?.order ?: emptyMap()
-                    writeCache(c, u, p.items, epg, order, p.counts, p.bytes, b.hidden, b.mode)
+                    writeCache(c, u, p.items, epg, order, p.counts, p.bytes, b.hidden)
                     Catchup.saveParsed(c, u, p.catchup)
                     return Extra(p.items, epg, order)
                 }
@@ -1030,12 +1018,12 @@ object PlaylistStore {
         }
         val (src, cs) = downloadWithRetry(c, u)
         val gzTmp = tmp(gzFile(c, u))
-        val b = build(c, src, false, cs, false, gzTmp, mode = contentMode(u))
+        val b = build(c, u, src, false, cs, false, gzTmp)
         val p = b.parsed
-        if (p.counts.isEmpty()) throw emptyResult(b.mode)
+        if (p.counts.isEmpty()) throw PlaylistError("Keine Sender in der Playlist gefunden.")
         val urls = epgFor(u, p.epgUrls)
         val order = fetchOrder(u)
-        writeCache(c, u, p.items, urls, order, p.counts, p.bytes, b.hidden, b.mode)
+        writeCache(c, u, p.items, urls, order, p.counts, p.bytes, b.hidden)
         Catchup.saveParsed(c, u, p.catchup)
         commitGz(c, u, gzTmp)
         return Extra(p.items, urls, order)
@@ -1067,11 +1055,11 @@ object PlaylistStore {
      * stored whole list, read in again ([allowGz]).
      */
     private suspend fun fromLocal(c: Context, u: String, allowGz: Boolean, ask: Boolean): Local {
-        val hidden = LangFilter.hidden
+        val hidden = PlaylistMode.withMode(c, u, LangFilter.hidden)
         val head = readHeader(c, u)
         if (head != null) {
             // Old version (whole list without language counts) with a very large file and no language selection: do not load everything into memory
-            val legacyTooBig = head.hidden == null && hidden.isEmpty() && cacheFile(c, u).length() > budget()
+            val legacyTooBig = head.hidden == null && (hidden - LangTagLogic.PSEUDO).isEmpty() && cacheFile(c, u).length() > budget()
             if (!legacyTooBig && (head.hidden == null || head.hidden == hidden)) {
                 val cached = readCache(c, u, hidden)
                 if (cached != null && cached.counts.isNotEmpty()) {
@@ -1085,13 +1073,13 @@ object PlaylistStore {
         heavy = true
         if (loadStarted == 0L) loadStarted = System.currentTimeMillis()
         return try {
-            val b = build(c, gz, true, Charsets.UTF_8, ask, null, mode = contentMode(u))
+            val b = build(c, u, gz, true, Charsets.UTF_8, ask, null)
             val p = b.parsed
             if (p.counts.isEmpty()) return Local.NONE
             val epg = head?.epg?.takeIf { it.isNotEmpty() } ?: epgFor(u, p.epgUrls)
             val order = head?.order ?: emptyMap()
             phase = "Playlist wird gespeichert …"; downloadDone = true
-            writeCache(c, u, p.items, epg, order, p.counts, p.bytes, b.hidden, b.mode)
+            writeCache(c, u, p.items, epg, order, p.counts, p.bytes, b.hidden)
             Catchup.saveParsed(c, u, p.catchup)
             show(c, u, p.items, epg, order, p.counts, p.bytes, b.hidden)
             Local.OK
@@ -1171,15 +1159,15 @@ object PlaylistStore {
             try {
                 val (src, cs) = downloadWithRetry(c, u)
                 val gzTmp = tmp(gzFile(c, u))
-                val b = build(c, src, false, cs, ask, gzTmp, forceAsk, contentMode(u))
+                val b = build(c, u, src, false, cs, ask, gzTmp, forceAsk)
                 val parsed = b.parsed
-                if (parsed.counts.isEmpty()) throw emptyResult(b.mode)
+                if (parsed.counts.isEmpty()) throw PlaylistError("Keine Sender in der Playlist gefunden.")
                 downloadDone = true
                 val urls = epgFor(u, parsed.epgUrls)
                 phase = "Kategorien werden sortiert …"
                 val order = fetchOrder(u)
                 phase = "Playlist wird gespeichert …"
-                writeCache(c, u, parsed.items, urls, order, parsed.counts, parsed.bytes, b.hidden, b.mode)
+                writeCache(c, u, parsed.items, urls, order, parsed.counts, parsed.bytes, b.hidden)
                 Catchup.saveParsed(c, u, parsed.catchup)
                 commitGz(c, u, gzTmp)
                 val list = parsed.items
@@ -1243,47 +1231,10 @@ object PlaylistStore {
                 Local.FAILED -> {
                     // New selection does not fit: restore the old selection (and, if already released, parse again)
                     val msg = error
-                    LangFilter.set(c, prev)
+                    LangFilter.set(c, prev - LangTagLogic.PSEUDO)
                     if (rawChannels.isEmpty()) withContext(Dispatchers.IO) { fromLocal(c, u, allowGz = true, ask = false) }
                     error = msg
                 }
-            }
-            return true
-        } finally {
-            loading = false
-            heavy = false
-            loadStarted = 0L
-            askRequested = false
-            job = null
-            loadLock.unlock()
-        }
-    }
-
-    /** Reparse one playlist after its content mode changes, preserving the current screen and language selection. */
-    private suspend fun reapplyContentMode(c: Context, i: Int, previous: ContentMode): Boolean {
-        val u = lists.getOrNull(i)?.url ?: return true
-        if (!loadLock.tryLock()) return false
-        try {
-            job = currentCoroutineContext()[Job]
-            loading = true; error = null
-            phase = "Inhaltsauswahl wird angewendet …"; bytesRead = 0L; totalBytes = -1L; downloadDone = false
-            val r = withContext(Dispatchers.IO) { fromLocal(c, u, allowGz = true, ask = false) }
-            when (r) {
-                Local.OK -> {
-                    if (i == active) {
-                        extras.clear()
-                        withContext(Dispatchers.IO) { runCatching { loadExtras(c, network = false) }.onFailure { if (it is CancellationException) throw it } }
-                    } else extras.remove(u)
-                }
-                Local.NONE -> {
-                    val mode = contentMode(u)
-                    if (gzFile(c, u).exists()) {
-                        // The stored list has no entry for this selection: go back instead of leaving the playlist empty.
-                        if (lists.getOrNull(i)?.url == u && mode != previous) { lists[i] = lists[i].copy(contentMode = previous); persist(c) }
-                        extraError = emptyResult(mode).message
-                    } else return loadInner(c, u, false, false, false, false).let { true }
-                }
-                Local.FAILED -> Unit // Keep the previous catalog active; the error is shown if the page supports it.
             }
             return true
         } finally {
@@ -1310,9 +1261,9 @@ object PlaylistStore {
                 try {
                     val (src, cs) = downloadWithRetry(c, u)
                     val gzTmp = tmp(gzFile(c, u))
-                    val b = build(c, src, false, cs, false, gzTmp, mode = contentMode(u))
+                    val b = build(c, u, src, false, cs, false, gzTmp)
                     if (b.parsed.counts.isEmpty()) return@withContext false
-                    writeCache(c, u, b.parsed.items, epgFor(u, b.parsed.epgUrls), fetchOrder(u), b.parsed.counts, b.parsed.bytes, b.hidden, b.mode)
+                    writeCache(c, u, b.parsed.items, epgFor(u, b.parsed.epgUrls), fetchOrder(u), b.parsed.counts, b.parsed.bytes, b.hidden)
                     Catchup.saveParsed(c, u, b.parsed.catchup)
                     commitGz(c, u, gzTmp)
                     true
@@ -1339,6 +1290,12 @@ object PlaylistStore {
 
     /** true if the UI is currently showing a playlist (app runs in the same process). */
     val hasData: Boolean get() = rawChannels.isNotEmpty()
+
+    /** Demo mode: show sample entries without a playlist. Memory only, nothing is saved (see [DemoMode]). */
+    fun showDemo(items: List<Item>) { error = null; setItems(items) }
+
+    /** Leaving demo mode: drop the sample entries. */
+    fun clearDemo() { setItems(emptyList()) }
 
     fun clear(c: Context) {
         ensure(c)

@@ -13,7 +13,7 @@ All settings are on the **Settings** tab of the sidebar. They are grouped into t
 | Audio & subtitles | Preferred audio and subtitle languages, subtitle style, remember per title |
 | Genres & categories | Automatic genres or provider categories, hide categories |
 | Live TV & guide | TV guide source, channel lists, reminders, rewind live TV (on-device buffer), recordings and their storage |
-| Playlists | Add, edit, remove playlists, choose Live TV + VOD / Live TV only / VOD only per playlist, show several at the same time ("Also show"), language filter, refresh interval or fixed time |
+| Playlists | Add, edit, remove playlists, show several at the same time ("Also show"), language filter, refresh interval or fixed time |
 | Profiles | Per-person history, favourites and parental controls |
 | API keys | Your own TMDB and OMDb keys, with a connection test |
 | Parental controls | PIN, hide adult content |

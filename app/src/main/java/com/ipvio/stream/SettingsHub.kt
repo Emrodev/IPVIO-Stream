@@ -62,7 +62,9 @@ private val CATS = listOf(
     Cat(AIcon.Download, "Listen importieren", "Letterboxd, MyAnimeList, Trakt"),
     Cat(AIcon.Live, "Boomer Mode", "Ganz einfach: große Kacheln zum Auswählen"),
     Cat(AIcon.Sliders, "Startseite anpassen", "Reihen und Widgets wählen und ordnen"),
-    Cat(AIcon.Info, "Über IPVIO Stream", "Version, Quellen, Zurücksetzen"),
+    Cat(AIcon.Info, "Über IPVIO Stream", "Version, Quellen, Updates"),
+    // Resets every settings tab at once (each tab 0..8 has its own reset for just that tab)
+    Cat(AIcon.Warning, "Alles zurücksetzen", "Alle Einstellungen auf Standard"),
     // Donate is always the very last entry
     Cat(AIcon.HeartFilled, "Spende", "Unterstütze IPVIO Stream")
 )
@@ -71,6 +73,8 @@ private val CATS = listOf(
 object SettingsNav {
     const val PROFILES = 10
     const val HOME = 17
+    /** "Reset all settings" page; the donate page is always the last one (one after this). */
+    const val RESET_ALL = 19
     var openPage by androidx.compose.runtime.mutableIntStateOf(-1)
 }
 
@@ -146,17 +150,18 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 16 -> BoomerPage(ctx) { page = -1 }
                 17 -> HomeLayoutPage(ctx)
                 15 -> ListImportPage(ctx)
-                19 -> DonateSection(ctx)
+                SettingsNav.RESET_ALL -> ResetAllPage(ctx)
+                SettingsNav.RESET_ALL + 1 -> DonateSection(ctx)
                 else -> AboutPage(ctx)   // 18
             }
-            // Every setting page ends with a way back to the defaults
-            if (page in 0..8) {
+            // Every settings tab ends with a way back to the defaults. It resets only the settings of the tab that is open.
+            if (SettingsResetLogic.hasReset(page)) {
                 SectionTitle("Zurücksetzen")
-                ConfirmPill("Alle Einstellungen zurücksetzen") {
-                    AppSettings.resetAll(ctx); General.resetAll(ctx)
-                    SidebarPrefs.set(ctx, SidebarPrefs.LEFT, false); BrowsePrefs.set(ctx, true); CatPrefs.set(ctx, true)
+                ConfirmPill("Diese Seite zurücksetzen") {
+                    SettingsReset.page(ctx, page)
+                    settingsToast(ctx, "Diese Seite wurde zurückgesetzt.")
                 }
-                Hint("Setzt Ansicht, Menü, Player, Ton und Start auf die Standardwerte. Playlists, Favoriten und Verlauf bleiben erhalten. Das Design hat einen eigenen Knopf.")
+                Hint("Resets only the settings of this page to their defaults. All other pages stay unchanged. To reset everything at once, use Settings > Reset all.")
             }
             Spacer(Modifier.height(8.dp).bringIntoViewRequester(endReq))
             }
@@ -858,7 +863,6 @@ private fun DesignPage(ctx: Context) {
         }
     }
     Hint("Fünf klare Systemschriften, die auf jedem Gerät vorhanden sind. Die Schriftgröße wirkt zusätzlich zur Anzeigegröße.")
-    PillButton("Design zurücksetzen") { Look.reset(); save() }
     }
 }
 
@@ -985,6 +989,56 @@ private fun FilterPage(ctx: Context, onLanguages: () -> Unit) {
     Hint("Welche Sprachen geladen werden, stellst du unter „Playlists“ ein – das bestimmt, was aus der Playlist geladen wird.")
     PillButton("Sprachen der Inhalte öffnen", icon = AIcon.Globe) { onLanguages() }
     IgnoredGroupsSection(ctx)
+    CategoryFilterSection(ctx)
+}
+
+/**
+ * Categories of movies, series and Live TV (Wishbox): hide single categories, or switch all off and only the wanted ones
+ * back on (as in TiviMate). Uses the "ignore" store, so hidden categories disappear everywhere without reloading.
+ * Each type is collapsed at first: a playlist can have hundreds of categories.
+ */
+@Composable
+private fun CategoryFilterSection(ctx: Context) {
+    IgnoredGroups.init(ctx)
+    val ver = IgnoredGroups.version
+    val all = PlaylistStore.channels
+    val groups by produceState<Map<Kind, List<Pair<String, Int>>>>(emptyMap(), all.size, PlaylistStore.langCounts) {
+        value = withContext(Dispatchers.Default) {
+            val raw = PlaylistStore.unfilteredChannels()
+            val out = LinkedHashMap<Kind, List<Pair<String, Int>>>()
+            for (k in listOf(Kind.MOVIE, Kind.SERIES, Kind.LIVE)) {
+                val m = HashMap<String, Int>()
+                for (i in raw) if (i.kind == k && i.group.isNotBlank()) m[i.group] = (m[i.group] ?: 0) + 1
+                out[k] = m.entries.sortedBy { it.key.lowercase() }.map { it.key to it.value }
+            }
+            out
+        }
+    }
+    if (groups.values.all { it.isEmpty() }) return
+    SectionTitle("Kategorien ein- und ausblenden")
+    Hint("Blende einzelne Kategorien aus oder schalte alle aus und nur die gewünschten wieder ein. Ausgeblendete Kategorien verschwinden sofort überall, ohne die Playlist neu zu laden.")
+    val names = mapOf(Kind.MOVIE to "Filme", Kind.SERIES to "Serien", Kind.LIVE to "Live-TV")
+    var open by remember { mutableStateOf<Kind?>(null) }
+    for ((kind, list) in groups) {
+        if (list.isEmpty()) continue
+        val keys = remember(list) { list.map { IgnoredGroups.groupKey(kind, it.first) } }
+        val off = remember(keys, ver) { keys.count { IgnoredGroups.has(it) } }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PillButton(
+                Lang.tr(names.getValue(kind)) + ": " + (list.size - off) + " / " + list.size,
+                icon = if (open == kind) AIcon.Up else AIcon.Down, raw = true
+            ) { open = if (open == kind) null else kind }
+            if (open == kind) {
+                PillButton("Alle aus") { IgnoredGroups.setMany(ctx, keys, true) }
+                PillButton("Alle ein") { IgnoredGroups.setMany(ctx, keys, false) }
+            }
+        }
+        if (open == kind) for ((g, n) in list) {
+            val key = IgnoredGroups.groupKey(kind, g)
+            ToggleRow(g, n.toString() + " " + Lang.tr("Titel"), !IgnoredGroups.has(key)) { on -> IgnoredGroups.set(ctx, key, !on) }
+        }
+    }
+    if (ver < 0) Spacer(Modifier.height(0.dp))
 }
 
 /**
@@ -1139,7 +1193,6 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
     PlaylistStore.savedUrl(ctx)
     if (Secrets.plainFallback) Hint("Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.")
     Text("Meine Playlists (${PlaylistStore.lists.size})", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-    Hint("Inhalt pro Playlist: Live TV + VOD, nur Live TV oder nur VOD (Filme und Serien). Nach einer Änderung wird die Playlist neu eingelesen.")
     if (PlaylistStore.lists.size > 1) Hint("Die Hauptliste ist die Playlist, mit der die App arbeitet. „Zusätzlich anzeigen“ blendet eine weitere Playlist dazu ein; sie ersetzt die Hauptliste nicht.")
     PlaylistStore.lists.forEachIndexed { i, pl ->
         val isActive = i == PlaylistStore.active
@@ -1164,6 +1217,13 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
                 PlaylistStore.activate(ctx, i)
                 PlaylistStore.loadDetached(ctx, pl.url)
             }
+            // Content mode (Wishbox): Live TV + VOD / Live TV only / VOD only, cycles on OK
+            val mode = remember(PlaylistMode.version, pl.url) { PlaylistMode.get(ctx, pl.url) }
+            SmallPill(PlaylistMode.labels[mode]) {
+                PlaylistMode.set(ctx, pl.url, (mode + 1) % PlaylistMode.labels.size)
+                // Parsed again from the stored list without network (the mode is applied while loading, saves memory)
+                scope.launch { if (!PlaylistStore.reapplyLanguages(ctx)) PlaylistStore.applyMode(ctx) }
+            }
             SmallPill("Umbenennen") { editing = i; name = pl.name }
             if (XtreamLogic.fromUrl(pl.url) != null) SmallPill("Backup-Server") {
                 val b = PlaylistStore.backups(ctx, pl.url)
@@ -1177,19 +1237,6 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
                 if (PlaylistStore.lists.isEmpty()) onAdd()
                 else if (wasActive) PlaylistStore.loadDetached(ctx, PlaylistStore.lists[PlaylistStore.active].url)
             }
-        }
-        val modeLabel = when (pl.contentMode) {
-            ContentMode.LIVE_AND_VOD -> "Live TV + VOD"
-            ContentMode.LIVE_ONLY -> "Nur Live TV"
-            ContentMode.VOD_ONLY -> "Nur VOD"
-        }
-        SmallPill("Inhalt: $modeLabel") {
-            val next = when (pl.contentMode) {
-                ContentMode.LIVE_AND_VOD -> ContentMode.LIVE_ONLY
-                ContentMode.LIVE_ONLY -> ContentMode.VOD_ONLY
-                ContentMode.VOD_ONLY -> ContentMode.LIVE_AND_VOD
-            }
-            PlaylistStore.setContentMode(ctx, i, next)
         }
     }
     if (PlaylistStore.lists.size > 1) Hint("„Zusätzlich anzeigen“ zeigt eine Playlist zusätzlich zur aktiven: Filme und Serien erscheinen zusammen (doppelte Filme nur einmal, gleiche Serien als eine Serie mit mehreren Quellen). In Filme und Serien filterst du über „Quelle“, im Live TV wechselst du die Quelle mit dem Knopf oben. Jede weitere Playlist braucht zusätzlich Speicher.")
@@ -1376,9 +1423,51 @@ private fun AboutPage(ctx: Context) {
         }
     }
     UpdateSection(ctx)
-    SectionTitle("Zurücksetzen")
-    ConfirmPill("Alle Einstellungen zurücksetzen") { AppSettings.resetAll(ctx); General.resetAll(ctx) }
-    Hint("Setzt Ansicht, Design, Menü, Player, Ton und Start auf die Standardwerte. Playlists, Favoriten, Verlauf und Fortsetzen-Positionen bleiben erhalten. Zwischenspeicher leerst du unter „Speicher“.")
+}
+
+private fun settingsToast(ctx: Context, message: String) {
+    android.widget.Toast.makeText(ctx, Lang.tr(message), android.widget.Toast.LENGTH_SHORT).show()
+}
+
+/** "Reset all settings": its own settings tab. The reset only runs after the confirmation dialog. */
+@Composable
+private fun ResetAllPage(ctx: Context) {
+    var ask by remember { mutableStateOf(false) }
+    Hint("Resets all settings to their defaults: view, design, menu, player, sound, genres, Live TV and more. Playlists, favorites, history, resume positions and the parental-control PIN are kept. Clear the cache under Storage.")
+    PillButton("Alle Einstellungen zurücksetzen", light = true, icon = AIcon.Warning) { ask = true }
+    Hint("Reset just one page? Every settings page has its own reset button at the bottom.")
+    if (ask) ResetAllDialog(onCancel = { ask = false }) {
+        ask = false
+        SettingsReset.all(ctx)
+        settingsToast(ctx, "Alle Einstellungen wurden zurückgesetzt.")
+    }
+}
+
+/** Confirmation before everything is reset. Focus starts on "Abbrechen", so a stray OK press cannot reset anything. */
+@Composable
+private fun ResetAllDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
+    val cancelFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(100); runCatching { cancelFocus.requestFocus() } }
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onCancel,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        val shape = RoundedCornerShape(DS.RadiusL)
+        Column(
+            Modifier.width(560.dp).clip(shape).background(Surf).border(1.dp, DS.Overlay3, shape).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Alle Einstellungen zurücksetzen?", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Alle Einstellungen gehen auf die Standardwerte zurück. Playlists, Favoriten, Verlauf und Fortsetzen-Positionen bleiben erhalten. Das lässt sich nicht rückgängig machen.",
+                color = Muted, fontSize = DS.TextSmall, lineHeight = 20.sp
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                PillButton("Abbrechen", Modifier.focusRequester(cancelFocus), light = true) { onCancel() }
+                PillButton("Zurücksetzen") { onConfirm() }
+            }
+        }
+    }
 }
 
 /** App update from within the app: the default is the latest release on GitHub. */

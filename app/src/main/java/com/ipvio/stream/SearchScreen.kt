@@ -69,14 +69,36 @@ fun SearchScreen(
     val scope = rememberCoroutineScope()
     val all = PlaylistStore.channels
     // Build the index in the background; searches also run in the background and only after a short typing pause
-    val index by produceState(SearchCache.get(all), all) { value = withContext(Dispatchers.Default) { SearchCache.build(all) } }
-    val byId = index?.byId.orEmpty()
-    val suggestIdx by produceState<WordSuggest?>(null, all, index, SearchState.query.length >= 2) {
-        if (index == null || SearchState.query.length < 2) { value = null; return@produceState }
-        value = withContext(Dispatchers.Default) { SearchCache.suggest(all) }
+    // With very large playlists memory can run out while the index is built: then free the image cache and try once more,
+    // and if it still does not fit, the search stays empty instead of the app crashing.
+    val index by produceState(SearchCache.get(all), all) {
+        value = withContext(Dispatchers.Default) {
+            if (Mem.heapTight(0.6)) Mem.trim(ctx)
+            try { SearchCache.build(all) } catch (e: OutOfMemoryError) {
+                Mem.trim(ctx)
+                try { SearchCache.build(all) } catch (e2: OutOfMemoryError) { null }
+            }
+        }
+    }
+    // Word suggestions are optional: built only after the index, skipped when memory is tight
+    val suggestIdx by produceState<WordSuggest?>(null, all, index != null) {
+        if (index == null) return@produceState
+        value = withContext(Dispatchers.Default) {
+            if (Mem.heapTight(0.7)) null else try { SearchCache.suggest(all) } catch (e: OutOfMemoryError) { null }
+        }
     }
     val firstSugg = remember { FocusRequester() }
-    val hist = History.ids.mapNotNull { byId[it] }
+    // Recently watched: resolved in one pass over the playlist in the background (order of the history is kept)
+    val hist by produceState(emptyList<Item>(), all, History.ids.size) {
+        val want = History.ids.toList()
+        value = withContext(Dispatchers.Default) {
+            val pos = HashMap<String, Int>(want.size * 2)
+            want.forEachIndexed { i, id -> pos.putIfAbsent(id, i) }
+            val out = arrayOfNulls<Item>(want.size)
+            for (x in all) { val p = pos[x.id] ?: continue; if (out[p] == null) out[p] = x }
+            out.filterNotNull()
+        }
+    }
     // Smaller cards than elsewhere so more hits are visible next to the keyboard
     val cardW = (AppSettings.cardW * 0.8f).toInt().coerceAtLeast(110)
     val firstRes = remember { FocusRequester() }
@@ -115,10 +137,11 @@ fun SearchScreen(
         if (q.length < 2) { value = q to none; return@produceState }
         delay(250)
         val searchContext = currentCoroutineContext()
+        // Also the de-duplication of movie versions runs here in the background (for short queries it can be tens of
+        // thousands of hits, before it ran on the main thread while typing)
         value = q to withContext(Dispatchers.Default) {
-            val (movies, series, live) = idx.find(q, checkCancelled = { searchContext.ensureActive() })
-            val uniqueMovies = PlaylistLogic.firstPerKey(movies) { it.mk + "|" + it.lang }
-            Triple(uniqueMovies, series, live)
+            idx.find(q, checkCancelled = { searchContext.ensureActive() })
+                .let { (m, s, l) -> Triple(PlaylistLogic.firstPerKey(m) { it.mk + "|" + it.lang }, s, l) }
         }
     }
     // Stalker portal: titles are loaded on demand, so the search also asks the portal; its hits join the list
@@ -145,22 +168,18 @@ fun SearchScreen(
         }
     }
     // Sports hub filter: live channels that look like sports channels (the hub itself opens with the button)
-    val rl = when (fl) { 0, 3 -> rl0; 4 -> rl0.filter { SearchSport.isSport(it) }; else -> emptyList() }
+    val rlSport = remember(rl0, fl == 4) { if (fl == 4) rl0.filter { SearchSport.isSport(it) } else emptyList() }
+    val rl = when (fl) { 0, 3 -> rl0; 4 -> rlSport; else -> emptyList() }
     val rs = if (fl == 0 || fl == 2) rs0 else emptyList()
     // The same movie in several versions only once (the source is chosen on the detail page)
-    // Movie versions are deduplicated with the search results off the UI thread.
-    val rm = if (fl == 0 || fl == 1) rm0 else emptyList()
+    val rmAll: List<Item> = rm0   // already one per movie (see the search above)
+    val rm = if (fl == 0 || fl == 1) rmAll else emptyList()
     val firstKey = when { rm.isNotEmpty() -> "rm"; rs.isNotEmpty() -> "rs"; rl.isNotEmpty() -> "rl"; else -> "" }
-    // Back: in the search field (keyboard already closed) first to the recent searches or hits, otherwise into the sidebar
+    // Back: from a hit (or any other element) first to the input (field or app keyboard); from the input to the sidebar
     BackHandler(enabled = !inSidebar) {
-        val target = when {
-            !fieldFocused -> null
-            firstKey.isNotEmpty() -> firstRes
-            else -> null
-        }
         // requestFocus returns false (no exception) when the target is not on screen: then go on to the sidebar instead of doing nothing
-        val moved = target != null && runCatching { target.requestFocus() }.getOrDefault(false)
-        if (!moved) runCatching { sideFocus.requestFocus() }
+        val toInput = !fieldFocused && runCatching { ContentFocus.req.requestFocus() }.getOrDefault(false)
+        if (!toInput) runCatching { sideFocus.requestFocus() }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -200,7 +219,13 @@ fun SearchScreen(
                         onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
                     )
                 } else {
-                QueryBox(SearchState.query, Modifier.fillMaxWidth())
+                // Tappable: OK or a tap opens the device keyboard for typing (the app keyboard below stays available).
+                // Deliberately not wired to fieldFocused: that flag belongs to the BackHandler and tracks the app keyboard only.
+                Field(
+                    SearchState.query, { SearchState.query = it.take(60) }, searchHint(SearchState.filter),
+                    Modifier.fillMaxWidth(),
+                    onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
+                )
                 // Own on-screen keyboard (instead of the TV's keyboard): hits appear while typing
                 SearchKeyboard(
                     Modifier.fillMaxWidth(),
@@ -398,19 +423,6 @@ private fun SearchRow(
     }
 }
 
-
-/** Display of the input (read only: typing is done with the on-screen keyboard on the left). */
-@Composable
-private fun QueryBox(text: String, modifier: Modifier) {
-    val shape = RoundedCornerShape(16.dp)
-    Box(
-        modifier.height(62.dp).clip(shape).background(Surf).border(DS.Border, Surf2, shape).padding(horizontal = 20.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        if (text.isEmpty()) Text(searchHint(SearchState.filter), color = Muted, fontSize = 20.sp, maxLines = 1)
-        else Text(text, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, raw = true)
-    }
-}
 
 /** Hint in the empty search field: follows the Movies / Series filter (translation keys shared with the header). */
 private fun searchHint(filter: Int): String = when (filter) { 1 -> "Filme suchen …"; 2 -> "Serien suchen …"; else -> "Filme, Serien oder Sender suchen…" }
