@@ -18,8 +18,8 @@ concurrency:
 
 jobs:
   build-tvos:
-    runs-on: macos-26
-    timeout-minutes: 60
+    runs-on: macos-26-intel
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,11 +92,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="tvos-build-${GITHUB_RUN_ID}"
-          NOTES="Unsigned tvOS build from commit ${GITHUB_SHA:0:7}.
-          
-          This .app was compiled successfully by GitHub Actions but is NOT code-signed and cannot be installed on Apple TV until it is signed with an Apple Developer team.
-          
-          KSPlayer 5.6.2 is pinned in the project."
+          cat > "$RUNNER_TEMP/release-notes.md" <<'EOF'
+          Unsigned tvOS build compiled successfully by GitHub Actions.
+
+          This .app is NOT code-signed and cannot be installed on Apple TV until it is signed with an Apple Developer team. See tvOS/SIGNING.md.
+
+          KSPlayer 5.6.2 is pinned in the project.
+          EOF
           gh release create "$TAG" "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "tvOS unsigned build ${GITHUB_RUN_NUMBER}" \            --notes "$NOTES"
+            --target "$GITHUB_SHA" \
+            --title "tvOS unsigned build ${GITHUB_RUN_NUMBER}" \
+            --notes-file "$RUNNER_TEMP/release-notes.md"

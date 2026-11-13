@@ -102,7 +102,7 @@ TVOS_DEPLOYMENT_TARGET=18.0
 
 الكود لا يستخدم أي API أحدث من tvOS 18، لذلك يعمل البناء على SDK 26 ويظل التطبيق قابلاً للتشغيل على tvOS 27. الناتج يُرفع كـ **Artifact باسم `IPVIOStream-tvOS-unsigned`** (ملف `.app` غير موقّع). هذا يثبت أن المشروع يُبنى، لكنه **غير قابل للتثبيت** على Apple TV قبل توقيعه بحسابك.
 
-> لتوقيع تلقائي في CI تحتاج إضافة شهادة Apple Distribution وProvisioning Profile إلى GitHub Secrets؛ راجع قسم «التوقيع» أدناه.
+> لتوقيع تلقائي في CI تحتاج إضافة شهادة Apple Distribution وProvisioning Profile إلى GitHub Secrets؛ راجع دليل التوقيع الكامل: [`SIGNING.md`](SIGNING.md).
 
 عند نجاح البناء ينشر الـ Workflow أيضاً **GitHub Release** باسم `tvOS unsigned build N` مع ملف `.zip`؛ ستجده هنا:
 
