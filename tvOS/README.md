@@ -329,6 +329,11 @@ python3 tools/verify_app.py /path/to/IPVIOStream.app --require-release
 ### استيراد بطيء
 - القوائم الضخمة تحتاج وقتاً لتنزيل JSON وتحليله. شريط التقدم يوضح المرحلة. لا تغلق التطبيق أثناء الاستيراد.
 
+### «App Transport Security policy requires the use of a secure connection»
+- هذا يعني أن iOS/tvOS يمنع طلب HTTP. المشروع يضبط `NSAllowsArbitraryLoads = true` فقط.
+- **لا تضف** `NSAllowsArbitraryLoadsForMedia` أو `NSAllowsArbitraryLoadsInWebContent` معه؛ وجود أحدهما يجعل النظام يتجاهل السماح العام على الإصدارات الحديثة، فتُرفض قوائم HTTP.
+- أعد بناء التطبيق بعد تعديل `Info.plist` (أو استخدم نسخة Release الجديدة).
+
 ### لا تظهر القنوات بعد إضافة قائمة
 - اضغط **تحديث** في الإعدادات.
 - افتح القائمة وتحقق من آخر خطأ أسفل اسمها.
