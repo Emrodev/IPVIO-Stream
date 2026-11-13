@@ -127,6 +127,16 @@ private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>)
 }
 
 /**
+ * Applies the user's category order ([CatOrder]) and ignored categories ([IgnoredGroups]) to the provider groups, so the
+ * home rows match the category page. Genre groups ([g] is not [provider]) are left as they are.
+ */
+private fun orderedGroups(g: Map<String, List<Item>>, provider: Map<String, List<Item>>, area: String, kind: Kind): Map<String, List<Item>> {
+    if (g !== provider) return g
+    val names = g.keys.filter { !IgnoredGroups.has(IgnoredGroups.groupKey(kind, it)) }
+    return CatOrder.sorted(area, names).associateWith { g.getValue(it) }
+}
+
+/**
  * The home data is rebuilt when only the genre progress changed (every 45 s while genres are detected); the live channels are the
  * same then. Reusing the previous list objects lets Live TV keep its cached genres and bundles instead of recomputing them on the
  * main thread while it is open.
@@ -225,8 +235,13 @@ fun HomeScreen(
     val movieP = data.movieP
     val seriesP = data.seriesP
     val liveP = data.liveP
-    val movieG = data.movieG
-    val seriesG = data.seriesG
+    // Provider categories follow the order / ignore settings of the category page. Only re-sorts the map keys when
+    // CatOrder or IgnoredGroups change (cheap, not per recomposition); genre groups keep their own order.
+    CatOrder.init(ctx)
+    val catVer = CatOrder.version
+    val ignVer = IgnoredGroups.version
+    val movieG = remember(data.movieG, data.movieP, catVer, ignVer) { orderedGroups(data.movieG, data.movieP, CatOrder.MOVIE, Kind.MOVIE) }
+    val seriesG = remember(data.seriesG, data.seriesP, catVer, ignVer) { orderedGroups(data.seriesG, data.seriesP, CatOrder.SERIES, Kind.SERIES) }
     val topM = data.topM
     val topS = data.topS
     val byId = data.byId
