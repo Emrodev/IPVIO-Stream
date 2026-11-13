@@ -98,10 +98,18 @@ object SubSearchLogic {
         return out
     }
 
-    fun sdHits(body: String, q: Query): List<Hit> {
-        val o = runCatching { JSONObject(body) }.getOrNull() ?: return emptyList()
-        if (!o.optBoolean("status")) return emptyList()
-        val a = o.optJSONArray("subtitles") ?: return emptyList()
+    fun sdHits(body: String, q: Query): List<Hit> = sdParse(body, q).hits
+
+    /**
+     * Parsed SubDL answer. [raw] = subtitles in the answer before any filter, [error] = the service's own error text
+     * ("status": false), already shortened and safe to show; null if the answer was fine.
+     */
+    data class SdParse(val hits: List<Hit>, val raw: Int, val error: String?)
+
+    fun sdParse(body: String, q: Query): SdParse {
+        val o = runCatching { JSONObject(body) }.getOrNull() ?: return SdParse(emptyList(), 0, "Antwort ungültig")
+        if (!o.optBoolean("status")) return SdParse(emptyList(), 0, sdErrorText(o) ?: "Nichts gefunden")
+        val a = o.optJSONArray("subtitles") ?: return SdParse(emptyList(), 0, null)
         val out = ArrayList<Hit>()
         for (i in 0 until a.length()) {
             val s = a.optJSONObject(i) ?: continue
@@ -110,7 +118,21 @@ object SubSearchLogic {
             if (q.isEpisode && (s.optBoolean("full_season") || s.optInt("episode", -1) != q.episode)) continue
             out.add(Hit(SD, path, s.optString("language").lowercase().take(5), s.optString("release_name").trim(), s.optBoolean("hi"), 0, "zip"))
         }
-        return out
+        return SdParse(out, a.length(), null)
+    }
+
+    /** Error text from a SubDL answer ("error" or "message"), at most 80 characters, never anything that looks like a key. */
+    fun sdErrorText(o: JSONObject?): String? {
+        val t = (o?.optString("error")?.ifBlank { null } ?: o?.optString("message")?.ifBlank { null })?.trim() ?: return null
+        return t.replace(Regex("""(?i)subdl_[A-Za-z0-9_-]+|api_key=\S+"""), "…").replace(Regex("""\s+"""), " ").take(80)
+    }
+
+    /** Short reason for a failed SubDL request with HTTP [code]; uses the service's text from [body] where there is one. */
+    fun sdHttpError(code: Int, body: String): String = when (code) {
+        401, 403 -> "Schlüssel ungültig"
+        429 -> "Zu viele Anfragen, bitte später erneut versuchen"
+        in 500..599 -> "Server-Fehler $code"
+        else -> sdErrorText(runCatching { JSONObject(body) }.getOrNull())?.let { "Fehler $code · $it" } ?: "Fehler $code"
     }
 
     /** "/subtitle/123-456.zip?api_key=…" → "/subtitle/123-456.zip" (the key never goes into lists or caches). */
