@@ -107,8 +107,14 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
             for ((g, l) in groupsAll) { val f = l.filter { it.src == srcK }; if (f.isNotEmpty()) m[g] = f }
         }
     }
-    // Genres (sports, movies, documentary, kids, news, music) – detected by category and channel name
-    val genres = remember(live) { LiveGenre.split(live) }
+    // Prepare genres off the UI thread; the home-screen prewarm and this screen share one job.
+    // The result is stored together with the list it was computed for, so a result of a previous list
+    // (e.g. after a source switch) is never shown for the current one. A failed job yields no genres.
+    val genreState by produceState<Pair<List<Item>, Map<String, List<Item>>>?>(null, live) {
+        value = live to (LivePreparation.genresOrNull(live) ?: emptyMap())
+    }
+    val genresReady = genreState?.first === live
+    val genres = if (genresReady) genreState?.second.orEmpty() else emptyMap()
     val favs = remember(favsAll, srcK) { if (srcK < 0) favsAll else favsAll.filter { it.src == srcK } }
     CatFavs.init(ctx)
     ChannelLists.init(ctx)
@@ -165,30 +171,92 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     }
     // Quality variants of one channel as a single row (not in favorites, own lists, recordings or while filling a list)
     val bundleOn = General.bundleLive && sel != FAV_CAT && sel != "REC" && curList == null && addTo == null
-    val bundled = remember(rawList, bundleOn) { if (bundleOn) LiveBundleLogic.bundle(rawList) else null }
+    // Bundle asynchronously and reuse the same in-flight work as the home-screen prewarm. Show raw rows immediately.
+    // The result is only used for the exact list it was computed for; while another category is being bundled
+    // (or bundling failed or was skipped) the raw rows of the current category are shown, never the previous category.
+    val bundledState by produceState<Pair<List<Item>, LiveBundleLogic.Result?>?>(null, rawList, bundleOn) {
+        value = if (bundleOn) rawList to LivePreparation.bundleOrNull(rawList) else null
+    }
+    val bundled = if (bundleOn) bundledState?.takeIf { it.first === rawList }?.second else null
     val list = bundled?.list ?: rawList
     val variantsOf = bundled?.variants.orEmpty()
     val firstChan = remember { FocusRequester() }
     // Back from the player: the last watched channel gets the focus (not the sidebar)
     val chanState = remember { LazyListState() }
     val restoreReq = remember { FocusRequester() }
-    val restoreId = remember { LastFocus.pending }
-    LaunchedEffect(Unit) {
+    val playedId = remember { LastFocus.pending }
+    // Row of the watched channel: the channel itself or the bundled row it is a quality variant of
+    val restoreId = remember(playedId, list, variantsOf) {
+        playedId?.let { id -> list.firstOrNull { it.id == id }?.id ?: variantsOf.entries.firstOrNull { e -> e.value.any { it.id == id } }?.key }
+    }
+    var restored by remember { mutableStateOf(false) }
+    val chanScope = androidx.compose.runtime.rememberCoroutineScope()
+    // Right from a category goes back to the channel last focused in this category (the first one after a category
+    // change). The row only exists while it is on screen (lazy list), and right after a category change the list may
+    // not have been laid out yet. A failed request only logs a warning, so check that the channel list really got the
+    // focus and try again for a moment (scrolling the row into view first if needed).
+    var chanHasFocus by remember { mutableStateOf(false) }
+    var lastChanIdx by remember { mutableIntStateOf(0) }
+    val lastChanReq = remember { FocusRequester() }
+    fun focusFirstChan() {
+        // Empty list: the requester sits on the "add channel" button, not on a list row
+        if (list.isEmpty()) { runCatching { firstChan.requestFocus() }; return }
+        val target = lastChanIdx.coerceIn(0, list.lastIndex)
+        if (target != lastChanIdx) lastChanIdx = target
+        chanScope.launch {
+            repeat(20) {
+                if (chanState.layoutInfo.visibleItemsInfo.none { it.index == target }) runCatching { chanState.scrollToItem(maxOf(target - 2, 0)) }
+                runCatching { lastChanReq.requestFocus() }
+                androidx.compose.runtime.withFrameNanos { }
+                if (chanHasFocus) return@launch
+                kotlinx.coroutines.delay(30)
+            }
+        }
+    }
+    // Another category: its channels start at the top (the scroll position of the previous category does not fit)
+    var shownSel by remember { mutableStateOf(sel) }
+    LaunchedEffect(sel) {
+        if (sel == shownSel) return@LaunchedEffect
+        shownSel = sel
+        lastChanIdx = 0
+        runCatching { chanState.scrollToItem(0) }
+    }
+    // Keyed on the row: genres and bundling arrive a moment after the tab opens, the channel is often not in the first list yet
+    LaunchedEffect(restoreId) {
         val id = restoreId ?: return@LaunchedEffect
+        if (restored) return@LaunchedEffect
         val i = list.indexOfFirst { it.id == id }
         if (i < 0) return@LaunchedEffect
         runCatching { chanState.scrollToItem(maxOf(i - 2, 0)) }
         repeat(15) {
             kotlinx.coroutines.delay(80)
-            if (runCatching { restoreReq.requestFocus() }.isSuccess) { LastFocus.pending = null; return@LaunchedEffect }
+            if (runCatching { restoreReq.requestFocus() }.isSuccess) { restored = true; LastFocus.pending = null; return@LaunchedEffect }
         }
     }
     var askDelete by remember { mutableStateOf(false) }
     val catState = remember { LazyListState() }
+    // Left from the channels goes to the selected category (not to whichever row happens to be beside the channel)
+    fun focusSelectedCat(): Boolean {
+        val ci = names.indexOf(sel)
+        if (ci < 0) return false
+        chanScope.launch {
+            repeat(20) {
+                if (catState.layoutInfo.visibleItemsInfo.none { it.index == ci }) runCatching { catState.scrollToItem(maxOf(ci - 3, 0)) }
+                runCatching { ContentFocus.req.requestFocus() }
+                androidx.compose.runtime.withFrameNanos { }
+                if (!chanHasFocus) return@launch
+                kotlinx.coroutines.delay(30)
+            }
+        }
+        return true
+    }
     var ask by remember { mutableStateOf<NameAsk?>(null) }
     SideEffect { ContentFocus.tab = 3 }
     // Selection points to a deleted list: back to "All channels"
     LaunchedEffect(sel, myLists.size) { if (ChannelListLogic.idOfKey(sel) != null && curList == null) sel = "ALL" }
+    LaunchedEffect(sel, genresReady, genres) {
+        if (genresReady && LiveGenre.isGenreKey(sel) && sel !in genres) sel = "ALL"
+    }
 
     // Add a channel to an own list: in "All channels"/categories OK adds the channel (instead of starting it)
     val addList = addTo?.let { id -> myLists.firstOrNull { it.id == id } }
@@ -221,7 +289,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     val ml = ChannelLists.byKey(n)
                     if (n == "GUIDE") {
                         // TV guide as in the design: starts the last watched (otherwise first) channel of the selection and opens the guide
-                        CatRow("TV-Guide", -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Grid) {
+                        CatRow("TV-Guide", -1, false, Modifier, onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Grid) {
                             val src = list.ifEmpty { live }
                             val ch = History.ids.firstNotNullOfOrNull { id -> src.firstOrNull { it.id == id } } ?: src.firstOrNull()
                             if (ch != null) { ZapContext.list = src; ZapContext.key = sel; AppNav.openGuide = true; onOpen(ch) }
@@ -229,7 +297,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "MULTI") {
-                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
+                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
                         return@itemsIndexed
                     }
                     if (n == "SEARCH") {
@@ -256,7 +324,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         }
                         val lbl = Lang.tr("Playlist") + ": " + (opts.getOrNull(curIdx) ?: "")
                         Box {
-                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Download, raw = true) { plOpen = true }
+                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Download, raw = true) { plOpen = true }
                             if (plOpen) OptionPopup(opts, curIdx, { plOpen = false; plBack = true }) { pick ->
                                 plOpen = false; plBack = true
                                 if (multiView && pick == 0) LiveSource.k = -1
@@ -277,7 +345,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     }
                     if (n == "SRC") {
                         val lbl = Lang.tr("Quelle") + ": " + (if (srcK < 0) Lang.tr("Alle") else srcNames[srcK])
-                        CatRow(lbl, -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Sliders, raw = true) {
+                        CatRow(lbl, -1, false, Modifier, onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Sliders, raw = true) {
                             LiveSource.k = if (srcK + 1 >= srcNames.size) -1 else srcK + 1
                             // The chosen category may not exist in the other source: then "All channels"
                             if (sel != FAV_CAT && sel != "ALL" && ChannelLists.byKey(sel) == null) sel = "ALL"
@@ -297,7 +365,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "NEW") {
-                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Plus) { newList(null) }
+                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = {}, onRight = { focusFirstChan() }, onFav = {}, icon = AIcon.Plus) { newList(null) }
                         return@itemsIndexed
                     }
                     val label = when {
@@ -320,7 +388,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     val count = when {
                         n == FAV_CAT -> favs.size
                         n == "ALL" -> live.size
-                        n == "HOME" -> 0
+                        n == "HOME" -> -1
                         n == "REC" -> recs.size
                         LiveGenre.isGenreKey(n) -> genres[n]?.size ?: 0
                         ml != null -> ChannelListLogic.resolve(ml, byIdLazy.value).size
@@ -333,10 +401,14 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         CatRow(
                             label, count, n == sel,
                             if (n == sel) Modifier.focusRequester(ContentFocus.req) else Modifier,
-                            onFocus = { sel = n }, onRight = { runCatching { firstChan.requestFocus() } },
+                            onFocus = { sel = n }, onRight = { focusFirstChan() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null
-                        ) { runCatching { firstChan.requestFocus() } }
+                        ) {
+                            // A tap on a touch screen does not focus the row, so select the category here (#67);
+                            // with a remote the focus has already selected it and OK moves to the channels.
+                            if (sel != n) sel = n else focusFirstChan()
+                        }
                         // Menu of a provider category: favorite on/off, hide, move, sorting of all categories
                         var sortMenu by remember { mutableStateOf(false) }
                         if (catMenu && plainCat) OptionPopup(
@@ -402,7 +474,10 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     PillButton("Fertig", light = true) { finishAdd() }
                 }
                 if (sel == "SEARCH") Field(query, { query = it.take(40) }, "Sendername eingeben", Modifier.padding(bottom = 12.dp), inner = Modifier.focusRequester(searchReq))
-                if (list.isEmpty()) EmptyState(
+                // Genres are still being prepared: no "No channels" message (it is not true yet)
+                if (list.isEmpty() && LiveGenre.isGenreKey(sel) && !genresReady) Text(
+                    "Genres werden erkannt", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(16.dp)
+                ) else if (list.isEmpty()) EmptyState(
                     if (sel == FAV_CAT) AIcon.Heart else AIcon.Live,
                     if (sel == FAV_CAT) "Noch keine Favoriten" else if (sel == "SEARCH") (if (query.isBlank()) "Sender suchen" else "Keine Treffer") else if (curList != null) "Diese Liste ist noch leer" else "Keine Sender",
                     when {
@@ -416,8 +491,9 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                 ) else LazyColumn(
                     state = chanState,
                     // Held Down/Up key: at most ~9 steps per second, so a weak box is not flooded with scroll animations and rebinds
-                    modifier = Modifier.onPreviewKeyEvent { e ->
-                        if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
+                    modifier = Modifier.onFocusChanged { chanHasFocus = it.hasFocus }.onPreviewKeyEvent { e ->
+                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && e.nativeKeyEvent.repeatCount == 0) focusSelectedCat()
+                        else if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
                             val now = android.os.SystemClock.uptimeMillis()
                             LiveHold.lastRepeat = now
                             if (now - LiveHold.lastStep < 110) true else { LiveHold.lastStep = now; false }
@@ -427,13 +503,16 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                 ) {
                     // In own lists the focus moves along with the channel when moving it (key = channel)
                     itemsIndexed(list, key = if (curList != null) { ix, ch -> ch.id + "#" + ix } else null, contentType = { _, _ -> "ch" }) { i, ch ->
+                        // derivedStateOf: only the two rows whose flag changes recompose when the focus moves
+                        val isLast by remember(i) { derivedStateOf { lastChanIdx == i } }
                         ChannelLine(
                             ch, (if (i == 0) Modifier.focusRequester(firstChan) else Modifier)
+                                .then(if (isLast) Modifier.focusRequester(lastChanReq) else Modifier)
                                 .then(if (ch.id == restoreId) Modifier.focusRequester(restoreReq) else Modifier)
                                 // Favorites: the focus follows a channel that was just moved
                                 .then(if (sel == FAV_CAT) Modifier.followFav(ch.id) else Modifier), curList,
                             onNewList = { newList(ch.id) },
-                            onFocus = { focusTarget = ch; plScope.launch { holdJump(chanState, i) } },
+                            onFocus = { focusTarget = ch; lastChanIdx = i; plScope.launch { holdJump(chanState, i) } },
                             variants = variantsOf[ch.id].orEmpty(),
                             favShown = if (sel == FAV_CAT) list else null,
                             onVariant = { v -> ZapContext.list = list; ZapContext.key = sel; LiveMemory.setSel(ctx, sel); onOpen(v) }

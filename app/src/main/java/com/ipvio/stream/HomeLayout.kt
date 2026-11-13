@@ -179,9 +179,9 @@ fun ClockWidget(
     }
     val h24 = when (General.timeFmt) { 1 -> true; 2 -> false; else -> General.sys24 }
     val tf = remember(h24) {
-        java.text.SimpleDateFormat(if (h24) "HH:mm" else "h:mm a", java.util.Locale.getDefault()).also { it.timeZone = General.zone() }
+        java.text.SimpleDateFormat(if (h24) "HH:mm" else "h:mm a", Lang.locale()).also { it.timeZone = General.zone() }
     }
-    val df = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL, java.util.Locale.getDefault()).also { it.timeZone = General.zone() } }
+    val df = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL, Lang.locale()).also { it.timeZone = General.zone() } }
     Row(
         modifier,
         verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(dpx(24))

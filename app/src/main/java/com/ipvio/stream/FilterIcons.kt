@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** Small line icons for the filter bars (drawn, not font characters – look the same on every device). */
-enum class FIcon { Sort, Rating, Year, Genre, Country, View, Grid, Reset }
+enum class FIcon { Sort, Rating, Year, Genre, Country, Language, View, Grid, Reset }
 
 @Composable
 fun FilterIcon(icon: FIcon, color: Color, size: Dp = 20.dp) {
@@ -60,6 +60,25 @@ fun FilterIcon(icon: FIcon, color: Color, size: Dp = 20.dp) {
                 drawCircle(color, 9f * u, o(12f, 12f), style = st)
                 drawLine(color, o(3f, 12f), o(21f, 12f), 2f * u, StrokeCap.Round)
                 drawOval(color, o(8f, 3f), Size(8f * u, 18f * u), style = st)
+            }
+            FIcon.Language -> {
+                // Speech bubble with two text lines (the globe stands for production country)
+                val p = Path()
+                p.moveTo(o(6f, 4f).x, o(6f, 4f).y)
+                p.lineTo(o(18f, 4f).x, o(18f, 4f).y)
+                p.quadraticTo(o(21f, 4f).x, o(21f, 4f).y, o(21f, 7f).x, o(21f, 7f).y)
+                p.lineTo(o(21f, 13f).x, o(21f, 13f).y)
+                p.quadraticTo(o(21f, 16f).x, o(21f, 16f).y, o(18f, 16f).x, o(18f, 16f).y)
+                p.lineTo(o(11f, 16f).x, o(11f, 16f).y)
+                p.lineTo(o(6.5f, 20f).x, o(6.5f, 20f).y)
+                p.lineTo(o(6.5f, 16f).x, o(6.5f, 16f).y)
+                p.quadraticTo(o(3f, 16f).x, o(3f, 16f).y, o(3f, 13f).x, o(3f, 13f).y)
+                p.lineTo(o(3f, 7f).x, o(3f, 7f).y)
+                p.quadraticTo(o(3f, 4f).x, o(3f, 4f).y, o(6f, 4f).x, o(6f, 4f).y)
+                p.close()
+                drawPath(p, color, style = st)
+                drawLine(color, o(7.5f, 8.5f), o(16.5f, 8.5f), 2f * u, StrokeCap.Round)
+                drawLine(color, o(7.5f, 12f), o(13.5f, 12f), 2f * u, StrokeCap.Round)
             }
             FIcon.View -> {
                 drawRoundRect(color, o(3.5f, 4f), Size(17f * u, 9.5f * u), CornerRadius(2.5f * u), style = st)

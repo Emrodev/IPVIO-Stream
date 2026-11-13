@@ -191,11 +191,12 @@ private fun ListMode(
     var pendingPreview by remember { mutableStateOf(false) }
     var focusedItem by remember { mutableStateOf<Item?>(null) }
     val cur = entries.getOrNull(sel)
-    val firstPreview = remember { FocusRequester() }
-    val restoreReq = remember { FocusRequester() }
+    // One requester on the title Right should reach: the one last focused in this category (the first after a change)
+    val targetReq = remember { FocusRequester() }
     val restoreIdx = remember {
         if (CatMemory.restore.remove(title) == true) CatMemory.item[title + "|" + (entries.getOrNull(sel)?.first ?: "")] else null
     }
+    var targetIdx by remember { mutableIntStateOf(restoreIdx ?: 0) }
     val catState = rememberLazyListState(maxOf(sel - 3, 0))
     val previewState = remember(cur?.first) { androidx.compose.foundation.lazy.grid.LazyGridState() }
     // Stalker portal: titles of the category loaded on demand belong to it (see [StalkerMore])
@@ -203,9 +204,11 @@ private fun ListMode(
     val prev = remember(cur?.first, cur?.second, more) {
         val c = cur
         if (c == null) emptyList<Item>()
-        else if (isTopEntry(c.first)) c.second.take(40)
-        else StalkerMore.withAdded(c.first, c.second).takeLast(40).reversed()
+        else if (isTopEntry(c.first)) c.second
+        // Every title of the category, newest first (the list keeps the newest at the end); more come near the end
+        else StalkerMore.withAdded(c.first, c.second).asReversed()
     }
+    val kinds = remember(cur?.first, cur?.second) { cur?.second?.mapTo(HashSet()) { it.kind } ?: emptySet() }
     val ctx = LocalContext.current
     // Stayed on the category briefly: fetch the next portion from the portal (not while scrolling quickly)
     LaunchedEffect(cur?.first) {
@@ -230,29 +233,44 @@ private fun ListMode(
         focusedItem = prev.firstOrNull()
         focusedItem?.let(onFocusItem)
     }
-    LaunchedEffect(Unit) {
-        if (restoreIdx != null && restoreIdx in prev.indices) {
-            previewState.scrollToItem(restoreIdx)
-            withFrameNanos { }
-            withFrameNanos { }
-            runCatching { (if (restoreIdx == 0) firstPreview else restoreReq).requestFocus() }
+    /** Focuses title [idx] of the preview: scroll it into view and retry until it is laid out and focused. */
+    fun focusTitle(idx: Int) {
+        if (prev.isEmpty()) return
+        val t = idx.coerceIn(0, prev.lastIndex)
+        targetIdx = t
+        scope.launch {
+            repeat(20) {
+                if (previewState.layoutInfo.visibleItemsInfo.none { it.index == t }) runCatching { previewState.scrollToItem(t) }
+                runCatching { targetReq.requestFocus() }
+                withFrameNanos { }
+                if (inPreview) return@launch
+                kotlinx.coroutines.delay(30)
+            }
         }
     }
+    /** Back to the selected category (not the row that happens to be beside the title). */
+    fun focusCategory() {
+        scope.launch {
+            repeat(20) {
+                if (catState.layoutInfo.visibleItemsInfo.none { it.index == sel }) runCatching { catState.scrollToItem(maxOf(sel - 3, 0)) }
+                runCatching { firstFocus.requestFocus() }
+                withFrameNanos { }
+                if (!inPreview) return@launch
+                kotlinx.coroutines.delay(30)
+            }
+        }
+    }
+    LaunchedEffect(Unit) { if (restoreIdx != null && restoreIdx in prev.indices) focusTitle(restoreIdx) }
     LaunchedEffect(sel, pendingPreview) {
         if (pendingPreview) {
             catState.scrollToItem(maxOf(sel - 3, 0))
-            withFrameNanos { }
-            withFrameNanos { }
-            runCatching { firstPreview.requestFocus() }
+            focusTitle(0)
             pendingPreview = false
         }
     }
     fun focusPreview() {
-        scope.launch {
-            previewState.scrollToItem(0)
-            withFrameNanos { }
-            runCatching { firstPreview.requestFocus() }
-        }
+        val c = cur ?: return
+        focusTitle(CatMemory.item[title + "|" + c.first] ?: 0)
     }
     Row(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.width(250.dp).fillMaxHeight(), state = catState, verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -290,20 +308,24 @@ private fun ListMode(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     itemsIndexed(prev) { i, item ->
+                        val isTarget by remember(i) { derivedStateOf { targetIdx == i } }
                         RowPosterCard(
                             item, posterW,
                             Modifier.onPreviewKeyEvent { ev ->
-                                if (ev.type == KeyEventType.KeyDown && ev.key == Key.DirectionUp && i < cols) {
-                                    runCatching { pillFocus.requestFocus() }; true
-                                } else false
+                                if (ev.type != KeyEventType.KeyDown) false
+                                else if (ev.key == Key.DirectionUp && i < cols) { runCatching { pillFocus.requestFocus() }; true }
+                                else if (ev.key == Key.DirectionLeft && i % cols == 0 && ev.nativeKeyEvent.repeatCount == 0) { focusCategory(); true }
+                                else false
                             }.onFocusChanged {
                                 if (it.hasFocus) {
                                     focusedItem = item; onFocusItem(item)
                                     CatMemory.item[title + "|" + cur.first] = i
+                                    targetIdx = i
+                                    // Near the end of a portal category: fetch the next portion
+                                    if (!isTopEntry(cur.first) && i >= prev.size - StalkerMore.AHEAD) StalkerMore.previewMore(ctx, cur.first, kinds)
                                 }
                             }
-                                .then(if (i == restoreIdx && i != 0) Modifier.focusRequester(restoreReq) else Modifier)
-                                .then(if (i == 0) Modifier.focusRequester(firstPreview) else Modifier),
+                                .then(if (isTarget) Modifier.focusRequester(targetReq) else Modifier),
                             overlay = if (i % cols >= cols / 2) 2 else 1
                         ) { CatMemory.restore[title] = true; onOpen(item) }
                     }
@@ -348,7 +370,7 @@ private fun TileMode(entries: List<Pair<String, List<Item>>>, sort: Int, firstFo
         contentPadding = PaddingValues(vertical = 8.dp, horizontal = 4.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        itemsIndexed(entries) { i, e ->
+        itemsIndexed(entries, key = { _, e -> e.first }) { i, e ->
             CatTile(e.first, e.second, if (i == 0) Modifier.focusRequester(firstFocus) else Modifier) { onPick(e.first, e.second, sortFor(e.first, sort)) }
         }
     }

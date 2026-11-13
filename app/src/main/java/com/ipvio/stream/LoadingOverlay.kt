@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import java.text.NumberFormat
-import java.util.Locale
 
 /**
  * Loading screen when adding a playlist – deliberately kept calm:
@@ -325,5 +324,5 @@ private fun LangTile(code: String, count: String, checked: Boolean, onClick: () 
 }
 
 private fun mb(b: Long): String =
-    if (b < 1_048_576) String.format(Locale.getDefault(), "%d KB", b / 1024)
-    else String.format(Locale.getDefault(), "%.1f MB", b / 1_048_576.0)
+    if (b < 1_048_576) String.format(Lang.locale(), "%d KB", b / 1024)
+    else String.format(Lang.locale(), "%.1f MB", b / 1_048_576.0)

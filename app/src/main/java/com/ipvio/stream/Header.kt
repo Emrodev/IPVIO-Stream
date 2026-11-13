@@ -70,7 +70,9 @@ fun HeaderBar(
         modifier.fillMaxWidth().padding(start = dpx(38), end = dpx(36), top = dpx(14)).height(dpx(52)),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SearchPill(if (tabs.isEmpty()) 467 else 330, onSearch)
+        // On Movies/Series the search opens filtered to that area, so the field says so
+        val hint = when (areaTab) { 1 -> "Filme suchen …"; 2 -> "Serien suchen …"; else -> "Suche nach Sendern, Filmen, Serien …" }
+        SearchPill(if (tabs.isEmpty()) 467 else 330, hint, onSearch)
         if (tabs.isNotEmpty()) {
             Spacer(Modifier.width(dpx(22)))
             Row(horizontalArrangement = Arrangement.spacedBy(dpx(8)), verticalAlignment = Alignment.CenterVertically) {
@@ -100,7 +102,7 @@ fun HeaderBar(
 }
 
 @Composable
-private fun SearchPill(w: Int, onClick: () -> Unit) {
+private fun SearchPill(w: Int, hint: String, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(50)
     Row(
@@ -115,7 +117,7 @@ private fun SearchPill(w: Int, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(dpx(14))
     ) {
         MenuIcon(4, if (f) DS.FocusInk else Color(0xFFD0D0D6), Modifier.size(dpx(22)))
-        Text("Suche nach Sendern, Filmen, Serien …", color = if (f) DS.FocusInk else Tok.TextLow, fontSize = spx(16), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(hint, color = if (f) DS.FocusInk else Tok.TextLow, fontSize = spx(16), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -291,9 +293,10 @@ private fun ClockPill() {
         }
     }
     val h24 = when (General.timeFmt) { 1 -> true; 2 -> false; else -> General.sys24 }
-    val fmt = java.text.SimpleDateFormat(if (h24) "HH:mm" else "h:mm a", java.util.Locale.getDefault())
+    val fmt = java.text.SimpleDateFormat(if (h24) "HH:mm" else "h:mm a", Lang.locale())
     fmt.timeZone = General.zone()
-    val dfmt = java.text.SimpleDateFormat("EEE, d. MMM", java.util.Locale.getDefault())
+    // Order and punctuation of the app language ("Tue, Nov 10" / "Di., 10. Nov.") instead of a fixed German pattern
+    val dfmt = Lang.locale().let { l -> java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(l, "EEEdMMM"), l) }
     dfmt.timeZone = General.zone()
     Column(horizontalAlignment = Alignment.End) {
         Text(fmt.format(java.util.Date(now)), color = Color.White, fontSize = spx(20), fontWeight = FontWeight.SemiBold, maxLines = 1, raw = true)

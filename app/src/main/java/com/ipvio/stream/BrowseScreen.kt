@@ -247,7 +247,7 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
         Column(Modifier.fillMaxSize().sidebarPad().padding(horizontal = 32.dp, vertical = DS.PageY)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(req.title, color = Color.White, fontSize = spx(34), fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                Text(if (ready) "${list.size} Titel" else "Lade …", color = Muted, fontSize = 16.sp)
+                Text(if (ready) (if (list.size == 1) "1 Titel" else "${list.size} Titel") else "Lade …", color = Muted, fontSize = 16.sp)
                 // New info from the genre detection: re-sort only on request so nothing shifts under the cursor
                 if (newer && ready) SmallPill("Neue Infos · aktualisieren") {
                     state.ver = Classifier.version; state.focused = 0; restoreIdx = 0; jumpTick++; jumpFirst = true
@@ -295,7 +295,7 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
                     if (langOptions.size > 1) item {
                         val lo = listOf("Alle") + langOptions.map { if (it == LangTagLogic.UNKNOWN) Lang.tr("Ohne Kennung") else LangTagLogic.name(it) }
                         DropdownPill("Sprache", lo.getOrElse(langOptions.indexOf(state.lang) + 1) { "Alle" }, lo, langOptions.indexOf(state.lang) + 1,
-                            active = state.lang != null, icon = FIcon.Country) {
+                            active = state.lang != null, icon = FIcon.Language) {
                             state.lang = if (it == 0) null else langOptions[it - 1]
                             BrowseLangPrefs.set(ctx, browseKind, state.lang)
                         }

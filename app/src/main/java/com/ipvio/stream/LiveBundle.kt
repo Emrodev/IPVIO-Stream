@@ -61,14 +61,24 @@ object LiveBundleLogic {
     )
 
     // Bundling a big list (all channels) takes noticeable time: results of the last lists are kept (same list object = same result)
+    private val cacheLock = Any()
     private val cache = ArrayList<Pair<List<Item>, Result>>()
 
-    @Synchronized
     fun bundle(items: List<Item>): Result {
-        cache.firstOrNull { it.first === items }?.let { return it.second }
+        synchronized(cacheLock) { cache.firstOrNull { it.first === items }?.let { return it.second } }
         val r = bundleNow(items)
-        if (items.size > 300) { cache.add(0, items to r); while (cache.size > 6) cache.removeAt(cache.size - 1) }
+        if (items.size > 300) synchronized(cacheLock) {
+            // Another worker may have finished the same list while this calculation was running.
+            cache.firstOrNull { it.first === items }?.let { return it.second }
+            cache.add(0, items to r)
+            while (cache.size > 2) cache.removeAt(cache.lastIndex)
+        }
         return r
+    }
+
+    fun trim() {
+        synchronized(cacheLock) { cache.clear() }
+        baseCache.clear()
     }
 
     private fun bundleNow(items: List<Item>): Result {

@@ -50,8 +50,13 @@ import java.net.URLEncoder
 fun openTrailer(ctx: Context, key: String?, title: String) {
     val uri = if (key != null) "https://www.youtube.com/watch?v=$key"
     else "https://www.youtube.com/results?search_query=" + URLEncoder.encode("$title Trailer", "UTF-8")
+    // CLEAR_TASK: start the trailer in a fresh YouTube task, so Back does not land on YouTube's own home screen left over
+    // from an earlier visit; "finish_on_ended" (YouTube extra) closes YouTube at the end. Back then returns here (#15).
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION)
+        .putExtra("finish_on_ended", true)
     try {
-        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION))
+        ctx.startActivity(intent)
     } catch (e: Exception) {
         Toast.makeText(ctx, Lang.tr("Keine App zum Öffnen des Trailers gefunden"), Toast.LENGTH_LONG).show()
     }
