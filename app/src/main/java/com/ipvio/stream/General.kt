@@ -47,10 +47,12 @@ object General {
     /** Default aspect ratio in the player (index in [ASPECT_NAMES]). */
     var defaultAspect by mutableIntStateOf(0)
     /**
-     * Aspect ratios (round 14). 0–2 differ only if the picture has a different aspect ratio than the TV
-     * (with 16:9 channels there was therefore no visible difference). 3–5 always change the picture visibly.
+     * Aspect ratios (round 14). Order must match the `when` in PlayerScreen: 0 = fit, 1 = zoom (crop to fill the
+     * screen), 2 = stretch (RESIZE_MODE_FILL, distorts). 0–2 differ only if the picture has a different aspect ratio
+     * than the TV (16:9 on a 16:9 screen looks identical); 3–5 always change the picture visibly.
+     * Labels are not in the dictionaries, so renaming them does not affect translations or saved settings (index).
      */
-    val ASPECT_NAMES = listOf("Einpassen", "Bildschirm füllen", "Strecken", "Zoom 115 %", "Zoom 133 %", "4:3")
+    val ASPECT_NAMES = listOf("Einpassen", "Zuschneiden", "Strecken", "Zoom 115 %", "Zoom 133 %", "4:3")
     /** Card size in the rows ("View" button at the top): 0 = small, 1 = normal, 2 = large. */
     var cardSize by mutableIntStateOf(2)
     /** Titles per row in rows, grid and categories ("View" button): 0 = automatic by card size. */
