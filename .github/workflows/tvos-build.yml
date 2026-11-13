@@ -1,0 +1,134 @@
+name: Build tvOS
+
+on:
+  push:
+    branches: [main, tvos-ci]
+    paths:
+      - "tvOS/**"
+      - "TVOS_PORT.md"
+      - ".github/workflows/tvos-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tvos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-tvos:
+    runs-on: macos-26-intel
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcode-select -p
+          ls -1 /Applications | grep -E '^Xcode' || true
+          xcodebuild -showsdks | sed -n '1,120p'
+          echo "tvOS SDK: $(xcrun --sdk appletvos --show-sdk-version)"
+
+      - name: Resolve packages
+        working-directory: tvOS
+        run: |
+          set -o pipefail
+          xcodebuild -project IPVIOStream.xcodeproj \
+            -scheme IPVIOStream \
+            -resolvePackageDependencies \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" 2>&1 | tee "$RUNNER_TEMP/resolve.log"
+
+      - name: Build tvOS app
+        working-directory: tvOS
+        run: |
+          set -o pipefail
+          xcodebuild -project IPVIOStream.xcodeproj \
+            -scheme IPVIOStream \
+            -configuration Release \
+            -destination 'generic/platform=tvOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            ENABLE_PREVIEWS=NO \
+            TVOS_DEPLOYMENT_TARGET=18.0 \
+            build 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Verify app bundle
+        working-directory: tvOS
+        run: |
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 3 -name "IPVIOStream.app" -type d | head -1)
+          echo "APP=$APP"
+          test -n "$APP"
+          python3 tools/verify_app.py "$APP" --require-release
+
+      - name: Package unsigned .app
+        if: success()
+        run: |
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 3 -name "IPVIOStream.app" -type d | head -1)
+          echo "APP=$APP"
+          test -n "$APP"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip"
+          ls -lh "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip"
+
+      - name: Package unsigned .ipa
+        if: success()
+        run: |
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 3 -name "IPVIOStream.app" -type d | head -1)
+          test -n "$APP"
+          rm -rf "$RUNNER_TEMP/ipa"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          ditto "$APP" "$RUNNER_TEMP/ipa/Payload/IPVIOStream.app"
+          cd "$RUNNER_TEMP/ipa"
+          zip -qry -y "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.ipa" Payload
+          unzip -l "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.ipa" | head -12
+          ls -lh "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.ipa"
+
+      - name: Upload unsigned app
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: IPVIOStream-tvOS-unsigned
+          path: |
+            ${{ runner.temp }}/IPVIOStream-tvOS-unsigned.zip
+            ${{ runner.temp }}/IPVIOStream-tvOS-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvos-build-logs
+          path: |
+            ${{ runner.temp }}/resolve.log
+            ${{ runner.temp }}/build.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish unsigned build to Releases
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="tvos-build-${GITHUB_RUN_ID}"
+          cat > "$RUNNER_TEMP/release-notes.md" <<'EOF'
+          Unsigned tvOS build compiled successfully by GitHub Actions.
+
+          Assets: IPVIOStream-tvOS-unsigned.ipa and the .app zip.
+
+          This IPA/.app is NOT code-signed and cannot be installed on Apple TV until it is signed with an Apple Developer team. See tvOS/SIGNING.md.
+
+          KSPlayer 5.6.2 is pinned in the project.
+          EOF
+          gh release create "$TAG" \
+            "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.zip" \
+            "$RUNNER_TEMP/IPVIOStream-tvOS-unsigned.ipa" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "tvOS unsigned build ${GITHUB_RUN_NUMBER}" \
+            --notes-file "$RUNNER_TEMP/release-notes.md"
