@@ -1038,6 +1038,16 @@ private fun CategoryFilterSection(d: IgnoreDraft) {
     Hint("Blende einzelne Kategorien aus oder schalte alle aus und nur die gewünschten wieder ein. Ausgeblendete Kategorien verschwinden sofort überall, ohne die Playlist neu zu laden.")
     IgnoreDraftBar(d)
     val names = mapOf(Kind.MOVIE to "Filme", Kind.SERIES to "Serien", Kind.LIVE to "Live-TV")
+    // Search over all types (Wishbox), e.g. "EU | DE": switch all hits at once instead of hundreds of single ticks.
+    // Like every switch here it only changes the draft, so nothing is filtered again until "Apply".
+    var query by remember { mutableStateOf("") }
+    BackHandler(enabled = query.isNotEmpty()) { query = "" }
+    Field(query, { query = it }, "Kategorien suchen, z. B. EU | DE")
+    val hits = remember(groups, query) {
+        val m = GroupSearch.matcher(query)
+        if (m == null) null else groups.mapValues { (_, l) -> l.filter { m(it.first) } }
+    }
+    if (hits != null) { CategorySearchHits(hits, names, d); return }
     var open by remember { mutableStateOf<Kind?>(null) }
     for ((kind, list) in groups) {
         if (list.isEmpty()) continue
@@ -1058,6 +1068,34 @@ private fun CategoryFilterSection(d: IgnoreDraft) {
             ToggleRow(g, n.toString() + " " + Lang.tr("Titel"), key !in d.keys) { on -> d.onEdit(if (on) d.keys - key else d.keys + key) }
         }
     }
+}
+
+/** Rows shown for a category search; the bulk buttons still act on every hit. */
+private const val MAX_SEARCH_ROWS = 200
+
+/** Hits of the category search, grouped by type, with buttons that switch all hits in the draft at once. */
+@Composable
+private fun CategorySearchHits(hits: Map<Kind, List<Pair<String, Int>>>, names: Map<Kind, String>, d: IgnoreDraft) {
+    val keys = remember(hits) { hits.flatMap { (kind, l) -> l.map { IgnoredGroups.groupKey(kind, it.first) } } }
+    if (keys.isEmpty()) { Hint("Keine Kategorie gefunden."); return }
+    val off = remember(keys, d.keys) { keys.count { it in d.keys } }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        PillButton("Alle Treffer aus") { d.onEdit(d.keys + keys) }
+        PillButton("Alle Treffer ein") { d.onEdit(d.keys - keys.toSet()) }
+        Text(Lang.tr("Gefundene Kategorien") + ": " + keys.size + " · " + Lang.tr("Ignoriert") + ": " + off, color = Muted, fontSize = 14.sp, raw = true)
+    }
+    var shown = 0
+    for ((kind, list) in hits) {
+        if (list.isEmpty() || shown >= MAX_SEARCH_ROWS) continue
+        SectionTitle(names.getValue(kind))
+        for ((g, n) in list) {
+            if (shown >= MAX_SEARCH_ROWS) break
+            shown++
+            val key = IgnoredGroups.groupKey(kind, g)
+            ToggleRow(g, n.toString() + " " + Lang.tr("Titel"), key !in d.keys) { on -> d.onEdit(if (on) d.keys - key else d.keys + key) }
+        }
+    }
+    if (keys.size > shown) Hint("Es werden nicht alle Treffer angezeigt. Grenze die Suche genauer ein – „Alle Treffer“ gilt trotzdem für alle.")
 }
 
 /**
