@@ -598,7 +598,7 @@ struct PlayerGlassButton: View {
         }
         .buttonStyle(.plain)
         .focused($focused)
-        .accessibilityLabel(label)
+        .accessibilityLabel(Text(label))
     }
 }
 
