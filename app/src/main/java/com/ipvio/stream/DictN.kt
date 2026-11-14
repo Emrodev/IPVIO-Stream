@@ -55,4 +55,9 @@ Google Drive meldet einen Fehler.¦Google Drive reports an error.
 Diese Sicherung gibt es in Google Drive nicht mehr.¦This backup no longer exists in Google Drive.
 Diese Sicherung ist zu groß.¦This backup is too big.
 Unbekannter Fehler.¦Unknown error.
+Unbekannter Fehler: {0}¦Unknown error: {0}
+Die Anmeldung bei Google ist fehlgeschlagen: {0}¦Signing in to Google failed: {0}
+Keine Verbindung zu Google ({0}). Bitte Internet prüfen.¦No connection to Google ({0}). Please check the internet.
+Google Drive meldet einen Fehler ({#0}): {1}¦Google Drive reports an error ({#0}): {1}
+Google Drive meldet einen Fehler: {0}¦Google Drive reports an error: {0}
 """
