@@ -7,13 +7,18 @@ import java.util.TimeZone
 
 /** Pure logic for the Google Drive sync (W-010): file names, Drive times, sign-in poll answers. No Android here. */
 object DriveLogic {
-    /** One file per device in the hidden app folder, so no device overwrites another one. */
+    /** One file per device in the app's folder, so no device overwrites another one. */
     const val PREFIX = "ipvio_sync_"
     const val SUFFIX = ".json"
-    /** The single backup file of the old Drive backup (1.0 to 1.1); still offered for restore. */
-    const val LEGACY_NAME = "ipvio_backup.json"
+    /**
+     * Visible folder in the user's Drive. The hidden app folder (scope drive.appdata) is refused by Google in the TV
+     * sign-in ("invalid_scope"), so the app uses drive.file: it only sees the folder and files it created itself.
+     */
+    const val FOLDER_NAME = "IPVIO Stream Sync"
+    const val FOLDER_MIME = "application/vnd.google-apps.folder"
 
     private val ID = Regex("^[A-Za-z0-9]{1,32}$")
+    private val DRIVE_ID = Regex("^[A-Za-z0-9_-]{1,128}$")
 
     fun fileName(deviceId: String): String {
         require(ID.matches(deviceId)) { "bad device id" }
@@ -21,14 +26,26 @@ object DriveLogic {
     }
 
     fun isSyncFile(name: String): Boolean =
-        name == LEGACY_NAME || (name.startsWith(PREFIX) && name.endsWith(SUFFIX) && ID.matches(deviceIdOf(name) ?: ""))
+        name.startsWith(PREFIX) && name.endsWith(SUFFIX) && ID.matches(deviceIdOf(name) ?: "")
 
-    /** Device id from a sync file name, null for the old single file or other names. */
+    /** Device id from a sync file name, null for other names. */
     fun deviceIdOf(name: String): String? =
         if (name.startsWith(PREFIX) && name.endsWith(SUFFIX)) name.removePrefix(PREFIX).removeSuffix(SUFFIX).ifEmpty { null } else null
 
-    /** Drive query for the file list (names are fixed, nothing from the user goes into it). */
-    fun listQuery(): String = "name contains '$PREFIX' or name = '$LEGACY_NAME'"
+    fun validDriveId(id: String): Boolean = DRIVE_ID.matches(id)
+
+    /** Drive queries: only fixed names and checked ids go into them, nothing typed by the user. */
+    fun folderQuery(): String = "name = '$FOLDER_NAME' and mimeType = '$FOLDER_MIME' and trashed = false"
+
+    fun listQuery(folderId: String): String {
+        require(validDriveId(folderId)) { "bad folder id" }
+        return "'$folderId' in parents and name contains '$PREFIX' and trashed = false"
+    }
+
+    fun fileQuery(folderId: String, deviceId: String): String {
+        require(validDriveId(folderId)) { "bad folder id" }
+        return "'$folderId' in parents and name = '${fileName(deviceId)}' and trashed = false"
+    }
 
     /** Drive time "2026-11-14T10:15:30.123Z" (also without milliseconds) in ms, 0 = unreadable. Works on API 24. */
     fun parseTime(s: String?): Long {

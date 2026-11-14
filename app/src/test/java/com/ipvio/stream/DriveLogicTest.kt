@@ -9,7 +9,7 @@ class DriveLogicTest {
         assertEquals("ab12cd34", DriveLogic.deviceIdOf("ipvio_sync_ab12cd34.json"))
         assertNull(DriveLogic.deviceIdOf("ipvio_backup.json"))
         assertTrue(DriveLogic.isSyncFile("ipvio_sync_ab12cd34.json"))
-        assertTrue(DriveLogic.isSyncFile("ipvio_backup.json"))
+        assertFalse(DriveLogic.isSyncFile("ipvio_backup.json"))
         assertFalse(DriveLogic.isSyncFile("ipvio_sync_.json"))
         assertFalse(DriveLogic.isSyncFile("ipvio_sync_a'b.json"))
         assertFalse(DriveLogic.isSyncFile("other.json"))
@@ -18,6 +18,15 @@ class DriveLogicTest {
     @Test fun badDeviceIdIsRefused() {
         var thrown = false
         try { DriveLogic.fileName("x' or name='y") } catch (e: IllegalArgumentException) { thrown = true }
+        assertTrue(thrown)
+    }
+
+    @Test fun queries() {
+        assertEquals("'1AbC_d-9' in parents and name contains 'ipvio_sync_' and trashed = false", DriveLogic.listQuery("1AbC_d-9"))
+        assertEquals("'1AbC' in parents and name = 'ipvio_sync_ab12.json' and trashed = false", DriveLogic.fileQuery("1AbC", "ab12"))
+        assertTrue(DriveLogic.folderQuery().startsWith("name = 'IPVIO Stream Sync'"))
+        var thrown = false
+        try { DriveLogic.listQuery("x' or '1'='1") } catch (e: IllegalArgumentException) { thrown = true }
         assertTrue(thrown)
     }
 
