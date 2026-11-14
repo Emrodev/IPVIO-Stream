@@ -30,6 +30,24 @@ Aus „Zuletzt gesehen“ entfernt¦Removed from “Recently watched”¦„Son 
 # Adult content off the home pages
 Erwachsenen-Inhalte nie auf den Startseiten¦Never show adult content on the home pages¦Yetişkin içeriği ana sayfalarda asla gösterme¦Sadržaj za odrasle nikad na početnim stranicama¦Sadržaj za odrasle nikad na početnim stranicama¦Sadržaj za odrasle nikad na početnim stranama¦Nunca mostrar contenido para adultos en las páginas de inicio¦Ne jamais afficher de contenu adulte sur les pages d’accueil¦Non mostrare mai contenuti per adulti nelle pagine iniziali
 Zeigt Titel und Sender für Erwachsene nie in den Reihen der Startseiten (Start, Filme, Serien), auch nicht unter „Zuletzt geschaut“ oder „Weiter schauen“. In Live TV, in den Kategorien und in der Suche bleiben sie erreichbar.¦Never shows adult titles and channels in the rows of the home pages (Home, Movies, Series), not even under “Recently watched” or “Continue watching”. They stay available in Live TV, in the categories and in the search.¦Yetişkin başlıklarını ve kanallarını ana sayfaların sıralarında (Ana sayfa, Filmler, Diziler) asla göstermez, „Son izlenenler“ veya „İzlemeye devam et“ altında da. Canlı TV’de, kategorilerde ve aramada erişilebilir kalırlar.¦Naslove i kanale za odrasle nikad ne prikazuje u redovima početnih stranica (Početna, Filmovi, Serije), ni pod „Nedavno gledano“ ili „Nastavi gledati“. U Live TV-u, kategorijama i pretrazi ostaju dostupni.¦Naslove i kanale za odrasle nikad ne prikazuje u redovima početnih stranica (Početna, Filmovi, Serije), ni pod „Nedavno gledano“ ili „Nastavi gledati“. U Live TV-u, kategorijama i pretraživanju ostaju dostupni.¦Naslove i kanale za odrasle nikad ne prikazuje u redovima početnih strana (Početna, Filmovi, Serije), ni pod „Nedavno gledano“ ili „Nastavi gledati“. U Live TV-u, kategorijama i pretrazi ostaju dostupni.¦Nunca muestra títulos y canales para adultos en las filas de las páginas de inicio (Inicio, Películas, Series), tampoco en «Vistos recientemente» o «Seguir viendo». Siguen disponibles en TV en directo, en las categorías y en la búsqueda.¦N’affiche jamais les titres et chaînes pour adultes dans les rangées des pages d’accueil (Accueil, Films, Séries), ni sous « Vu récemment » ou « Reprendre ». Ils restent accessibles dans la TV en direct, les catégories et la recherche.¦Non mostra mai titoli e canali per adulti nelle righe delle pagine iniziali (Home, Film, Serie), nemmeno in «Visti di recente» o «Continua a guardare». Restano disponibili in TV in diretta, nelle categorie e nella ricerca.
+# W-004 notes for 1.4.2 (English only for now; the other languages show English)
+Google Drive: Favoriten, Verlauf, Einstellungen und Playlists zwischen Geräten sichern und wiederherstellen (Einstellungen > Speicher)¦Google Drive: back up and restore favorites, history, settings and playlists between devices (Settings > Storage)
+Live TV: Größe der Senderzeilen wählbar (Klein, Normal, Groß)¦Live TV: choose the size of the channel rows (small, normal, large)
+Filter: Kategorien suchen, Änderungen mit „Übernehmen“ auf einmal speichern¦Filter: search categories, save all changes at once with “Apply”
+API-Schlüssel bequem am Handy eingeben (QR-Code oben auf der Seite)¦Enter API keys comfortably on your phone (QR code at the top of the page)
+Die App startet schneller und ist kleiner¦The app starts faster and is smaller
+Nach jedem Update: dieses Fenster mit allen Neuigkeiten¦After every update: this window with everything new
+Kategorien abhaken ruckelt nicht mehr und bringt die App nicht mehr zum Absturz¦Ticking categories no longer stutters or crashes the app
+24/7- und Adult-Kanäle erscheinen wieder, wenn der Filter aus ist¦24/7 and adult channels show up again when the filter is off
+Live TV: Genre-Kategorien lassen sich wieder per OK gedrückt halten ausblenden¦Live TV: genre categories can be hidden again by holding OK
+Jugendschutz: die PIN lässt sich nur noch mit der PIN entfernen¦Parental control: the PIN can only be removed with the PIN
+Suche am Handy: nur noch „Schließen“, Zurück schließt mit einem Druck¦Search on your phone: only “Close” left, Back closes it with one press
+Startseite: der Playlist-Knopf zeigt „Playlist“ statt eines Download-Symbols, „Zusätzlich anzeigen“ entfernt¦Home: the playlist button shows “Playlist” instead of a download icon, “Show as well” removed
+Startseite: Reihenfolge und ausgeblendete Kategorien gelten auch für die Reihen¦Home: category order and hidden categories also apply to the rows
+Untertitel-Suche (SubDL) findet bei Serien wieder Treffer¦Subtitle search (SubDL) finds results for series again
+Bildformate heißen so, wie sie wirken („Zuschneiden“)¦Aspect modes are named after what they do (“Crop”)
+Viele fehlende Übersetzungen ergänzt¦Many missing translations added
+Hoch/Runter blättert¦Up/Down scrolls
 """
 
 /**
