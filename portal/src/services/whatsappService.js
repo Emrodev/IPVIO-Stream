@@ -12,23 +12,24 @@ async function sendWhatsAppMessage({ apiUrl, apiToken, phone, message }) {
     throw new Error('Telefone ou mensagem vazia.');
   }
 
-  // Remove caracteres não numéricos do telefone
-  const cleanPhone = String(phone).replace(/\D/g, '');
-  if (cleanPhone.length < 8) {
+  // Remove caracteres não numéricos do telefone e normaliza DDI 55 se omitido
+  let cleanPhone = String(phone).replace(/\D/g, '');
+  if ((cleanPhone.length === 10 || cleanPhone.length === 11) && !cleanPhone.startsWith('55')) {
+    cleanPhone = '55' + cleanPhone;
+  }
+  if (cleanPhone.length < 10) {
     throw new Error(`Número de telefone inválido: ${phone}`);
   }
 
   const endpoint = apiUrl.trim();
   const token = (apiToken || '').trim();
 
-  // Payload padrão oficial WhatsApp Cloud API
+  // Contrato oficial da ViperConnect / WhatsApp Cloud API
   const payload = {
     messaging_product: 'whatsapp',
-    recipient_type: 'individual',
     to: cleanPhone,
     type: 'text',
     text: {
-      preview_url: false,
       body: message
     }
   };
@@ -40,6 +41,12 @@ async function sendWhatsAppMessage({ apiUrl, apiToken, phone, message }) {
     headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
   }
 
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload)
+  });
+
   const resText = await response.text();
   let resJson;
   try {
@@ -49,8 +56,14 @@ async function sendWhatsAppMessage({ apiUrl, apiToken, phone, message }) {
   }
 
   if (!response.ok) {
-    const errorMsg = resJson?.error?.message || resJson?.message || resText || `HTTP ${response.status}`;
-    throw new Error(`Erro na API do WhatsApp: ${errorMsg}`);
+    let errorMsg = resJson?.error?.message 
+      || resJson?.error 
+      || resJson?.message 
+      || (typeof resJson === 'string' ? resJson : '') 
+      || resText 
+      || `HTTP ${response.status}`;
+    if (typeof errorMsg === 'object') errorMsg = JSON.stringify(errorMsg);
+    throw new Error(`Erro ${response.status}: ${errorMsg}`);
   }
 
   return {
