@@ -23,6 +23,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,6 +54,10 @@ fun RemoteOverlay(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) { delay(150); runCatching { focus.requestFocus() } }
     androidx.compose.foundation.layout.Box(
         modifier.fillMaxSize().background(Color(0xCC000000))
+            // Back closes the card with ONE press, whatever has the focus (the BackHandler alone needed two presses on the Fire TV)
+            .onPreviewKeyEvent { ev ->
+                if (ev.key == Key.Back) { if (ev.type == KeyEventType.KeyDown) close(); true } else false
+            }
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { },
         contentAlignment = Alignment.Center
     ) {
