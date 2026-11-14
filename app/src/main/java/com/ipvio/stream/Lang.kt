@@ -24,6 +24,7 @@ object Lang {
         loaded = true
         I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6)
+        I18nCore.loadColumn(I18nCore.CODES.indexOf("zh"), DictZh)
     }
 
     /** Index in I18nCore.CODES. Reads the state so texts are redrawn on switching. */
@@ -40,13 +41,14 @@ object Lang {
         "bs" -> Locale.Builder().setLanguage("bs").setRegion("BA").build()
         "hr" -> Locale.Builder().setLanguage("hr").setRegion("HR").build()
         "sr" -> Locale.Builder().setLanguage("sr").setScript("Latn").setRegion("RS").build()
+        "zh" -> Locale.SIMPLIFIED_CHINESE
         else -> Locale.forLanguageTag(code())
     }
 
     /** Language code for TMDB requests, e.g. "de-DE". */
     fun tmdb(): String = when (code()) {
         "en" -> "en-US"; "tr" -> "tr-TR"; "bs" -> "bs-BA"; "hr" -> "hr-HR"; "sr" -> "sr-RS"
-        "es" -> "es-ES"; "fr" -> "fr-FR"; "it" -> "it-IT"; "nl" -> "nl-NL"; else -> "de-DE"
+        "es" -> "es-ES"; "fr" -> "fr-FR"; "it" -> "it-IT"; "nl" -> "nl-NL"; "zh" -> "zh-CN"; else -> "de-DE"
     }
 
     fun tr(s: String): String {
