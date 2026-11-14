@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 1.4.4
+- Remote Portal: integrated device management web portal with password-protected login, real-time metrics and SQLite/PostgreSQL support.
+- Pairing Code: activation screen on app start displaying a 6-character pairing code (e.g. `7A1-9FB`) and virtual MAC. Devices can be linked directly from the web portal without manual typing on the TV.
+- Remote Playlist & Expiry Checker: remote M3U and Xtream Codes playlist assignment, with automatic subscription validity checks (expiration date, active status, max connections) queried directly from provider APIs.
+- OTA Updates: portal hosts uploaded APKs and serves over-the-air updates to connected client devices.
+- Configurable Portal URL: dedicated `PORTAL_URL` variable in `app/build.gradle.kts` for custom server deployments.
+- Localization: complete Brazilian Portuguese (pt-BR) translation and live TV group navigation fixes.
+
 ## 1.4.1
 - Fix: 1.4 did not open after the update on user devices. R8 over the whole app (T-024) is switched off again (`enable = false` in app/build.gradle.kts, the rollback from ADR 0005); versionCode 6. Cause not confirmed by a crash log (unverified). Install 1.4.1 over 1.4; data is kept (same signature)
 

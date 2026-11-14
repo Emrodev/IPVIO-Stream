@@ -54,17 +54,18 @@ Allow "Install unknown apps" for Downloader (or your file manager) when asked, t
 - HLS, MPEG-DASH and MPEG-TS
 - Aspect ratio/zoom, frame-rate matching, technical info, clock overlay, sleep timer
 
-**Personal**
+**Personal & Management**
 - Profiles ("Who's watching?"), parental controls with PIN
 - History, my list, favourites, backup and restore of settings
 - Transfer to another device over Wi-Fi, optional Google Drive backup
-- In-app updates from GitHub Releases
+- Remote Device Management Web Portal & OTA: manage playlists remotely, pair devices instantly with a 6-character activation code, inspect subscription expiration, and push messages/updates directly to screens
+- In-app updates from GitHub Releases and the remote portal
 
 **Look and feel**
 - IPVIO green on navy plus 12 colour themes, 5 backgrounds, custom colours
 - Fonts Outfit, Inter or system; adjustable text and display size; animations off/subtle/normal
 - Sidebar left, right or top, icons only or with text; phones: landscape, tap and double-tap controls
-- 10 languages: German, English, Turkish, Bosnian, Croatian, Serbian, Spanish, French, Italian, Dutch
+- 11 languages: Portuguese (Brazil), German, English, Turkish, Bosnian, Croatian, Serbian, Spanish, French, Italian, Dutch
 
 ## Screenshots
 
