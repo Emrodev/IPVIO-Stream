@@ -139,7 +139,8 @@ async function createTables() {
   const alterColumns = [
     'ALTER TABLE devices ADD COLUMN playlist_exp_date TEXT',
     'ALTER TABLE devices ADD COLUMN playlist_status TEXT',
-    'ALTER TABLE devices ADD COLUMN playlist_max_cons INTEGER'
+    'ALTER TABLE devices ADD COLUMN playlist_max_cons INTEGER',
+    'ALTER TABLE devices ADD COLUMN pairing_code TEXT'
   ];
   for (const alterSql of alterColumns) {
     try {

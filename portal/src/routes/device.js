@@ -47,10 +47,19 @@ async function buildDeviceResponse(device, currentCode = 0) {
   };
 }
 
+function derivePairingCode(mac, deviceId) {
+  const source = (mac || '').replace(/[^a-zA-Z0-9]/g, '') || (deviceId || '').replace(/[^a-zA-Z0-9]/g, '');
+  const hex = source.slice(-6).toUpperCase();
+  if (hex.length === 6) {
+    return `${hex.slice(0, 3)}-${hex.slice(3)}`;
+  }
+  return hex || '000-000';
+}
+
 // 1. Registro inicial do dispositivo
 router.post('/register', async (req, res) => {
   try {
-    const { deviceId, mac, model, appVersion, versionCode } = req.body;
+    const { deviceId, mac, model, appVersion, versionCode, pairingCode } = req.body;
     if (!deviceId) {
       return res.status(400).json({ success: false, error: 'deviceId obrigatório' });
     }
@@ -58,22 +67,23 @@ router.post('/register', async (req, res) => {
     const ip = getClientIp(req);
     const now = Date.now();
     const vCode = parseInt(versionCode || '0', 10);
+    const code = pairingCode || derivePairingCode(mac, deviceId);
 
     const existing = await db.query('SELECT * FROM devices WHERE id = ?', [deviceId]);
     if (existing.rows.length === 0) {
       // Novo dispositivo
       await db.query(
-        `INSERT INTO devices (id, mac, name, model, app_version, ip, status, created_at, last_seen)
-         VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
-        [deviceId, mac || '', model || 'Dispositivo Desconhecido', model || 'Dispositivo Desconhecido', appVersion || '', ip, now, now]
+        `INSERT INTO devices (id, mac, pairing_code, name, model, app_version, ip, status, created_at, last_seen)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+        [deviceId, mac || '', code, model || 'Dispositivo Desconhecido', model || 'Dispositivo Desconhecido', appVersion || '', ip, now, now]
       );
       const dev = (await db.query('SELECT * FROM devices WHERE id = ?', [deviceId])).rows[0];
       return res.json(await buildDeviceResponse(dev, vCode));
     } else {
       // Dispositivo existente -> atualiza último acesso e dados
       await db.query(
-        `UPDATE devices SET model = ?, app_version = ?, ip = ?, last_seen = ? WHERE id = ?`,
-        [model || existing.rows[0].model, appVersion || existing.rows[0].app_version, ip, now, deviceId]
+        `UPDATE devices SET model = ?, app_version = ?, ip = ?, last_seen = ?, pairing_code = COALESCE(?, pairing_code) WHERE id = ?`,
+        [model || existing.rows[0].model, appVersion || existing.rows[0].app_version, ip, now, code, deviceId]
       );
       const dev = (await db.query('SELECT * FROM devices WHERE id = ?', [deviceId])).rows[0];
       return res.json(await buildDeviceResponse(dev, vCode));

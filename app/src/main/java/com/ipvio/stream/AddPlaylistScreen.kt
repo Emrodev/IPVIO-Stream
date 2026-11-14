@@ -116,7 +116,11 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
             Handler(Looper.getMainLooper()).post { ListImportApply.run(ctx, name, bytes) }
         }
         serving = receiver.start()
-        onDispose { receiver.stop() }
+        PortalManager.onPlaylistLoaded = { onDone() }
+        onDispose {
+            PortalManager.onPlaylistLoaded = null
+            receiver.stop()
+        }
     }
     val canCancel = PlaylistStore.lists.isNotEmpty() || PlaylistStore.channels.isNotEmpty()
     val pickFile = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
@@ -187,14 +191,38 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
                 Text("IPVIO", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                 Text("Playlist hinzufügen", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 14.dp))
             }
-            // Many new users ask which link to enter: say clearly that the app brings no content of its own
+            val pairingCode = remember { DeviceIdentity.getPairingCode(ctx) }
+            val virtualMac = remember { DeviceIdentity.getVirtualMac(ctx) }
+            val portalUrl = remember { PortalManager.getPortalUrl(ctx) }
+
+            // Card de Pareamento com o Portal Web
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(DS.RadiusM)).background(Color(0x14FFFFFF)).border(1.dp, Surf2, RoundedCornerShape(DS.RadiusM)).padding(10.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(DS.RadiusM))
+                    .background(Color(0xFF0C1929))
+                    .border(1.5.dp, Color(0xFF06B6D4), RoundedCornerShape(DS.RadiusM))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text("Wichtig zu wissen", color = Accent2, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text("IPVIO Stream ist nur ein Abspielgerät. Die App liefert selbst keine Sender, Filme, Serien und keine Playlist. Den Link oder die Zugangsdaten bekommst du von deinem IPTV-Anbieter oder aus deiner eigenen Quelle. Wir können dir keinen Link nennen.",
-                    color = Muted, fontSize = 12.sp, lineHeight = 16.sp)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("🔗", fontSize = 16.sp)
+                    Text("Vincular pelo Portal Web", color = Color(0xFF38BDF8), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
+                Text("Acesse no computador ou celular: $portalUrl", color = Color(0xFFA1A1AA), fontSize = 12.sp)
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("CÓDIGO DE ATIVAÇÃO", color = Color(0xFF67E8F9), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(pairingCode, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("MAC VIRTUAL", color = Color(0xFFA1A1AA), fontSize = 10.sp)
+                        Text(virtualMac, color = Color(0xFFE4E4E7), fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                    }
+                }
+                Text("Basta digitar este código no painel para carregar sua lista automaticamente nesta tela.", color = Color(0xFF34D399), fontSize = 11.sp)
             }
             // The padding sits inside the scrolling row: an enlarged (focused) button must not be cut off at its edge
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {

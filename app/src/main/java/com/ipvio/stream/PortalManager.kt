@@ -23,6 +23,8 @@ object PortalManager {
     var lastSyncStatus = ""
         private set
 
+    var onPlaylistLoaded: (() -> Unit)? = null
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
@@ -75,7 +77,8 @@ object PortalManager {
             registerDevice(ctx, url)
 
             while (isActive) {
-                delay(60_000)
+                val delayTime = if (PlaylistStore.savedUrl(ctx) == null) 4_000L else 45_000L
+                delay(delayTime)
                 sendHeartbeat(ctx, url)
             }
         }
@@ -88,10 +91,12 @@ object PortalManager {
             val model = DeviceIdentity.getDeviceModel()
             val verName = AppUpdate.currentName(ctx)
             val verCode = AppUpdate.currentCode(ctx)
+            val pairingCode = DeviceIdentity.getPairingCode(ctx)
 
             val json = JSONObject().apply {
                 put("deviceId", devId)
                 put("mac", mac)
+                put("pairingCode", pairingCode)
                 put("model", model)
                 put("appVersion", verName)
                 put("versionCode", verCode)
@@ -120,9 +125,11 @@ object PortalManager {
         return try {
             val devId = DeviceIdentity.getDeviceId(ctx)
             val verCode = AppUpdate.currentCode(ctx)
+            val pairingCode = DeviceIdentity.getPairingCode(ctx)
 
             val json = JSONObject().apply {
                 put("deviceId", devId)
+                put("pairingCode", pairingCode)
                 put("versionCode", verCode)
             }
 
@@ -190,6 +197,7 @@ object PortalManager {
                         sp.edit().putLong(KEY_LAST_PLAYLIST_UPDATE, updatedAt).apply()
                         mainHandler.post {
                             Toast.makeText(ctx, Lang.tr("Playlist sincronizada remotamente pelo portal!"), Toast.LENGTH_LONG).show()
+                            onPlaylistLoaded?.invoke()
                         }
                     }
                 }

@@ -87,10 +87,19 @@ router.get('/devices', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM devices ORDER BY last_seen DESC');
     const now = Date.now();
-    const devices = result.rows.map(d => ({
-      ...d,
-      isOnline: (now - Number(d.last_seen || 0)) < 2 * 60 * 1000 // visto nos últimos 2 min
-    }));
+    const devices = result.rows.map(d => {
+      let code = d.pairing_code;
+      if (!code) {
+        const src = (d.mac || '').replace(/[^a-zA-Z0-9]/g, '') || (d.id || '').replace(/[^a-zA-Z0-9]/g, '');
+        const hex = src.slice(-6).toUpperCase();
+        code = hex.length === 6 ? `${hex.slice(0, 3)}-${hex.slice(3)}` : (hex || '-');
+      }
+      return {
+        ...d,
+        pairing_code: code,
+        isOnline: (now - Number(d.last_seen || 0)) < 2 * 60 * 1000 // visto nos últimos 2 min
+      };
+    });
     res.json({ success: true, devices });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -125,6 +134,74 @@ router.put('/devices/:id', async (req, res) => {
 });
 
 // 5. Atribuir ou atualizar playlist remotamente (com checagem de validade)
+router.post('/devices/link-by-code', async (req, res) => {
+  try {
+    const { code, type, url, host, user, pass } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, error: 'Código de pareamento ou MAC é obrigatório.' });
+    }
+
+    const cleanInput = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    const result = await db.query(
+      `SELECT * FROM devices 
+       WHERE REPLACE(UPPER(COALESCE(pairing_code, '')), '-', '') = ?
+          OR REPLACE(UPPER(COALESCE(mac, '')), ':', '') LIKE ?
+          OR UPPER(id) LIKE ?
+       ORDER BY last_seen DESC LIMIT 1`,
+      [cleanInput, `%${cleanInput}`, `%${cleanInput}`]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: `Nenhum aparelho encontrado com o código "${code}". Certifique-se de que o aplicativo está aberto.` });
+    }
+
+    const dev = result.rows[0];
+    const now = Date.now();
+
+    let expDate = null;
+    let plStatus = 'Active';
+    let maxCons = 1;
+
+    if (type !== 'none') {
+      const checkRes = await checkPlaylistValidity({ type, url, host, user, pass });
+      if (checkRes.success) {
+        expDate = checkRes.expDateFormatted;
+        plStatus = checkRes.status;
+        maxCons = checkRes.maxConnections || 1;
+      } else {
+        expDate = 'Erro ao verificar';
+      }
+    }
+
+    await db.query(
+      `UPDATE devices SET 
+        playlist_type = ?, 
+        playlist_url = ?, 
+        xtream_host = ?, 
+        xtream_user = ?, 
+        xtream_pass = ?, 
+        playlist_updated_at = ?,
+        playlist_exp_date = ?,
+        playlist_status = ?,
+        playlist_max_cons = ?
+       WHERE id = ?`,
+      [type || 'none', url || '', host || '', user || '', pass || '', now, expDate, plStatus, maxCons, dev.id]
+    );
+
+    res.json({
+      success: true,
+      deviceId: dev.id,
+      deviceName: dev.name,
+      pairingCode: dev.pairing_code,
+      updatedAt: now,
+      validity: { expDate, status: plStatus, maxCons }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 router.post('/devices/:id/playlist', async (req, res) => {
   try {
     const { type, url, host, user, pass } = req.body;

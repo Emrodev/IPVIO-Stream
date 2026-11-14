@@ -45,6 +45,19 @@ object DeviceIdentity {
         return mac
     }
 
+    fun getPairingCode(ctx: Context): String {
+        val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val existing = sp.getString("pairing_code", null)
+        if (!existing.isNullOrBlank()) return existing
+
+        val mac = getVirtualMac(ctx)
+        val clean = mac.replace(":", "")
+        val hex = if (clean.length >= 6) clean.takeLast(6).uppercase() else clean.uppercase()
+        val code = if (hex.length == 6) "${hex.take(3)}-${hex.takeLast(3)}" else hex
+        sp.edit().putString("pairing_code", code).apply()
+        return code
+    }
+
     fun getDeviceModel(): String {
         val m = android.os.Build.MODEL ?: "Android TV"
         val b = android.os.Build.BRAND ?: ""

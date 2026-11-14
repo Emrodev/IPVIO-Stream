@@ -130,17 +130,25 @@ function updateStats() {
   document.getElementById('stat-playlists').innerText = withPlaylist;
 }
 
+function getPairingCode(d) {
+  if (d.pairing_code) return d.pairing_code;
+  const src = (d.mac || '').replace(/[^a-zA-Z0-9]/g, '') || (d.id || '').replace(/[^a-zA-Z0-9]/g, '');
+  const hex = src.slice(-6).toUpperCase();
+  return hex.length === 6 ? `${hex.slice(0, 3)}-${hex.slice(3)}` : (hex || '-');
+}
+
 // Renderizar tabela de dispositivos
 function renderDevices(list) {
   const tbody = document.getElementById('devices-tbody');
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-gray-500">Nenhum dispositivo registrado ainda.<br><span class="text-xs text-gray-600">Abra o app IPVIO no Android conectado a este portal.</span></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-12 text-gray-500">Nenhum dispositivo registrado ainda.<br><span class="text-xs text-gray-600">Abra o app IPVIO no Android conectado a este portal.</span></td></tr>`;
     return;
   }
 
   tbody.innerHTML = list.map(d => {
     const isOnline = d.isOnline;
     const isBlocked = d.status === 'blocked';
+    const pairingCode = getPairingCode(d);
 
     let statusBadge = '';
     if (isBlocked) {
@@ -151,7 +159,7 @@ function renderDevices(list) {
       statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-500/10 text-gray-400 border border-gray-500/20"><span class="w-2 h-2 rounded-full bg-gray-500"></span> Offline</span>`;
     }
 
-    let plBadge = '<span class="text-gray-500 text-xs">Nenhuma</span>';
+    let plBadge = '<span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 text-xs font-semibold border border-amber-500/20">Sem Lista</span>';
     if (d.playlist_type === 'xtream') {
       plBadge = `<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-xs font-mono font-bold" title="${d.xtream_host || ''}">Xtream</span>`;
     } else if (d.playlist_type === 'm3u') {
@@ -192,6 +200,14 @@ function renderDevices(list) {
       <tr class="hover:bg-surface-800/40 transition">
         <td class="py-4 px-5">${statusBadge}</td>
         <td class="py-4 px-5">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-500/40 text-cyan-300 font-mono font-black text-sm tracking-wider shadow-sm">
+            <span>${escapeHtml(pairingCode)}</span>
+            <button onclick="navigator.clipboard.writeText('${pairingCode}'); alert('Código ${pairingCode} copiado!')" class="text-cyan-500 hover:text-cyan-200 ml-1" title="Copiar Código">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            </button>
+          </div>
+        </td>
+        <td class="py-4 px-5">
           <div class="font-bold text-white flex items-center gap-2">
             ${escapeHtml(d.name || 'Sem nome')}
             <button onclick="renameDevice('${d.id}', '${escapeHtml(d.name || '')}')" class="text-gray-500 hover:text-brand-400" title="Renomear">
@@ -217,6 +233,9 @@ function renderDevices(list) {
         <td class="py-4 px-5 whitespace-nowrap">${expBadge}</td>
         <td class="py-4 px-5 text-xs text-gray-400">${formatTimeAgo(d.last_seen)}</td>
         <td class="py-4 px-5 text-right space-x-1 whitespace-nowrap">
+          <button onclick="openLinkCodeModal('${escapeHtml(pairingCode)}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-cyan-700/60 hover:bg-cyan-600 text-cyan-100 hover:text-white transition" title="Vincular Lista por Código">
+            ⚡ Vincular
+          </button>
           <button onclick="openPlaylistModal('${d.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-700 hover:bg-brand-600 text-gray-200 hover:text-white transition" title="Configurar Playlist">
             Playlist
           </button>
@@ -418,6 +437,66 @@ async function sendMessage() {
 
 function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
+}
+
+// Modal de Vincular Aparelho por Código
+function openLinkCodeModal(prefillCode = '') {
+  document.getElementById('link-code-input').value = prefillCode || '';
+  document.getElementById('link-xtream-host').value = '';
+  document.getElementById('link-xtream-user').value = '';
+  document.getElementById('link-xtream-pass').value = '';
+  document.getElementById('link-modal').classList.remove('hidden');
+  if (!prefillCode) {
+    document.getElementById('link-code-input').focus();
+  } else {
+    document.getElementById('link-xtream-host').focus();
+  }
+}
+
+async function submitLinkByCode() {
+  const code = document.getElementById('link-code-input').value.trim();
+  const host = document.getElementById('link-xtream-host').value.trim();
+  const user = document.getElementById('link-xtream-user').value.trim();
+  const pass = document.getElementById('link-xtream-pass').value.trim();
+
+  if (!code) return alert('Por favor, informe o Código de Ativação do aparelho.');
+  if (!host || !user || !pass) return alert('Por favor, preencha o Servidor, Usuário e Senha.');
+
+  const btn = document.getElementById('btn-submit-link');
+  btn.disabled = true;
+  btn.innerText = 'Vinculando e Verificando...';
+
+  try {
+    const res = await fetch('/api/admin/devices/link-by-code', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        code,
+        type: 'xtream',
+        host,
+        user,
+        pass
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Não foi possível vincular o aparelho.');
+    }
+
+    let msg = `Aparelho "${data.deviceName || code}" vinculado com sucesso!\nAs credenciais foram enviadas para o aparelho.`;
+    if (data.validity?.expDate) {
+      msg += `\n\nValidade detectada no provedor: ${data.validity.expDate} (Status: ${data.validity.status})`;
+    }
+    alert(msg);
+    closeModal('link-modal');
+    loadDevices();
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Vincular & Enviar para o Aparelho';
+  }
 }
 
 // OTA: Carregar e Submeter
