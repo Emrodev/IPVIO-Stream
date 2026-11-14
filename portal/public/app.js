@@ -74,20 +74,30 @@ function showApp() {
 // Alternar abas
 function switchTab(tab) {
   const devSec = document.getElementById('section-devices');
+  const autSec = document.getElementById('section-automations');
   const otaSec = document.getElementById('section-ota');
   const devBtn = document.getElementById('tab-devices-btn');
+  const autBtn = document.getElementById('tab-automations-btn');
   const otaBtn = document.getElementById('tab-ota-btn');
+
+  devSec.classList.add('hidden');
+  autSec.classList.add('hidden');
+  otaSec.classList.add('hidden');
+
+  devBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
+  autBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
+  otaBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
 
   if (tab === 'devices') {
     devSec.classList.remove('hidden');
-    otaSec.classList.add('hidden');
     devBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow';
-    otaBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
     loadDevices();
+  } else if (tab === 'automations') {
+    autSec.classList.remove('hidden');
+    autBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow';
+    loadSettings();
   } else {
-    devSec.classList.add('hidden');
     otaSec.classList.remove('hidden');
-    devBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
     otaBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow';
     loadOtaUpdates();
   }
@@ -166,6 +176,24 @@ function renderDevices(list) {
       plBadge = `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 text-xs font-mono font-bold" title="${d.playlist_url || ''}">M3U</span>`;
     }
 
+    // Assistindo Agora (Now Playing)
+    let nowPlayingBadge = '<span class="text-xs text-gray-500 font-mono">-</span>';
+    if (d.isPlaying && d.currentPlaying) {
+      let typeIcon = '🔴';
+      if (d.currentPlayingType === 'movie') typeIcon = '🎬';
+      else if (d.currentPlayingType === 'series') typeIcon = '🍿';
+      else if (d.currentPlayingType === 'live') typeIcon = '🔴';
+
+      nowPlayingBadge = `
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-medium max-w-[200px]" title="${escapeHtml(d.currentPlaying)}">
+          <span>${typeIcon}</span>
+          <span class="truncate font-semibold">${escapeHtml(d.currentPlaying)}</span>
+        </div>
+      `;
+    } else if (d.now_playing && !d.isPlaying) {
+      nowPlayingBadge = `<span class="text-[11px] text-gray-500 truncate max-w-[150px] inline-block" title="Último reproduzido: ${escapeHtml(d.now_playing)}">Pausado (${escapeHtml(d.now_playing.slice(0, 16))}...)</span>`;
+    }
+
     // Badge de Validade
     let expBadge = '<span class="text-gray-500 text-xs">-</span>';
     if (d.playlist_type && d.playlist_type !== 'none') {
@@ -196,6 +224,18 @@ function renderDevices(list) {
       `;
     }
 
+    let phoneHtml = '';
+    if (d.client_phone) {
+      const cleanPhone = String(d.client_phone).replace(/\D/g, '');
+      phoneHtml = `
+        <div class="mt-0.5">
+          <a href="https://wa.me/${cleanPhone}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-mono" title="Abrir conversa no WhatsApp">
+            <span>💬</span> ${escapeHtml(d.client_phone)}
+          </a>
+        </div>
+      `;
+    }
+
     return `
       <tr class="hover:bg-surface-800/40 transition">
         <td class="py-4 px-5">${statusBadge}</td>
@@ -210,10 +250,11 @@ function renderDevices(list) {
         <td class="py-4 px-5">
           <div class="font-bold text-white flex items-center gap-2">
             ${escapeHtml(d.name || 'Sem nome')}
-            <button onclick="renameDevice('${d.id}', '${escapeHtml(d.name || '')}')" class="text-gray-500 hover:text-brand-400" title="Renomear">
+            <button onclick="openEditDeviceModal('${d.id}')" class="text-gray-500 hover:text-brand-400" title="Editar Nome e Telefone WhatsApp">
               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
             </button>
           </div>
+          ${phoneHtml}
           <div class="text-xs text-gray-400">${escapeHtml(d.model || 'Android TV')}</div>
         </td>
         <td class="py-4 px-5">
@@ -230,6 +271,7 @@ function renderDevices(list) {
           <div class="text-[11px] text-brand-400 font-medium">v${escapeHtml(d.app_version || '1.0')}</div>
         </td>
         <td class="py-4 px-5">${plBadge}</td>
+        <td class="py-4 px-5">${nowPlayingBadge}</td>
         <td class="py-4 px-5 whitespace-nowrap">${expBadge}</td>
         <td class="py-4 px-5 text-xs text-gray-400">${formatTimeAgo(d.last_seen)}</td>
         <td class="py-4 px-5 text-right space-x-1 whitespace-nowrap">
@@ -296,17 +338,35 @@ async function refreshValidity(id) {
   }
 }
 
-// Renomear Dispositivo
-async function renameDevice(id, currentName) {
-  const newName = prompt('Novo nome para o dispositivo:', currentName);
-  if (newName === null || newName.trim() === '') return;
+// Modal de Edição de Cliente (Nome e WhatsApp)
+let editingDeviceId = null;
+function openEditDeviceModal(id) {
+  editingDeviceId = id;
+  const dev = devices.find(d => d.id === id);
+  document.getElementById('edit-device-subtitle').innerText = `Aparelho: ${dev?.model || id} (${dev?.mac || ''})`;
+  document.getElementById('edit-device-name').value = dev?.name || '';
+  document.getElementById('edit-device-phone').value = dev?.client_phone || '';
+  document.getElementById('edit-device-modal').classList.remove('hidden');
+}
 
-  await fetch(`/api/admin/devices/${id}`, {
+async function saveDeviceEdit() {
+  if (!editingDeviceId) return;
+  const name = document.getElementById('edit-device-name').value.trim();
+  const phone = document.getElementById('edit-device-phone').value.trim();
+
+  await fetch(`/api/admin/devices/${editingDeviceId}`, {
     method: 'PUT',
     headers: authHeaders(),
-    body: JSON.stringify({ name: newName.trim() })
+    body: JSON.stringify({ name, clientPhone: phone })
   });
+
+  closeModal('edit-device-modal');
   loadDevices();
+}
+
+// Renomear Dispositivo (compatibilidade)
+async function renameDevice(id, currentName) {
+  openEditDeviceModal(id);
 }
 
 // Bloquear / Desbloquear Dispositivo
@@ -458,6 +518,7 @@ async function submitLinkByCode() {
   const host = document.getElementById('link-xtream-host').value.trim();
   const user = document.getElementById('link-xtream-user').value.trim();
   const pass = document.getElementById('link-xtream-pass').value.trim();
+  const phone = document.getElementById('link-client-phone')?.value.trim() || '';
 
   if (!code) return alert('Por favor, informe o Código de Ativação do aparelho.');
   if (!host || !user || !pass) return alert('Por favor, preencha o Servidor, Usuário e Senha.');
@@ -475,7 +536,8 @@ async function submitLinkByCode() {
         type: 'xtream',
         host,
         user,
-        pass
+        pass,
+        phone
       })
     });
 
@@ -565,8 +627,16 @@ async function submitOta(e) {
         headers: { 'x-admin-token': getAdminToken() },
         body: formData
       });
-      if (!res.ok) throw new Error('Falha no upload do APK.');
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Falha no upload do APK.');
+      alert(`Atualização OTA publicada com sucesso!\nVersão detectada: v${data.versionName} (Code ${data.versionCode})`);
     } else if (directUrl) {
+      if (!vName || !vCode) {
+        alert('Ao usar link externo de download, preencha o Nome e o Código da Versão.');
+        btn.disabled = false;
+        btn.innerText = 'Publicar Versão';
+        return;
+      }
       const res = await fetch('/api/admin/ota', {
         method: 'POST',
         headers: authHeaders(),
@@ -578,7 +648,9 @@ async function submitOta(e) {
           mandatory
         })
       });
-      if (!res.ok) throw new Error('Falha ao registrar versão.');
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Falha ao registrar versão.');
+      alert('Atualização OTA publicada com sucesso! Os aparelhos clientes já podem baixar essa versão.');
     } else {
       alert('Selecione um arquivo APK ou informe uma URL de download.');
       btn.disabled = false;
@@ -586,7 +658,6 @@ async function submitOta(e) {
       return;
     }
 
-    alert('Atualização OTA publicada com sucesso! Os aparelhos clientes já podem baixar essa versão.');
     document.getElementById('ota-form').reset();
     loadOtaUpdates();
   } catch (err) {
@@ -601,6 +672,203 @@ function escapeHtml(str) {
   return String(str || '').replace(/[&<>"']/g, m => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[m]);
+}
+
+// ==============================================================================
+// AUTOMAÇÕES, WHATSAPP & CONFIGURAÇÕES IPTV
+// ==============================================================================
+
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/admin/settings', { headers: authHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    const s = data.settings || {};
+
+    if (document.getElementById('iptv-default-url')) {
+      document.getElementById('iptv-default-url').value = s.default_iptv_url || '';
+    }
+    if (document.getElementById('wa-api-url')) {
+      document.getElementById('wa-api-url').value = s.whatsapp_api_url || '';
+    }
+    if (document.getElementById('wa-api-token')) {
+      document.getElementById('wa-api-token').value = s.whatsapp_api_token || '';
+    }
+    if (document.getElementById('auto-expiry-enabled')) {
+      document.getElementById('auto-expiry-enabled').checked = Boolean(s.auto_expiry_enabled);
+    }
+    if (document.getElementById('auto-expiry-days')) {
+      document.getElementById('auto-expiry-days').value = s.auto_expiry_days || 3;
+    }
+    if (document.getElementById('auto-expiry-notify-tv')) {
+      document.getElementById('auto-expiry-notify-tv').checked = Boolean(s.auto_expiry_notify_tv);
+    }
+    if (document.getElementById('auto-expiry-notify-wa')) {
+      document.getElementById('auto-expiry-notify-wa').checked = Boolean(s.auto_expiry_notify_wa);
+    }
+    if (document.getElementById('auto-expiry-message')) {
+      document.getElementById('auto-expiry-message').value = s.auto_expiry_message || '';
+    }
+  } catch (err) {
+    console.error('Erro ao carregar configurações:', err);
+  }
+}
+
+async function saveDefaultIptvUrl() {
+  const url = document.getElementById('iptv-default-url').value.trim();
+  if (!url) return alert('Por favor, informe a URL do servidor IPTV.');
+
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ default_iptv_url: url })
+    });
+    if (res.ok) alert('URL do IPTV padrão salva com sucesso!');
+    else alert('Erro ao salvar URL.');
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+async function migrateAllIptvUrl() {
+  const url = document.getElementById('iptv-default-url').value.trim();
+  if (!url) return alert('Por favor, informe a URL do servidor IPTV.');
+
+  const conf = confirm(
+    `ATENÇÃO: Deseja alterar o servidor IPTV de TODOS os clientes ativos para:\n\n${url}\n\nTodos os aparelhos conectados receberão essa nova URL no próximo sinal.`
+  );
+  if (!conf) return;
+
+  try {
+    const res = await fetch('/api/admin/iptv/migrate-url', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ newUrl: url })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert(`Migração em massa concluída com sucesso!\n${data.affected} dispositivo(s) atualizado(s) para o novo servidor.`);
+      loadDevices();
+    } else {
+      alert('Erro na migração: ' + (data.error || 'Erro desconhecido'));
+    }
+  } catch (err) {
+    alert('Erro ao migrar clientes: ' + err.message);
+  }
+}
+
+async function saveWhatsAppApiSettings() {
+  const url = document.getElementById('wa-api-url').value.trim();
+  const token = document.getElementById('wa-api-token').value.trim();
+
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        whatsapp_api_url: url,
+        whatsapp_api_token: token
+      })
+    });
+    if (res.ok) alert('Credenciais da API do WhatsApp salvas com sucesso!');
+    else alert('Erro ao salvar credenciais.');
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+async function testWhatsAppMessage() {
+  const phone = document.getElementById('wa-test-phone').value.trim();
+  const url = document.getElementById('wa-api-url').value.trim();
+  const token = document.getElementById('wa-api-token').value.trim();
+
+  if (!phone) return alert('Digite o número de WhatsApp com DDD para o teste (ex: 5511999999999).');
+
+  const btn = document.getElementById('btn-test-wa');
+  btn.disabled = true;
+  btn.innerText = 'Enviando...';
+
+  try {
+    const res = await fetch('/api/admin/whatsapp/test', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        phone,
+        apiUrl: url,
+        apiToken: token,
+        message: '✅ Mensagem de teste oficial enviada com sucesso pelo Portal IPVIO Stream!'
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert(`Mensagem enviada com sucesso para ${phone}! Verifique o WhatsApp.`);
+    } else {
+      alert(`Erro no envio da mensagem: ${data.error || 'Verifique a URL e o Token da API'}`);
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Testar';
+  }
+}
+
+async function saveAutomationRules() {
+  const enabled = document.getElementById('auto-expiry-enabled').checked;
+  const days = document.getElementById('auto-expiry-days').value;
+  const notifyTv = document.getElementById('auto-expiry-notify-tv').checked;
+  const notifyWa = document.getElementById('auto-expiry-notify-wa').checked;
+  const message = document.getElementById('auto-expiry-message').value;
+
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        auto_expiry_enabled: enabled,
+        auto_expiry_days: days,
+        auto_expiry_notify_tv: notifyTv,
+        auto_expiry_notify_wa: notifyWa,
+        auto_expiry_message: message
+      })
+    });
+    if (res.ok) alert('Regras de automação salvas com sucesso!');
+    else alert('Erro ao salvar regras.');
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+async function runAutomationsNow() {
+  const btn = document.getElementById('btn-run-automations');
+  btn.disabled = true;
+  btn.innerText = 'Verificando...';
+
+  try {
+    const res = await fetch('/api/admin/automations/run-expiry', {
+      method: 'POST',
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      let msg = `Verificação concluída!\n\nDispositivos escaneados: ${data.scanned || 0}`;
+      msg += `\nAvisos enviados na TV: ${data.notifiedTv || 0}`;
+      msg += `\nMensagens enviadas no WhatsApp: ${data.notifiedWa || 0}`;
+      if (data.errors && data.errors.length > 0) {
+        msg += `\n\nErros:\n${data.errors.join('\n')}`;
+      }
+      alert(msg);
+      loadDevices();
+    } else {
+      alert(`Erro: ${data.error || data.reason || 'Falha ao executar automações'}`);
+    }
+  } catch (err) {
+    alert('Erro ao executar: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '⚡ Executar Agora';
+  }
 }
 
 // Inicialização

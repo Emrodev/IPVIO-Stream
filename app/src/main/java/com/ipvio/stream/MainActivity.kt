@@ -201,6 +201,15 @@ private fun AppContent() {
     LaunchedEffect(browse) { browse?.let { StalkerMore.attach(ctx, it) } ?: StalkerMore.detach() }
     var cats by remember { mutableStateOf<CatReq?>(null) }
     var playing by remember { mutableStateOf<PlayReq?>(null) }
+    LaunchedEffect(playing) {
+        val p = playing
+        if (p != null) {
+            val type = if (p.live) "live" else if (p.season > 0 || p.episode > 0) "series" else "movie"
+            PortalManager.setNowPlaying(ctx, p.title, type)
+        } else {
+            PortalManager.setNowPlaying(ctx, null, null)
+        }
+    }
     var tab by remember { mutableStateOf(SettingsLogic.resolveStartTab(General.startTab, AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList())) }
     // W-002: the start page is the movie or series area: open its categories as well
     LaunchedEffect(Unit) { if (General.vodCats && (tab == 1 || tab == 2)) AppNav.pendingVodCats = tab }

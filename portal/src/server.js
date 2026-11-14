@@ -8,6 +8,8 @@ const db = require('./db');
 const deviceRoutes = require('./routes/device');
 const adminRoutes = require('./routes/admin');
 
+const { runExpiryAutomations } = require('./services/automationService');
+
 const app = express();
 
 app.use(cors());
@@ -46,6 +48,11 @@ async function start() {
       console.log(`💾 Banco de dados: ${config.dbType.toUpperCase()}`);
       console.log(`🔑 Chave de Admin: ${config.adminKey}`);
       console.log(`====================================================`);
+
+      // Verificação periódica de renovações (a cada 1 hora)
+      setInterval(() => {
+        runExpiryAutomations().catch(err => console.error('[Automação Vencimento]', err.message));
+      }, 60 * 60 * 1000);
     });
   } catch (err) {
     console.error('Falha ao iniciar o portal:', err);

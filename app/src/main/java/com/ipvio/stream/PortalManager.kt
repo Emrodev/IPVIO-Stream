@@ -25,6 +25,47 @@ object PortalManager {
 
     var onPlaylistLoaded: (() -> Unit)? = null
 
+    var currentPlayingTitle: String? = null
+        private set
+    var currentPlayingType: String? = null
+        private set
+
+    fun setNowPlaying(ctx: Context, title: String?, type: String?) {
+        currentPlayingTitle = title
+        currentPlayingType = type
+        val url = getPortalUrl(ctx)
+        if (url.isBlank()) return
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val devId = DeviceIdentity.getDeviceId(ctx)
+                val json = JSONObject().apply {
+                    put("deviceId", devId)
+                    put("title", title ?: JSONObject.NULL)
+                    put("type", type ?: JSONObject.NULL)
+                }
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val req = Request.Builder()
+                    .url("$url/api/device/now-playing")
+                    .post(body)
+                    .build()
+                client.newCall(req).execute().close()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun getAccountKey(ctx: Context): String {
+        val url = PlaylistStore.savedUrl(ctx) ?: return ""
+        return try {
+            val u = android.net.Uri.parse(url)
+            val host = u.host.orEmpty()
+            val user = u.getQueryParameter("username") ?: ""
+            if (host.isNotBlank() && user.isNotBlank()) "$host:$user" else url.take(80)
+        } catch (_: Exception) {
+            url.take(80)
+        }
+    }
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
@@ -74,7 +115,9 @@ object PortalManager {
         if (url.isBlank()) return
 
         job = CoroutineScope(Dispatchers.IO).launch {
-            registerDevice(ctx, url)
+            if (registerDevice(ctx, url)) {
+                pullSharedProgress(ctx)
+            }
 
             while (isActive) {
                 val delayTime = if (PlaylistStore.savedUrl(ctx) == null) 4_000L else 45_000L
@@ -131,6 +174,10 @@ object PortalManager {
                 put("deviceId", devId)
                 put("pairingCode", pairingCode)
                 put("versionCode", verCode)
+                if (currentPlayingTitle != null) {
+                    put("nowPlaying", currentPlayingTitle)
+                    put("nowPlayingType", currentPlayingType)
+                }
             }
 
             val body = json.toString().toRequestBody("application/json".toMediaType())
@@ -202,6 +249,165 @@ object PortalManager {
                     }
                 }
             }
+        }
+    }
+
+    fun backupToPortal(ctx: Context, onResult: (Boolean, String) -> Unit) {
+        val url = getPortalUrl(ctx)
+        if (url.isBlank()) {
+            onResult(false, Lang.tr("URL do Portal não configurada."))
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val backupText = Backup.exportText(ctx, withPlaylists = true)
+                if (backupText == null) {
+                    withContext(Dispatchers.Main) { onResult(false, Lang.tr("Falha ao gerar arquivo de backup.")) }
+                    return@launch
+                }
+                val sum = Backup.summary(backupText)
+                val sumJson = JSONObject().apply {
+                    put("profiles", sum?.profiles ?: 1)
+                    put("favs", sum?.favorites ?: 0)
+                    put("cats", sum?.categories?.size ?: 0)
+                    put("date", sum?.at ?: System.currentTimeMillis())
+                }
+
+                val devId = DeviceIdentity.getDeviceId(ctx)
+                val accKey = getAccountKey(ctx)
+
+                val payload = JSONObject().apply {
+                    put("deviceId", devId)
+                    put("accountKey", accKey)
+                    put("backupData", backupText)
+                    put("summary", sumJson)
+                }
+
+                val body = payload.toString().toRequestBody("application/json".toMediaType())
+                val req = Request.Builder()
+                    .url("$url/api/device/backup")
+                    .post(body)
+                    .build()
+
+                val res = client.newCall(req).execute()
+                val ok = res.isSuccessful
+                res.close()
+                withContext(Dispatchers.Main) {
+                    if (ok) onResult(true, Lang.tr("Backup salvo no portal com sucesso!"))
+                    else onResult(false, Lang.tr("Erro ao salvar backup no portal."))
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onResult(false, e.message ?: "Erro de conexão") }
+            }
+        }
+    }
+
+    fun restoreFromPortal(ctx: Context, onResult: (Boolean, String) -> Unit) {
+        val url = getPortalUrl(ctx)
+        if (url.isBlank()) {
+            onResult(false, Lang.tr("URL do Portal não configurada."))
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val devId = DeviceIdentity.getDeviceId(ctx)
+                val accKey = getAccountKey(ctx)
+                val req = Request.Builder()
+                    .url("$url/api/device/backup?deviceId=$devId&accountKey=$accKey")
+                    .get()
+                    .build()
+
+                val res = client.newCall(req).execute()
+                if (!res.isSuccessful) {
+                    res.close()
+                    withContext(Dispatchers.Main) { onResult(false, Lang.tr("Nenhum backup encontrado no portal.")) }
+                    return@launch
+                }
+
+                val str = res.body?.string().orEmpty()
+                val json = JSONObject(str)
+                val backupData = json.optString("backupData")
+                if (backupData.isBlank()) {
+                    withContext(Dispatchers.Main) { onResult(false, Lang.tr("Arquivo de backup vazio.")) }
+                    return@launch
+                }
+
+                val count = Backup.restoreText(ctx, backupData)
+                withContext(Dispatchers.Main) {
+                    if (count >= 0) onResult(true, Lang.tr("Backup restaurado do portal com sucesso! Reinicie o app."))
+                    else onResult(false, Lang.tr("Falha ao restaurar o backup."))
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onResult(false, e.message ?: "Erro ao restaurar") }
+            }
+        }
+    }
+
+    fun syncEpProgress(ctx: Context, seriesId: String, season: Int, ep: Int, posMs: Long, durMs: Long) {
+        val accKey = getAccountKey(ctx)
+        val url = getPortalUrl(ctx)
+        if (accKey.isBlank() || url.isBlank() || durMs <= 0) return
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val itemObj = JSONObject().apply {
+                    put("itemId", seriesId)
+                    put("syncType", "ep_progress")
+                    put("data", JSONObject().apply {
+                        put("season", season)
+                        put("ep", ep)
+                        put("pos", posMs)
+                        put("dur", durMs)
+                    })
+                    put("updatedAt", System.currentTimeMillis())
+                }
+                val arr = org.json.JSONArray().put(itemObj)
+                val payload = JSONObject().apply {
+                    put("accountKey", accKey)
+                    put("items", arr)
+                }
+                val body = payload.toString().toRequestBody("application/json".toMediaType())
+                val req = Request.Builder().url("$url/api/device/sync/progress").post(body).build()
+                client.newCall(req).execute().close()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun pullSharedProgress(ctx: Context) {
+        val accKey = getAccountKey(ctx)
+        val url = getPortalUrl(ctx)
+        if (accKey.isBlank() || url.isBlank()) return
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val req = Request.Builder()
+                    .url("$url/api/device/sync/progress?accountKey=$accKey")
+                    .get()
+                    .build()
+                val res = client.newCall(req).execute()
+                if (res.isSuccessful) {
+                    val str = res.body?.string().orEmpty()
+                    val json = JSONObject(str)
+                    val items = json.optJSONArray("items") ?: return@launch
+                    for (i in 0 until items.length()) {
+                        val it = items.getJSONObject(i)
+                        val syncType = it.optString("syncType")
+                        val itemId = it.optString("itemId")
+                        val data = it.optJSONObject("data") ?: continue
+
+                        if (syncType == "ep_progress") {
+                            val season = data.optInt("season", 0)
+                            val ep = data.optInt("ep", 0)
+                            val pos = data.optLong("pos", 0L)
+                            val dur = data.optLong("dur", 0L)
+                            if (season > 0 && ep > 0 && dur > 0) {
+                                EpProgress.put(ctx, itemId, season, ep, pos, dur)
+                            }
+                        }
+                    }
+                }
+                res.close()
+            } catch (_: Exception) {}
         }
     }
 

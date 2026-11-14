@@ -4,9 +4,12 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
+const AppInfoParser = require('app-info-parser');
 const db = require('../db');
 const config = require('../config');
 const { checkPlaylistValidity } = require('../services/playlistChecker');
+const { getSettings, saveSettings, migrateAllClientsUrl, runExpiryAutomations } = require('../services/automationService');
+const { sendWhatsAppMessage } = require('../services/whatsappService');
 
 // Sessões ativas em memória (token -> { username, expiresAt })
 const activeSessions = new Map();
@@ -94,10 +97,15 @@ router.get('/devices', async (req, res) => {
         const hex = src.slice(-6).toUpperCase();
         code = hex.length === 6 ? `${hex.slice(0, 3)}-${hex.slice(3)}` : (hex || '-');
       }
+      const isOnline = (now - Number(d.last_seen || 0)) < 2 * 60 * 1000;
+      const isPlaying = Boolean(isOnline && d.now_playing && (now - Number(d.now_playing_at || 0)) < 3 * 60 * 1000);
       return {
         ...d,
         pairing_code: code,
-        isOnline: (now - Number(d.last_seen || 0)) < 2 * 60 * 1000 // visto nos últimos 2 min
+        isOnline,
+        isPlaying,
+        currentPlaying: isPlaying ? d.now_playing : null,
+        currentPlayingType: isPlaying ? d.now_playing_type : null
       };
     });
     res.json({ success: true, devices });
@@ -119,15 +127,78 @@ router.get('/devices/:id', async (req, res) => {
   }
 });
 
-// 4. Atualizar dados básicos / status do dispositivo
+// 4. Atualizar dados básicos, telefone ou status do dispositivo
 router.put('/devices/:id', async (req, res) => {
   try {
-    const { name, status } = req.body;
+    const { name, status, clientPhone } = req.body;
     await db.query(
-      'UPDATE devices SET name = COALESCE(?, name), status = COALESCE(?, status) WHERE id = ?',
-      [name, status, req.params.id]
+      'UPDATE devices SET name = COALESCE(?, name), status = COALESCE(?, status), client_phone = COALESCE(?, client_phone) WHERE id = ?',
+      [name, status, clientPhone !== undefined ? clientPhone : null, req.params.id]
     );
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4.1 Configurações globais e automações
+router.get('/settings', async (req, res) => {
+  try {
+    const settings = await getSettings();
+    res.json({ success: true, settings });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/settings', async (req, res) => {
+  try {
+    const updated = await saveSettings(req.body);
+    res.json({ success: true, settings: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4.2 Migração em massa da URL/Host IPTV para TODOS os clientes conectados
+router.post('/iptv/migrate-url', async (req, res) => {
+  try {
+    const { newUrl } = req.body;
+    if (!newUrl) {
+      return res.status(400).json({ success: false, error: 'Nova URL do IPTV é obrigatória' });
+    }
+    const result = await migrateAllClientsUrl(newUrl);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4.3 Teste de envio de WhatsApp oficial
+router.post('/whatsapp/test', async (req, res) => {
+  try {
+    const { apiUrl, apiToken, phone, message } = req.body;
+    const settings = await getSettings();
+    const finalUrl = apiUrl || settings.whatsapp_api_url;
+    const finalToken = apiToken || settings.whatsapp_api_token;
+
+    const result = await sendWhatsAppMessage({
+      apiUrl: finalUrl,
+      apiToken: finalToken,
+      phone,
+      message: message || '✅ Teste de conexão com a API do WhatsApp via Portal IPVIO Stream!'
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4.4 Disparo manual/imediato das automações de vencimento
+router.post('/automations/run-expiry', async (req, res) => {
+  try {
+    const result = await runExpiryAutomations();
+    res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -136,7 +207,7 @@ router.put('/devices/:id', async (req, res) => {
 // 5. Atribuir ou atualizar playlist remotamente (com checagem de validade)
 router.post('/devices/link-by-code', async (req, res) => {
   try {
-    const { code, type, url, host, user, pass } = req.body;
+    const { code, type, url, host, user, pass, phone } = req.body;
     if (!code) {
       return res.status(400).json({ success: false, error: 'Código de pareamento ou MAC é obrigatório.' });
     }
@@ -184,9 +255,10 @@ router.post('/devices/link-by-code', async (req, res) => {
         playlist_updated_at = ?,
         playlist_exp_date = ?,
         playlist_status = ?,
-        playlist_max_cons = ?
+        playlist_max_cons = ?,
+        client_phone = COALESCE(?, client_phone)
        WHERE id = ?`,
-      [type || 'none', url || '', host || '', user || '', pass || '', now, expDate, plStatus, maxCons, dev.id]
+      [type || 'none', url || '', host || '', user || '', pass || '', now, expDate, plStatus, maxCons, phone || null, dev.id]
     );
 
     res.json({
@@ -362,33 +434,57 @@ router.post('/ota', async (req, res) => {
   }
 });
 
-// 12. Upload direto do APK para servir via OTA
+// 12. Upload direto do APK para servir via OTA (com extração automática de versão)
 router.post('/ota/upload', upload.single('apk'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'Nenhum arquivo APK enviado.' });
     }
-    const { versionName, versionCode, changelog, mandatory } = req.body;
-    
+    const { changelog, mandatory } = req.body;
+    let finalVersionName = (req.body.versionName || '').trim();
+    let finalVersionCode = req.body.versionCode ? parseInt(req.body.versionCode, 10) : null;
+
+    // Extrai automaticamente versionCode e versionName do binário do APK
+    try {
+      const parser = new AppInfoParser(req.file.path);
+      const parsed = await parser.parse();
+      if (parsed) {
+        if (!finalVersionName && parsed.versionName) finalVersionName = String(parsed.versionName);
+        if (!finalVersionCode && parsed.versionCode) finalVersionCode = parseInt(parsed.versionCode, 10);
+      }
+    } catch (parseErr) {
+      console.warn('[APK Parser Auto-detect Warning]', parseErr.message);
+    }
+
+    finalVersionName = finalVersionName || '1.0.0';
+    finalVersionCode = finalVersionCode || 1;
+
     // Constrói URL absoluta com o domínio do portal para a TV conseguir baixar
     const protocol = req.protocol || 'http';
     const host = req.get('host') || `localhost:${config.port}`;
     const downloadUrl = `${protocol}://${host}/apks/${req.file.filename}`;
     const now = Date.now();
-    
+
     await db.query(
       `INSERT INTO ota_updates (version_name, version_code, download_url, changelog, mandatory, released_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        versionName || 'Versão Atualizada',
-        parseInt(versionCode || '8', 10),
+        finalVersionName,
+        finalVersionCode,
         downloadUrl,
         changelog || '',
         mandatory ? 1 : 0,
         now
       ]
     );
-    res.json({ success: true, downloadUrl, filename: req.file.filename });
+
+    res.json({
+      success: true,
+      downloadUrl,
+      filename: req.file.filename,
+      versionName: finalVersionName,
+      versionCode: finalVersionCode
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

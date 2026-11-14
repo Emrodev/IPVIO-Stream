@@ -27,9 +27,10 @@ val hasKeystore = listOf("storeFile", "storePassword", "keyAlias", "keyPassword"
 
 // ==============================================================================
 // CONFIGURAÇÃO DO PORTAL REMOTO IPVIO
-// Altere esta URL sempre que mudar de servidor/domínio para os novos APKs:
+// Prioridade: -PPORTAL_URL -> env PORTAL_URL -> secrets.properties (ignorado no git) -> padrão
 val PORTAL_URL: String = (project.findProperty("PORTAL_URL") as String?)
     ?: System.getenv("PORTAL_URL")
+    ?: (secrets.getProperty("PORTAL_URL") ?: "").trim().ifBlank { null }
     ?: "http://192.168.1.100:3000"
 // ==============================================================================
 

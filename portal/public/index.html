@@ -101,6 +101,7 @@
       <div class="flex items-center gap-3">
         <nav class="flex bg-surface-800 p-1 rounded-xl border border-gray-800">
           <button id="tab-devices-btn" onclick="switchTab('devices')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow">Dispositivos</button>
+          <button id="tab-automations-btn" onclick="switchTab('automations')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white">Automações & WhatsApp</button>
           <button id="tab-ota-btn" onclick="switchTab('ota')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white">Atualizações OTA</button>
         </nav>
 
@@ -204,6 +205,7 @@
                   <th class="py-4 px-5">MAC / ID</th>
                   <th class="py-4 px-5">IP / App</th>
                   <th class="py-4 px-5">Playlist</th>
+                  <th class="py-4 px-5">Assistindo Agora</th>
                   <th class="py-4 px-5">Validade</th>
                   <th class="py-4 px-5">Último Acesso</th>
                   <th class="py-4 px-5 text-right">Ações</th>
@@ -211,7 +213,7 @@
               </thead>
               <tbody id="devices-tbody" class="divide-y divide-gray-800/60 text-gray-200">
                 <tr>
-                  <td colspan="8" class="text-center py-12 text-gray-500">Carregando dispositivos...</td>
+                  <td colspan="10" class="text-center py-12 text-gray-500">Carregando dispositivos...</td>
                 </tr>
               </tbody>
             </table>
@@ -219,7 +221,146 @@
         </div>
       </section>
 
-      <!-- SEÇÃO 2: ATUALIZAÇÕES OTA -->
+      <!-- SEÇÃO 2: AUTOMAÇÕES, WHATSAPP & IPTV EM MASSA -->
+      <section id="section-automations" class="hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          <!-- CARD 1: SERVIDOR IPTV & MIGRAÇÃO EM MASSA -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+            <div class="flex items-center gap-2 text-white">
+              <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">🌐</div>
+              <div>
+                <h2 class="text-base font-bold">Servidor IPTV Padrão</h2>
+                <p class="text-xs text-gray-400">Migração em massa de URL</p>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Defina o endereço do servidor IPTV padrão. Caso mude de servidor ou DNS, altere todos os clientes de uma só vez!
+            </p>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Host / URL do Servidor IPTV</label>
+                <input type="text" id="iptv-default-url" placeholder="http://meuservidor.com:8080" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+              </div>
+
+              <div class="flex gap-2">
+                <button onclick="saveDefaultIptvUrl()" class="flex-1 py-2 px-3 rounded-xl bg-surface-700 hover:bg-surface-600 text-white font-semibold transition text-xs">
+                  Salvar Padrão
+                </button>
+                <button onclick="migrateAllIptvUrl()" class="flex-1 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition text-xs shadow-lg shadow-purple-500/20" title="Muda o host de TODOS os clientes Xtream ativos">
+                  ⚡ Mudar de Todos
+                </button>
+              </div>
+            </div>
+
+            <div class="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl text-[11px] text-purple-300 space-y-1">
+              <p class="font-bold">Como funciona a migração em massa?</p>
+              <p>Ao clicar em "Mudar de Todos", o portal atualiza o servidor de todas as TVs e celulares vinculados. No próximo sinal (heartbeat), os aparelhos recarregam automaticamente a lista sem precisar refazer o login!</p>
+            </div>
+          </div>
+
+          <!-- CARD 2: API OFICIAL DO WHATSAPP -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+            <div class="flex items-center gap-2 text-white">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">💬</div>
+              <div>
+                <h2 class="text-base font-bold">API Oficial do WhatsApp</h2>
+                <p class="text-xs text-gray-400">Meta Cloud API / Gateway</p>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Integração padrão oficial da Meta (WhatsApp Cloud API) para disparo de mensagens de cobrança e avisos.
+            </p>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">URL / Endpoint da API</label>
+                <input type="url" id="wa-api-url" placeholder="https://graph.facebook.com/v20.0/{PHONE_ID}/messages" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Token de Acesso (Bearer Token)</label>
+                <input type="password" id="wa-api-token" placeholder="EAABw..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
+              </div>
+
+              <button onclick="saveWhatsAppApiSettings()" class="w-full py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition text-xs shadow-md">
+                Salvar Credenciais WhatsApp
+              </button>
+
+              <div class="pt-3 border-t border-gray-800 space-y-2">
+                <p class="font-semibold text-gray-300 text-[11px]">Testar Envio de Mensagem</p>
+                <div class="flex gap-2">
+                  <input type="tel" id="wa-test-phone" placeholder="5511999999999" class="flex-1 bg-surface-700 border border-gray-700 rounded-xl px-3 py-1.5 text-white text-xs font-mono">
+                  <button onclick="testWhatsAppMessage()" id="btn-test-wa" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs whitespace-nowrap">
+                    Testar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD 3: REGRAS DE RENOVAÇÃO & AVISOS -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+            <div class="flex items-center gap-2 text-white">
+              <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">⏰</div>
+              <div>
+                <h2 class="text-base font-bold">Automação de Vencimento</h2>
+                <p class="text-xs text-gray-400">Lembretes na TV e no WhatsApp</p>
+              </div>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div class="flex items-center justify-between p-2.5 bg-surface-800 rounded-xl border border-gray-800">
+                <span class="font-semibold text-white">Ativar Automações de Vencimento</span>
+                <input type="checkbox" id="auto-expiry-enabled" class="rounded bg-surface-700 border-gray-700 text-brand-600 w-4 h-4">
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Avisar com quantos dias de antecedência?</label>
+                <div class="flex items-center gap-2">
+                  <input type="number" id="auto-expiry-days" min="1" max="30" value="3" class="w-24 bg-surface-700 border border-gray-700 rounded-xl px-3 py-1.5 text-white font-bold focus:outline-none focus:border-brand-500">
+                  <span class="text-gray-400">dia(s) antes do vencimento</span>
+                </div>
+              </div>
+
+              <div class="space-y-1.5 p-2.5 bg-surface-800 rounded-xl border border-gray-800">
+                <p class="font-semibold text-gray-300 mb-1">Canais de Notificação:</p>
+                <label class="flex items-center gap-2 cursor-pointer text-gray-200">
+                  <input type="checkbox" id="auto-expiry-notify-tv" class="rounded bg-surface-700 border-gray-700 text-brand-600">
+                  <span>📺 <strong>Lembrar cliente no app da TV</strong> (mensagem em tela)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-gray-200">
+                  <input type="checkbox" id="auto-expiry-notify-wa" class="rounded bg-surface-700 border-gray-700 text-emerald-600">
+                  <span>💬 <strong>Enviar mensagem via WhatsApp</strong> (ao número cadastrado)</span>
+                </label>
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">
+                  Modelo da Mensagem
+                  <span class="text-[10px] text-gray-400 font-normal">({{nome}}, {{dias}}, {{data}}, {{aparelho}})</span>
+                </label>
+                <textarea id="auto-expiry-message" rows="3" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-brand-500 leading-relaxed"></textarea>
+              </div>
+
+              <div class="flex gap-2 pt-1">
+                <button onclick="saveAutomationRules()" class="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition text-xs shadow-md">
+                  Salvar Regras
+                </button>
+                <button onclick="runAutomationsNow()" id="btn-run-automations" class="py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition text-xs shadow-md" title="Executa a verificação e envia avisos para todos os que estão para vencer agora">
+                  ⚡ Executar Agora
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SEÇÃO 3: ATUALIZAÇÕES OTA -->
       <section id="section-ota" class="hidden space-y-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <!-- Formulário de Nova Versão -->
@@ -234,16 +375,22 @@
 
             <form id="ota-form" onsubmit="submitOta(event)" class="space-y-4 text-sm">
               <div>
-                <label class="block text-xs font-medium text-gray-300 mb-1">Nome da Versão (ex: 1.4.3)</label>
-                <input type="text" id="ota-version-name" required placeholder="1.4.3" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                <label class="block text-xs font-medium text-gray-300 mb-1">
+                  Nome da Versão (ex: 1.4.4) 
+                  <span class="text-brand-400 font-normal">(Opcional no APK - detectado automático)</span>
+                </label>
+                <input type="text" id="ota-version-name" placeholder="Automático do APK (ou digite ex: 1.4.4)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
               </div>
 
               <div>
                 <div class="flex items-center justify-between mb-1">
-                  <label class="text-xs font-medium text-gray-300">Código da Versão (VersionCode numérico)</label>
-                  <span class="text-[10px] text-brand-400 cursor-pointer" onclick="alert('O versionCode é um número sequencial que o Android usa internamente para saber que a versão é mais nova (ex: se o app atual tem 7, a nova versão deve ter 8, depois 9, etc).')">O que é isso? ❓</span>
+                  <label class="text-xs font-medium text-gray-300">
+                    Código da Versão (VersionCode numérico)
+                    <span class="text-brand-400 font-normal">(Opcional no APK - detectado automático)</span>
+                  </label>
+                  <span class="text-[10px] text-cyan-400 cursor-pointer" onclick="alert('Se você fizer o upload do arquivo .apk, o portal lê o VersionCode e o VersionName diretamente de dentro do APK automaticamente! Não precisa digitar.')">Como funciona? 💡</span>
                 </div>
-                <input type="number" id="ota-version-code" required placeholder="8" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                <input type="number" id="ota-version-code" placeholder="Automático do APK (ou digite ex: 9)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
               </div>
 
               <div class="p-3 bg-surface-800 rounded-xl border border-gray-700/80 space-y-2">
@@ -299,6 +446,37 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- MODAL: EDITAR CLIENTE (NOME & WHATSAPP) -->
+  <div id="edit-device-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass rounded-2xl border border-gray-700 max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-white">Editar Dados do Cliente</h3>
+          <p id="edit-device-subtitle" class="text-xs text-gray-400">Dispositivo: -</p>
+        </div>
+        <button onclick="closeModal('edit-device-modal')" class="text-gray-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Nome / Identificação do Cliente</label>
+          <input type="text" id="edit-device-name" placeholder="ex: João Silva - Sala" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Telefone / WhatsApp (com DDD)</label>
+          <input type="tel" id="edit-device-phone" placeholder="ex: 5511999999999" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          <p class="text-[11px] text-gray-400 mt-1">Usado nas automações para envio de avisos de vencimento e renovação.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeModal('edit-device-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
+        <button onclick="saveDeviceEdit()" class="px-5 py-2 text-xs font-bold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/30">Salvar Alterações</button>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL: ATRIBUIR PLAYLIST -->
@@ -420,6 +598,10 @@
               <label class="block text-gray-400 mb-1">Senha</label>
               <input type="text" id="link-xtream-pass" placeholder="senha123" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
             </div>
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">WhatsApp do Cliente (Opcional, com DDD)</label>
+            <input type="tel" id="link-client-phone" placeholder="ex: 5511999999999" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
           </div>
         </div>
       </div>

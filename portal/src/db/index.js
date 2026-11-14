@@ -131,16 +131,44 @@ async function createTables() {
     );
   `;
 
+  const createBackupsTable = `
+    CREATE TABLE IF NOT EXISTS device_backups (
+      device_id VARCHAR(100) PRIMARY KEY,
+      account_key VARCHAR(150),
+      summary TEXT,
+      backup_data TEXT NOT NULL,
+      updated_at BIGINT NOT NULL
+    );
+  `;
+
+  const createAccountSyncTable = `
+    CREATE TABLE IF NOT EXISTS account_sync (
+      account_key VARCHAR(150) NOT NULL,
+      sync_type VARCHAR(50) NOT NULL,
+      item_id VARCHAR(100) NOT NULL,
+      data_json TEXT NOT NULL,
+      updated_at BIGINT NOT NULL,
+      PRIMARY KEY (account_key, sync_type, item_id)
+    );
+  `;
+
   await dbDriver.exec(createDevicesTable);
   await dbDriver.exec(createOtaTable);
   await dbDriver.exec(createSettingsTable);
+  await dbDriver.exec(createBackupsTable);
+  await dbDriver.exec(createAccountSyncTable);
 
   // Migrações suaves para colunas adicionais
   const alterColumns = [
     'ALTER TABLE devices ADD COLUMN playlist_exp_date TEXT',
     'ALTER TABLE devices ADD COLUMN playlist_status TEXT',
     'ALTER TABLE devices ADD COLUMN playlist_max_cons INTEGER',
-    'ALTER TABLE devices ADD COLUMN pairing_code TEXT'
+    'ALTER TABLE devices ADD COLUMN pairing_code TEXT',
+    'ALTER TABLE devices ADD COLUMN now_playing TEXT',
+    'ALTER TABLE devices ADD COLUMN now_playing_type TEXT',
+    'ALTER TABLE devices ADD COLUMN now_playing_at BIGINT DEFAULT 0',
+    'ALTER TABLE devices ADD COLUMN client_phone TEXT',
+    'ALTER TABLE devices ADD COLUMN last_expiry_notified_at BIGINT DEFAULT 0'
   ];
   for (const alterSql of alterColumns) {
     try {

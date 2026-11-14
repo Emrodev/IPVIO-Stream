@@ -22,21 +22,39 @@ Permite gerenciar TVs e celulares à distância: parear via código de ativaçã
    - Badges coloridas indicando status: 🟢 Válida (com contagem de dias restantes), 🟡 Vencendo em breve ou 🔴 Vencida.
    - Botão para reconsultar validade sob demanda.
 
-4. **Gerenciamento de Dispositivos**:
+4. **Assistindo Agora (Now Playing)**:
+   - Monitoramento em tempo real do canal ao vivo, filme ou série que cada cliente está assistindo no momento.
+   - Exibição de badge com ícone temático (`🔴 Ao Vivo`, `🎬 Filme`, `🍿 Série`).
+
+5. **Servidor IPTV Padrão & Migração em Massa de URL**:
+   - Defina a URL padrão do seu servidor IPTV.
+   - Botão **`⚡ Mudar URL de Todos`**: atualiza o servidor de todos os aparelhos ativos simultaneamente sem precisar reconfigurar os aparelhos um a um!
+
+6. **Automações de Vencimento & Cobrança (WhatsApp Oficial & TV)**:
+   - Notificações automáticas prévias de vencimento com antecedência configurável (ex: 3 dias antes).
+   - Envio de lembrete diretamente na tela da TV do usuário.
+   - Integração com a **API Oficial do WhatsApp (Meta Cloud API / Gateway)** com token Bearer e endpoint configuráveis.
+   - Modelo de mensagem personalizado com tags: `{{nome}}`, `{{dias}}`, `{{data}}`, `{{aparelho}}`.
+
+7. **Backup na Nuvem pelo Portal & Sincronização Cross-Device**:
+   - Armazenamento de backup completo (favoritos, configurações e histórico) direto no portal sem precisar de conta Google.
+   - Sincronização contínua do progresso de episódios e filmes entre múltiplos aparelhos que utilizam a mesma conta IPTV.
+
+8. **Upload com Detecção Automática de Versão do APK**:
+   - Ao fazer o upload do APK no portal, o `versionCode` e o `versionName` são extraídos automaticamente do binário, eliminando a digitação manual.
+
+9. **Gerenciamento de Dispositivos**:
    - Identificação completa: Device ID, MAC Virtual (`00:1A:79:XX:XX:XX`), Modelo, IP interno/externo e versão do app instalada.
+   - Cadastro do telefone/WhatsApp do cliente para contato direto.
    - Bloqueio / Desbloqueio remoto de dispositivos.
    - Renomeação personalizada de aparelhos.
 
-5. **Mensagens Push na Tela**:
-   - Envio de notificações instantâneas individuais ou em massa (Broadcast).
-   - Níveis de aviso: Informativo (azul), Aviso/Cobrança (amarelo) ou Alerta Urgente (vermelho).
-
-6. **Servidor de Atualizações OTA (Over-The-Air)**:
+10. **Servidor de Atualizações OTA (Over-The-Air)**:
    - Hospedagem direta de arquivos APK enviados pelo painel.
    - Suporte a links externos de download (ex: GitHub Releases).
    - Flag de atualização obrigatória.
 
-7. **Banco de Dados Híbrido (Zero Configuração)**:
+11. **Banco de Dados Híbrido (Zero Configuração)**:
    - Inicia por padrão com **SQLite** sem necessidade de instalar nada.
    - Pronto para migrar para **PostgreSQL** a qualquer momento mudando apenas o `.env`.
 
