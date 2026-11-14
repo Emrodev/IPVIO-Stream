@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  portal:
+    build: .
+    container_name: ipvio-portal
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - ADMIN_KEY=admin123
+      - DB_TYPE=sqlite
+      - SQLITE_PATH=/app/data/portal.db
+      # Para usar PostgreSQL, descomente as linhas abaixo e comente as 2 acima:
+      # - DB_TYPE=postgres
+      # - DATABASE_URL=postgresql://ipvio_user:ipvio_pass@postgres:5432/ipvio_portal
+    volumes:
+      - ./data:/app/data
+      - ./public/apks:/app/public/apks
+
+  # Serviço PostgreSQL opcional (pronto para ligar a qualquer momento)
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: ipvio-postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     - POSTGRES_USER=ipvio_user
+  #     - POSTGRES_PASSWORD=ipvio_pass
+  #     - POSTGRES_DB=ipvio_portal
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+
+# volumes:
+#   pgdata:

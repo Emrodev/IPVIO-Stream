@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
                 .build()
         )
         ScreenAwake.attach(this)
+        PortalManager.start(this)
         intent?.getStringExtra(Reminders.EXTRA_CH)?.let { AppNav.openChannel = it }
         setContent { App(pick) }
     }
