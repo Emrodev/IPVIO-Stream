@@ -44,6 +44,16 @@ class PhoneImportTest {
         } finally { pi.stop() }
     }
 
+    @Test fun serverLiefertFehlerWennOnReceiveFehlschlaegt() {
+        val pi = PhoneImport { "Ungültige Anmeldedaten" }
+        assertTrue(pi.start())
+        try {
+            val res = post(pi.port, "code=${pi.code}&url=http%3A%2F%2Fa%2Fb.m3u")
+            assertTrue(res.startsWith("HTTP/1.1 400"))
+            assertTrue(res.contains("Ungültige Anmeldedaten"))
+        } finally { pi.stop() }
+    }
+
     @Test fun sperreNachFuenfFehlversuchen() {
         val pi = PhoneImport { }
         assertTrue(pi.start())

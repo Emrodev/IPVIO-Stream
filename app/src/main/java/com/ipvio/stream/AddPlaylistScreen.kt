@@ -34,6 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -64,12 +67,30 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
     val ip = remember { PhoneImport.localIp() }
     val receiver = remember {
         PhoneImport { inp ->
+            val u = if (inp.isXtream) PlaylistStore.xtreamUrl(inp.host, inp.user, inp.pass) else PlaylistLogic.normalizeUrl(inp.url)
+            if (u == null) return@PhoneImport "Angaben unvollständig oder ungültig: Server, Benutzername und Passwort nötig."
             Handler(Looper.getMainLooper()).post {
-                val u = if (inp.isXtream) PlaylistStore.xtreamUrl(inp.host, inp.user, inp.pass) else inp.url
                 stalker = false
                 if (inp.isXtream) { xtream = true; host = inp.host; user = inp.user; pass = inp.pass } else { xtream = false; url = inp.url }
-                if (u == null) PlaylistStore.error = "Angaben unvollständig: Server, Benutzername und Passwort nötig."
-                else scope.launch { if (PlaylistStore.load(ctx, u, true)) onDone() }
+                PlaylistStore.error = null
+            }
+            if (inp.isXtream && backups.isNotEmpty()) {
+                PlaylistStore.setBackups(ctx, u, backups.filter { it.isNotBlank() })
+            }
+            val ok = runBlocking(Dispatchers.IO) {
+                withTimeoutOrNull(15_000) {
+                    PlaylistStore.load(ctx, u, save = true, ask = false)
+                }
+            }
+            if (ok == true) {
+                Handler(Looper.getMainLooper()).post { onDone() }
+                null
+            } else if (ok == false) {
+                val err = PlaylistStore.error ?: "Download oder Verarbeitung fehlgeschlagen."
+                Handler(Looper.getMainLooper()).post { PlaylistStore.error = err }
+                err
+            } else {
+                null
             }
         }
     }

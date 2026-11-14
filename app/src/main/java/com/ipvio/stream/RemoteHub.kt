@@ -12,6 +12,9 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Phone search: the TV serves a small web page ([RemoteLogic.page]); on the phone you search movies, series and channels
@@ -43,7 +46,25 @@ object RemoteHub {
     fun start(ctx: Context): PhoneImport? {
         appCtx = ctx.applicationContext
         server?.let { if (active) return it }
-        val s = PhoneImport { }
+        val s = PhoneImport { inp ->
+            val app = appCtx ?: return@PhoneImport "App nicht bereit"
+            val u = if (inp.isXtream) PlaylistStore.xtreamUrl(inp.host, inp.user, inp.pass) else PlaylistLogic.normalizeUrl(inp.url)
+            if (u == null) return@PhoneImport "Angaben unvollständig oder ungültig: Server, Benutzername und Passwort nötig."
+            val ok = runBlocking(Dispatchers.IO) {
+                withTimeoutOrNull(15_000) {
+                    PlaylistStore.load(app, u, save = true, ask = false)
+                }
+            }
+            if (ok == true) {
+                null
+            } else if (ok == false) {
+                PlaylistStore.error ?: "Download oder Verarbeitung fehlgeschlagen."
+            } else {
+                null
+            }
+        }
+        s.uploadDir = ImportFiles.tmpDir(ctx)
+        s.saveUpload = { name, f -> ImportFiles.save(ctx, name, f) }
         s.onList = { name, bytes -> main.post { appCtx?.let { ListImportApply.run(it, name, bytes) } } }
         s.api = { name, q ->
             // The phone opened the page or used it: close the QR card on the TV (it would otherwise stay in front of the player).
