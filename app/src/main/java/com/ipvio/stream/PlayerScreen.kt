@@ -117,7 +117,7 @@ private const val STALKER_NO_ADDRESS = "Das Portal hat keine Abspiel-Adresse gel
 
 private val SLEEP_MIN = listOf(0, 15, 30, 45, 60, 90, 120)
 
-private enum class Panel { NONE, TRACKS, SUBSEARCH, SUBSTYLE, QUALITY, SPEED, ASPECT, MENU, STEP, EPISODES, SLEEP, ARCHIVE, CLOCK }
+private enum class Panel { NONE, TRACKS, SUBSEARCH, SUBSTYLE, QUALITY, SPEED, ASPECT, MENU, STEP, EPISODES, SLEEP, ARCHIVE, CLOCK, SUBDELAY, AVDELAY }
 
 private class Flash(val icon: PIcon?, val text: String?)
 
@@ -157,7 +157,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(10_000)
             .setReadTimeoutMs(15_000)
-        ExoPlayer.Builder(ctx, SoftAudio.factory(ctx))
+        // W-005/W-007: renderers wrapped for the subtitle and audio delay (no change while both are 0)
+        ExoPlayer.Builder(ctx, PlayerSync.wrap(SoftAudio.factory(ctx)))
             .setLoadControl(Mem.loadControl(ctx))
             .setWakeMode(C.WAKE_MODE_NETWORK)
             // "tap://" = live buffer on the device (rewind, recording), everything else as before
@@ -182,6 +183,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
     var foreground by remember { mutableStateOf(true) }
     KeepScreenOn("player", AwakeLogic.playerNeedsScreen(pWhenReady, pState, pError, foreground))
     var cur by remember { mutableStateOf(req) }
+    // W-005: the subtitle delay applies to one title only
+    LaunchedEffect(cur.itemId, cur.season, cur.episode) { PlayerSync.resetSub() }
     var zapSrc by remember { mutableStateOf(zapList) }
     var msg by remember { mutableStateOf<String?>(null) }
     var buffering by remember { mutableStateOf(true) }
@@ -1601,7 +1604,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
 
         // ---------------------------------------------------------------- Menus
         if (panel != Panel.NONE) {
-            val back = if (panelParent != Panel.NONE) "Links = zurück" else "Links schließt das Menü"
+            val back = if (panelParent != Panel.NONE) "Links = zurück" else "Zurück schließt das Menü"
             when (panel) {
                 Panel.TRACKS -> TracksPanel(
                     player, tracksVer, { tracksVer++; h.postDelayed({ rememberTracks() }, 400) }, panelFocus, subsFocus,
@@ -1619,7 +1622,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     panelParent = Panel.NONE; panel = Panel.NONE
                 }
 
-                Panel.SUBSTYLE -> PSimplePanel(440.dp, "Untertitel-Stil", back, { closePanel() }) {
+                Panel.SUBSTYLE -> PSimplePanel(440.dp, "Untertitel-Stil", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
                     Column(verticalArrangement = Arrangement.spacedBy(PT.RowGap)) {
                         PPanelRow("Größe", false, Modifier.focusRequester(panelFocus), trailing = SubStyle.SIZES[AppSettings.subSize].first, chevron = true) {
                             AppSettings.setSub(ctx, (AppSettings.subSize + 1) % SubStyle.SIZES.size, AppSettings.subColor, AppSettings.subBg, AppSettings.subEdge)
@@ -1637,7 +1640,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     }
                 }
 
-                Panel.QUALITY -> PSimplePanel(440.dp, "Videoqualität", back, { closePanel() }) {
+                Panel.QUALITY -> PSimplePanel(440.dp, "Videoqualität", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
                     val video = remember(tracksVer) { collectTracks(player, C.TRACK_TYPE_VIDEO) }
                     val videoAuto = player.trackSelectionParameters.overrides.keys.none { it.type == C.TRACK_TYPE_VIDEO }
                     // Several sources of the same title (4K/FHD/HD as separate entries): switch by hand here
@@ -1694,25 +1697,25 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     ArchivePanel(curItem, archChannels, cur.archive?.prog?.start, panelFocus, { closePanel() }) { ch, e -> playArchive(ch, e) }
                 }
 
-                Panel.SPEED -> PSimplePanel(400.dp, "Wiedergabe-Tempo", back, { closePanel() }) {
+                Panel.SPEED -> PSimplePanel(400.dp, "Wiedergabe-Tempo", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
                     PChoiceList(SPEEDS.map { speedLabel(it) }, speedIdx, panelFocus) { i ->
                         speedIdx = i
                         player.setPlaybackSpeed(SPEEDS[i])
                     }
                 }
 
-                Panel.SLEEP -> PSimplePanel(400.dp, "Sleep-Timer", back, { closePanel() }) {
+                Panel.SLEEP -> PSimplePanel(400.dp, "Sleep-Timer", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
                     PChoiceList(SLEEP_MIN.map { if (it == 0) "Aus" else "$it min" }, sleepIdx, panelFocus) { i ->
                         sleepIdx = i
                         sleepAt = if (i == 0) 0L else System.currentTimeMillis() + SLEEP_MIN[i] * 60_000L
                     }
                 }
 
-                Panel.ASPECT -> PSimplePanel(440.dp, "Bildformat", back, { closePanel() }) {
+                Panel.ASPECT -> PSimplePanel(440.dp, "Bildformat", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
                     PChoiceList(ASPECTS, aspect, panelFocus) { aspect = it; flash = Flash(null, ASPECTS[it]) }
                 }
 
-                Panel.CLOCK -> PSimplePanel(440.dp, "Uhrzeit im Bild", back, { closePanel() }) {
+                Panel.CLOCK -> PSimplePanel(440.dp, "Uhrzeit im Bild", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
                     val poss = listOf("Oben rechts", "Oben links", "Unten rechts", "Unten links")
                     val sizes = listOf("Klein", "Mittel", "Groß")
                     val ops = listOf(20, 30, 40, 50, 60, 70, 80, 90, 100)
@@ -1742,14 +1745,24 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     }
                 }
 
-                Panel.STEP -> PSimplePanel(400.dp, "Sprungweite", back, { closePanel() }) {
+                Panel.SUBDELAY -> PSimplePanel(440.dp, "Untertitel-Verzögerung", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
+                    SyncRows(PlayerSync.subMs, 100, 1000, panelFocus, "Später", "Früher",
+                        "Gilt nur für diesen Titel. Später = der Text erscheint später.") { PlayerSync.setSub(it) }
+                }
+
+                Panel.AVDELAY -> PSimplePanel(440.dp, "Ton-Verzögerung", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
+                    SyncRows(PlayerSync.avMs, 50, 250, panelFocus, "Später", "Früher",
+                        "Später = der Ton kommt später als das Bild. Gilt für alle Titel auf diesem Gerät.") { PlayerSync.setAv(ctx, it) }
+                }
+
+                Panel.STEP -> PSimplePanel(400.dp, "Sprungweite", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
                     Text("Gilt für Links/Rechts, Halten und die Zeitleiste.", color = Muted, fontSize = 14.sp, modifier = Modifier.padding(bottom = 12.dp))
                     PChoiceList(STEP_OPTIONS.map { "$it s" }, STEP_OPTIONS.indexOf(AppSettings.seekStep).coerceAtLeast(0), panelFocus) { i ->
                         AppSettings.setPlayer(ctx, AppSettings.skipIntro, AppSettings.showInfo, STEP_OPTIONS[i])
                     }
                 }
 
-                Panel.MENU -> PSimplePanel(440.dp, "Einstellungen", back, { closePanel() }) {
+                Panel.MENU -> PSimplePanel(440.dp, "Einstellungen", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
                     val entries = buildList<MenuEntry> {
                         if (cur.live) add(MenuEntry(20, "Zusatzbild", second?.title ?: "Aus", false))
                         if (cur.live && second != null) {
@@ -1763,6 +1776,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                         }
                         add(MenuEntry(0, "Sprungweite", "${step / 1000} s", true))
                         add(MenuEntry(1, "Untertitel-Stil", null, true))
+                        add(MenuEntry(30, "Untertitel-Verzögerung", PlayerSync.label(PlayerSync.subMs), true))
+                        add(MenuEntry(31, "Ton-Verzögerung", PlayerSync.label(PlayerSync.avMs), true))
                         add(MenuEntry(2, "Videoqualität", currentAlts().size.takeIf { it > 1 }?.let { "$it Quellen" }, true))
                         add(MenuEntry(3, "Wiedergabe-Tempo", speedLabel(SPEEDS[speedIdx]), true))
                         add(MenuEntry(4, "Bildformat", ASPECTS[aspect].substringBefore(" ("), true))
@@ -1792,6 +1807,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                                     4 -> openPanel(Panel.ASPECT, Panel.MENU)
                                     8 -> openPanel(Panel.SLEEP, Panel.MENU)
                                     10 -> openPanel(Panel.CLOCK, Panel.MENU)
+                                    30 -> openPanel(Panel.SUBDELAY, Panel.MENU)
+                                    31 -> openPanel(Panel.AVDELAY, Panel.MENU)
                                     11 -> techOn = !techOn
                                     13 -> AppSettings.setAutoOutro(ctx, !AppSettings.autoSkipOutro)
                                     9 -> { panel = Panel.NONE; panelParent = Panel.NONE; lastChannel() }

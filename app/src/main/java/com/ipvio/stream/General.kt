@@ -24,6 +24,8 @@ object General {
     /** Resume the last watched movie / series at start at the remembered position. */
     var resumeVod by mutableStateOf(false)
     var confirmExit by mutableStateOf(true)
+    /** W-002: "Movies" / "Series" in the sidebar open the categories screen right away instead of their home page. */
+    var vodCats by mutableStateOf(false)
     /** Live TV: show the quality variants of one channel (8K/4K/FHD/HD/SD) as a single row. */
     var bundleLive by mutableStateOf(true)
     /** Playlist refresh: 0 = at every start, 1 = every X hours, 2 = daily, 3 = weekly, 4 = by hand only */
@@ -118,6 +120,7 @@ object General {
         resumeLive = p.getBoolean("resume_live", false)
         resumeVod = p.getBoolean("resume_vod", false)
         confirmExit = p.getBoolean("confirm_exit", true)
+        vodCats = p.getBoolean("vod_cats", false)
         bundleLive = p.getBoolean("bundle_live", true)
         // Users who never chose a mode get "daily": the first start still loads the list once (lastRefresh = 0),
         // later starts use the cache. Before 1.4 the default was "at every start", which re-downloaded the whole line each time.
@@ -163,6 +166,7 @@ object General {
     fun setResumeLive(c: Context, v: Boolean) { resumeLive = v; prefs(c).edit().putBoolean("resume_live", v).apply() }
     fun setResumeVod(c: Context, v: Boolean) { resumeVod = v; prefs(c).edit().putBoolean("resume_vod", v).apply() }
     fun setBundleLive(c: Context, v: Boolean) { bundleLive = v; prefs(c).edit().putBoolean("bundle_live", v).apply() }
+    fun setVodCats(c: Context, v: Boolean) { vodCats = v; prefs(c).edit().putBoolean("vod_cats", v).apply() }
     fun setConfirmExit(c: Context, v: Boolean) { confirmExit = v; prefs(c).edit().putBoolean("confirm_exit", v).apply() }
     fun setPlan(c: Context, mode: Int = refreshMode, interval: Int = refreshInterval, hour: Int = refreshHour, minute: Int = refreshMinute, dow: Int = refreshDow) {
         refreshMode = mode.coerceIn(0, 4); refreshInterval = interval.coerceIn(1, 168)

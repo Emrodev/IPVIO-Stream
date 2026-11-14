@@ -673,6 +673,7 @@ fun ReminderCard(r: Reminder, modifier: Modifier, onClose: () -> Unit, onSwitch:
 /** Start in the Live TV area: last watched, favorites and a row of channels per genre. */
 @Composable
 private fun LiveHome(live: List<Item>, genres: Map<String, List<Item>>, favs: List<Item>, firstReq: FocusRequester, onOpen: (Item, List<Item>) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val byId = remember(live) { live.associateBy { it.id } }
     val recent = remember(live, History.ids.size) { History.ids.mapNotNull { byId[it] }.take(24) }
     val rows = ArrayList<Pair<String, List<Item>>>()
@@ -689,10 +690,18 @@ private fun LiveHome(live: List<Item>, genres: Map<String, List<Item>>, favs: Li
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     itemsIndexed(r.second, key = { i, c -> c.id + "#" + i }) { i, c ->
-                        LiveCard(c, { onOpen(c, r.second) }, Modifier.width(260.dp).then(if (ri == 0 && i == 0) Modifier.focusRequester(firstReq) else Modifier))
+                        // W-009: in "Recently watched" a long OK removes the channel from the history (e.g. adult channels)
+                        val onLong: (() -> Unit)? = if (r.second === recent) ({ removeRecent(ctx, c) }) else null
+                        LiveCard(c, { onOpen(c, r.second) }, Modifier.width(260.dp).then(if (ri == 0 && i == 0) Modifier.focusRequester(firstReq) else Modifier), onLong)
                     }
                 }
             }
         }
     }
+}
+
+/** W-009: removes a channel from "Recently watched" (long OK on the card). Playing it again adds it back. */
+internal fun removeRecent(ctx: android.content.Context, item: Item) {
+    History.remove(ctx, item.id)
+    android.widget.Toast.makeText(ctx, Lang.tr("Aus „Zuletzt gesehen“ entfernt"), android.widget.Toast.LENGTH_SHORT).show()
 }

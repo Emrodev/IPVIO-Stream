@@ -106,10 +106,12 @@ private class HomeData(
     val liveP: Map<String, List<Item>>, val movieP: Map<String, List<Item>>, val seriesP: Map<String, List<Item>>,
     val movieG: Map<String, List<Item>>, val seriesG: Map<String, List<Item>>,
     val topM: List<Item>, val topS: List<Item>, val byId: Map<String, Item>, val trendItems: List<Item>,
-    val genresOk: Boolean
+    val genresOk: Boolean,
+    /** Movies/series for the home rows: without adult titles when Parental control > "never on the home pages" is on. */
+    val rowMovies: List<Item> = movies, val rowSeries: List<Item> = series
 )
 
-private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>): HomeData {
+private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>, noAdult: Boolean = false): HomeData {
     val live = ArrayList<Item>(); val movies0 = ArrayList<Item>(); val series = ArrayList<Item>()
     for (i in all) when (i.kind) { Kind.LIVE -> live.add(i); Kind.MOVIE -> movies0.add(i); Kind.SERIES -> series.add(i) }
     // Show the same movie in several versions (HD, 4K, …) only once; the version is chosen on the detail page (source)
@@ -118,11 +120,16 @@ private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>)
     val ipvio = ipvioWanted && genresOk
     val movieP = providerGroups(movies)
     val seriesP = providerGroups(series)
-    val trendItems = if (trend.isEmpty()) emptyList() else (movies.asSequence() + series.asSequence()).filter { Trending.norm(it.title) in trend }.toList()
+    // Home rows never show adult titles if wanted; categories, "All movies" and Live TV keep them (whoever looks finds them there)
+    val rm = if (noAdult) movies.filterNot { ParentalLogic.isAdult(it.group, it.title) } else movies
+    val rs = if (noAdult) series.filterNot { ParentalLogic.isAdult(it.group, it.title) } else series
+    val trendItems = if (trend.isEmpty()) emptyList() else (rm.asSequence() + rs.asSequence()).filter { Trending.norm(it.title) in trend }.toList()
+    val rowMP = if (rm === movies) movieP else providerGroups(rm)
+    val rowSP = if (rs === series) seriesP else providerGroups(rs)
     return HomeData(
         live, movies, series, providerGroups(live), movieP, seriesP,
-        if (ipvio) ipvioGroups(movies) else movieP, if (ipvio) ipvioGroups(series) else seriesP,
-        topRated(movies), topRated(series), all.associateBy { it.id }, trendItems, genresOk
+        if (ipvio) ipvioGroups(rm) else rowMP, if (ipvio) ipvioGroups(rs) else rowSP,
+        topRated(rm), topRated(rs), all.associateBy { it.id }, trendItems, genresOk, rm, rs
     )
 }
 
@@ -137,7 +144,7 @@ private fun keepLiveLists(d: HomeData, prev: HomeData?): HomeData {
     val liveP = if (d.liveP.size == prev.liveP.size && d.liveP.keys.zip(prev.liveP.keys).all { (a, b) -> a == b } &&
         d.liveP.all { (k, l) -> sameItems(l, prev.liveP[k]) }) prev.liveP else d.liveP
     if (live === d.live && liveP === d.liveP) return d
-    return HomeData(live, d.movies, d.series, liveP, d.movieP, d.seriesP, d.movieG, d.seriesG, d.topM, d.topS, d.byId, d.trendItems, d.genresOk)
+    return HomeData(live, d.movies, d.series, liveP, d.movieP, d.seriesP, d.movieG, d.seriesG, d.topM, d.topS, d.byId, d.trendItems, d.genresOk, d.rowMovies, d.rowSeries)
 }
 
 private fun sameItems(a: List<Item>, b: List<Item>?): Boolean {
@@ -161,15 +168,16 @@ private object HomeCache {
     private var all: List<Item>? = null
     private var order: Map<String, Int>? = null
     private var want = false
+    private var noAdult = false
     private var ver = -1
     private var trend: Set<String>? = null
     private var data: HomeData? = null
 
-    @Synchronized fun get(all: List<Item>, order: Map<String, Int>, want: Boolean, ver: Int, trend: Set<String>): HomeData? =
-        if (all === this.all && order === this.order && want == this.want && ver == this.ver && trend === this.trend) data else null
+    @Synchronized fun get(all: List<Item>, order: Map<String, Int>, want: Boolean, ver: Int, trend: Set<String>, noAdult: Boolean): HomeData? =
+        if (all === this.all && order === this.order && want == this.want && ver == this.ver && trend === this.trend && noAdult == this.noAdult) data else null
 
-    @Synchronized fun put(all: List<Item>, order: Map<String, Int>, want: Boolean, ver: Int, trend: Set<String>, d: HomeData) {
-        this.all = all; this.order = order; this.want = want; this.ver = ver; this.trend = trend; data = d
+    @Synchronized fun put(all: List<Item>, order: Map<String, Int>, want: Boolean, ver: Int, trend: Set<String>, noAdult: Boolean, d: HomeData) {
+        this.all = all; this.order = order; this.want = want; this.ver = ver; this.trend = trend; this.noAdult = noAdult; data = d
     }
 
     /** For the wait after a change: better show the previous state than an empty skeleton. */
@@ -209,11 +217,12 @@ fun HomeScreen(
     var trend by remember { mutableStateOf(HomeVer.trend) }
     LaunchedEffect(all.isNotEmpty()) { if (all.isNotEmpty()) { trend = Trending.titles(); HomeVer.trend = trend } }
     val wantIpvio = AppSettings.ipvioFilter
-    val cached = HomeCache.get(all, order, wantIpvio, ver, trend)
+    val noAdult = Parental.adultOffHome
+    val cached = HomeCache.get(all, order, wantIpvio, ver, trend, noAdult)
     // When inputs change, the previous state stays visible until the new result (produceState keeps the value)
-    val dataState = produceState(cached, all, order, wantIpvio, ver, trend) {
-        value = HomeCache.get(all, order, wantIpvio, ver, trend)
-            ?: withContext(Dispatchers.Default) { keepLiveLists(buildHome(all, wantIpvio, trend), HomeCache.last()) }.also { HomeCache.put(all, order, wantIpvio, ver, trend, it) }
+    val dataState = produceState(cached, all, order, wantIpvio, ver, trend, noAdult) {
+        value = HomeCache.get(all, order, wantIpvio, ver, trend, noAdult)
+            ?: withContext(Dispatchers.Default) { keepLiveLists(buildHome(all, wantIpvio, trend, noAdult), HomeCache.last()) }.also { HomeCache.put(all, order, wantIpvio, ver, trend, noAdult, it) }
     }
     // While recomputing: show the previous state, the loading skeleton only the very first time
     val prev = HomeCache.last()
@@ -236,13 +245,19 @@ fun HomeScreen(
     val hist by remember(byId) { derivedStateOf { History.ids.mapNotNull { byId[it] } } }
     val watchList by remember(byId) { derivedStateOf { Library.watch.mapNotNull { byId[it] } } }
     val favLive by remember(byId) { derivedStateOf { Library.favs.mapNotNull { byId[it] }.filter { it.kind == Kind.LIVE } } }
+    // Home rows: the same short lists without adult titles if wanted (Live TV, favorites tab and history keep them)
+    val histHome = remember(hist, noAdult) { homeSafe(hist, noAdult) }
+    val watchHome = remember(watchList, noAdult) { homeSafe(watchList, noAdult) }
+    val favLiveHome = remember(favLive, noAdult) { homeSafe(favLive, noAdult) }
+    val rowMovies = data.rowMovies
+    val rowSeries = data.rowSeries
     // Row lists that were built anew inside the rows on every recomposition
-    val newMovies = remember(movies) { movies.takeLast(40).reversed() }
-    val newSeries = remember(series) { series.takeLast(40).reversed() }
-    val histTop = remember(hist) { hist.take(30) }
+    val newMovies = remember(rowMovies) { rowMovies.takeLast(40).reversed() }
+    val newSeries = remember(rowSeries) { rowSeries.takeLast(40).reversed() }
+    val histTop = remember(histHome) { histHome.take(30) }
     val trendItems = data.trendItems
     val trendTop = remember(trendItems) { trendItems.take(10) }
-    val wlVod = remember(watchList) { watchList.filter { it.kind != Kind.LIVE } }
+    val wlVod = remember(watchHome) { watchHome.filter { it.kind != Kind.LIVE } }
     // Live TV opens faster: genres and quality bundling of all channels are prepared in the background (both keep their result)
     LaunchedEffect(live) {
         if (live.isEmpty()) return@LaunchedEffect
@@ -254,7 +269,7 @@ fun HomeScreen(
         }
     }
     // "Because you watched X": similar titles (TMDB) of the last started movie/series, matched against the own playlist
-    val becauseSrc = hist.firstOrNull { it.kind != Kind.LIVE }
+    val becauseSrc = histHome.firstOrNull { it.kind != Kind.LIVE }
     val because by produceState<Pair<Item, List<Item>>?>(null, becauseSrc?.id, byId.size) {
         val src = becauseSrc ?: return@produceState
         val m = MetaRepo.extended(ctx, src) ?: return@produceState
@@ -262,7 +277,7 @@ fun HomeScreen(
         val c = CreditsRepo.credits(ctx, m) ?: return@produceState
         val seen = History.ids.toSet()
         val l = withContext(Dispatchers.Default) {
-            LibMatch.matches(PlaylistStore.channels, c.similar, 40).filter { it.id != src.id && it.id !in seen && it.kind != Kind.LIVE }
+            homeSafe(LibMatch.matches(PlaylistStore.channels, c.similar, 40).filter { it.id != src.id && it.id !in seen && it.kind != Kind.LIVE }, noAdult)
         }
         if (l.size >= 4) value = src to l.take(20)
     }
@@ -279,11 +294,11 @@ fun HomeScreen(
     val ready = remember { mutableStateListOf<Item>() }
     // Also use the sizes of movies/series as a key: if the computed home screen arrives only after the list (and without trend titles,
     // i.e. the same empty trend list), the selection stayed empty and the big picture was missing.
-    val candidates = remember(all, trendItems, movies.size, series.size, tab) {
+    val candidates = remember(all, trendItems, rowMovies.size, rowSeries.size, tab) {
         when (tab) {
-            1 -> (trendItems.filter { it.kind == Kind.MOVIE }.take(8) + movies.takeLast(30).reversed())
-            2 -> (trendItems.filter { it.kind == Kind.SERIES }.take(8) + series.takeLast(30).reversed())
-            else -> (trendItems.take(8) + movies.takeLast(25).reversed() + series.takeLast(15).reversed())
+            1 -> (trendItems.filter { it.kind == Kind.MOVIE }.take(8) + rowMovies.takeLast(30).reversed())
+            2 -> (trendItems.filter { it.kind == Kind.SERIES }.take(8) + rowSeries.takeLast(30).reversed())
+            else -> (trendItems.take(8) + rowMovies.takeLast(25).reversed() + rowSeries.takeLast(15).reversed())
         }.distinctBy { it.id }
     }
     // Movies/series: tabs at the top next to the search (instead of the big buttons under the picture)
@@ -307,6 +322,10 @@ fun HomeScreen(
             val l = g.filter { it.key.startsWith("$src · ") }.values.flatten().distinctBy { it.id }
             if (l.isEmpty()) null else Triple(src, l, "tb:imp$src$tab")
         }
+    }
+    // W-002: chosen in the menu with "straight to the categories" on: open them once the titles of this area are there
+    LaunchedEffect(AppNav.pendingVodCats, tab, vodBase.isNotEmpty()) {
+        if (AppNav.pendingVodCats == tab && tab in 1..2 && vodBase.isNotEmpty()) { AppNav.pendingVodCats = -1; openCats() }
     }
     // Asked by the View settings' live preview (consumed at once so a later visit does not open it again)
     LaunchedEffect(AppNav.openCatsSignal) { if (AppNav.openCatsSignal > 0) { AppNav.openCatsSignal = 0; if (tab == 1) openCats() } }
@@ -354,8 +373,8 @@ fun HomeScreen(
     }
     // Tiles with real images from the own library (round 15): scene image of a top title per area,
     // for favorites and My list a title from it, for Live TV the logos of favorite channels.
-    val nowChannels = remember(favLive, hist, live) {
-        (favLive + hist.filter { it.kind == Kind.LIVE }).distinctBy { it.id }.ifEmpty { live.take(20) }
+    val nowChannels = remember(favLiveHome, histHome, live) {
+        (favLiveHome + histHome.filter { it.kind == Kind.LIVE }).distinctBy { it.id }.ifEmpty { homeSafe(live.take(40), noAdult).take(20) }
     }
     val favVod by remember(byId) { derivedStateOf { Library.favs.mapNotNull { byId[it] }.filter { it.kind != Kind.LIVE } } }
     val tileImg by produceState(emptyMap<Int, String>(), topM.size, topS.size, favVod.size, watchList.size) {
@@ -477,12 +496,13 @@ fun HomeScreen(
         else { lastBack = now; android.widget.Toast.makeText(ctx, Lang.tr("Noch einmal Zurück drücken zum Beenden"), android.widget.Toast.LENGTH_SHORT).show() }
     }
 
-    val resumeList by remember(byId) { derivedStateOf { WatchStore.entries.mapNotNull { e -> byId[e.itemId]?.let { e to it } } } }
+    val resumeAll by remember(byId) { derivedStateOf { WatchStore.entries.mapNotNull { e -> byId[e.itemId]?.let { e to it } } } }
+    val resumeList = remember(resumeAll, noAdult) { if (!noAdult) resumeAll else resumeAll.filterNot { ParentalLogic.isAdult(it.second.group, it.second.title) } }
     // Movies/series tab: the same lists filtered by kind, kept between recompositions
     val vodKind = if (tab == 1) Kind.MOVIE else Kind.SERIES
     val resumeK = remember(resumeList, vodKind) { resumeList.filter { it.second.kind == vodKind } }
-    val watchK = remember(watchList, vodKind) { watchList.filter { it.kind == vodKind } }
-    val histK = remember(hist, vodKind) { hist.filter { it.kind == vodKind } }
+    val watchK = remember(watchHome, vodKind) { watchHome.filter { it.kind == vodKind } }
+    val histK = remember(histHome, vodKind) { histHome.filter { it.kind == vodKind } }
     val trendK = remember(trendItems, vodKind) { trendItems.filter { it.kind == vodKind } }
     val reload: () -> Unit = { PlaylistStore.savedUrl(ctx)?.let { u -> scope.launch { PlaylistStore.load(ctx, u, false) } } }
 
@@ -610,7 +630,7 @@ fun HomeScreen(
                                     "clock" -> { item(key = "clock") { ClockWidget() } }
                                     // Continue watching directly under the tiles: whoever watches a lot wants to continue in few clicks
                                     "resume" -> { if (resumeList.isNotEmpty()) item(key = "resume") { ResumeRow(resumeList, cardW, onResume) } }
-                                    "favch" -> { if (favLive.isNotEmpty()) item(key = "favch") { ItemsRow("Meine Sender", favLive, cardW, onOpen) { onTab(3) } } }
+                                    "favch" -> { if (favLiveHome.isNotEmpty()) item(key = "favch") { ItemsRow("Meine Sender", favLiveHome, cardW, onOpen) { onTab(3) } } }
                                     "chnow" -> { if (nowChannels.isNotEmpty()) item(key = "chnow") { ChannelNowRow("Live TV", nowChannels, onOpen) { onTab(3) } } }
                                     // Top 10 always as whole covers (independent of the picture setting)
                                     "trend" -> { if (trendItems.size >= 3) item(key = "trend") {
@@ -620,15 +640,15 @@ fun HomeScreen(
                                         item(key = "because") { ItemsRow("Weil du „" + src.title + "“ geschaut hast", l, cardW, onOpen) { onBrowse(BrowseReq("Ähnlich wie " + src.title, l, SORT_PLAYLIST)) } }
                                     } }
                                     "wl" -> { if (wl.isNotEmpty()) item(key = "wl") { ItemsRow("Meine Liste", wl, cardW, onOpen) { onTab(MenuLogic.MYLIST) } } }
-                                    "hist" -> { if (hist.isNotEmpty()) item(key = "hist") { ItemsRow("Zuletzt geschaut", histTop, cardW, onOpen) { onBrowse(BrowseReq("Zuletzt geschaut", hist, SORT_PLAYLIST)) } } }
-                                    "newm" -> { if (movies.isNotEmpty()) item(key = "newm") {
-                                        ItemsRow("Neu hinzugefügt · Filme", newMovies, cardW, onOpen) { onBrowse(BrowseReq("Neu hinzugefügt · Filme", movies, SORT_NEW)) }
+                                    "hist" -> { if (histHome.isNotEmpty()) item(key = "hist") { ItemsRow("Zuletzt geschaut", histTop, cardW, onOpen) { onBrowse(BrowseReq("Zuletzt geschaut", histHome, SORT_PLAYLIST)) } } }
+                                    "newm" -> { if (rowMovies.isNotEmpty()) item(key = "newm") {
+                                        ItemsRow("Neu hinzugefügt · Filme", newMovies, cardW, onOpen) { onBrowse(BrowseReq("Neu hinzugefügt · Filme", rowMovies, SORT_NEW)) }
                                     } }
                                     "topm" -> { if (topM.size >= 8) item(key = "topm") {
                                         ItemsRow("Top bewertet · Filme", topM, cardW, onOpen) { onBrowse(BrowseReq("Top bewertet · Filme", topM, SORT_RATING)) }
                                     } }
-                                    "news" -> { if (series.isNotEmpty()) item(key = "news") {
-                                        ItemsRow("Neu hinzugefügt · Serien", newSeries, cardW, onOpen) { onBrowse(BrowseReq("Neu hinzugefügt · Serien", series, SORT_NEW)) }
+                                    "news" -> { if (rowSeries.isNotEmpty()) item(key = "news") {
+                                        ItemsRow("Neu hinzugefügt · Serien", newSeries, cardW, onOpen) { onBrowse(BrowseReq("Neu hinzugefügt · Serien", rowSeries, SORT_NEW)) }
                                     } }
                                     "tops" -> { if (topS.size >= 8) item(key = "tops") {
                                         ItemsRow("Top bewertet · Serien", topS, cardW, onOpen) { onBrowse(BrowseReq("Top bewertet · Serien", topS, SORT_RATING)) }
@@ -682,7 +702,7 @@ fun HomeScreen(
                                 item { EmptyHint("Keine $noun in dieser Playlist") }
                                 item { EmptyHint(CONTENT_MODE_HINT.format(if (isM) "movies" else "series", "live TV only")) }
                             }
-                            if (base.isNotEmpty()) item(key = "new$tab") { ItemsRow("Neu hinzugefügt", if (isM) newMovies else newSeries, cardW, onOpen) { onBrowse(BrowseReq("Neu hinzugefügt · $noun", base, SORT_NEW)) } }
+                            if (base.isNotEmpty() && (if (isM) newMovies else newSeries).isNotEmpty()) item(key = "new$tab") { ItemsRow("Neu hinzugefügt", if (isM) newMovies else newSeries, cardW, onOpen) { onBrowse(BrowseReq("Neu hinzugefügt · $noun", if (isM) rowMovies else rowSeries, SORT_NEW)) } }
                             if (top.size >= 8) item(key = "best$tab") { ItemsRow("Top bewertet", top, cardW, onOpen) { onBrowse(BrowseReq("Top bewertet · $noun", top, SORT_RATING)) } }
                             groups.entries.take(12).forEach { (g, l) -> item(key = "G$tab$g") { ItemsRow(g, l, cardW, onOpen) { onBrowse(BrowseReq(g, l, SORT_NEW)) } } }
                             if (groups.size > 12) item { EmptyHint("Weitere Kategorien findest du unter „Kategorien“ oben.") }
@@ -1003,3 +1023,7 @@ private fun BillboardLayer(fade: () -> Float, item: State<Item?>, infoMod: Modif
     BillboardBackdrop(bi, Modifier.fillMaxSize().graphicsLayer { alpha = fade() })
     bi?.let { BillboardInfo(it, infoMod.graphicsLayer { alpha = fade(); translationY = (1f - fade()) * 20.dp.toPx() }) }
 }
+
+/** Home rows without adult titles when Parental control > "never on the home pages" is on ([on]). */
+private fun homeSafe(list: List<Item>, on: Boolean): List<Item> =
+    if (!on) list else list.filterNot { ParentalLogic.isAdult(it.group, it.title) }
