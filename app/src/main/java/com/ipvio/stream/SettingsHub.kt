@@ -1421,6 +1421,17 @@ private fun ApiKeysPage(ctx: Context) {
     var osStatus by remember { mutableStateOf("") }
     var sdStatus by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    // Phone entry first: the button must be visible without scrolling (its QR block appears right below it)
+    ApiKeysPhoneEntry(ctx) { got ->
+        // Keep the keys the phone did not send, store the rest; "Speichern und prüfen" then checks them as usual
+        got["tmdb"]?.let { tmdb = Config.clean(it); tmdbStatus = "" }
+        got["omdb"]?.let { omdb = Config.clean(it); omdbStatus = "" }
+        got["os"]?.let { osKey = it; osStatus = "" }
+        got["sd"]?.let { sdKey = it; sdStatus = "" }
+        Config.save(ctx, tmdb, omdb)
+        Config.saveSubs(ctx, osKey, sdKey)
+        tmdb = Config.ownTmdb(ctx); omdb = Config.ownOmdb(ctx); osKey = Config.OS_KEY; sdKey = Config.SD_KEY
+    }
     Hint("Die App enthält keine eigenen Schlüssel. Mit deinen eigenen, kostenlosen Schlüsseln zeigt sie Poster, Beschreibungen, Besetzung, Trailer, automatische Genres sowie IMDb- und Rotten-Tomatoes-Wertungen. Ohne Schlüssel übernimmt sie Beschreibung, Cover und Bewertung von deinem Anbieter (bei Xtream-Zugängen).")
 
     SectionTitle("TMDB (Film-Infos)")
@@ -1442,16 +1453,6 @@ private fun ApiKeysPage(ctx: Context) {
     if (sdStatus.isNotBlank()) Text(sdStatus, color = if (sdStatus == "Schlüssel gültig") Accent2 else Muted, fontSize = 16.sp)
 
     Hint("Die Schlüssel bleiben nur auf diesem Gerät. Nach dem Eintragen die App einmal neu starten, damit alle Bereiche die Infos laden. Intro- und Abspann-Zeiten kommen von TheIntroDB und brauchen keinen Schlüssel.")
-    ApiKeysPhoneEntry(ctx) { got ->
-        // Keep the keys the phone did not send, store the rest; "Speichern und prüfen" then checks them as usual
-        got["tmdb"]?.let { tmdb = Config.clean(it); tmdbStatus = "" }
-        got["omdb"]?.let { omdb = Config.clean(it); omdbStatus = "" }
-        got["os"]?.let { osKey = it; osStatus = "" }
-        got["sd"]?.let { sdKey = it; sdStatus = "" }
-        Config.save(ctx, tmdb, omdb)
-        Config.saveSubs(ctx, osKey, sdKey)
-        tmdb = Config.ownTmdb(ctx); omdb = Config.ownOmdb(ctx); osKey = Config.OS_KEY; sdKey = Config.SD_KEY
-    }
     // Buttons last: text below the last focusable element was cut off at the bottom of the page
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton(if (busy) "Bitte warten …" else "Speichern und prüfen", light = true, icon = AIcon.Check) {
@@ -1493,8 +1494,11 @@ private fun ApiKeysPhoneEntry(ctx: Context, onKeys: (Map<String, String>) -> Uni
         }
     }
     DisposableEffect(Unit) { onDispose { server.stop() } }
-    if (!serving) PillButton("Am Handy eingeben", icon = AIcon.Phone) { received = false; serving = server.start() }
-    else {
+    // One button for both states, so it keeps the focus (swapping it for another block lost the focus and opened the sidebar)
+    PillButton(if (serving) "Eingabe am Handy beenden" else "Am Handy eingeben", icon = AIcon.Phone) {
+        if (serving) { server.stop(); serving = false } else { received = false; serving = server.start() }
+    }
+    if (serving) {
         Column(
             Modifier.clip(RoundedCornerShape(DS.RadiusM)).background(Color(0x14FFFFFF)).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1511,7 +1515,6 @@ private fun ApiKeysPhoneEntry(ctx: Context, onKeys: (Map<String, String>) -> Uni
                 }
                 if (received) Text("Schlüssel vom Handy erhalten und gespeichert. Jetzt „Speichern und prüfen“ drücken.", color = Accent2, fontSize = 16.sp)
             }
-            PillButton("Eingabe am Handy beenden") { server.stop(); serving = false }
         }
     }
 }
