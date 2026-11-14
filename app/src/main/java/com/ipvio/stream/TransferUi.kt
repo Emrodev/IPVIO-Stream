@@ -76,6 +76,8 @@ internal fun TransferSection(ctx: Context) {
             PillButton("Übertragung beenden") { server.stop(); serving = false }
         }
     }
+    UndoRestoreRow(ctx)
+    if (DriveSync.available()) DriveSection(ctx)
 }
 
 /** QR code (black on white, with a border – so phone cameras also read it on a dark screen). */
