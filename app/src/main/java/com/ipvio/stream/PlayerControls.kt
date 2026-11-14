@@ -130,7 +130,7 @@ fun PSkipPill(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) 
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         PlayerIcon(PIcon.NextEp, if (f) DS.FocusInk else Color.White, size = 16.dp)
-        Text(if (f && !text.endsWith("(OK)")) "$text  (OK)" else text, color = if (f) DS.FocusInk else Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(Lang.tr(text.removeSuffix("(OK)").trimEnd()) + (if (f || text.endsWith("(OK)")) "  (OK)" else ""), raw = true, color = if (f) DS.FocusInk else Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 

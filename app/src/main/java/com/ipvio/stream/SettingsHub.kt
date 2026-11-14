@@ -161,7 +161,7 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                     SettingsReset.page(ctx, page)
                     settingsToast(ctx, "Diese Seite wurde zurückgesetzt.")
                 }
-                Hint("Resets only the settings of this page to their defaults. All other pages stay unchanged. To reset everything at once, use Settings > Reset all.")
+                Hint("Setzt nur die Einstellungen dieser Seite auf die Standardwerte zurück. Alle anderen Seiten bleiben unverändert. Um alles auf einmal zurückzusetzen, nutze Einstellungen > Alles zurücksetzen.")
             }
             Spacer(Modifier.height(8.dp).bringIntoViewRequester(endReq))
             }
@@ -896,7 +896,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
                 "\n" + DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date(it.first)) + "  " +
                     (if (it.second == "aus") Lang.tr("aus") else Lang.tr("an") + it.second.removePrefix("an"))
             },
-        "Weiterschauen" to (ResumeLog.also { it.init(ctx) }.lines.take(12).joinToString("\n").ifBlank { "noch nichts gemerkt" }),
+        "Weiterschauen" to (ResumeLog.also { it.init(ctx) }.lines.take(12).joinToString("\n") { ResumeLog.display(it) }.ifBlank { "noch nichts gemerkt" }),
         "Letzter Absturz" to (CrashLog.last(ctx)?.let { it.first + "  (" + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.second)) + ")" } ?: "keiner")
     )
     lines.forEach { (k, v) ->
@@ -1074,7 +1074,7 @@ private fun CategoryFilterSection(d: IgnoreDraft) {
             ) { open = if (open == kind) null else kind }
             if (open == kind) {
                 PillButton("Alle aus") { d.onEdit(d.keys + keys) }
-                PillButton("Alle ein") { d.onEdit(d.keys - keys.toSet()) }
+                PillButton("Alle an") { d.onEdit(d.keys - keys.toSet()) }
             }
         }
         if (open == kind) for ((g, n) in list) {
@@ -1234,7 +1234,7 @@ private fun LivePage(ctx: Context) {
     ToggleRow("Sender-Qualitäten bündeln", "Derselbe Sender in 8K, 4K, FHD, HD und SD erscheint als eine Zeile. OK startet die beste Qualität, die anderen wählst du im Menü des Senders (OK gedrückt halten).", General.bundleLive) { General.setBundleLive(ctx, it) }
     val rowSizes = listOf("Klein", "Normal", "Groß")
     SelectRow("Senderzeilen", rowSizes[General.channelRowSize], rowSizes, General.channelRowSize) { General.setChannelRowSize(ctx, it) }
-    Hint("Smaller rows show more channels at once, which helps on large TVs. Larger rows are easier to read from far away.")
+    Hint("Kleinere Zeilen zeigen mehr Sender auf einmal, das hilft auf großen Fernsehern. Größere Zeilen lassen sich aus der Ferne leichter lesen.")
     Hint("Die App sucht die Programmdaten automatisch (Xtream-Schnittstelle oder XMLTV-Adresse aus der Playlist). Wenn dein Anbieter eine eigene XMLTV-Adresse nennt, trage sie hier ein.")
     Field(url, { url = it }, "https://…/xmltv.php?username=…&password=…")
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1560,9 +1560,9 @@ private fun settingsToast(ctx: Context, message: String) {
 @Composable
 private fun ResetAllPage(ctx: Context) {
     var ask by remember { mutableStateOf(false) }
-    Hint("Resets all settings to their defaults: view, design, menu, player, sound, genres, Live TV and more. Playlists, favorites, history, resume positions and the parental-control PIN are kept. Clear the cache under Storage.")
+    Hint("Setzt alle Einstellungen auf die Standardwerte zurück: Ansicht, Design, Menü, Player, Ton, Genres, Live TV und mehr. Playlists, Favoriten, Verlauf, Fortsetzen-Positionen und die PIN der Kindersicherung bleiben erhalten. Den Cache leerst du unter Speicher.")
     PillButton("Alle Einstellungen zurücksetzen", light = true, icon = AIcon.Warning) { ask = true }
-    Hint("Reset just one page? Every settings page has its own reset button at the bottom.")
+    Hint("Nur eine Seite zurücksetzen? Jede Einstellungsseite hat unten ihren eigenen Zurücksetzen-Knopf.")
     if (ask) ResetAllDialog(onCancel = { ask = false }) {
         ask = false
         SettingsReset.all(ctx)

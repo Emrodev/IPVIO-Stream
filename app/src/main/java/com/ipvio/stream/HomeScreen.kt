@@ -685,7 +685,7 @@ fun HomeScreen(
                             }
                             if (movies.isEmpty() && series.isEmpty()) {
                                 item { EmptyHint("Diese Playlist enthält keine Filme oder Serien. Live TV findest du links.") }
-                                item { EmptyHint(CONTENT_MODE_HINT.format("movies or series", "live TV only")) }
+                                item { EmptyHint(CONTENT_MODE_HINT.format("Filme oder Serien", "Nur Live TV")) }
                             }
                         }
                         1, 2 -> {
@@ -716,7 +716,7 @@ fun HomeScreen(
                             if (recent.isNotEmpty()) item(key = "hr$tab") { ItemsRow("Zuletzt geschaut", recent, cardW, onOpen) { onBrowse(BrowseReq("Zuletzt geschaut · $noun", recent, SORT_PLAYLIST)) } }
                             if (base.isEmpty()) {
                                 item { EmptyHint("Keine $noun in dieser Playlist") }
-                                item { EmptyHint(CONTENT_MODE_HINT.format(if (isM) "movies" else "series", "live TV only")) }
+                                item { EmptyHint(CONTENT_MODE_HINT.format(if (isM) "Filme" else "Serien", "Nur Live TV")) }
                             }
                             if (base.isNotEmpty() && (if (isM) newMovies else newSeries).isNotEmpty()) item(key = "new$tab") { ItemsRow("Neu hinzugefügt", if (isM) newMovies else newSeries, cardW, onOpen) { onBrowse(BrowseReq("Neu hinzugefügt · $noun", if (isM) rowMovies else rowSeries, SORT_NEW)) } }
                             if (top.size >= 8) item(key = "best$tab") { ItemsRow("Top bewertet", top, cardW, onOpen) { onBrowse(BrowseReq("Top bewertet · $noun", top, SORT_RATING)) } }
@@ -823,7 +823,7 @@ fun HomeScreen(
 }
 
 /** Shown when the playlist has no movies/series; most likely its content mode hides them. Args: kind of content, mode name. */
-private const val CONTENT_MODE_HINT = "There are no %s. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to %s."
+private const val CONTENT_MODE_HINT = "Es gibt keine %s. Falls es welche geben sollte, prüfe Einstellungen > Playlists: Der Inhaltsmodus dieser Playlist steht vielleicht auf „%s“."
 
 @Composable
 private fun EmptyHint(text: String) {

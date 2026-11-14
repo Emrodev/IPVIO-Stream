@@ -68,9 +68,9 @@ object Look {
 
     val DESIGNS = listOf(
         ReadyDesign("Nachteule", 0, 0),
-        ReadyDesign("Vampir-Disco", 10, 5),
-        ReadyDesign("Eisbär im Eisfach", 8, 6),
-        ReadyDesign("Tiefsee-Tauchgang", 2, 7),
+        ReadyDesign("Vampir", 10, 5),
+        ReadyDesign("Eisbär", 8, 6),
+        ReadyDesign("Tiefsee", 2, 7),
         ReadyDesign("Waldschrat", 3, 8),
         ReadyDesign("Mitternachtssnack", 6, 2),
         ReadyDesign("Sonnenbrand", 4, 9)

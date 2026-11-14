@@ -449,6 +449,12 @@ object ResumeLog {
         loaded = true
         prefs(c).getString("l", null)?.split('\n')?.filter { it.isNotBlank() }?.let { lines.addAll(it) }
     }
+    /** One log line in the UI language: the time stamp stays, the message is translated (see DictO). */
+    fun display(line: String): String {
+        val i = line.indexOf("  ")
+        return if (i < 0) Lang.tr(line) else line.substring(0, i) + "  " + Lang.tr(line.substring(i + 2))
+    }
+
     fun add(c: Context, msg: String) {
         init(c)
         val t = java.text.SimpleDateFormat("dd.MM. HH:mm:ss", java.util.Locale.US).format(java.util.Date())
