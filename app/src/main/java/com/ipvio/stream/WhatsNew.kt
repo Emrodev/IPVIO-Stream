@@ -68,7 +68,8 @@ object WhatsNew {
     /** Once at start: decides whether the popup appears. The version counts as seen when the popup is closed. */
     fun check(c: Context) {
         val code = AppUpdate.currentCode(c)
-        val n = AppUpdate.currentName(c)
+        // Test builds ("1.4.3-test") use the notes of their release version
+        val n = AppUpdate.currentName(c).substringBefore('-')
         val fresh = runCatching {
             val pi = c.packageManager.getPackageInfo(c.packageName, 0)
             pi.firstInstallTime == pi.lastUpdateTime
