@@ -40,6 +40,7 @@ object Lang {
         I18nCore.loadColumn(I18nCore.CODES.indexOf("ar"), DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6, DictEnAr, DictT051Ar, DictT055Ar)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPlW, DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7, DictPl8, DictEnPl, DictT051Pl, DictT055Pl)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("zh"), DictZh)
+        I18nCore.loadColumn(I18nCore.CODES.indexOf("pt"), DictPt1, DictPt2, DictPt3, DictPt4, DictPt5, DictPt6, DictPt7)
         loadMs = android.os.SystemClock.elapsedRealtime() - t0
         loaded = true
     }
@@ -70,13 +71,14 @@ object Lang {
         "hr" -> Locale.Builder().setLanguage("hr").setRegion("HR").build()
         "sr" -> Locale.Builder().setLanguage("sr").setScript("Latn").setRegion("RS").build()
         "zh" -> Locale.SIMPLIFIED_CHINESE
+        "pt" -> Locale.Builder().setLanguage("pt").setRegion("BR").build()
         else -> Locale.forLanguageTag(code())
     }
 
     /** Language code for TMDB requests, e.g. "de-DE". */
     fun tmdb(): String = when (code()) {
         "en" -> "en-US"; "tr" -> "tr-TR"; "bs" -> "bs-BA"; "hr" -> "hr-HR"; "sr" -> "sr-RS"
-        "es" -> "es-ES"; "fr" -> "fr-FR"; "it" -> "it-IT"; "nl" -> "nl-NL"; "ar" -> "ar-SA"; "pl" -> "pl-PL"; "zh" -> "zh-CN"; else -> "de-DE"
+        "es" -> "es-ES"; "fr" -> "fr-FR"; "it" -> "it-IT"; "nl" -> "nl-NL"; "ar" -> "ar-SA"; "pl" -> "pl-PL"; "zh" -> "zh-CN"; "pt" -> "pt-BR"; else -> "de-DE"
     }
 
     fun tr(s: String): String {

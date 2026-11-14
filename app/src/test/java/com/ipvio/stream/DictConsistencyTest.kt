@@ -10,7 +10,7 @@ class DictConsistencyTest {
 
     @Test fun placeholders_eindeutig_und_in_allen_sprachen() {
         val problems = ArrayList<String>()
-        for (block in listOf(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictP, DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6, DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6, DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7, DictW, DictPlW)) {
+        for (block in listOf(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictP, DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6, DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6, DictPt1, DictPt2, DictPt3, DictPt4, DictPt5, DictPt6, DictPt7, DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7, DictW, DictPlW)) {
             for (line in block.lineSequence()) {
                 if (line.isBlank() || line.startsWith("#") || !line.contains('¦')) continue
                 val cols = line.split('¦')
@@ -64,5 +64,15 @@ class DictConsistencyTest {
         assertEquals("8 episodes", I18nCore.translate("8 Folgen", 1))
         assertEquals("No connection: SocketException", I18nCore.translate("Keine Verbindung: SocketException", 1))
         assertEquals("Server not found (DNS)", I18nCore.translate("Server nicht gefunden (DNS)", 1))
+    }
+
+    @Test fun portugiesisch_deckt_alle_zeilen_ab() {
+        I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO)
+        val pt = I18nCore.CODES.indexOf("pt")
+        assertEquals(13, pt)   // after Chinese (index 12)
+        I18nCore.loadColumn(pt, DictPt1, DictPt2, DictPt3, DictPt4, DictPt5, DictPt6, DictPt7)
+        assertEquals("Adicionar lista", I18nCore.translate("Playlist hinzufügen", pt))
+        assertEquals("8 episódios", I18nCore.translate("8 Folgen", pt))
+        assertEquals("Português (Brasil)", I18nCore.NATIVE[pt])
     }
 }
