@@ -221,9 +221,18 @@ object DriveSync {
         }
     }
 
-    /** Forgets the sign-in on this device (the files in Drive stay). */
+    /** Sync passphrase, remembered on this device (encrypted with the device key; not stored without a keystore). */
+    fun passphrase(c: Context): String? = prefs(c).getString("pp", null)?.let { Secrets.decrypt(it) }
+
+    fun savePassphrase(c: Context, p: String) {
+        if (!SyncLogic.validPassphrase(p)) return
+        val enc = Secrets.encrypt(p) ?: return
+        prefs(c).edit().putString("pp", enc).apply()
+    }
+
+    /** Forgets the sign-in and the remembered passphrase on this device (the files in Drive stay). */
     fun disconnect(c: Context) {
-        prefs(c).edit().remove("rt").apply()
+        prefs(c).edit().remove("rt").remove("pp").apply()
         access = null
         accessUntil = 0L
         connected = false
