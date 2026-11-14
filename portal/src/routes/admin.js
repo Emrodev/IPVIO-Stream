@@ -11,11 +11,46 @@ const { checkPlaylistValidity } = require('../services/playlistChecker');
 const { getSettings, saveSettings, migrateAllClientsUrl, runExpiryAutomations } = require('../services/automationService');
 const { sendWhatsAppMessage } = require('../services/whatsappService');
 
-// Sessões ativas em memória (token -> { username, expiresAt })
+// Sessões ativas em memória e tokens assinados
 const activeSessions = new Map();
 
-function generateToken() {
-  return crypto.randomBytes(32).toString('hex');
+function generateToken(username = 'admin') {
+  const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 dias
+  const data = `${username}:${expiresAt}`;
+  const sig = crypto.createHmac('sha256', config.sessionSecret || 'ipvio-stream-secret-key').update(data).digest('hex');
+  return `${Buffer.from(data).toString('base64url')}.${sig}`;
+}
+
+function verifyToken(token) {
+  if (!token) return null;
+  if (config.adminKey && token === config.adminKey) {
+    return { username: 'admin' };
+  }
+
+  // 1. Tenta validar token assinado (resiste a reinicializações)
+  try {
+    const parts = token.split('.');
+    if (parts.length === 2) {
+      const [payloadB64, sig] = parts;
+      const data = Buffer.from(payloadB64, 'base64url').toString('utf8');
+      const expectedSig = crypto.createHmac('sha256', config.sessionSecret || 'ipvio-stream-secret-key').update(data).digest('hex');
+      if (crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+        const [username, expStr] = data.split(':');
+        const expiresAt = parseInt(expStr, 10);
+        if (expiresAt > Date.now()) {
+          return { username, expiresAt };
+        }
+      }
+    }
+  } catch (_) {}
+
+  // 2. Fallback para mapa em memória
+  const session = activeSessions.get(token);
+  if (session && session.expiresAt > Date.now()) {
+    return session;
+  }
+
+  return null;
 }
 
 // Configuração do multer para upload de APKs
@@ -48,8 +83,8 @@ router.post('/login', (req, res) => {
   const validPass = (password === config.adminPass);
 
   if (validUser && validPass) {
-    const token = generateToken();
-    const expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 dias
+    const token = generateToken(username);
+    const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
     activeSessions.set(token, { username, expiresAt });
     return res.json({ success: true, token, username, expiresAt });
   }
@@ -68,19 +103,13 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({ success: false, error: 'Acesso não autorizado. Faça login.' });
   }
 
-  // Permite acesso se for o token da sessão ou a chave mestra
-  const session = activeSessions.get(token);
-  if (session && session.expiresAt > Date.now()) {
+  const session = verifyToken(token);
+  if (session) {
     req.user = session.username;
     return next();
   }
 
-  if (config.adminKey && token === config.adminKey) {
-    req.user = 'admin';
-    return next();
-  }
-
-  return res.status(401).json({ success: false, error: 'Sessão expirada ou chave inválida. Faça login novamente.' });
+  return res.status(401).json({ success: false, error: 'Sessão expirada. Faça login novamente.' });
 }
 
 router.use(authMiddleware);
@@ -485,6 +514,38 @@ router.post('/ota/upload', upload.single('apk'), async (req, res) => {
       versionName: finalVersionName,
       versionCode: finalVersionCode
     });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 13. Excluir versão OTA e arquivo físico se existir
+router.delete('/ota/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const findRes = await db.query('SELECT * FROM ota_updates WHERE id = ?', [id]);
+    if (findRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Versão OTA não encontrada.' });
+    }
+    const update = findRes.rows[0];
+
+    // Se o downloadUrl for um APK local dentro de /apks/, remove o arquivo físico
+    if (update.download_url) {
+      try {
+        const urlMatch = update.download_url.match(/\/apks\/([^/?#]+)/);
+        if (urlMatch && urlMatch[1]) {
+          const filePath = path.join(config.apkDir, urlMatch[1]);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        }
+      } catch (fErr) {
+        console.warn('[Delete OTA File Warning]', fErr.message);
+      }
+    }
+
+    await db.query('DELETE FROM ota_updates WHERE id = ?', [id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

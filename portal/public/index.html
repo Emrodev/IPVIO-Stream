@@ -362,6 +362,26 @@
 
       <!-- SEÇÃO 3: ATUALIZAÇÕES OTA -->
       <section id="section-ota" class="hidden space-y-6">
+        <!-- Card Link Permanente de Download -->
+        <div class="glass rounded-2xl p-5 border border-emerald-500/30 bg-emerald-500/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              <span>Link Fixo Permanente para Primeira Instalação</span>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[10px] uppercase tracking-wider font-extrabold text-emerald-300">URL Única</span>
+            </div>
+            <p class="text-xs text-gray-300">
+              Envie este link fixo para os clientes baixarem o app na 1ª instalação. Ele sempre entrega o APK mais recente publicado (não precisa ficar gerando links novos).
+            </p>
+          </div>
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <input type="text" id="permanent-download-link" readonly class="w-full md:w-72 bg-surface-900/80 border border-emerald-500/40 rounded-xl px-3 py-2 text-emerald-300 font-mono text-xs select-all">
+            <button type="button" onclick="copyPermanentLink()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md whitespace-nowrap flex items-center gap-1.5">
+              📋 Copiar
+            </button>
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <!-- Formulário de Nova Versão -->
           <div class="glass rounded-2xl p-6 border border-gray-800 lg:col-span-1 space-y-4">
@@ -435,10 +455,11 @@
                     <th class="py-3 px-3">Obrigatória</th>
                     <th class="py-3 px-3">Data</th>
                     <th class="py-3 px-3">Link</th>
+                    <th class="py-3 px-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody id="ota-history-tbody" class="divide-y divide-gray-800 text-gray-300">
-                  <tr><td colspan="5" class="py-8 text-center text-gray-500">Nenhuma versão publicada ainda.</td></tr>
+                  <tr><td colspan="6" class="py-8 text-center text-gray-500">Nenhuma versão publicada ainda.</td></tr>
                 </tbody>
               </table>
             </div>

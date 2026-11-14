@@ -564,6 +564,11 @@ async function submitLinkByCode() {
 // OTA: Carregar e Submeter
 async function loadOtaUpdates() {
   try {
+    const permInput = document.getElementById('permanent-download-link');
+    if (permInput) {
+      permInput.value = `${window.location.origin}/app.apk`;
+    }
+
     const res = await fetch('/api/admin/ota', { headers: authHeaders() });
     if (res.status === 401) {
       showLogin();
@@ -580,7 +585,7 @@ async function loadOtaUpdates() {
 
     const tbody = document.getElementById('ota-history-tbody');
     if (list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-gray-500">Nenhuma versão publicada ainda.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-gray-500">Nenhuma versão publicada ainda.</td></tr>';
       return;
     }
 
@@ -593,11 +598,48 @@ async function loadOtaUpdates() {
         <td class="py-3 px-3">
           <a href="${escapeHtml(u.download_url)}" target="_blank" class="text-xs text-brand-400 hover:underline font-mono">Download APK</a>
         </td>
+        <td class="py-3 px-3 text-right">
+          <button onclick="deleteOtaUpdate(${u.id}, '${escapeHtml(u.version_name)}')" class="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/25 text-red-400 hover:text-red-300 transition text-xs font-semibold inline-flex items-center gap-1" title="Excluir versão e arquivo do servidor">
+            🗑️ Excluir
+          </button>
+        </td>
       </tr>
     `).join('');
   } catch (err) {
     console.error('Erro ao carregar OTA:', err);
   }
+}
+
+async function deleteOtaUpdate(id, versionName) {
+  if (!confirm(`Tem certeza que deseja excluir a versão "${versionName || id}"?\n\nO registro e o arquivo APK físico no servidor serão excluídos.`)) {
+    return;
+  }
+  try {
+    const res = await fetch(`/api/admin/ota/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      loadOtaUpdates();
+    } else {
+      alert('Erro ao excluir versão: ' + (data.error || res.statusText));
+    }
+  } catch (err) {
+    alert('Erro de conexão ao excluir: ' + err.message);
+  }
+}
+
+function copyPermanentLink() {
+  const permInput = document.getElementById('permanent-download-link');
+  if (!permInput) return;
+  permInput.select();
+  permInput.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(permInput.value).then(() => {
+    alert('Link permanente copiado com sucesso!\n\n' + permInput.value);
+  }).catch(() => {
+    prompt('Copie o link permanente abaixo:', permInput.value);
+  });
 }
 
 async function submitOta(e) {
@@ -724,8 +766,12 @@ async function saveDefaultIptvUrl() {
       headers: authHeaders(),
       body: JSON.stringify({ default_iptv_url: url })
     });
-    if (res.ok) alert('URL do IPTV padrão salva com sucesso!');
-    else alert('Erro ao salvar URL.');
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      alert('URL do IPTV padrão salva com sucesso!');
+    } else {
+      alert('Erro ao salvar URL: ' + (data.error || `HTTP ${res.status}`));
+    }
   } catch (err) {
     alert('Erro: ' + err.message);
   }
@@ -746,7 +792,7 @@ async function migrateAllIptvUrl() {
       headers: authHeaders(),
       body: JSON.stringify({ newUrl: url })
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
       alert(`Migração em massa concluída com sucesso!\n${data.affected} dispositivo(s) atualizado(s) para o novo servidor.`);
       loadDevices();
@@ -771,8 +817,12 @@ async function saveWhatsAppApiSettings() {
         whatsapp_api_token: token
       })
     });
-    if (res.ok) alert('Credenciais da API do WhatsApp salvas com sucesso!');
-    else alert('Erro ao salvar credenciais.');
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      alert('Credenciais da API do WhatsApp salvas com sucesso!');
+    } else {
+      alert('Erro ao salvar credenciais: ' + (data.error || `HTTP ${res.status}`));
+    }
   } catch (err) {
     alert('Erro: ' + err.message);
   }
@@ -833,8 +883,12 @@ async function saveAutomationRules() {
         auto_expiry_message: message
       })
     });
-    if (res.ok) alert('Regras de automação salvas com sucesso!');
-    else alert('Erro ao salvar regras.');
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      alert('Regras de automação salvas com sucesso!');
+    } else {
+      alert('Erro ao salvar regras: ' + (data.error || `HTTP ${res.status}`));
+    }
   } catch (err) {
     alert('Erro: ' + err.message);
   }

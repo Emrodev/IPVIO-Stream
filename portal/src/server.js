@@ -24,6 +24,47 @@ if (!fs.existsSync(config.apkDir)) {
 // Arquivos estáticos (painel web e downloads de APK)
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Link permanente para primeira instalação (sempre serve o APK mais recente)
+app.get(['/app.apk', '/download', '/baixar', '/instalador.apk', '/instalar'], async (req, res) => {
+  try {
+    const latest = await db.query('SELECT * FROM ota_updates ORDER BY version_code DESC, released_at DESC LIMIT 1');
+    if (latest.rows.length > 0) {
+      const update = latest.rows[0];
+      const urlMatch = (update.download_url || '').match(/\/apks\/([^/?#]+)/);
+      if (urlMatch && urlMatch[1]) {
+        const filePath = path.join(config.apkDir, urlMatch[1]);
+        if (fs.existsSync(filePath)) {
+          return res.download(filePath, `IPVIO-Stream-v${update.version_name || 'latest'}.apk`);
+        }
+      }
+      if (update.download_url) {
+        return res.redirect(update.download_url);
+      }
+    }
+
+    // Fallback 1: arquivo APK mais recente na pasta public/apks/
+    if (fs.existsSync(config.apkDir)) {
+      const files = fs.readdirSync(config.apkDir).filter(f => f.endsWith('.apk'));
+      if (files.length > 0) {
+        const newest = files
+          .map(f => ({ name: f, time: fs.statSync(path.join(config.apkDir, f)).mtimeMs }))
+          .sort((a, b) => b.time - a.time)[0];
+        return res.download(path.join(config.apkDir, newest.name), 'IPVIO-Stream.apk');
+      }
+    }
+
+    // Fallback 2: APK gerado na raiz do projeto (se disponível)
+    const rootApk = path.join(__dirname, '..', '..', 'IPVIO-Stream-ptBR.apk');
+    if (fs.existsSync(rootApk)) {
+      return res.download(rootApk, 'IPVIO-Stream.apk');
+    }
+
+    res.status(404).send('Nenhum APK publicado no momento. Faça o upload pelo painel do portal.');
+  } catch (err) {
+    res.status(500).send('Erro ao buscar APK: ' + err.message);
+  }
+});
+
 // Rotas da API
 app.use('/api/device', deviceRoutes);
 app.use('/api/admin', adminRoutes);

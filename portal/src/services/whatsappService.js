@@ -5,8 +5,8 @@ const fetch = global.fetch || require('node-fetch');
  * e compatível com gateways WhatsApp padrão.
  */
 async function sendWhatsAppMessage({ apiUrl, apiToken, phone, message }) {
-  if (!apiUrl || !apiToken) {
-    throw new Error('URL da API do WhatsApp ou Token não configurados.');
+  if (!apiUrl) {
+    throw new Error('URL da API do WhatsApp não configurada.');
   }
   if (!phone || !message) {
     throw new Error('Telefone ou mensagem vazia.');
@@ -19,7 +19,7 @@ async function sendWhatsAppMessage({ apiUrl, apiToken, phone, message }) {
   }
 
   const endpoint = apiUrl.trim();
-  const token = apiToken.trim();
+  const token = (apiToken || '').trim();
 
   // Payload padrão oficial WhatsApp Cloud API
   const payload = {
@@ -33,14 +33,12 @@ async function sendWhatsAppMessage({ apiUrl, apiToken, phone, message }) {
     }
   };
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  if (token) {
+    headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+  }
 
   const resText = await response.text();
   let resJson;
