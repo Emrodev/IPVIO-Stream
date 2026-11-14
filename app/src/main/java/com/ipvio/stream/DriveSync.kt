@@ -53,7 +53,12 @@ object DriveSync {
     /** Why a Drive call failed; the UI shows a translated text for it. */
     enum class Reason { NOT_CONNECTED, NETWORK, GOOGLE, NOT_FOUND, TOO_BIG }
 
-    class DriveException(val reason: Reason, val code: Int = 0) : Exception("Drive: $reason $code")
+    /** [detail] = Google's error name or the exception class, shown to help with support. */
+    class DriveException(val reason: Reason, val code: Int = 0, val detail: String = "") : Exception("Drive: $reason $code $detail")
+
+    /** Google's error name of the last failed sign-in (empty = none). */
+    var lastError: String = ""
+        private set
 
     private fun prefs(c: Context) = c.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -66,11 +71,13 @@ object DriveSync {
 
     class DeviceCode(val device: String, val user: String, val url: String, val interval: Int, val expiresAt: Long)
 
-    private fun post(url: String, form: Map<String, String>): JSONObject? {
+    /** Form POST to Google; the answer is always JSON (also for errors), anything else is a Google error. */
+    private fun post(url: String, form: Map<String, String>): JSONObject {
         val b = FormBody.Builder()
         for ((k, v) in form) b.add(k, v)
         return client.newCall(Request.Builder().url(url).post(b.build()).build()).execute().use { r ->
             runCatching { JSONObject(r.body?.string().orEmpty()) }.getOrNull()
+                ?: throw DriveException(Reason.GOOGLE, r.code, "no JSON")
         }
     }
 
@@ -79,7 +86,7 @@ object DriveSync {
     } catch (e: DriveException) {
         throw e
     } catch (e: java.io.IOException) {
-        throw DriveException(Reason.NETWORK)
+        throw DriveException(Reason.NETWORK, 0, e.javaClass.simpleName)
     }
 
     /** Step 1: get the code the user enters on the phone at the shown address. */
@@ -87,8 +94,9 @@ object DriveSync {
         runCatching {
             net {
                 val o = post("https://oauth2.googleapis.com/device/code", mapOf("client_id" to clientId, "scope" to SCOPE))
-                    ?: throw DriveException(Reason.GOOGLE)
-                val user = o.optString("user_code").ifBlank { throw DriveException(Reason.GOOGLE) }
+                val user = o.optString("user_code").ifBlank {
+                    throw DriveException(Reason.GOOGLE, 0, o.optString("error").ifBlank { "no code" })
+                }
                 DeviceCode(
                     o.optString("device_code"), user, o.optString("verification_url").ifBlank { "https://www.google.com/device" },
                     o.optInt("interval", 5).coerceIn(2, 30), System.currentTimeMillis() + o.optLong("expires_in", 900) * 1000
@@ -102,6 +110,7 @@ object DriveSync {
     /** Step 2: wait until the user has agreed on the phone. Cancelling the coroutine stops the waiting. */
     suspend fun poll(c: Context, d: DeviceCode): SignIn = withContext(Dispatchers.IO) {
         var wait = d.interval * 1000L
+        lastError = ""
         while (System.currentTimeMillis() < d.expiresAt) {
             delay(wait)
             val o = runCatching {
@@ -112,8 +121,8 @@ object DriveSync {
             }.getOrNull() ?: continue
             val err = o.optString("error")
             if (err.isEmpty()) {
-                val rt = o.optString("refresh_token").ifBlank { return@withContext SignIn.FAILED }
-                val enc = Secrets.encrypt(rt) ?: return@withContext SignIn.FAILED
+                val rt = o.optString("refresh_token").ifBlank { lastError = "no refresh_token"; return@withContext SignIn.FAILED }
+                val enc = Secrets.encrypt(rt) ?: run { lastError = "keystore"; return@withContext SignIn.FAILED }
                 prefs(c).edit().putString("rt", enc).apply()
                 access = o.optString("access_token")
                 accessUntil = System.currentTimeMillis() + (o.optLong("expires_in", 3600) - 120) * 1000
@@ -125,7 +134,7 @@ object DriveSync {
                 DriveLogic.Poll.SLOWER -> wait += 5000
                 DriveLogic.Poll.DENIED -> return@withContext SignIn.DENIED
                 DriveLogic.Poll.EXPIRED -> return@withContext SignIn.EXPIRED
-                DriveLogic.Poll.FAILED -> return@withContext SignIn.FAILED
+                DriveLogic.Poll.FAILED -> { lastError = err; return@withContext SignIn.FAILED }
             }
         }
         SignIn.EXPIRED
@@ -136,10 +145,10 @@ object DriveSync {
         val rt = refreshToken(c) ?: throw DriveException(Reason.NOT_CONNECTED)
         val o = post("https://oauth2.googleapis.com/token", mapOf(
             "client_id" to clientId, "client_secret" to secret, "refresh_token" to rt, "grant_type" to "refresh_token"
-        )) ?: throw DriveException(Reason.GOOGLE)
+        ))
         // Access was withdrawn in the Google account: forget the sign-in
         if (o.optString("error") == "invalid_grant") { disconnect(c); throw DriveException(Reason.NOT_CONNECTED) }
-        val t = o.optString("access_token").ifBlank { throw DriveException(Reason.GOOGLE) }
+        val t = o.optString("access_token").ifBlank { throw DriveException(Reason.GOOGLE, 0, o.optString("error").ifBlank { "no token" }) }
         access = t
         accessUntil = System.currentTimeMillis() + (o.optLong("expires_in", 3600) - 120) * 1000
         return t

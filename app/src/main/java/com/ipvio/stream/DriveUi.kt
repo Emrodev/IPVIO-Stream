@@ -1,15 +1,19 @@
 package com.ipvio.stream
 
 import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,6 +21,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -98,10 +104,24 @@ internal fun DriveSection(ctx: Context) {
             status = "Getrennt. Die Sicherungen in Google Drive bleiben erhalten."
         }
     }
-    if (status.isNotBlank()) Text(status, color = Accent2, fontSize = 15.sp)
+    StatusLine(status)
+}
+
+/**
+ * Message under the buttons. The settings page only scrolls to the focused button, so a text below it would stay
+ * outside the screen on TV ("nothing happens"): every new message scrolls itself into view.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StatusLine(text: String) {
+    if (text.isBlank()) return
+    val req = remember { BringIntoViewRequester() }
+    LaunchedEffect(text) { runCatching { req.bringIntoView() } }
+    Text(text, color = Accent2, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.bringIntoViewRequester(req))
 }
 
 /** Sign-in: code and QR code for google.com/device; waits in the background until the user agreed on the phone. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DriveConnect(ctx: Context, onStatus: (String) -> Unit) {
     val scope = rememberCoroutineScope()
@@ -123,14 +143,22 @@ private fun DriveConnect(ctx: Context, onStatus: (String) -> Unit) {
                         DriveSync.SignIn.CONNECTED -> "Mit Google verbunden."
                         DriveSync.SignIn.DENIED -> "Die Anmeldung wurde am Handy abgelehnt."
                         DriveSync.SignIn.EXPIRED -> "Der Code ist abgelaufen. Bitte neu verbinden."
-                        DriveSync.SignIn.FAILED -> "Die Anmeldung bei Google ist fehlgeschlagen."
+                        DriveSync.SignIn.FAILED -> if (DriveSync.lastError.isNotEmpty()) "Die Anmeldung bei Google ist fehlgeschlagen: " + DriveSync.lastError
+                            else "Die Anmeldung bei Google ist fehlgeschlagen."
                     })
                 }.onFailure { onStatus(driveError(it)) }
             }
         }
     } else {
+        // The connect button disappears: show the whole code panel and put the focus on "Cancel"
+        val req = remember { BringIntoViewRequester() }
+        val cancelFocus = remember { FocusRequester() }
+        LaunchedEffect(c) {
+            runCatching { cancelFocus.requestFocus() }
+            runCatching { req.bringIntoView() }
+        }
         Column(
-            Modifier.clip(RoundedCornerShape(DS.RadiusM)).background(Color(0x14FFFFFF)).padding(16.dp),
+            Modifier.bringIntoViewRequester(req).clip(RoundedCornerShape(DS.RadiusM)).background(Color(0x14FFFFFF)).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text("Am Handy öffnen und den Code eingeben:", color = Muted, fontSize = 15.sp)
@@ -138,7 +166,7 @@ private fun DriveConnect(ctx: Context, onStatus: (String) -> Unit) {
             QrWithLabel(c.url)
             Text(c.user, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, raw = true)
             Text("Warte auf die Bestätigung am Handy …", color = Muted, fontSize = 14.sp)
-            PillButton("Abbrechen") { job?.cancel(); code = null; onStatus("") }
+            PillButton("Abbrechen", Modifier.focusRequester(cancelFocus)) { job?.cancel(); code = null; onStatus("") }
         }
     }
 }
@@ -258,15 +286,21 @@ internal fun UndoRestoreRow(ctx: Context) {
             if (n >= 0) Profiles.restart(ctx) else status = "Rückgängig machen ist fehlgeschlagen."
         }
     }
-    if (status.isNotBlank()) Text(status, color = Accent2, fontSize = 15.sp)
+    StatusLine(status)
 }
 
 private fun driveError(e: Throwable): String {
-    val d = e as? DriveSync.DriveException ?: return "Unbekannter Fehler."
+    val d = e as? DriveSync.DriveException ?: return "Unbekannter Fehler: " + e.javaClass.simpleName
     return when (d.reason) {
         DriveSync.Reason.NOT_CONNECTED -> "Nicht mit Google verbunden. Bitte neu verbinden."
-        DriveSync.Reason.NETWORK -> "Keine Verbindung zu Google. Bitte Internet prüfen."
-        DriveSync.Reason.GOOGLE -> if (d.code > 0) "Google Drive meldet einen Fehler (" + d.code + ")." else "Google Drive meldet einen Fehler."
+        DriveSync.Reason.NETWORK -> if (d.detail.isNotEmpty()) "Keine Verbindung zu Google (" + d.detail + "). Bitte Internet prüfen."
+            else "Keine Verbindung zu Google. Bitte Internet prüfen."
+        DriveSync.Reason.GOOGLE -> when {
+            d.detail.isNotEmpty() && d.code > 0 -> "Google Drive meldet einen Fehler (" + d.code + "): " + d.detail
+            d.detail.isNotEmpty() -> "Google Drive meldet einen Fehler: " + d.detail
+            d.code > 0 -> "Google Drive meldet einen Fehler (" + d.code + ")."
+            else -> "Google Drive meldet einen Fehler."
+        }
         DriveSync.Reason.NOT_FOUND -> "Diese Sicherung gibt es in Google Drive nicht mehr."
         DriveSync.Reason.TOO_BIG -> "Diese Sicherung ist zu groß."
     }
