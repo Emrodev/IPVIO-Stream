@@ -23,6 +23,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,8 +40,7 @@ object RemoteUi {
 }
 
 /**
- * Card with a large QR code. The server keeps running when the card is closed (the phone stays connected);
- * „Beenden“ switches it off.
+ * Card with a large QR code. The server keeps running when the card is closed (the phone stays connected).
  */
 @Composable
 fun RemoteOverlay(modifier: Modifier = Modifier) {
@@ -49,6 +53,10 @@ fun RemoteOverlay(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) { delay(150); runCatching { focus.requestFocus() } }
     androidx.compose.foundation.layout.Box(
         modifier.fillMaxSize().background(Color(0xCC000000))
+            // Back closes the card with ONE press, whatever has the focus (the BackHandler alone needed two presses on the Fire TV)
+            .onPreviewKeyEvent { ev ->
+                if (ev.key == Key.Back) { if (ev.type == KeyEventType.KeyDown) close(); true } else false
+            }
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { },
         contentAlignment = Alignment.Center
     ) {
@@ -74,10 +82,7 @@ fun RemoteOverlay(modifier: Modifier = Modifier) {
                     color = Muted, fontSize = 14.sp
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PillButton("Schließen", Modifier.focusRequester(focus), light = true) { close() }
-                if (server != null) PillButton("Beenden") { RemoteHub.stop(); close() }
-            }
+            PillButton("Schließen", Modifier.focusRequester(focus), light = true) { close() }
         }
     }
 }
