@@ -645,4 +645,68 @@ TD¦GD¦AV¦GR¦¦¦DG¦Diff¦DR
 OTN¦OTL¦UZM¦PNP¦¦¦DPR¦DP¦SS
 Serie¦Streak¦Seri¦Niz¦¦¦Racha¦Série¦Serie
 J.¦yrs¦yaş¦god.¦¦¦años¦ans¦anni
+Kategorien ein- und ausblenden¦Show / hide categories
+Blende einzelne Kategorien aus oder schalte alle aus und nur die gewünschten wieder ein. Ausgeblendete Kategorien verschwinden sofort überall, ohne die Playlist neu zu laden.¦Hide individual categories, or switch all off and turn only the wanted ones back on. Hidden categories disappear everywhere immediately, without reloading the playlist.
+„Zusätzlich anzeigen“ zeigt eine Playlist zusätzlich zur aktiven: Filme und Serien erscheinen zusammen (doppelte Filme nur einmal, gleiche Serien als eine Serie mit mehreren Quellen). In Filme und Serien filterst du über „Quelle“, im Live TV wechselst du die Quelle mit dem Knopf oben. Jede weitere Playlist braucht zusätzlich Speicher.¦"Also show" adds a playlist to the active one: movies and series appear together (duplicate movies only once, the same series as one series with several sources). In Movies and Series you can filter by "Source", in Live TV you switch the source with the button at the top. Every additional playlist needs extra memory.
+Zugangsdaten werden nur auf diesem Gerät gespeichert und hier nicht angezeigt. Es ist immer eine Playlist aktiv. Mit „Zur Hauptliste machen“ wechselst du die Liste.¦Login details are stored only on this device and not shown here. Exactly one playlist is active at a time. Use "Make main list" to switch.
+Beim Markieren einer Auswahl zeigt die Vorschau sofort die Wirkung, OK übernimmt sie.¦Highlighting a choice immediately previews the effect, OK applies it.
+Tippe rechts mit der Tastatur. Gesucht wird im Sendernamen und in der Kategorie.¦Type on the keyboard on the right. Channel names and categories are searched.
+Der Server des Anbieters lehnt die Verbindung ab (512). Meist ist die Server-Adresse nicht mehr aktuell oder gesperrt. Beim Anbieter nach der aktuellen Adresse fragen.¦The provider's server refused the connection (512). The server address is usually outdated or blocked. Ask your provider for the current address.
+Der Server des Anbieters lehnt die Verbindung ab (512). Meist ist die Server-Adresse nicht mehr aktuell oder gesperrt.¦The provider's server refused the connection (512). The server address is usually outdated or blocked.
+Das Portal hat die Anmeldung abgelehnt. Adresse und MAC-Adresse prüfen.¦The portal rejected the login. Check the address and MAC address.
+Erstelle ein Backup, installiere die App neu und stelle das Backup wieder her.¦Create a backup, reinstall the app and restore the backup.
+Boomer Mode¦Boomer Mode¦¦¦¦¦¦¦
+Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.¦Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.¦¦¦¦¦¦¦
+IPVIO Stream is free, ad-free and open source (GPL-3.0). Donations are voluntary and do not unlock any features.¦IPVIO Stream is free, ad-free and open source (GPL-3.0). Donations are voluntary and do not unlock any features.¦¦¦¦¦¦¦
+Resets all settings to their defaults: view, design, menu, player, sound, genres, Live TV and more. Playlists, favorites, history, resume positions and the parental-control PIN are kept. Clear the cache under Storage.¦Resets all settings to their defaults: view, design, menu, player, sound, genres, Live TV and more. Playlists, favorites, history, resume positions and the parental-control PIN are kept. Clear the cache under Storage.¦¦¦¦¦¦¦
+Reset just one page? Every settings page has its own reset button at the bottom.¦Reset just one page? Every settings page has its own reset button at the bottom.¦¦¦¦¦¦¦
+Live TV + Filme & Serien¦Live TV + movies & series¦¦¦¦¦¦¦
+Nur Live TV¦Live TV only¦¦¦¦¦¦¦
+Nur Filme & Serien¦Movies & series only¦¦¦¦¦¦¦
+There are no movies or series. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to live TV only.¦There are no movies or series. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to live TV only.¦¦¦¦¦¦¦
+There are no movies. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to live TV only.¦There are no movies. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to live TV only.¦¦¦¦¦¦¦
+There are no series. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to live TV only.¦There are no series. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to live TV only.¦¦¦¦¦¦¦
+There are no live channels. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to movies & series only.¦There are no live channels. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to movies & series only.¦¦¦¦¦¦¦
+Alle paar Stunden¦Every few hours¦¦¦¦¦¦¦
+4K does not suit this device – playing FHD¦4K does not suit this device – playing FHD¦¦¦¦¦¦¦
+All movies¦All movies¦¦¦¦¦¦¦
+Datei konnte nicht umbenannt werden¦Could not rename the file¦¦¦¦¦¦¦
+Das Zertifikat des Anbieters passt nicht zur Server-Adresse. Beim Anbieter nach einer aktuellen Adresse fragen.¦The provider's certificate does not match the server address. Ask the provider for the current address.¦¦¦¦¦¦¦
+Apps from unknown sources¦Apps from unknown sources¦¦¦¦¦¦¦
+No description found.¦No description found.¦¦¦¦¦¦¦
+Go to episode¦Go to episode¦¦¦¦¦¦¦
+From the beginning¦From the beginning¦¦¦¦¦¦¦
+no longer available¦no longer available¦¦¦¦¦¦¦
+English¦¦¦¦¦¦¦¦
+Türkçe¦¦¦¦¦¦¦¦
+العربية¦¦¦¦¦¦¦¦
+Français¦¦¦¦¦¦¦¦
+Español¦¦¦¦¦¦¦¦
+Italiano¦¦¦¦¦¦¦¦
+Nederlands¦¦¦¦¦¦¦¦
+Polski¦¦¦¦¦¦¦¦
+Português¦¦¦¦¦¦¦¦
+Русский¦¦¦¦¦¦¦¦
+हिन्दी¦¦¦¦¦¦¦¦
+日本語¦¦¦¦¦¦¦¦
+한국어¦¦¦¦¦¦¦¦
+Shqip¦¦¦¦¦¦¦¦
+Ex-YU / Balkan¦¦¦¦¦¦¦¦
+Ελληνικά¦¦¦¦¦¦¦¦
+Română¦¦¦¦¦¦¦¦
+Magyar¦¦¦¦¦¦¦¦
+Čeština¦¦¦¦¦¦¦¦
+Svenska¦¦¦¦¦¦¦¦
+Dansk¦¦¦¦¦¦¦¦
+Norsk¦¦¦¦¦¦¦¦
+Suomi¦¦¦¦¦¦¦¦
+فارسی¦¦¦¦¦¦¦¦
+Kurdî¦¦¦¦¦¦¦¦
+עברית¦¦¦¦¦¦¦¦
+Українська¦¦¦¦¦¦¦¦
+Български¦¦¦¦¦¦¦¦
+اردو¦¦¦¦¦¦¦¦
+Tiếng Việt¦¦¦¦¦¦¦¦
+ไทย¦¦¦¦¦¦¦¦
+Filipino¦¦¦¦¦¦¦¦
 """
