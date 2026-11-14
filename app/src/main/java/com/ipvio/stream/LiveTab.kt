@@ -138,7 +138,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Recorder.list(ctx).map { Recorder.itemOf(it) } }
         LiveRecCache.items = value
     }
-    val names = (if (PlaylistStore.lists.size > 1) listOf("PL") else emptyList()) + listOf("HOME", "GUIDE", "SEARCH", "MULTI", FAV_CAT) + (if (recs.isNotEmpty()) listOf("REC") else emptyList()) + myLists.map { ChannelListLogic.key(it) } + listOf("NEW", "ALL") + genres.keys + favCats + CatOrder.sorted(CatOrder.LIVE, groups.keys.toList()).filter { it !in favCats && it !in HiddenCats.list } + (if (HiddenCats.list.any { it in groups }) listOf("HIDDEN") else emptyList())
+    val names = (if (PlaylistStore.lists.size > 1) listOf("PL") else emptyList()) + listOf("HOME", "GUIDE", "SEARCH", "MULTI", FAV_CAT) + (if (recs.isNotEmpty()) listOf("REC") else emptyList()) + myLists.map { ChannelListLogic.key(it) } + listOf("NEW", "ALL") + genres.keys.filter { it !in HiddenCats.list } + favCats + CatOrder.sorted(CatOrder.LIVE, groups.keys.toList()).filter { it !in favCats && it !in HiddenCats.list } + (if (HiddenCats.list.any { it in groups || it in genres }) listOf("HIDDEN") else emptyList())
     val catKeys = remember(names) { val seen = HashSet<String>(); names.mapIndexed { i, n -> if (seen.add(n)) n else "$n#$i" } }
     val curList = ChannelLists.byKey(sel)
     // Own list currently being filled (OK on a channel adds it); declared early because bundling depends on it
@@ -288,10 +288,10 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     }
                     if (n == "HIDDEN") {
                         var hidMenu by remember { mutableStateOf(false) }
-                        val hid = HiddenCats.list.filter { it in groups }
+                        val hid = HiddenCats.list.filter { it in groups || it in genres }
                         Box {
                             CatRow(Lang.tr("Ausgeblendete") + " (" + hid.size + ")", -1, false, Modifier, onFocus = {}, onRight = {}, onFav = {}, icon = AIcon.Sliders, raw = true) { hidMenu = true }
-                            if (hidMenu) OptionPopup(listOf("Alle wieder einblenden") + hid, -1, { hidMenu = false }) { i ->
+                            if (hidMenu) OptionPopup(listOf("Alle wieder einblenden") + hid.map { LiveGenre.byKey(it)?.label ?: it }, -1, { hidMenu = false }) { i ->
                                 hidMenu = false
                                 if (i == 0) HiddenCats.showAll(ctx) else HiddenCats.show(ctx, hid[i - 1])
                             }
@@ -330,17 +330,24 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     }
                     var listMenu by remember { mutableStateOf(false) }
                     var catMenu by remember { mutableStateOf(false) }
+                    var genMenu by remember { mutableStateOf(false) }
                     val plainCat = ml == null && n != FAV_CAT && n != "ALL" && n != "REC" && n != "HOME" && !LiveGenre.isGenreKey(n) && groups.containsKey(n)
                     Box {
                         CatRow(
                             label, count, n == sel,
                             if (n == sel) Modifier.focusRequester(ContentFocus.req) else Modifier,
                             onFocus = { sel = n }, onRight = { runCatching { firstChan.requestFocus() } },
-                            onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
+                            onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null
                         ) { runCatching { firstChan.requestFocus() } }
                         // Menu of a provider category: favorite on/off, hide, move, sorting of all categories
                         var sortMenu by remember { mutableStateOf(false) }
+                        // Menu of a genre category (Sports, Movies, ...): hide
+                        if (genMenu && LiveGenre.isGenreKey(n)) OptionPopup(listOf("Kategorie ausblenden"), -1, { genMenu = false }) { _ ->
+                            genMenu = false
+                            if (sel == n) sel = "ALL"
+                            HiddenCats.hide(ctx, n)
+                        }
                         if (catMenu && plainCat) OptionPopup(
                             listOf(
                                 if (n in CatFavs.list) "Aus Favoriten entfernen" else "Zu Favoriten hinzufügen", "Kategorie ausblenden",
@@ -373,7 +380,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
             }
             // With no live channels at all the plain list shows the hint instead of an empty home
             if (sel == "HOME" && live.isNotEmpty()) Box(Modifier.weight(2f).fillMaxHeight().padding(end = 24.dp)) {
-                LiveHome(live, genres, favs, firstChan, onOpen = { ch, l -> ZapContext.list = l; ZapContext.key = "ALL"; onOpen(ch) })
+                LiveHome(live, genres.filterKeys { it !in HiddenCats.list }, favs, firstChan, onOpen = { ch, l -> ZapContext.list = l; ZapContext.key = "ALL"; onOpen(ch) })
             } else {
             Column(Modifier.weight(0.9f).fillMaxHeight().padding(end = 24.dp)) {
                 // Own list: rename and delete clearly visible above the channels (before only via long OK on the list)
