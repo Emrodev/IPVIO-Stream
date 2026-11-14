@@ -40,8 +40,7 @@ object RemoteUi {
 }
 
 /**
- * Card with a large QR code. The server keeps running when the card is closed (the phone stays connected);
- * „Beenden“ switches it off.
+ * Card with a large QR code. The server keeps running when the card is closed (the phone stays connected).
  */
 @Composable
 fun RemoteOverlay(modifier: Modifier = Modifier) {
@@ -83,10 +82,7 @@ fun RemoteOverlay(modifier: Modifier = Modifier) {
                     color = Muted, fontSize = 14.sp
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PillButton("Schließen", Modifier.focusRequester(focus), light = true) { close() }
-                if (server != null) PillButton("Beenden") { RemoteHub.stop(); close() }
-            }
+            PillButton("Schließen", Modifier.focusRequester(focus), light = true) { close() }
         }
     }
 }
