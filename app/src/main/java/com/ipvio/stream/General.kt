@@ -24,6 +24,8 @@ object General {
     /** Resume the last watched movie / series at start at the remembered position. */
     var resumeVod by mutableStateOf(false)
     var confirmExit by mutableStateOf(true)
+    /** W-002: "Movies" / "Series" in the sidebar open the categories screen right away instead of their home page. */
+    var vodCats by mutableStateOf(false)
     /** Live TV: show the quality variants of one channel (8K/4K/FHD/HD/SD) as a single row. */
     var bundleLive by mutableStateOf(true)
     /** Live TV channel row size: 0 = small, 1 = normal (default), 2 = large. */
@@ -122,6 +124,7 @@ object General {
         resumeLive = p.getBoolean("resume_live", false)
         resumeVod = p.getBoolean("resume_vod", false)
         confirmExit = p.getBoolean("confirm_exit", true)
+        vodCats = p.getBoolean("vod_cats", false)
         bundleLive = p.getBoolean("bundle_live", true)
         channelRowSize = p.getInt("channel_row_size", 1).coerceIn(0, 2)
         // Users who never chose a mode get "daily": the first start still loads the list once (lastRefresh = 0),
@@ -169,6 +172,7 @@ object General {
     fun setResumeVod(c: Context, v: Boolean) { resumeVod = v; prefs(c).edit().putBoolean("resume_vod", v).apply() }
     fun setBundleLive(c: Context, v: Boolean) { bundleLive = v; prefs(c).edit().putBoolean("bundle_live", v).apply() }
     fun setChannelRowSize(c: Context, v: Int) { channelRowSize = v.coerceIn(0, 2); prefs(c).edit().putInt("channel_row_size", channelRowSize).apply() }
+    fun setVodCats(c: Context, v: Boolean) { vodCats = v; prefs(c).edit().putBoolean("vod_cats", v).apply() }
     fun setConfirmExit(c: Context, v: Boolean) { confirmExit = v; prefs(c).edit().putBoolean("confirm_exit", v).apply() }
     fun setPlan(c: Context, mode: Int = refreshMode, interval: Int = refreshInterval, hour: Int = refreshHour, minute: Int = refreshMinute, dow: Int = refreshDow) {
         refreshMode = mode.coerceIn(0, 4); refreshInterval = interval.coerceIn(1, 168)

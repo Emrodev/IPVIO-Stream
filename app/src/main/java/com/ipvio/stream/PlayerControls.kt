@@ -41,7 +41,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -303,7 +302,6 @@ fun PEndsAt(pos: () -> Long, dur: () -> Long, speed: () -> Float) {
 fun BoxScope.PPanelFrame(
     width: Dp, title: String, hint: String,
     modifier: Modifier = Modifier,
-    onEdgeDown: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val maxH = (LocalConfiguration.current.screenHeightDp - 64).coerceAtLeast(240).dp
@@ -312,14 +310,9 @@ fun BoxScope.PPanelFrame(
         Modifier.align(Alignment.TopEnd).padding(top = PT.MarginY, end = PT.MarginY)
             .width(width).heightIn(max = maxH)
             .clip(shape).background(PT.PanelBg).border(1.dp, PT.PanelBorder, shape)
-            // Down at the end of the list: close the menu, the focus goes back to the icon in the control bar.
-            // "exit" is called only when the focus would leave the menu downward (i.e. nothing below in the menu).
-            .focusProperties {
-                exitTo { dir ->
-                    if (dir == FocusDirection.Down && onEdgeDown != null) { onEdgeDown(); FocusRequester.Cancel }
-                    else FocusRequester.Default
-                }
-            }
+            // W-006: the focus never leaves an open menu with the arrow keys (Down at the end used to close it).
+            // "exit" is called only when the focus would leave the menu; only Back (or Left in a submenu) closes it.
+            .focusProperties { exitTo { FocusRequester.Cancel } }
             .focusGroup()
             .then(modifier)
             .padding(24.dp)
@@ -330,19 +323,23 @@ fun BoxScope.PPanelFrame(
     }
 }
 
-/** Menu with standard keys: Left closes, Right stays in the menu. */
+/**
+ * Menu with standard keys: Left goes back to the parent menu ([leftBack]), Right stays in the menu.
+ * The top-level menu closes only with Back (W-006); Left does nothing there.
+ */
 @Composable
 fun BoxScope.PSimplePanel(
-    width: Dp, title: String, hint: String, onClose: () -> Unit,
+    width: Dp, title: String, hint: String, onClose: () -> Unit, leftBack: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     PPanelFrame(
         width, title, hint,
         Modifier
-            .onPreviewKeyEvent { e -> if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onClose(); true } else false }
+            .onPreviewKeyEvent { e ->
+                if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { if (leftBack) onClose(); true } else false
+            }
             // Swallow Right only after the rows: rows with an arrow open their submenu with it, otherwise the focus stays in the menu
             .onKeyEvent { e -> e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight },
-        onEdgeDown = onClose,
         content = content
     )
 }

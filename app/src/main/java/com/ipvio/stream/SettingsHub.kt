@@ -446,6 +446,12 @@ private fun ParentalPage(ctx: Context, onExit: () -> Unit) {
             ) { Parental.setHide(ctx, it) }
             if (Parental.hideAdult) Text("Der Schutz ist aktiv.", color = Accent2, fontSize = 15.sp)
             else Text(if (hiddenCount > 0) "$hiddenCount Einträge in deiner Playlist würden ausgeblendet." else "Kein Erwachsenen-Inhalt erkannt.", color = Muted, fontSize = 15.sp)
+            // Only adult content off the home pages; Live TV, categories and search keep it
+            if (!Parental.hideAdult) ToggleRow(
+                "Erwachsenen-Inhalte nie auf den Startseiten",
+                "Zeigt Titel und Sender für Erwachsene nie in den Reihen der Startseiten (Start, Filme, Serien), auch nicht unter „Zuletzt geschaut“ oder „Weiter schauen“. In Live TV, in den Kategorien und in der Suche bleiben sie erreichbar.",
+                Parental.homeHide
+            ) { Parental.setHomeHide(ctx, it) }
             SectionTitle("PIN")
             Text(if (Parental.pinSet) "PIN ist gesetzt" else "Keine PIN gesetzt", color = if (Parental.pinSet) Accent2 else Muted, fontSize = 16.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -488,6 +494,7 @@ private fun GeneralPage(ctx: Context) {
     Hint("Diese Seite öffnet sich beim Start der App. Versteckte Menüpunkte sind nicht wählbar.")
     ToggleRow("Letzten Sender beim Start abspielen", "Wenn du zuletzt Live TV gesehen hast, läuft dieser Sender direkt nach dem Start.", General.resumeLive) { General.setResumeLive(ctx, it) }
     ToggleRow("Letzten Film / letzte Serie beim Start fortsetzen", "Wenn du zuletzt einen Film oder eine Serie gesehen hast, läuft sie nach dem Start an der gemerkten Stelle weiter (bei einer fertigen Folge mit der nächsten).", General.resumeVod) { General.setResumeVod(ctx, it) }
+    ToggleRow("Filme und Serien direkt zu den Kategorien", "„Filme“ und „Serien“ im Menü öffnen sofort die Kategorien statt der Startseite des Bereichs. Zurück führt zur Startseite des Bereichs.", General.vodCats) { General.setVodCats(ctx, it) }
 
     SectionTitle("Bedienung")
     ToggleRow("Tastatur des Geräts in der Suche", "Aus: die eingebaute Tastatur der App. An: die Tastatur deines Geräts (z. B. Gboard) mit allen Sprachen, Sprachfunktion und Einfügen. Mit OK auf das Suchfeld wird sie geöffnet.", AppSettings.systemKeyboard) { AppSettings.setSystemKeyboard(ctx, it) }

@@ -218,7 +218,7 @@ fun PosterCard(
 }
 
 @Composable
-fun LiveCard(item: Item, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun LiveCard(item: Item, onClick: () -> Unit, modifier: Modifier = Modifier, onLong: (() -> Unit)? = null) {
     val ctx = LocalContext.current
     var f by remember { mutableStateOf(false) }
     val s by animateFloatAsState(if (f) focusScale(1.08f) else 1f, label = "live")
@@ -230,7 +230,8 @@ fun LiveCard(item: Item, onClick: () -> Unit, modifier: Modifier = Modifier) {
             .clip(shape).background(Surf)
             .border(DS.FocusBorder, border, shape)
             .onFocusChanged { f = it.isFocused }
-            .favKeys { Library.toggleFav(ctx, item.id) }
+            // Long OK: toggles the favorite, unless the row gives its own action (e.g. remove from "Recently watched")
+            .favKeys { if (onLong != null) onLong() else Library.toggleFav(ctx, item.id) }
             .clickable(onClick = onClick)
     ) {
         Box(

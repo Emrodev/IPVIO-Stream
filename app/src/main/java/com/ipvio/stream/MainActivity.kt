@@ -183,7 +183,7 @@ private fun AppContent() {
     val ctx = LocalContext.current
     remember {
         AppSettings.init(ctx); WatchStore.init(ctx); History.init(ctx); Library.init(ctx); QualityStore.init(ctx)
-        PlaybackPrefs.init(ctx); DeadLinks.init(ctx); ChannelLists.init(ctx); Reminders.init(ctx); Reminders.schedule(ctx); 0
+        PlaybackPrefs.init(ctx); PlayerSync.init(ctx); loadWishboxTexts(); DeadLinks.init(ctx); ChannelLists.init(ctx); Reminders.init(ctx); Reminders.schedule(ctx); 0
     }
     // Interrupted in the middle of adding last time (crash, power loss): the add screen automatically continues loading
     val resumeAdd = remember { PlaylistStore.pending(ctx)?.autoResume == true }
@@ -201,6 +201,8 @@ private fun AppContent() {
     var cats by remember { mutableStateOf<CatReq?>(null) }
     var playing by remember { mutableStateOf<PlayReq?>(null) }
     var tab by remember { mutableStateOf(SettingsLogic.resolveStartTab(General.startTab, AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList())) }
+    // W-002: the start page is the movie or series area: open its categories as well
+    LaunchedEffect(Unit) { if (General.vodCats && (tab == 1 || tab == 2)) AppNav.pendingVodCats = tab }
     val gridState = remember(browse) { LazyGridState() }
     val states = listOf(
         rememberLazyListState(), rememberLazyListState(), rememberLazyListState(),
@@ -208,6 +210,8 @@ private fun AppContent() {
         rememberLazyListState(), rememberLazyListState(), rememberLazyListState(), rememberLazyListState()
     )
 
+    // W-004: "What's new" once after an update to a new version
+    LaunchedEffect(Unit) { runCatching { WhatsNew.check(ctx) } }
     // New app version on GitHub? Check silently once a day; a find appears in the bell at the top right.
     LaunchedEffect(Unit) {
         delay(3_000)   // only after the start, the playlist takes priority
@@ -316,6 +320,8 @@ private fun AppContent() {
     fun goTab(id: Int) {
         if (id == MenuLogic.EPG) { openEpg(); return }
         tab = id; CatMemory.reset()
+        // W-002: movies/series straight to their categories (the area opens them when its data is ready)
+        AppNav.pendingVodCats = if (General.vodCats && !ViewLive.active && (id == 1 || id == 2)) id else -1
         jumpTick++
     }
 
@@ -493,6 +499,8 @@ private fun AppContent() {
             ) }
         }
         if (RemoteUi.show) RemoteOverlay(Modifier.align(Alignment.Center))
+        // W-004: not over the player or the add screen, and not at the same time as the update dialog
+        if (p == null && !adding && (AppUpdate.available == null || AppUpdate.promptDismissed)) WhatsNewHost()
         // Live preview of the View settings: bar at the bottom, the real app stays visible
         if (ViewLive.active) ViewLivePanel(ctx, goTab = { goTab(it) }, closeCats = { cats = null; browse = null }) {
             ViewLive.active = false
