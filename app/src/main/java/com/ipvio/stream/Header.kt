@@ -167,6 +167,24 @@ private fun RoundHeaderButton(icon: AIcon, modifier: Modifier = Modifier, onClic
     }
 }
 
+/** Pill-shaped header button with a text label (same height and focus look as [RoundHeaderButton]). */
+@Composable
+private fun TextHeaderButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    var f by remember { mutableStateOf(false) }
+    Box(
+        modifier.height(dpx(48)).clip(CircleShape)
+            .background(if (f) DS.FocusFill else Tok.Glass)
+            .border(1.dp, if (f) DS.FocusFill else Color(0x26FFFFFF), CircleShape)
+            .onFocusChanged { f = it.isFocused }
+            .trackFocus()
+            .clickable(onClick = onClick)
+            .padding(horizontal = dpx(20)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = if (f) DS.FocusInk else Color.White, fontSize = spx(16), fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
 /** "View": card size and image type of the rows (applies immediately, is remembered). */
 @Composable
 private fun ViewButton() {
@@ -337,7 +355,7 @@ private fun PlaylistSwitchButton() {
     var open by remember { mutableStateOf(false) }
     val pls = PlaylistStore.lists.toList()
     Box {
-        RoundHeaderButton(AIcon.Download, onClick = { open = true })
+        TextHeaderButton("Playlist", onClick = { open = true })
         if (open) OptionPopup(pls.map { it.name }, PlaylistStore.active, { open = false }) { i ->
             open = false
             if (i != PlaylistStore.active) scope.launch { PlaylistStore.switchTo(ctx, i) }
