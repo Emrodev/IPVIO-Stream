@@ -1183,7 +1183,6 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
     PlaylistStore.savedUrl(ctx)
     if (Secrets.plainFallback) Hint("Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.")
     Text("Meine Playlists (${PlaylistStore.lists.size})", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-    if (PlaylistStore.lists.size > 1) Hint("Die Hauptliste ist die Playlist, mit der die App arbeitet. „Zusätzlich anzeigen“ blendet eine weitere Playlist dazu ein; sie ersetzt die Hauptliste nicht.")
     PlaylistStore.lists.forEachIndexed { i, pl ->
         val isActive = i == PlaylistStore.active
         val shown = PlaylistStore.isShown(i)
@@ -1199,8 +1198,9 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
                 val down = PlaylistStore.downServers(ctx, pl.url)
                 if (down.isNotEmpty()) Text("Nicht erreichbar: " + down.joinToString(", "), color = Color(0xFFFF8A80), fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-            if (!isActive) SmallPill(if (shown) "Nicht mehr zusätzlich anzeigen" else "Zusätzlich anzeigen") {
-                PlaylistStore.setShown(ctx, i, !shown)
+            // "Show as well" can no longer be switched on (1.4.2); playlists already shown can still be switched off
+            if (!isActive && shown) SmallPill("Nicht mehr zusätzlich anzeigen") {
+                PlaylistStore.setShown(ctx, i, false)
                 scope.launch { PlaylistStore.applyMulti(ctx) }
             }
             if (!isActive) SmallPill("Zur Hauptliste machen") {
@@ -1231,7 +1231,6 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
             }
         }
     }
-    if (PlaylistStore.lists.size > 1) Hint("„Zusätzlich anzeigen“ zeigt eine Playlist zusätzlich zur aktiven: Filme und Serien erscheinen zusammen (doppelte Filme nur einmal, gleiche Serien als eine Serie mit mehreren Quellen). In Filme und Serien filterst du über „Quelle“, im Live TV wechselst du die Quelle mit dem Knopf oben. Jede weitere Playlist braucht zusätzlich Speicher.")
     PlaylistStore.extraError?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 15.sp) }
     if (editing >= 0) {
         Field(name, { name = it }, "Name der Playlist")
