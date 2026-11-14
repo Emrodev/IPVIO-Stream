@@ -25,6 +25,14 @@ val keystore = Properties().apply {
 }
 val hasKeystore = listOf("storeFile", "storePassword", "keyAlias", "keyPassword").all { !keystore.getProperty(it).isNullOrBlank() }
 
+// ==============================================================================
+// CONFIGURAÇÃO DO PORTAL REMOTO IPVIO
+// Altere esta URL sempre que mudar de servidor/domínio para os novos APKs:
+val PORTAL_URL: String = (project.findProperty("PORTAL_URL") as String?)
+    ?: System.getenv("PORTAL_URL")
+    ?: "http://192.168.1.100:3000"
+// ==============================================================================
+
 android {
     namespace = "com.ipvio.stream"
     compileSdk {
@@ -45,6 +53,7 @@ android {
         buildConfigField("String", "OMDB_KEY", "\"${secret("OMDB_KEY")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${secretId("GOOGLE_CLIENT_ID")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_SECRET", "\"${secretId("GOOGLE_CLIENT_SECRET")}\"")
+        buildConfigField("String", "PORTAL_URL", "\"$PORTAL_URL\"")
     }
 
     signingConfigs {

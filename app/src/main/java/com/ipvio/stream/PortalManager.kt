@@ -36,7 +36,7 @@ object PortalManager {
     fun getPortalUrl(ctx: Context): String {
         val stored = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_PORTAL_URL, "")?.trim().orEmpty()
-        return if (stored.isNotBlank()) stored else "http://192.168.1.100:3000"
+        return if (stored.isNotBlank()) stored else BuildConfig.PORTAL_URL
     }
 
     fun setPortalUrl(ctx: Context, url: String) {
