@@ -45,7 +45,7 @@ internal fun DriveSection(ctx: Context) {
     var busy by remember { mutableStateOf(false) }
 
     SectionTitle("Google Drive")
-    Hint("Gleicht Favoriten, Verlauf und Einstellungen zwischen deinen Geräten ab. Die App speichert nur in ihrem eigenen, versteckten Ordner in deinem Google Drive und sieht sonst nichts.")
+    Hint("Gleicht Favoriten, Verlauf und Einstellungen zwischen deinen Geräten ab. Die App legt in deinem Google Drive den Ordner „IPVIO Stream Sync“ an und sieht nur diesen Ordner, sonst nichts.")
 
     if (!DriveSync.connected) {
         DriveConnect(ctx) { status = it }
@@ -187,7 +187,7 @@ private fun DriveRestore(ctx: Context, list: List<DriveSync.Remote>, pass: Strin
     Text("Sicherung zum Wiederherstellen wählen:", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
     for (r in list) {
         val s = r.modified / 1000
-        val name = r.deviceName ?: Lang.tr(if (r.deviceId == null) "Alte Sicherung (Version 1.1)" else "Unbekanntes Gerät")
+        val name = r.deviceName ?: Lang.tr("Unbekanntes Gerät")
         val label = name + " · " + (if (s > 0) dayLabel(s) + " " + hhmm(s) else "?") +
             (if (r.isThisDevice(ctx)) " · " + Lang.tr("dieses Gerät") else "")
         PillButton(label, raw = true, light = picked?.id == r.id) {

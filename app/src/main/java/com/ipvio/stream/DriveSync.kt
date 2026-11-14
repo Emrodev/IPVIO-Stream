@@ -21,15 +21,16 @@ import java.net.URLEncoder
  * Device sync over Google Drive (W-010, based on the Drive backup of 1.1). Optional.
  *
  * Sign-in like on other TV apps: the TV shows a code, the user confirms it on the phone (google.com/device);
- * this also works on Fire TV without Google services. Storage is the hidden app folder of Drive ("appDataFolder"):
- * the app only sees its own files, nothing else in the user's Drive. Every device writes only its own file
+ * this also works on Fire TV without Google services. Storage is the folder "IPVIO Stream Sync" in the user's Drive
+ * (scope drive.file: the app only sees the folder and files it created itself, nothing else; the hidden app folder
+ * "drive.appdata" is refused by Google in the TV sign-in with "invalid_scope"). Every device writes only its own file
  * (see [DriveLogic.fileName]), so no device overwrites another one. Restoring is always a manual step in the UI.
  *
  * Needs an own OAuth client (type "TVs and Limited Input devices") in secrets.properties, see docs/GOOGLE_DRIVE.md.
  * Without it the section stays hidden.
  */
 object DriveSync {
-    private const val SCOPE = "https://www.googleapis.com/auth/drive.appdata"
+    private const val SCOPE = "https://www.googleapis.com/auth/drive.file"
     private const val PREFS = "ipvio_drive"
     private const val FILES = "https://www.googleapis.com/drive/v3/files"
     private const val UPLOAD = "https://www.googleapis.com/upload/drive/v3/files"
@@ -162,7 +163,25 @@ object DriveSync {
         r.body?.string().orEmpty()
     }
 
-    /** A sync file in Drive. [deviceId] null = old single backup file of 1.1. */
+    /** Id of the app's folder in Drive; with [create] it is made when missing, otherwise null = no backup yet. */
+    private fun folder(c: Context, t: String, create: Boolean): String? {
+        val q = URLEncoder.encode(DriveLogic.folderQuery(), "UTF-8")
+        val found = JSONObject(get(t, "$FILES?q=$q&orderBy=createdTime&pageSize=1&fields=files(id)"))
+            .optJSONArray("files")?.optJSONObject(0)?.optString("id")?.ifBlank { null }
+        if (found != null && DriveLogic.validDriveId(found)) return found
+        if (!create) return null
+        val meta = JSONObject().put("name", DriveLogic.FOLDER_NAME).put("mimeType", DriveLogic.FOLDER_MIME)
+        val req = Request.Builder().url("$FILES?fields=id").header("Authorization", "Bearer $t")
+            .post(meta.toString().toRequestBody(JSON)).build()
+        val id = client.newCall(req).execute().use { r ->
+            if (!r.isSuccessful) throw DriveException(Reason.GOOGLE, r.code, "folder")
+            JSONObject(r.body?.string().orEmpty()).optString("id")
+        }
+        if (!DriveLogic.validDriveId(id)) throw DriveException(Reason.GOOGLE, 0, "folder id")
+        return id
+    }
+
+    /** A sync file in Drive. [deviceId] null = file without a device id in its name. */
     class Remote(val id: String, val deviceId: String?, val deviceName: String?, val modified: Long, val size: Long) {
         fun isThisDevice(c: Context) = deviceId != null && deviceId == Backup.deviceId(c)
     }
@@ -172,8 +191,9 @@ object DriveSync {
         runCatching {
             net {
                 val t = token(c)
-                val q = URLEncoder.encode(DriveLogic.listQuery(), "UTF-8")
-                val body = get(t, "$FILES?spaces=appDataFolder&q=$q&orderBy=modifiedTime%20desc&pageSize=50" +
+                val dir = folder(c, t, create = false) ?: return@net emptyList<Remote>()
+                val q = URLEncoder.encode(DriveLogic.listQuery(dir), "UTF-8")
+                val body = get(t, "$FILES?q=$q&orderBy=modifiedTime%20desc&pageSize=50" +
                     "&fields=files(id,name,modifiedTime,size,appProperties)")
                 val a = JSONObject(body).optJSONArray("files") ?: JSONArray()
                 (0 until a.length()).mapNotNull { i ->
@@ -197,12 +217,13 @@ object DriveSync {
                 val t = token(c)
                 val devId = Backup.deviceId(c)
                 val name = DriveLogic.fileName(devId)
-                val q = URLEncoder.encode("name = '$name'", "UTF-8")
-                val existing = JSONObject(get(t, "$FILES?spaces=appDataFolder&q=$q&fields=files(id)"))
+                val dir = folder(c, t, create = true)!!
+                val q = URLEncoder.encode(DriveLogic.fileQuery(dir, devId), "UTF-8")
+                val existing = JSONObject(get(t, "$FILES?q=$q&fields=files(id)"))
                     .optJSONArray("files")?.optJSONObject(0)?.optString("id")?.ifBlank { null }
                 val props = JSONObject().put("deviceId", devId).put("deviceName", Backup.deviceName())
                 val meta = JSONObject().put("appProperties", props)
-                if (existing == null) meta.put("name", name).put("parents", JSONArray().put("appDataFolder"))
+                if (existing == null) meta.put("name", name).put("parents", JSONArray().put(dir))
                 val body = MultipartBody.Builder().setType("multipart/related".toMediaType())
                     .addPart(meta.toString().toRequestBody(JSON))
                     .addPart(text.toRequestBody(JSON))
