@@ -385,7 +385,8 @@ fun guideCategories(list: List<Item>, all: List<Item>): List<GuideCat> {
     }
     val groups = LinkedHashMap<String, ArrayList<Item>>()
     for (it in all) groups.getOrPut(it.group) { ArrayList() }.add(it)
-    if (groups.size > 1) for ((g, l) in groups) out.add(GuideCat(g, l, null))
+    val sortedKeys = CatOrder.sorted(CatOrder.LIVE, groups.keys.toList())
+    if (groups.size > 1) for (g in sortedKeys) groups[g]?.let { l -> out.add(GuideCat(g, l, null)) }
     return out
 }
 

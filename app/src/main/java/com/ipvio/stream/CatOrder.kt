@@ -28,12 +28,13 @@ object CatOrder {
         inited = true
         val p = prefs(c)
         for (a in listOf(LIVE, MOVIE, SERIES)) {
-            modes[a] = p.getInt("m_$a", CatOrderLogic.PROVIDER).coerceIn(0, 2)
+            val def = if (a == LIVE) CatOrderLogic.AZ else CatOrderLogic.PROVIDER
+            modes[a] = p.getInt("m_$a", def).coerceIn(0, 2)
             own[a] = CatOrderLogic.decode(p.getString("o_$a", ""))
         }
     }
 
-    fun mode(area: String): Int = modes[area] ?: CatOrderLogic.PROVIDER
+    fun mode(area: String): Int = modes[area] ?: if (area == LIVE) CatOrderLogic.AZ else CatOrderLogic.PROVIDER
 
     /** [names] in provider order → order to show. */
     fun sorted(area: String, names: List<String>): List<String> = CatOrderLogic.apply(names, mode(area), own[area].orEmpty())

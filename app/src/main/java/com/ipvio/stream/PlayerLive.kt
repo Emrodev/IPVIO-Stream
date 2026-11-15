@@ -162,12 +162,15 @@ fun ChannelOverlay(
     onClose: () -> Unit, onPick: (Item, List<Item>) -> Unit
 ) {
     val ctx = LocalContext.current
+    CatOrder.init(ctx)
     val byId = remember(liveAll) { liveAll.associateBy { it.id } }
     val groups = remember(liveAll) { liveAll.groupBy { it.group } }
     // Remembered: the overlay recomposes on every focus step (focusedCh), the lists only change with their sources
     val favItems = remember(byId, Library.favs.size) { Library.favs.mapNotNull { byId[it] } }
     val favCats = remember(groups, CatFavs.list.size) { CatFavs.list.filter { it in groups } }
-    val catNames = remember(groups, favCats) { favCats + groups.keys.filter { it !in favCats } }
+    val catNames = remember(groups, favCats, CatOrder.version) {
+        favCats + CatOrder.sorted(CatOrder.LIVE, groups.keys.toList()).filter { it !in favCats }
+    }
     // Own channel lists (created in the Live TV area with the menu key)
     val myLists = ChannelLists.lists.toList()
     val curList = ChannelLists.byKey(chanCat)
