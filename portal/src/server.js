@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
 const config = require('./config');
@@ -13,9 +14,19 @@ const { runExpiryAutomations } = require('./services/automationService');
 
 const app = express();
 
+// Confia no primeiro proxy reverso (Cloudflare / Nginx / Traefik) para obter o IP real
+app.set('trust proxy', 1);
+
+// Proteções de cabeçalhos HTTP
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+app.disable('x-powered-by');
+
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // Garante que as pastas de uploads/apks existam
 if (!fs.existsSync(config.apkDir)) {

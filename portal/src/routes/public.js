@@ -1,8 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { getSettings } = require('../services/automationService');
 const { sendWhatsAppMessage, checkWhatsAppNumber } = require('../services/whatsappService');
+
+// Rate limiter contra spam de testes (máx 5 solicitações por hora por IP)
+const testLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: {
+    success: false,
+    error: 'Limite de testes atingido para esta conexão. Tente novamente mais tarde.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 function getClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
@@ -48,8 +61,8 @@ router.get('/teste-info', async (req, res) => {
   }
 });
 
-// Solicitar Teste Grátis (Painel Slim)
-router.post('/solicitar-teste', async (req, res) => {
+// Solicitar Teste Grátis (Painel Slim com proteção contra spam e duplicidade)
+router.post('/solicitar-teste', testLimiter, async (req, res) => {
   try {
     const { phone, name, type } = req.body;
     if (!phone) {
@@ -59,6 +72,19 @@ router.post('/solicitar-teste', async (req, res) => {
     const cleanPhone = normalizePhone(phone);
     if (cleanPhone.length < 10) {
       return res.status(400).json({ success: false, error: 'Número de WhatsApp inválido. Digite DDD + Número.' });
+    }
+
+    // Proteção contra solicitação repetida no mesmo número em menos de 24h
+    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+    const existing = await db.query(
+      'SELECT id, created_at FROM test_requests WHERE phone = ? AND created_at > ? LIMIT 1',
+      [cleanPhone, oneDayAgo]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(429).json({
+        success: false,
+        error: 'Você já gerou um teste grátis nas últimas 24 horas. Verifique seu WhatsApp ou use seus dados ativos.'
+      });
     }
 
     const settings = await getSettings();

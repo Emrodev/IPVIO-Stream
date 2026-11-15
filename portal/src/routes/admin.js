@@ -4,12 +4,37 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const AppInfoParser = require('app-info-parser');
 const db = require('../db');
 const config = require('../config');
 const { checkPlaylistValidity } = require('../services/playlistChecker');
 const { getSettings, saveSettings, migrateAllClientsUrl, runExpiryAutomations } = require('../services/automationService');
 const { sendWhatsAppMessage } = require('../services/whatsappService');
+
+// Rate limiter contra ataques de força bruta no login (máx 5 tentativas por IP a cada 15 min)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+  message: {
+    success: false,
+    error: 'Muitas tentativas de login incorretas. Por segurança, tente novamente em 15 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+function safeCompare(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 // Sessões ativas em memória e tokens assinados
 const activeSessions = new Map();
@@ -69,18 +94,25 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 150 * 1024 * 1024 } // Até 150MB
+  limits: { fileSize: 150 * 1024 * 1024 }, // Até 150MB
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.apk') {
+      return cb(new Error('Apenas arquivos instaladores com extensão .apk são permitidos.'));
+    }
+    cb(null, true);
+  }
 });
 
-// 1. Rota de Login (Pública)
-router.post('/login', (req, res) => {
+// 1. Rota de Login (Pública com proteção contra força bruta)
+router.post('/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ success: false, error: 'Usuário e senha são obrigatórios.' });
   }
 
-  const validUser = (username === config.adminUser);
-  const validPass = (password === config.adminPass);
+  const validUser = safeCompare(username, config.adminUser);
+  const validPass = safeCompare(password, config.adminPass);
 
   if (validUser && validPass) {
     const token = generateToken(username);
