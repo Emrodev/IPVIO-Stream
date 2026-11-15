@@ -909,11 +909,26 @@ object PlaylistStore {
         if (i !in lists.indices) return
         if (loadLock.isLocked) return   // a load is already running: do not interfere
         activate(c, i)
+        // Mark the load before the list is emptied: otherwise one frame shows "No channels yet" instead of the loading screen.
+        // No suspension point between here and load(), so its lock is still free.
+        loading = true
         primaryItems = emptyList(); primaryUrl = null
         merged = MultiLogic.Merged(emptyList(), emptySet(), emptyMap()); sourceNames = emptyList()
         setItems(emptyList())
         load(c, lists[i].url, false)
     }
+
+    /**
+     * Runs [switchTo] in a scope that outlives the screen that started it. The switch empties the list, the home screen then
+     * replaces Live TV / the movie or series page by the loading screen, and a scope remembered there was cancelled with it:
+     * the load stopped half way and "No channels yet" stayed until a restart (issues 1 and 16).
+     */
+    fun switchAsync(c: Context, i: Int) {
+        val app = c.applicationContext
+        switchScope.launch { switchTo(app, i) }
+    }
+
+    private val switchScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     /** Show a playlist additionally (or no longer). Call [applyMulti] afterwards. */
     fun setShown(c: Context, i: Int, on: Boolean) {
