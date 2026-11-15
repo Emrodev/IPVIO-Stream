@@ -60,6 +60,7 @@ Player: „Zuschneiden“ und „Strecken“ wirken wieder¦Player: “Crop” a
 Einstellungen: Meldungen unter den Knöpfen sind sofort zu sehen¦Settings: messages below the buttons are visible right away
 WLAN-Übertragung: der Fokus bleibt nach Start und Stopp auf dem Knopf¦Wi-Fi transfer: the focus stays on the button after start and stop
 „Was ist neu“ erscheint auch nach einer Test-Version¦“What’s new” also appears after a test version
+Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Update nicht mehr¦In-app update: “The signature could not be checked” no longer stops the update
 """
 
 /**

@@ -84,7 +84,8 @@ object WhatsNew {
             "Player: „Zuschneiden“ und „Strecken“ wirken wieder",
             "Einstellungen: Meldungen unter den Knöpfen sind sofort zu sehen",
             "WLAN-Übertragung: der Fokus bleibt nach Start und Stopp auf dem Knopf",
-            "„Was ist neu“ erscheint auch nach einer Test-Version"
+            "„Was ist neu“ erscheint auch nach einer Test-Version",
+            "Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Update nicht mehr"
         ),
         "1.4.2" to listOf(
             "Google Drive: Favoriten, Verlauf, Einstellungen und Playlists zwischen Geräten sichern und wiederherstellen (Einstellungen > Speicher)",

@@ -122,4 +122,13 @@ class UpdateLogicTest {
         val base = "https://github.com/Emrodev/IPVIO-Stream/releases/latest/download/update.json"
         assertEquals("https://github.com/Emrodev/IPVIO-Stream/releases/latest/download/IPVIO-Stream.apk", UpdateLogic.resolve(base, "IPVIO-Stream.apk"))
     }
+
+    @Test fun signer_verdict_never_blocks_when_unreadable() {
+        val a = setOf("aa"); val b = setOf("bb")
+        assertEquals(UpdateLogic.SignerVerdict.MATCH, UpdateLogic.signerVerdict(a, a, emptySet()))
+        assertEquals(UpdateLogic.SignerVerdict.MISMATCH, UpdateLogic.signerVerdict(a, b, emptySet()))
+        // Fire OS 7 / Android 9: the downloaded APK's signer stays empty -> the installer decides, the update is not stopped
+        assertEquals(UpdateLogic.SignerVerdict.UNKNOWN, UpdateLogic.signerVerdict(a, emptySet(), emptySet()))
+        assertEquals(UpdateLogic.SignerVerdict.UNKNOWN, UpdateLogic.signerVerdict(emptySet(), a, emptySet()))
+    }
 }
