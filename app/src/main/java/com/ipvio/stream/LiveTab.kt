@@ -87,7 +87,7 @@ private object LiveRecCache {
 private fun FocusedBackdrop(focused: State<Item?>, modifier: Modifier) { LiveBackdrop(focused.value, modifier) }
 
 @Composable
-private fun FocusedNowPanel(focused: State<Item?>, fallback: Item?) { LiveNowPanel(focused.value ?: fallback) }
+private fun FocusedNowPanel(focused: State<Item?>, fallback: Item?, compact: Boolean = false) { LiveNowPanel(focused.value ?: fallback, compact = compact) }
 
 @Composable
 fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: List<Item>, onOpen: (Item) -> Unit, onPlayNow: (Item) -> Unit = onOpen) {
@@ -401,7 +401,6 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     PillButton("Fertig", light = true) { finishAdd() }
                 }
-                if (sel == "SEARCH") Field(query, { query = it.take(40) }, "Sendername eingeben", Modifier.padding(bottom = 12.dp), inner = Modifier.focusRequester(searchReq))
                 if (list.isEmpty()) EmptyState(
                     if (sel == FAV_CAT) AIcon.Heart else AIcon.Live,
                     if (sel == FAV_CAT) "Noch keine Favoriten" else if (sel == "SEARCH") (if (query.isBlank()) "Sender suchen" else "Keine Treffer") else if (curList != null) "Diese Liste ist noch leer" else "Keine Sender",
@@ -429,10 +428,13 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     itemsIndexed(list, key = if (curList != null) { ix, ch -> ch.id + "#" + ix } else null, contentType = { _, _ -> "ch" }) { i, ch ->
                         ChannelLine(
                             ch, (if (i == 0) Modifier.focusRequester(firstChan) else Modifier)
-                                .then(if (ch.id == restoreId) Modifier.focusRequester(restoreReq) else Modifier), curList,
+                                .then(if (ch.id == restoreId) Modifier.focusRequester(restoreReq) else Modifier)
+                                // Favorites: the focus follows a channel that was just moved
+                                .then(if (sel == FAV_CAT) Modifier.followFav(ch.id) else Modifier), curList,
                             onNewList = { newList(ch.id) },
                             onFocus = { focusTarget = ch; plScope.launch { holdJump(chanState, i) } },
                             variants = variantsOf[ch.id].orEmpty(),
+                            favShown = if (sel == FAV_CAT) list else null,
                             onVariant = { v -> ZapContext.list = list; ZapContext.key = sel; LiveMemory.setSel(ctx, sel); onOpen(v) }
                         ) {
                             if (addList != null) {
@@ -446,23 +448,30 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                 }
             }
             // Right: what is on the selected channel
-            Box(Modifier.weight(1.1f).fillMaxHeight().padding(start = dpx(30), end = dpx(60), top = dpx(150))) {
+            Box(Modifier.weight(1.1f).fillMaxHeight().padding(start = dpx(30), end = dpx(60), top = dpx(if (sel == "SEARCH") 70 else 150))) {
                 if (sel == "SEARCH") Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f).fillMaxWidth()) { FocusedNowPanel(focusedState, list.firstOrNull()) }
+                    // Compact info on top, then the input field directly above the keyboard (the field has room, the info is smaller)
+                    Box(Modifier.weight(1f).fillMaxWidth()) { FocusedNowPanel(focusedState, list.firstOrNull(), compact = true) }
                     Spacer(Modifier.height(10.dp))
                     // Setting "device keyboard" (Wishbox): a normal text field opens Gboard & co. (all languages, voice input)
                     if (AppSettings.systemKeyboard) Field(
                         query, { query = it.take(40) }, "Sender suchen",
                         Modifier.fillMaxWidth().padding(bottom = dpx(24)), inner = Modifier.focusRequester(kbFirst)
-                    ) else SearchKeyboard(
-                        Modifier.fillMaxWidth().padding(bottom = dpx(24)),
-                        onKey = { query = (query + it).take(40) },
-                        onSpace = { if (query.isNotEmpty() && !query.endsWith(" ")) query += " " },
-                        onDelete = { query = query.dropLast(1) },
-                        onClear = { query = "" },
-                        onPhone = null, onVoice = null,
-                        firstKey = kbFirst, onFocusChange = {}, onRight = { true }
-                    )
+                    ) else {
+                        Field(
+                            query, { query = it.take(40) }, "Sender suchen",
+                            Modifier.fillMaxWidth().padding(bottom = 8.dp), inner = Modifier.focusRequester(searchReq)
+                        )
+                        SearchKeyboard(
+                            Modifier.fillMaxWidth().padding(bottom = dpx(24)),
+                            onKey = { query = (query + it).take(40) },
+                            onSpace = { if (query.isNotEmpty() && !query.endsWith(" ")) query += " " },
+                            onDelete = { query = query.dropLast(1) },
+                            onClear = { query = "" },
+                            onPhone = null, onVoice = null,
+                            firstKey = kbFirst, onFocusChange = {}, onRight = { true }
+                        )
+                    }
                 } else FocusedNowPanel(focusedState, list.firstOrNull())
             }
                     }
@@ -523,11 +532,11 @@ private fun CatRow(
 }
 
 @Composable
-private fun ChannelLine(item: Item, modifier: Modifier, inList: ChList?, onNewList: () -> Unit, onFocus: () -> Unit = {}, variants: List<Item> = emptyList(), onVariant: (Item) -> Unit = {}, onClick: () -> Unit) {
+private fun ChannelLine(item: Item, modifier: Modifier, inList: ChList?, onNewList: () -> Unit, onFocus: () -> Unit = {}, variants: List<Item> = emptyList(), onVariant: (Item) -> Unit = {}, favShown: List<Item>? = null, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     Box {
-    if (menu) ChannelMenu(item, inList, onNewList, variants, onVariant) { menu = false }
+    if (menu) ChannelMenu(item, inList, onNewList, variants, onVariant, favShown) { menu = false }
     val shape = RoundedCornerShape(DS.RadiusM)
     // Wait briefly before loading the guide data: rows that only fly past while scrolling are cancelled and cost nothing
     // While Up/Down is held no guide data is loaded: the row would grow by two lines and the list would re-measure while it scrolls
@@ -601,12 +610,14 @@ private fun ChannelLogo(logo: String?, title: String) {
  * move within the list, new list. [onNewList] = null hides "New channel list" (player).
  */
 @Composable
-fun ChannelMenu(item: Item, inList: ChList?, onNewList: (() -> Unit)?, variants: List<Item> = emptyList(), onVariant: (Item) -> Unit = {}, onClose: () -> Unit) {
+fun ChannelMenu(item: Item, inList: ChList?, onNewList: (() -> Unit)?, variants: List<Item> = emptyList(), onVariant: (Item) -> Unit = {}, favShown: List<Item>? = null, onClose: () -> Unit) {
     val ctx = LocalContext.current
     val acts = ArrayList<Triple<String, AIcon?, () -> Unit>>()
     // Bundled quality variants: pick one to play (best first)
     if (variants.size > 1) for (v in variants) acts.add(Triple(Lang.tr("Qualität") + ": " + (v.quality ?: v.title), AIcon.Play) { onVariant(v) })
     acts.add(Triple(if (Library.isFav(item.id)) "Aus Favoriten entfernen" else "Zu Favoriten", AIcon.Star) { Library.toggleFav(ctx, item.id) })
+    // In the favorites category of the Live tab: move the channel (favShown = the favorites on screen)
+    if (favShown != null) acts.addAll(favMoveActions(ctx, item, favShown))
     if (inList != null) {
         acts.add(Triple("Nach oben", AIcon.Up) { ChannelLists.move(ctx, inList.id, item.id, -1) })
         acts.add(Triple("Nach unten", AIcon.Down) { ChannelLists.move(ctx, inList.id, item.id, 1) })
