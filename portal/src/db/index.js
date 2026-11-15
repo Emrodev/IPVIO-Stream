@@ -204,6 +204,146 @@ async function createTables() {
   }
 
   console.log('[DB] Tabelas verificadas/criadas com sucesso.');
+  await migrateFromSqliteIfPresent();
+}
+
+async function migrateFromSqliteIfPresent() {
+  if (dbDriver.type !== 'postgres') return;
+  const sqliteFile = config.sqlitePath;
+  if (!fs.existsSync(sqliteFile)) return;
+
+  const sqlite3 = require('sqlite3').verbose();
+  let sdb;
+  try {
+    sdb = await new Promise((resolve, reject) => {
+      const d = new sqlite3.Database(sqliteFile, sqlite3.OPEN_READONLY, (err) => {
+        if (err) reject(err);
+        else resolve(d);
+      });
+    });
+  } catch (err) {
+    console.warn('[DB Migration] Não foi possível abrir arquivo SQLite:', err.message);
+    return;
+  }
+
+  const querySqlite = (sql) => new Promise((resolve) => {
+    sdb.all(sql, [], (err, rows) => resolve(rows || []));
+  });
+
+  try {
+    // 1. Configurações (admin_settings)
+    const existingSettings = await dbDriver.query('SELECT count(*) as c FROM admin_settings');
+    const settingsCount = parseInt(existingSettings.rows[0]?.c || '0', 10);
+    if (settingsCount === 0) {
+      const sqliteSettings = await querySqlite('SELECT key, value FROM admin_settings');
+      for (const row of sqliteSettings) {
+        await dbDriver.query(
+          'INSERT INTO admin_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+          [row.key, row.value]
+        );
+      }
+      if (sqliteSettings.length > 0) {
+        console.log(`[DB Migration] ✅ Migradas ${sqliteSettings.length} configurações do SQLite para o PostgreSQL.`);
+      }
+    }
+
+    // 2. Atualizações OTA (ota_updates)
+    const existingOta = await dbDriver.query('SELECT count(*) as c FROM ota_updates');
+    const otaCount = parseInt(existingOta.rows[0]?.c || '0', 10);
+    if (otaCount === 0) {
+      const sqliteOta = await querySqlite('SELECT * FROM ota_updates');
+      for (const row of sqliteOta) {
+        await dbDriver.query(
+          'INSERT INTO ota_updates (version_name, version_code, download_url, changelog, mandatory, released_at) VALUES (?, ?, ?, ?, ?, ?)',
+          [row.version_name, row.version_code, row.download_url, row.changelog || '', row.mandatory || 0, row.released_at]
+        );
+      }
+      if (sqliteOta.length > 0) {
+        console.log(`[DB Migration] ✅ Migradas ${sqliteOta.length} atualizações OTA do SQLite para o PostgreSQL.`);
+      }
+    }
+
+    // 3. Dispositivos (devices)
+    const existingDevs = await dbDriver.query('SELECT count(*) as c FROM devices');
+    const devCount = parseInt(existingDevs.rows[0]?.c || '0', 10);
+    if (devCount === 0) {
+      const sqliteDevs = await querySqlite('SELECT * FROM devices');
+      for (const d of sqliteDevs) {
+        await dbDriver.query(
+          `INSERT INTO devices (
+            id, mac, name, model, app_version, ip, status, playlist_type, playlist_url,
+            xtream_host, xtream_user, xtream_pass, playlist_updated_at, message, message_id,
+            message_type, created_at, last_seen, playlist_exp_date, playlist_status,
+            playlist_max_cons, pairing_code, now_playing, now_playing_type, now_playing_at,
+            client_phone, client_name, notes, last_expiry_notified_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT (id) DO NOTHING`,
+          [
+            d.id, d.mac, d.name, d.model, d.app_version, d.ip, d.status || 'active',
+            d.playlist_type || 'none', d.playlist_url, d.xtream_host, d.xtream_user, d.xtream_pass,
+            d.playlist_updated_at || 0, d.message, d.message_id, d.message_type || 'info',
+            d.created_at || Date.now(), d.last_seen || Date.now(), d.playlist_exp_date,
+            d.playlist_status, d.playlist_max_cons, d.pairing_code, d.now_playing,
+            d.now_playing_type, d.now_playing_at || 0, d.client_phone, d.client_name,
+            d.notes, d.last_expiry_notified_at || 0
+          ]
+        );
+      }
+      if (sqliteDevs.length > 0) {
+        console.log(`[DB Migration] ✅ Migrados ${sqliteDevs.length} dispositivos do SQLite para o PostgreSQL.`);
+      }
+    }
+
+    // 4. Test Requests (test_requests)
+    const existingTests = await dbDriver.query('SELECT count(*) as c FROM test_requests');
+    const testsCount = parseInt(existingTests.rows[0]?.c || '0', 10);
+    if (testsCount === 0) {
+      const sqliteTests = await querySqlite('SELECT * FROM test_requests');
+      for (const t of sqliteTests) {
+        await dbDriver.query(
+          `INSERT INTO test_requests (
+            phone, name, type, username, password, dns, package_name, expires_at_formatted,
+            pay_url, raw_reply, ip, is_valid_wa, wa_lid, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            t.phone, t.name, t.type, t.username, t.password, t.dns, t.package_name,
+            t.expires_at_formatted, t.pay_url, t.raw_reply, t.ip, t.is_valid_wa || 0,
+            t.wa_lid || null, t.created_at
+          ]
+        );
+      }
+      if (sqliteTests.length > 0) {
+        console.log(`[DB Migration] ✅ Migradas ${sqliteTests.length} solicitações de testes do SQLite para o PostgreSQL.`);
+      }
+    }
+
+    // 5. Backups & Account Sync
+    const existingBackups = await dbDriver.query('SELECT count(*) as c FROM device_backups');
+    if (parseInt(existingBackups.rows[0]?.c || '0', 10) === 0) {
+      const sqliteBackups = await querySqlite('SELECT * FROM device_backups');
+      for (const b of sqliteBackups) {
+        await dbDriver.query(
+          'INSERT INTO device_backups (device_id, account_key, summary, backup_data, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (device_id) DO NOTHING',
+          [b.device_id, b.account_key, b.summary, b.backup_data, b.updated_at]
+        );
+      }
+    }
+
+    const existingSync = await dbDriver.query('SELECT count(*) as c FROM account_sync');
+    if (parseInt(existingSync.rows[0]?.c || '0', 10) === 0) {
+      const sqliteSync = await querySqlite('SELECT * FROM account_sync');
+      for (const s of sqliteSync) {
+        await dbDriver.query(
+          'INSERT INTO account_sync (account_key, sync_type, item_id, data_json, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (account_key, sync_type, item_id) DO NOTHING',
+          [s.account_key, s.sync_type, s.item_id, s.data_json, s.updated_at]
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[DB Migration Warning] Erro durante migração automática:', err.message);
+  } finally {
+    sdb.close();
+  }
 }
 
 module.exports = {

@@ -51,7 +51,20 @@ Os ativos visuais foram criados no padrão moderno com gradientes em ciano e azu
 
 ## 3. Portal de Gerenciamento (`portal/`)
 
-### 3.1. Variáveis de Ambiente e Arquivo `.env` (Ignorado pelo Git)
+### 3.1. Execução via Docker com PostgreSQL (Recomendado)
+O portal possui orquestração completa pronta para produção com PostgreSQL 16:
+
+```bash
+docker compose up -d --build
+```
+
+#### O que acontece automaticamente na inicialização:
+* **Banco PostgreSQL com Healthcheck:** O container `korp-postgres` inicia primeiro e só libera o portal quando o banco estiver 100% pronto.
+* **Migração Automática do SQLite:** Na primeira execução com PostgreSQL, o sistema detecta o arquivo `portal/data/portal.db`, lê todas as configurações salvas, aparelhos vinculados, histórico de testes e registros de atualização OTA e migra tudo automaticamente para o PostgreSQL.
+* **Persistência de Dados:** O banco é salvo no volume `pgdata`, e os APKs são persistidos no diretório `./portal/public/apks`.
+* **CI/CD no GitHub (GHCR):** O workflow `.github/workflows/docker-publish.yml` compila e publica automaticamente a imagem Docker em `ghcr.io/kabaweb/korp-portal:latest` a cada push na branch `main`.
+
+### 3.2. Variáveis de Ambiente e Arquivo `.env` (Ignorado pelo Git)
 No diretório `portal/.env`, configure as variáveis do servidor:
 
 ```env
