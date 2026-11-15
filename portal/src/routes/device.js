@@ -16,7 +16,19 @@ async function getLatestOta(currentCode = 0, req = null) {
   const hasUpdate = latest.version_code > currentCode;
 
   let dlUrl = latest.download_url || '';
-  if (req) {
+  let publicDomain = '';
+  try {
+    const settings = await getSettings();
+    publicDomain = (settings && settings.portal_public_domain ? settings.portal_public_domain : '').trim().replace(/\/+$/, '');
+  } catch (_) {}
+
+  if (publicDomain) {
+    if (dlUrl.startsWith('/')) {
+      dlUrl = `${publicDomain}${dlUrl}`;
+    } else if (dlUrl.includes('localhost') || dlUrl.includes('127.0.0.1')) {
+      dlUrl = dlUrl.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, publicDomain);
+    }
+  } else if (req) {
     const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
     const host = req.headers['x-forwarded-host'] || req.get('host') || '';
     if (dlUrl.startsWith('/')) {

@@ -4,6 +4,13 @@ let isBroadcast = false;
 let currentPlaylistType = 'xtream';
 let systemSettings = {};
 
+function getPublicBaseUrl() {
+  if (systemSettings && systemSettings.portal_public_domain && systemSettings.portal_public_domain.trim()) {
+    return systemSettings.portal_public_domain.trim().replace(/\/+$/, '');
+  }
+  return window.location.origin;
+}
+
 function getAdminToken() {
   return localStorage.getItem('ipvio_admin_token') || '';
 }
@@ -623,7 +630,7 @@ async function loadOtaUpdates() {
   try {
     const permInput = document.getElementById('permanent-download-link');
     if (permInput) {
-      permInput.value = `${window.location.origin}/app.apk`;
+      permInput.value = `${getPublicBaseUrl()}/app.apk`;
     }
 
     const res = await fetch('/api/admin/ota', { headers: authHeaders() });
@@ -830,8 +837,8 @@ async function loadSettings() {
     }
     const publicLink = document.getElementById('link-public-teste');
     if (publicLink) {
-      publicLink.href = `${window.location.origin}/teste`;
-      publicLink.innerText = `${window.location.origin}/teste`;
+      publicLink.href = `${getPublicBaseUrl()}/teste`;
+      publicLink.innerText = `${getPublicBaseUrl()}/teste`;
     }
   } catch (err) {
     console.error('Erro ao carregar configurações:', err);
@@ -1041,7 +1048,7 @@ async function saveTestSettings() {
 }
 
 function copyTesteLink() {
-  const link = `${window.location.origin}/teste`;
+  const link = `${getPublicBaseUrl()}/teste`;
   navigator.clipboard.writeText(link).then(() => {
     alert(`Link copiado: ${link}`);
   }).catch(() => {
@@ -1143,7 +1150,7 @@ async function deleteTest(id) {
 let portalQrCodeInstance = null;
 
 function openQrModal() {
-  const permUrl = `${window.location.origin}/app.apk`;
+  const permUrl = `${getPublicBaseUrl()}/app.apk`;
   document.getElementById('modal-qr-download-link').value = permUrl;
   document.getElementById('btn-modal-direct-apk').href = permUrl;
 

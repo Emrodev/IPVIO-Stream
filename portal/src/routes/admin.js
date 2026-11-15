@@ -538,10 +538,8 @@ router.post('/ota/upload', upload.single('apk'), async (req, res) => {
     finalVersionName = finalVersionName || '1.0.0';
     finalVersionCode = finalVersionCode || 1;
 
-    // Constrói URL absoluta com o domínio do portal para a TV conseguir baixar
-    const protocol = req.protocol || 'http';
-    const host = req.get('host') || `localhost:${config.port}`;
-    const downloadUrl = `${protocol}://${host}/apks/${req.file.filename}`;
+    // Constrói URL relativa para ser resolvida dinamicamente com o domínio público configurado
+    const downloadUrl = `/apks/${req.file.filename}`;
     const now = Date.now();
 
     await db.query(
