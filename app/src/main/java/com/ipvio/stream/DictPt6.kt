@@ -130,17 +130,17 @@ Seriennummer (optional)¦Número de serie (opcional)
 Device ID (optional)¦Device ID (opcional)
 Device ID 2 (optional)¦Device ID 2 (opcional)
 Seriennummer und Device IDs nur eintragen, wenn dein Anbieter sie verlangt (wie bei TiviMate oder STB Emu). Leer = die App erzeugt eigene Werte.¦Introduce el número de serie y los Device ID solo si tu proveedor los exige (como en TiviMate o STB Emu). Vacío = la app genera sus propios valores.
-Update verfügbar¦Actualización disponible
-Neue Version {0} (installiert: {1})¦Nueva versión {0} (instalada: {1})
-Deine Playlists und Einstellungen bleiben erhalten. Android fragt vor der Installation einmal nach.¦Tus listas y ajustes se conservan. Android pregunta una vez antes de instalar.
-Jetzt aktualisieren¦Actualizar ahora
-Später¦Más tarde
-Auf Updates prüfen¦Buscar actualizaciones
-Suche nach Updates …¦Buscando actualizaciones …
-Du hast die neueste Version ({0}).¦Tienes la última versión ({0}).
-Update anzeigen¦Ver actualización
-Keine Verbindung. Prüfe das Netzwerk und versuche es erneut.¦Sin conexión. Revisa la red e inténtalo de nuevo.
-Dieser Hinweis erscheint nur einmal.¦Este aviso solo aparece una vez.
+Update verfügbar¦Atualização disponível
+Neue Version {0} (instalada: {1})¦Nova versão {0} (instalada: {1})
+Deine Playlists und Einstellungen bleiben erhalten. Android fragt vor der Installation einmal nach.¦Suas listas e configurações serão mantidas. O Android pedirá confirmação antes de instalar.
+Jetzt aktualisieren¦Atualizar agora
+Später¦Mais tarde
+Auf Updates prüfen¦Verificar atualizações
+Suche nach Updates …¦Procurando atualizações …
+Du hast die neueste Version ({0}).¦Você já tem a versão mais recente ({0}).
+Update anzeigen¦Ver atualização
+Keine Verbindung. Prüfe das Netzwerk und versuche es erneut.¦Sem conexão. Verifique sua rede e tente novamente.
+Dieser Hinweis erscheint nur einmal.¦Este aviso aparece apenas uma vez.
 Staffel gesehen¦Season watched
 Staffel zurücksetzen¦Reset season
 Serie gesehen¦Series watched

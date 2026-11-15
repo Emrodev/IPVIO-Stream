@@ -26,12 +26,17 @@ val keystore = Properties().apply {
 val hasKeystore = listOf("storeFile", "storePassword", "keyAlias", "keyPassword").all { !keystore.getProperty(it).isNullOrBlank() }
 
 // ==============================================================================
-// CONFIGURAÇÃO DO PORTAL REMOTO IPVIO
-// Prioridade: -PPORTAL_URL -> env PORTAL_URL -> secrets.properties (ignorado no git) -> padrão
+// CONFIGURAÇÃO DO PORTAL REMOTO IPVIO E NOME DO APP (REBRANDING)
+// Prioridade: -P -> env -> secrets.properties (ignorado no git) -> padrão
 val PORTAL_URL: String = (project.findProperty("PORTAL_URL") as String?)
     ?: System.getenv("PORTAL_URL")
     ?: (secrets.getProperty("PORTAL_URL") ?: "").trim().ifBlank { null }
     ?: "http://192.168.1.100:3000"
+
+val APP_NAME: String = (project.findProperty("APP_NAME") as String?)
+    ?: System.getenv("APP_NAME")
+    ?: (secrets.getProperty("APP_NAME") ?: "").trim().ifBlank { null }
+    ?: "IPVIO Stream"
 // ==============================================================================
 
 android {
@@ -45,16 +50,18 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 10
-        versionName = "1.4.4.1"
+        versionCode = 12
+        versionName = "1.4.5"
         // Name under the icon; the debug build overrides it (see buildTypes)
-        manifestPlaceholders["appLabel"] = "IPVIO Stream"
+        manifestPlaceholders["appLabel"] = APP_NAME
+        resValue("string", "app_name", APP_NAME)
 
         buildConfigField("String", "TMDB_KEY", "\"${secret("TMDB_KEY")}\"")
         buildConfigField("String", "OMDB_KEY", "\"${secret("OMDB_KEY")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${secretId("GOOGLE_CLIENT_ID")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_SECRET", "\"${secretId("GOOGLE_CLIENT_SECRET")}\"")
         buildConfigField("String", "PORTAL_URL", "\"$PORTAL_URL\"")
+        buildConfigField("String", "APP_NAME", "\"$APP_NAME\"")
     }
 
     signingConfigs {
@@ -71,7 +78,7 @@ android {
         // is not overwritten. Both apps can be installed side by side (own data, own name).
         debug {
             applicationIdSuffix = ".test"
-            manifestPlaceholders["appLabel"] = "IPVIO Stream"
+            manifestPlaceholders["appLabel"] = APP_NAME
         }
         release {
             if (hasKeystore) signingConfig = signingConfigs.getByName("release")
@@ -95,6 +102,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
 
     lint {

@@ -16,7 +16,13 @@ async function getSettings() {
     auto_expiry_days: parseInt(map.auto_expiry_days || '3', 10),
     auto_expiry_notify_tv: map.auto_expiry_notify_tv !== '0', // padrão ligado se habilitado
     auto_expiry_notify_wa: map.auto_expiry_notify_wa === '1',
-    auto_expiry_message: map.auto_expiry_message || 'Olá {{nome}}! Sua assinatura do IPVIO Stream vence em {{dias}} dia(s) (no dia {{data}}). Renove para continuar assistindo sem interrupções!'
+    auto_expiry_message: map.auto_expiry_message || 'Olá {{nome}}! Sua assinatura do IPVIO Stream vence em {{dias}} dia(s) (no dia {{data}}). Renove para continuar assistindo sem interrupções!',
+    test_api_without_adults: map.test_api_without_adults || '',
+    test_api_with_adults: map.test_api_with_adults || '',
+    portal_public_domain: map.portal_public_domain || process.env.PORTAL_PUBLIC_DOMAIN || '',
+    test_app_url: map.test_app_url || '',
+    test_auto_whatsapp: map.test_auto_whatsapp !== '0',
+    test_whatsapp_message: map.test_whatsapp_message || 'Olá {{nome}}! Seu teste do Korp TV foi liberado com sucesso 🎉\n\n📲 *Baixar Aplicativo:* {{app_url}}\n\n👤 *Usuário:* {{usuario}}\n🔑 *Senha:* {{senha}}\n📅 *Vencimento:* {{vencimento}}\n\nAbra o aplicativo e assista no seu celular, TV Box ou Smart TV!'
   };
 }
 

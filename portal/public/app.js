@@ -2,6 +2,7 @@ let devices = [];
 let selectedDeviceId = null;
 let isBroadcast = false;
 let currentPlaylistType = 'xtream';
+let systemSettings = {};
 
 function getAdminToken() {
   return localStorage.getItem('ipvio_admin_token') || '';
@@ -69,36 +70,48 @@ function showApp() {
   document.getElementById('app-container').classList.remove('hidden');
   const user = localStorage.getItem('ipvio_admin_username') || 'admin';
   document.getElementById('user-display').innerText = user;
+  loadSettings();
 }
 
 // Alternar abas
 function switchTab(tab) {
   const devSec = document.getElementById('section-devices');
+  const tstSec = document.getElementById('section-tests');
   const autSec = document.getElementById('section-automations');
   const otaSec = document.getElementById('section-ota');
   const devBtn = document.getElementById('tab-devices-btn');
+  const tstBtn = document.getElementById('tab-tests-btn');
   const autBtn = document.getElementById('tab-automations-btn');
   const otaBtn = document.getElementById('tab-ota-btn');
 
   devSec.classList.add('hidden');
+  if (tstSec) tstSec.classList.add('hidden');
   autSec.classList.add('hidden');
   otaSec.classList.add('hidden');
 
-  devBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
-  autBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
-  otaBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
+  const inactiveClass = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
+  const activeClass = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow';
+
+  devBtn.className = inactiveClass;
+  if (tstBtn) tstBtn.className = inactiveClass;
+  autBtn.className = inactiveClass;
+  otaBtn.className = inactiveClass;
 
   if (tab === 'devices') {
     devSec.classList.remove('hidden');
-    devBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow';
+    devBtn.className = activeClass;
     loadDevices();
+  } else if (tab === 'tests') {
+    if (tstSec) tstSec.classList.remove('hidden');
+    if (tstBtn) tstBtn.className = activeClass;
+    loadTests();
   } else if (tab === 'automations') {
     autSec.classList.remove('hidden');
-    autBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow';
+    autBtn.className = activeClass;
     loadSettings();
   } else {
     otaSec.classList.remove('hidden');
-    otaBtn.className = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow';
+    otaBtn.className = activeClass;
     loadOtaUpdates();
   }
 }
@@ -151,7 +164,7 @@ function getPairingCode(d) {
 function renderDevices(list) {
   const tbody = document.getElementById('devices-tbody');
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-12 text-gray-500">Nenhum dispositivo registrado ainda.<br><span class="text-xs text-gray-600">Abra o app IPVIO no Android conectado a este portal.</span></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-12 text-gray-500">Nenhum dispositivo registrado ainda.<br><span class="text-xs text-gray-600">Abra o app Korp TV no Android conectado a este portal.</span></td></tr>`;
     return;
   }
 
@@ -236,6 +249,17 @@ function renderDevices(list) {
       `;
     }
 
+    let notesHtml = '';
+    if (d.notes) {
+      notesHtml = `
+        <div class="mt-1 text-[11px] text-amber-300/90 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 max-w-[220px] truncate" title="${escapeHtml(d.notes)}">
+          📝 ${escapeHtml(d.notes)}
+        </div>
+      `;
+    }
+
+    const displayName = d.client_name || d.name || 'Sem nome';
+
     return `
       <tr class="hover:bg-surface-800/40 transition">
         <td class="py-4 px-5">${statusBadge}</td>
@@ -249,13 +273,14 @@ function renderDevices(list) {
         </td>
         <td class="py-4 px-5">
           <div class="font-bold text-white flex items-center gap-2">
-            ${escapeHtml(d.name || 'Sem nome')}
-            <button onclick="openEditDeviceModal('${d.id}')" class="text-gray-500 hover:text-brand-400" title="Editar Nome e Telefone WhatsApp">
+            ${escapeHtml(displayName)}
+            <button onclick="openEditDeviceModal('${d.id}')" class="text-gray-500 hover:text-brand-400" title="Editar Nome, WhatsApp e Notas">
               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
             </button>
           </div>
           ${phoneHtml}
-          <div class="text-xs text-gray-400">${escapeHtml(d.model || 'Android TV')}</div>
+          ${notesHtml}
+          <div class="text-xs text-gray-400 mt-0.5">${escapeHtml(d.model || 'Android TV')}</div>
         </td>
         <td class="py-4 px-5">
           <div class="font-mono text-xs text-gray-200 flex items-center gap-1.5">
@@ -338,14 +363,15 @@ async function refreshValidity(id) {
   }
 }
 
-// Modal de Edição de Cliente (Nome e WhatsApp)
+// Modal de Edição de Cliente (Nome, WhatsApp e Notas)
 let editingDeviceId = null;
 function openEditDeviceModal(id) {
   editingDeviceId = id;
   const dev = devices.find(d => d.id === id);
   document.getElementById('edit-device-subtitle').innerText = `Aparelho: ${dev?.model || id} (${dev?.mac || ''})`;
-  document.getElementById('edit-device-name').value = dev?.name || '';
+  document.getElementById('edit-device-name').value = dev?.client_name || dev?.name || '';
   document.getElementById('edit-device-phone').value = dev?.client_phone || '';
+  document.getElementById('edit-device-notes').value = dev?.notes || '';
   document.getElementById('edit-device-modal').classList.remove('hidden');
 }
 
@@ -353,11 +379,12 @@ async function saveDeviceEdit() {
   if (!editingDeviceId) return;
   const name = document.getElementById('edit-device-name').value.trim();
   const phone = document.getElementById('edit-device-phone').value.trim();
+  const notes = document.getElementById('edit-device-notes').value.trim();
 
   await fetch(`/api/admin/devices/${editingDeviceId}`, {
     method: 'PUT',
     headers: authHeaders(),
-    body: JSON.stringify({ name, clientPhone: phone })
+    body: JSON.stringify({ name, clientName: name, clientPhone: phone, notes })
   });
 
   closeModal('edit-device-modal');
@@ -401,10 +428,20 @@ function openPlaylistModal(id) {
   currentPlaylistType = dev?.playlist_type || 'xtream';
   setPlaylistType(currentPlaylistType);
 
-  document.getElementById('xtream-host').value = dev?.xtream_host || '';
+  const defaultHost = systemSettings.default_iptv_url || '';
+  document.getElementById('xtream-host').value = dev?.xtream_host || defaultHost;
   document.getElementById('xtream-user').value = dev?.xtream_user || '';
   document.getElementById('xtream-pass').value = dev?.xtream_pass || '';
   document.getElementById('m3u-url').value = dev?.playlist_url || '';
+  if (document.getElementById('playlist-client-name')) {
+    document.getElementById('playlist-client-name').value = dev?.client_name || dev?.name || '';
+  }
+  if (document.getElementById('playlist-client-phone')) {
+    document.getElementById('playlist-client-phone').value = dev?.client_phone || '';
+  }
+  if (document.getElementById('playlist-client-notes')) {
+    document.getElementById('playlist-client-notes').value = dev?.notes || '';
+  }
 
   document.getElementById('playlist-modal').classList.remove('hidden');
 }
@@ -428,12 +465,20 @@ function setPlaylistType(type) {
 async function savePlaylist() {
   if (!selectedDeviceId) return;
 
+  const defaultHost = systemSettings.default_iptv_url || '';
+  const inputHost = document.getElementById('xtream-host').value.trim();
+  const effectiveHost = inputHost || (currentPlaylistType === 'xtream' ? defaultHost : '');
+
   const payload = {
     type: currentPlaylistType,
     url: document.getElementById('m3u-url').value.trim(),
-    host: document.getElementById('xtream-host').value.trim(),
+    host: effectiveHost,
     user: document.getElementById('xtream-user').value.trim(),
     pass: document.getElementById('xtream-pass').value.trim(),
+    clientName: document.getElementById('playlist-client-name')?.value.trim() || '',
+    name: document.getElementById('playlist-client-name')?.value.trim() || '',
+    clientPhone: document.getElementById('playlist-client-phone')?.value.trim() || '',
+    notes: document.getElementById('playlist-client-notes')?.value.trim() || ''
   };
 
   const res = await fetch(`/api/admin/devices/${selectedDeviceId}/playlist`, {
@@ -502,26 +547,36 @@ function closeModal(id) {
 // Modal de Vincular Aparelho por Código
 function openLinkCodeModal(prefillCode = '') {
   document.getElementById('link-code-input').value = prefillCode || '';
-  document.getElementById('link-xtream-host').value = '';
+  const defaultHost = systemSettings.default_iptv_url || '';
+  document.getElementById('link-xtream-host').value = defaultHost;
   document.getElementById('link-xtream-user').value = '';
   document.getElementById('link-xtream-pass').value = '';
+  if (document.getElementById('link-client-name')) document.getElementById('link-client-name').value = '';
+  if (document.getElementById('link-client-phone')) document.getElementById('link-client-phone').value = '';
+  if (document.getElementById('link-client-notes')) document.getElementById('link-client-notes').value = '';
   document.getElementById('link-modal').classList.remove('hidden');
   if (!prefillCode) {
     document.getElementById('link-code-input').focus();
-  } else {
+  } else if (!defaultHost) {
     document.getElementById('link-xtream-host').focus();
+  } else {
+    document.getElementById('link-xtream-user').focus();
   }
 }
 
 async function submitLinkByCode() {
   const code = document.getElementById('link-code-input').value.trim();
-  const host = document.getElementById('link-xtream-host').value.trim();
+  const defaultHost = systemSettings.default_iptv_url || '';
+  const inputHost = document.getElementById('link-xtream-host').value.trim();
+  const host = inputHost || defaultHost;
   const user = document.getElementById('link-xtream-user').value.trim();
   const pass = document.getElementById('link-xtream-pass').value.trim();
+  const name = document.getElementById('link-client-name')?.value.trim() || '';
   const phone = document.getElementById('link-client-phone')?.value.trim() || '';
+  const notes = document.getElementById('link-client-notes')?.value.trim() || '';
 
   if (!code) return alert('Por favor, informe o Código de Ativação do aparelho.');
-  if (!host || !user || !pass) return alert('Por favor, preencha o Servidor, Usuário e Senha.');
+  if (!host || !user || !pass) return alert('Por favor, preencha o Servidor (ou defina a URL Padrão nas Configurações), Usuário e Senha.');
 
   const btn = document.getElementById('btn-submit-link');
   btn.disabled = true;
@@ -537,7 +592,9 @@ async function submitLinkByCode() {
         host,
         user,
         pass,
-        phone
+        name,
+        phone,
+        notes
       })
     });
 
@@ -726,6 +783,7 @@ async function loadSettings() {
     if (!res.ok) return;
     const data = await res.json();
     const s = data.settings || {};
+    systemSettings = s;
 
     if (document.getElementById('iptv-default-url')) {
       document.getElementById('iptv-default-url').value = s.default_iptv_url || '';
@@ -750,6 +808,30 @@ async function loadSettings() {
     }
     if (document.getElementById('auto-expiry-message')) {
       document.getElementById('auto-expiry-message').value = s.auto_expiry_message || '';
+    }
+
+    if (document.getElementById('test-api-without-adults')) {
+      document.getElementById('test-api-without-adults').value = s.test_api_without_adults || '';
+    }
+    if (document.getElementById('test-api-with-adults')) {
+      document.getElementById('test-api-with-adults').value = s.test_api_with_adults || '';
+    }
+    if (document.getElementById('portal-public-domain')) {
+      document.getElementById('portal-public-domain').value = s.portal_public_domain || '';
+    }
+    if (document.getElementById('test-app-url')) {
+      document.getElementById('test-app-url').value = s.test_app_url || '';
+    }
+    if (document.getElementById('test-auto-whatsapp')) {
+      document.getElementById('test-auto-whatsapp').checked = Boolean(s.test_auto_whatsapp);
+    }
+    if (document.getElementById('test-whatsapp-message')) {
+      document.getElementById('test-whatsapp-message').value = s.test_whatsapp_message || '';
+    }
+    const publicLink = document.getElementById('link-public-teste');
+    if (publicLink) {
+      publicLink.href = `${window.location.origin}/teste`;
+      publicLink.innerText = `${window.location.origin}/teste`;
     }
   } catch (err) {
     console.error('Erro ao carregar configurações:', err);
@@ -847,7 +929,7 @@ async function testWhatsAppMessage() {
         phone,
         apiUrl: url,
         apiToken: token,
-        message: '✅ Mensagem de teste oficial enviada com sucesso pelo Portal IPVIO Stream!'
+        message: '✅ Mensagem de teste oficial enviada com sucesso pelo Portal Korp TV!'
       })
     });
     const data = await res.json();
@@ -923,6 +1005,195 @@ async function runAutomationsNow() {
     btn.disabled = false;
     btn.innerText = '⚡ Executar Agora';
   }
+}
+
+// Salvar Configurações de Testes (Painel Slim)
+async function saveTestSettings() {
+  const apiWithout = document.getElementById('test-api-without-adults').value.trim();
+  const apiWith = document.getElementById('test-api-with-adults').value.trim();
+  const portalDomain = document.getElementById('portal-public-domain')?.value.trim() || '';
+  const appUrl = document.getElementById('test-app-url').value.trim();
+  const autoWa = document.getElementById('test-auto-whatsapp').checked;
+  const waMsg = document.getElementById('test-whatsapp-message').value.trim();
+
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        test_api_without_adults: apiWithout,
+        test_api_with_adults: apiWith,
+        portal_public_domain: portalDomain,
+        test_app_url: appUrl,
+        test_auto_whatsapp: autoWa,
+        test_whatsapp_message: waMsg
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      alert('Configurações de teste e Painel Slim salvas com sucesso!');
+    } else {
+      alert('Erro ao salvar: ' + (data.error || `HTTP ${res.status}`));
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+function copyTesteLink() {
+  const link = `${window.location.origin}/teste`;
+  navigator.clipboard.writeText(link).then(() => {
+    alert(`Link copiado: ${link}`);
+  }).catch(() => {
+    prompt('Copie o link abaixo:', link);
+  });
+}
+
+// ==============================================================================
+// SOLICITAÇÕES DE TESTES REALIZADAS
+// ==============================================================================
+
+async function loadTests() {
+  const tbody = document.getElementById('tests-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-500">Carregando solicitações de testes...</td></tr>';
+
+  try {
+    const res = await fetch('/api/admin/tests', { headers: authHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    const tests = data.tests || [];
+
+    if (tests.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">Nenhum teste solicitado ainda.<br><span class="text-xs text-gray-600">Compartilhe o link /teste com seus clientes.</span></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = tests.map(t => {
+      const isAdult = t.type === 'with_adults';
+      const cleanPhone = String(t.phone || '').replace(/\D/g, '');
+      const dateStr = t.created_at ? new Date(Number(t.created_at)).toLocaleString('pt-BR') : '-';
+
+      const typeBadge = isAdult
+        ? '<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30 text-[11px]">🔞 Com Adultos</span>'
+        : '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30 text-[11px]">🟢 Sem Adultos</span>';
+
+      let waBadge = '';
+      if (t.is_valid_wa) {
+        waBadge = `<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold" title="WhatsApp Válido${t.wa_lid ? ' (LID: ' + t.wa_lid + ')' : ''}">✓ WA Válido</span>`;
+      } else {
+        waBadge = `<span class="px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400 font-mono text-[10px]">Não verificado</span>`;
+      }
+
+      let lidHtml = '';
+      if (t.wa_lid) {
+        lidHtml = `<div class="text-[10px] text-gray-500 font-mono" title="WhatsApp LID">${escapeHtml(t.wa_lid)}</div>`;
+      }
+
+      return `
+        <tr class="hover:bg-surface-800/40 transition">
+          <td class="py-3 px-4 text-gray-400 font-mono">${dateStr}</td>
+          <td class="py-3 px-4">
+            <div class="font-bold text-white flex items-center gap-1.5">
+              <span>${escapeHtml(t.name || 'Cliente')}</span>
+              ${waBadge}
+            </div>
+            <div class="flex items-center gap-1">
+              <a href="https://wa.me/${cleanPhone}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-mono">
+                <span>💬</span> ${escapeHtml(t.phone)}
+              </a>
+            </div>
+            ${lidHtml}
+          </td>
+          <td class="py-3 px-4">${typeBadge}</td>
+          <td class="py-3 px-4 font-mono font-bold text-cyan-300 select-all">${escapeHtml(t.username || '-')}</td>
+          <td class="py-3 px-4 font-mono text-gray-300 select-all">${escapeHtml(t.password || '-')}</td>
+          <td class="py-3 px-4 font-mono text-yellow-300 whitespace-nowrap">${escapeHtml(t.expires_at_formatted || '-')}</td>
+          <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+            ${t.pay_url ? `<a href="${escapeHtml(t.pay_url)}" target="_blank" class="px-2 py-1 text-xs rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black font-semibold transition inline-block" title="Checkout Painel Slim">Checkout</a>` : ''}
+            <a href="https://wa.me/${cleanPhone}" target="_blank" class="px-2.5 py-1 text-xs rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white transition inline-block">
+              Conversar
+            </a>
+            <button onclick="deleteTest(${t.id})" class="p-1 text-gray-500 hover:text-red-400 transition" title="Excluir">
+              <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-red-400">Erro ao carregar testes: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+async function deleteTest(id) {
+  if (!confirm('Excluir este registro de teste?')) return;
+  try {
+    await fetch(`/api/admin/tests/${id}`, { method: 'DELETE', headers: authHeaders() });
+    loadTests();
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+// ==============================================================================
+// MODAL: QR CODE & DOWNLOAD APK
+// ==============================================================================
+
+let portalQrCodeInstance = null;
+
+function openQrModal() {
+  const permUrl = `${window.location.origin}/app.apk`;
+  document.getElementById('modal-qr-download-link').value = permUrl;
+  document.getElementById('btn-modal-direct-apk').href = permUrl;
+
+  const container = document.getElementById('portal-qrcode-container');
+  container.innerHTML = '';
+
+  portalQrCodeInstance = new QRCode(container, {
+    text: permUrl,
+    width: 200,
+    height: 200,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  document.getElementById('qr-modal').classList.remove('hidden');
+}
+
+function copyModalQrLink() {
+  const input = document.getElementById('modal-qr-download-link');
+  navigator.clipboard.writeText(input.value).then(() => {
+    alert(`Link de download copiado: ${input.value}`);
+  }).catch(() => {
+    prompt('Copie o link abaixo:', input.value);
+  });
+}
+
+function downloadQrCodeImage() {
+  const container = document.getElementById('portal-qrcode-container');
+  const canvas = container.querySelector('canvas');
+  const img = container.querySelector('img');
+
+  let dataUrl = null;
+  if (canvas) {
+    dataUrl = canvas.toDataURL('image/png');
+  } else if (img && img.src) {
+    dataUrl = img.src;
+  }
+
+  if (!dataUrl) {
+    alert('Não foi possível gerar a imagem do QR Code no momento.');
+    return;
+  }
+
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = 'qrcode-korp-tv-download.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // Inicialização

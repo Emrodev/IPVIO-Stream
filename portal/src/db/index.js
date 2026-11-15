@@ -152,11 +152,32 @@ async function createTables() {
     );
   `;
 
+  const createTestRequestsTable = `
+    CREATE TABLE IF NOT EXISTS test_requests (
+      id ${isPg ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT'},
+      phone VARCHAR(50) NOT NULL,
+      name VARCHAR(150),
+      type VARCHAR(50) DEFAULT 'without_adults',
+      username VARCHAR(100),
+      password VARCHAR(100),
+      dns VARCHAR(255),
+      package_name TEXT,
+      expires_at_formatted VARCHAR(100),
+      pay_url TEXT,
+      raw_reply TEXT,
+      ip VARCHAR(50),
+      is_valid_wa INTEGER DEFAULT 0,
+      wa_lid VARCHAR(100),
+      created_at BIGINT NOT NULL
+    );
+  `;
+
   await dbDriver.exec(createDevicesTable);
   await dbDriver.exec(createOtaTable);
   await dbDriver.exec(createSettingsTable);
   await dbDriver.exec(createBackupsTable);
   await dbDriver.exec(createAccountSyncTable);
+  await dbDriver.exec(createTestRequestsTable);
 
   // Migrações suaves para colunas adicionais
   const alterColumns = [
@@ -168,7 +189,11 @@ async function createTables() {
     'ALTER TABLE devices ADD COLUMN now_playing_type TEXT',
     'ALTER TABLE devices ADD COLUMN now_playing_at BIGINT DEFAULT 0',
     'ALTER TABLE devices ADD COLUMN client_phone TEXT',
-    'ALTER TABLE devices ADD COLUMN last_expiry_notified_at BIGINT DEFAULT 0'
+    'ALTER TABLE devices ADD COLUMN client_name TEXT',
+    'ALTER TABLE devices ADD COLUMN notes TEXT',
+    'ALTER TABLE devices ADD COLUMN last_expiry_notified_at BIGINT DEFAULT 0',
+    'ALTER TABLE test_requests ADD COLUMN is_valid_wa INTEGER DEFAULT 0',
+    'ALTER TABLE test_requests ADD COLUMN wa_lid VARCHAR(100)'
   ];
   for (const alterSql of alterColumns) {
     try {

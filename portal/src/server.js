@@ -7,6 +7,7 @@ const db = require('./db');
 
 const deviceRoutes = require('./routes/device');
 const adminRoutes = require('./routes/admin');
+const publicRoutes = require('./routes/public');
 
 const { runExpiryAutomations } = require('./services/automationService');
 
@@ -24,6 +25,11 @@ if (!fs.existsSync(config.apkDir)) {
 // Arquivos estáticos (painel web e downloads de APK)
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Página pública de solicitação de teste
+app.get(['/teste', '/test', '/solicitar-teste'], (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'teste.html'));
+});
+
 // Link permanente para primeira instalação (sempre serve o APK mais recente)
 app.get(['/app.apk', '/download', '/baixar', '/instalador.apk', '/instalar'], async (req, res) => {
   try {
@@ -34,7 +40,7 @@ app.get(['/app.apk', '/download', '/baixar', '/instalador.apk', '/instalar'], as
       if (urlMatch && urlMatch[1]) {
         const filePath = path.join(config.apkDir, urlMatch[1]);
         if (fs.existsSync(filePath)) {
-          return res.download(filePath, `IPVIO-Stream-v${update.version_name || 'latest'}.apk`);
+          return res.download(filePath, `Korp-TV-v${update.version_name || 'latest'}.apk`);
         }
       }
       if (update.download_url) {
@@ -49,14 +55,14 @@ app.get(['/app.apk', '/download', '/baixar', '/instalador.apk', '/instalar'], as
         const newest = files
           .map(f => ({ name: f, time: fs.statSync(path.join(config.apkDir, f)).mtimeMs }))
           .sort((a, b) => b.time - a.time)[0];
-        return res.download(path.join(config.apkDir, newest.name), 'IPVIO-Stream.apk');
+        return res.download(path.join(config.apkDir, newest.name), 'Korp-TV.apk');
       }
     }
 
     // Fallback 2: APK gerado na raiz do projeto (se disponível)
     const rootApk = path.join(__dirname, '..', '..', 'IPVIO-Stream-ptBR.apk');
     if (fs.existsSync(rootApk)) {
-      return res.download(rootApk, 'IPVIO-Stream.apk');
+      return res.download(rootApk, 'Korp-TV.apk');
     }
 
     res.status(404).send('Nenhum APK publicado no momento. Faça o upload pelo painel do portal.');
@@ -68,12 +74,13 @@ app.get(['/app.apk', '/download', '/baixar', '/instalador.apk', '/instalar'], as
 // Rotas da API
 app.use('/api/device', deviceRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/public', publicRoutes);
 
 // Informações básicas da API
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    app: 'IPVIO Stream Management Portal',
+    app: 'Korp TV Management Portal',
     db: config.dbType,
     time: new Date().toISOString()
   });
@@ -84,7 +91,7 @@ async function start() {
     await db.init();
     app.listen(config.port, '0.0.0.0', () => {
       console.log(`====================================================`);
-      console.log(`🚀 IPVIO Portal rodando em http://localhost:${config.port}`);
+      console.log(`🚀 Korp TV Portal rodando em http://localhost:${config.port}`);
       console.log(`📡 Gerenciamento de dispositivos e OTA ativo`);
       console.log(`💾 Banco de dados: ${config.dbType.toUpperCase()}`);
       console.log(`🔑 Chave de Admin: ${config.adminKey}`);

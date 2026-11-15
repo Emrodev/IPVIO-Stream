@@ -174,10 +174,8 @@ object PortalManager {
                 put("deviceId", devId)
                 put("pairingCode", pairingCode)
                 put("versionCode", verCode)
-                if (currentPlayingTitle != null) {
-                    put("nowPlaying", currentPlayingTitle)
-                    put("nowPlayingType", currentPlayingType)
-                }
+                put("nowPlaying", currentPlayingTitle ?: JSONObject.NULL)
+                put("nowPlayingType", currentPlayingType ?: JSONObject.NULL)
             }
 
             val body = json.toString().toRequestBody("application/json".toMediaType())
@@ -247,6 +245,42 @@ object PortalManager {
                             onPlaylistLoaded?.invoke()
                         }
                     }
+                }
+            }
+        }
+
+        // 3. Atualização OTA pelo Portal Remoto
+        val otaObj = json.optJSONObject("ota")
+        if (otaObj != null) {
+            val hasUpdate = otaObj.optBoolean("hasUpdate", false)
+            val vCode = otaObj.optLong("versionCode", 0L)
+            val vName = otaObj.optString("versionName", "")
+            var apkUrl = otaObj.optString("url", "")
+            val changelog = otaObj.optString("changelog", "")
+            val mandatory = otaObj.optBoolean("mandatory", false)
+            val currentCode = AppUpdate.currentCode(ctx)
+
+            if (apkUrl.isNotBlank() && (hasUpdate || vCode > currentCode)) {
+                if (apkUrl.startsWith("/")) {
+                    apkUrl = "$baseUrl$apkUrl"
+                } else if (apkUrl.contains("localhost")) {
+                    val baseUri = android.net.Uri.parse(baseUrl)
+                    val baseHost = baseUri.host ?: "192.168.1.100"
+                    val baseScheme = baseUri.scheme ?: "http"
+                    val basePort = if (baseUri.port > 0) ":${baseUri.port}" else ""
+                    apkUrl = apkUrl.replace(Regex("https?://localhost(:\\d+)?"), "$baseScheme://$baseHost$basePort")
+                }
+
+                val upd = UpdateInfo(
+                    code = vCode,
+                    name = vName,
+                    apkUrl = apkUrl,
+                    notes = changelog,
+                    mandatory = mandatory
+                )
+                withContext(Dispatchers.Main) {
+                    AppUpdate.promptDismissed = false
+                    AppUpdate.setFromPortal(upd)
                 }
             }
         }

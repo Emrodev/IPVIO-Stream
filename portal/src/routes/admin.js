@@ -126,8 +126,8 @@ router.get('/devices', async (req, res) => {
         const hex = src.slice(-6).toUpperCase();
         code = hex.length === 6 ? `${hex.slice(0, 3)}-${hex.slice(3)}` : (hex || '-');
       }
-      const isOnline = (now - Number(d.last_seen || 0)) < 2 * 60 * 1000;
-      const isPlaying = Boolean(isOnline && d.now_playing && (now - Number(d.now_playing_at || 0)) < 3 * 60 * 1000);
+      const isOnline = (now - Number(d.last_seen || 0)) < 3 * 60 * 1000;
+      const isPlaying = Boolean(isOnline && d.now_playing && (now - Number(d.now_playing_at || 0)) < 6 * 60 * 1000);
       return {
         ...d,
         pairing_code: code,
@@ -159,10 +159,26 @@ router.get('/devices/:id', async (req, res) => {
 // 4. Atualizar dados básicos, telefone ou status do dispositivo
 router.put('/devices/:id', async (req, res) => {
   try {
-    const { name, status, clientPhone } = req.body;
+    const { name, status, clientPhone, clientName, notes, phone } = req.body;
+    const finalPhone = clientPhone !== undefined ? clientPhone : (phone !== undefined ? phone : null);
+    const finalName = clientName !== undefined ? clientName : (name !== undefined ? name : null);
+
     await db.query(
-      'UPDATE devices SET name = COALESCE(?, name), status = COALESCE(?, status), client_phone = COALESCE(?, client_phone) WHERE id = ?',
-      [name, status, clientPhone !== undefined ? clientPhone : null, req.params.id]
+      `UPDATE devices SET 
+        name = COALESCE(?, name), 
+        status = COALESCE(?, status), 
+        client_phone = COALESCE(?, client_phone),
+        client_name = COALESCE(?, client_name),
+        notes = COALESCE(?, notes)
+       WHERE id = ?`,
+      [
+        name !== undefined ? name : null,
+        status !== undefined ? status : null,
+        finalPhone,
+        finalName,
+        notes !== undefined ? notes : null,
+        req.params.id
+      ]
     );
     res.json({ success: true });
   } catch (err) {
@@ -236,7 +252,7 @@ router.post('/automations/run-expiry', async (req, res) => {
 // 5. Atribuir ou atualizar playlist remotamente (com checagem de validade)
 router.post('/devices/link-by-code', async (req, res) => {
   try {
-    const { code, type, url, host, user, pass, phone } = req.body;
+    const { code, type, url, host, user, pass, phone, name, notes } = req.body;
     if (!code) {
       return res.status(400).json({ success: false, error: 'Código de pareamento ou MAC é obrigatório.' });
     }
@@ -259,12 +275,15 @@ router.post('/devices/link-by-code', async (req, res) => {
     const dev = result.rows[0];
     const now = Date.now();
 
+    const settings = await getSettings();
+    const effectiveHost = (host && host.trim()) || (type === 'xtream' ? (settings.default_iptv_url || '') : '');
+
     let expDate = null;
     let plStatus = 'Active';
     let maxCons = 1;
 
     if (type !== 'none') {
-      const checkRes = await checkPlaylistValidity({ type, url, host, user, pass });
+      const checkRes = await checkPlaylistValidity({ type, url, host: effectiveHost, user, pass });
       if (checkRes.success) {
         expDate = checkRes.expDateFormatted;
         plStatus = checkRes.status;
@@ -276,6 +295,8 @@ router.post('/devices/link-by-code', async (req, res) => {
 
     await db.query(
       `UPDATE devices SET 
+        name = COALESCE(?, name),
+        client_name = COALESCE(?, client_name),
         playlist_type = ?, 
         playlist_url = ?, 
         xtream_host = ?, 
@@ -285,9 +306,10 @@ router.post('/devices/link-by-code', async (req, res) => {
         playlist_exp_date = ?,
         playlist_status = ?,
         playlist_max_cons = ?,
-        client_phone = COALESCE(?, client_phone)
+        client_phone = COALESCE(?, client_phone),
+        notes = COALESCE(?, notes)
        WHERE id = ?`,
-      [type || 'none', url || '', host || '', user || '', pass || '', now, expDate, plStatus, maxCons, phone || null, dev.id]
+      [name || null, name || null, type || 'none', url || '', effectiveHost || '', user || '', pass || '', now, expDate, plStatus, maxCons, phone || null, notes || null, dev.id]
     );
 
     res.json({
@@ -305,8 +327,11 @@ router.post('/devices/link-by-code', async (req, res) => {
 
 router.post('/devices/:id/playlist', async (req, res) => {
   try {
-    const { type, url, host, user, pass } = req.body;
+    const { type, url, host, user, pass, name, clientName, clientPhone, phone, notes } = req.body;
     const now = Date.now();
+
+    const settings = await getSettings();
+    const effectiveHost = (host && host.trim()) || (type === 'xtream' ? (settings.default_iptv_url || '') : '');
 
     let expDate = null;
     let plStatus = 'Active';
@@ -314,7 +339,7 @@ router.post('/devices/:id/playlist', async (req, res) => {
 
     // Consulta validade da lista no servidor do provedor
     if (type !== 'none') {
-      const checkRes = await checkPlaylistValidity({ type, url, host, user, pass });
+      const checkRes = await checkPlaylistValidity({ type, url, host: effectiveHost, user, pass });
       if (checkRes.success) {
         expDate = checkRes.expDateFormatted;
         plStatus = checkRes.status;
@@ -324,8 +349,15 @@ router.post('/devices/:id/playlist', async (req, res) => {
       }
     }
 
+    const finalPhone = clientPhone !== undefined ? clientPhone : (phone !== undefined ? phone : null);
+    const finalName = clientName !== undefined ? clientName : (name !== undefined ? name : null);
+
     await db.query(
       `UPDATE devices SET 
+        name = COALESCE(?, name),
+        client_name = COALESCE(?, client_name),
+        client_phone = COALESCE(?, client_phone),
+        notes = COALESCE(?, notes),
         playlist_type = ?, 
         playlist_url = ?, 
         xtream_host = ?, 
@@ -336,7 +368,22 @@ router.post('/devices/:id/playlist', async (req, res) => {
         playlist_status = ?,
         playlist_max_cons = ?
        WHERE id = ?`,
-      [type || 'none', url || '', host || '', user || '', pass || '', now, expDate, plStatus, maxCons, req.params.id]
+      [
+        finalName,
+        finalName,
+        finalPhone,
+        notes !== undefined ? notes : null,
+        type || 'none',
+        url || '',
+        effectiveHost || '',
+        user || '',
+        pass || '',
+        now,
+        expDate,
+        plStatus,
+        maxCons,
+        req.params.id
+      ]
     );
 
     res.json({
@@ -365,18 +412,21 @@ router.post('/devices/:id/check-validity', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Dispositivo não tem playlist atribuída' });
     }
 
+    const settings = await getSettings();
+    const effectiveHost = dev.xtream_host || (dev.playlist_type === 'xtream' ? (settings.default_iptv_url || '') : '');
+
     const checkRes = await checkPlaylistValidity({
       type: dev.playlist_type,
       url: dev.playlist_url,
-      host: dev.xtream_host,
+      host: effectiveHost,
       user: dev.xtream_user,
       pass: dev.xtream_pass
     });
 
     if (checkRes.success) {
       await db.query(
-        'UPDATE devices SET playlist_exp_date = ?, playlist_status = ?, playlist_max_cons = ? WHERE id = ?',
-        [checkRes.expDateFormatted, checkRes.status, checkRes.maxConnections || 1, req.params.id]
+        'UPDATE devices SET xtream_host = COALESCE(NULLIF(xtream_host, ""), ?), playlist_exp_date = ?, playlist_status = ?, playlist_max_cons = ? WHERE id = ?',
+        [effectiveHost, checkRes.expDateFormatted, checkRes.status, checkRes.maxConnections || 1, req.params.id]
       );
       return res.json({
         success: true,
@@ -545,6 +595,26 @@ router.delete('/ota/:id', async (req, res) => {
     }
 
     await db.query('DELETE FROM ota_updates WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 14. Listar solicitações de teste geradas
+router.get('/tests', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM test_requests ORDER BY created_at DESC LIMIT 150');
+    res.json({ success: true, tests: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 15. Excluir registro de teste
+router.delete('/tests/:id', async (req, res) => {
+  try {
+    await db.query('DELETE FROM test_requests WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

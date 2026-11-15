@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { getSettings } = require('../services/automationService');
 
 function getClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
@@ -8,24 +9,39 @@ function getClientIp(req) {
   return req.socket.remoteAddress || req.ip || '';
 }
 
-async function getLatestOta(currentCode = 0) {
+async function getLatestOta(currentCode = 0, req = null) {
   const res = await db.query('SELECT * FROM ota_updates ORDER BY version_code DESC LIMIT 1');
   if (res.rows.length === 0) return null;
   const latest = res.rows[0];
   const hasUpdate = latest.version_code > currentCode;
+
+  let dlUrl = latest.download_url || '';
+  if (req) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || '';
+    if (dlUrl.startsWith('/')) {
+      dlUrl = `${proto}://${host}${dlUrl}`;
+    } else if (host && dlUrl.includes('localhost')) {
+      dlUrl = dlUrl.replace(/https?:\/\/localhost(:\d+)?/i, `${proto}://${host}`);
+    }
+  }
+
   return {
     hasUpdate,
     versionName: latest.version_name,
     versionCode: latest.version_code,
-    url: latest.download_url,
+    url: dlUrl,
     changelog: latest.changelog,
     mandatory: Boolean(latest.mandatory)
   };
 }
 
 // Resposta unificada para register e heartbeat
-async function buildDeviceResponse(device, currentCode = 0) {
-  const ota = await getLatestOta(currentCode);
+async function buildDeviceResponse(device, currentCode = 0, req = null) {
+  const ota = await getLatestOta(currentCode, req);
+  const settings = await getSettings();
+  const effectiveHost = device.xtream_host || (device.playlist_type === 'xtream' ? (settings.default_iptv_url || '') : '');
+
   return {
     success: true,
     status: device.status || 'active',
@@ -33,7 +49,7 @@ async function buildDeviceResponse(device, currentCode = 0) {
     playlist: {
       type: device.playlist_type || 'none',
       url: device.playlist_url || '',
-      host: device.xtream_host || '',
+      host: effectiveHost,
       user: device.xtream_user || '',
       pass: device.xtream_pass || '',
       updatedAt: Number(device.playlist_updated_at || 0)
@@ -78,7 +94,7 @@ router.post('/register', async (req, res) => {
         [deviceId, mac || '', code, model || 'Dispositivo Desconhecido', model || 'Dispositivo Desconhecido', appVersion || '', ip, now, now]
       );
       const dev = (await db.query('SELECT * FROM devices WHERE id = ?', [deviceId])).rows[0];
-      return res.json(await buildDeviceResponse(dev, vCode));
+      return res.json(await buildDeviceResponse(dev, vCode, req));
     } else {
       // Dispositivo existente -> atualiza último acesso e dados
       await db.query(
@@ -86,7 +102,7 @@ router.post('/register', async (req, res) => {
         [model || existing.rows[0].model, appVersion || existing.rows[0].app_version, ip, now, code, deviceId]
       );
       const dev = (await db.query('SELECT * FROM devices WHERE id = ?', [deviceId])).rows[0];
-      return res.json(await buildDeviceResponse(dev, vCode));
+      return res.json(await buildDeviceResponse(dev, vCode, req));
     }
   } catch (err) {
     console.error('[Device Register Error]', err);
@@ -112,18 +128,37 @@ router.post('/heartbeat', async (req, res) => {
     }
 
     if (nowPlaying !== undefined) {
-      await db.query(
-        'UPDATE devices SET ip = ?, last_seen = ?, now_playing = ?, now_playing_type = ?, now_playing_at = ? WHERE id = ?',
-        [ip, now, nowPlaying || null, nowPlayingType || null, nowPlaying ? now : 0, deviceId]
-      );
+      const hasContent = Boolean(nowPlaying && String(nowPlaying).trim().length > 0);
+      if (hasContent) {
+        await db.query(
+          'UPDATE devices SET ip = ?, last_seen = ?, now_playing = ?, now_playing_type = ?, now_playing_at = ? WHERE id = ?',
+          [ip, now, String(nowPlaying), nowPlayingType || null, now, deviceId]
+        );
+      } else {
+        await db.query(
+          'UPDATE devices SET ip = ?, last_seen = ?, now_playing = NULL, now_playing_type = NULL, now_playing_at = 0 WHERE id = ?',
+          [ip, now, deviceId]
+        );
+      }
     } else {
       await db.query('UPDATE devices SET ip = ?, last_seen = ? WHERE id = ?', [ip, now, deviceId]);
     }
 
     const dev = (await db.query('SELECT * FROM devices WHERE id = ?', [deviceId])).rows[0];
-    return res.json(await buildDeviceResponse(dev, vCode));
+    return res.json(await buildDeviceResponse(dev, vCode, req));
   } catch (err) {
     console.error('[Device Heartbeat Error]', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2.0 Checagem direta de OTA
+router.get('/check-update', async (req, res) => {
+  try {
+    const vCode = parseInt(req.query.versionCode || '0', 10);
+    const ota = await getLatestOta(vCode, req);
+    res.json({ success: true, ota });
+  } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });

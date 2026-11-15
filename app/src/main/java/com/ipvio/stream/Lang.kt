@@ -53,7 +53,10 @@ object Lang {
 
     fun tr(s: String): String {
         val i = index
-        return if (i == 0) s else I18nCore.translate(s, i)
+        val res = if (i == 0) s else I18nCore.translate(s, i)
+        return if (BuildConfig.APP_NAME != "IPVIO Stream") {
+            res.replace("IPVIO Stream", BuildConfig.APP_NAME)
+        } else res
     }
 }
 
@@ -93,8 +96,11 @@ fun Text(
             textAlign = textAlign ?: TextAlign.Unspecified, lineHeight = lineHeight
         )
     )
+    val displayed = if (raw) {
+        if (BuildConfig.APP_NAME != "IPVIO Stream") text.replace("IPVIO Stream", BuildConfig.APP_NAME) else text
+    } else Lang.tr(text)
     BasicText(
-        text = if (raw) text else Lang.tr(text), modifier = modifier, style = merged,
+        text = displayed, modifier = modifier, style = merged,
         onTextLayout = onTextLayout, overflow = overflow, softWrap = softWrap, maxLines = maxLines, minLines = minLines
     )
 }

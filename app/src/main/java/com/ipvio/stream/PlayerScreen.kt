@@ -189,6 +189,15 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
     var msg by remember { mutableStateOf<String?>(null) }
     var buffering by remember { mutableStateOf(true) }
     var playing by remember { mutableStateOf(true) }
+    // Notifica o portal remoto do conteúdo em reprodução
+    LaunchedEffect(cur.title, playing) {
+        if (playing) {
+            val type = if (cur.live) "live" else if (cur.season > 0 || cur.episode > 0) "series" else "movie"
+            PortalManager.setNowPlaying(ctx, cur.title, type)
+        } else {
+            PortalManager.setNowPlaying(ctx, null, null)
+        }
+    }
     // Live (round 14): open straight with the control bar showing channel and show instead of the short info box
     var controls by remember { mutableStateOf(true) }
     var focusSeek by remember { mutableStateOf(false) }
@@ -781,6 +790,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         AppNav.playing = true
         RemoteHub.player = player
         onDispose {
+            PortalManager.setNowPlaying(ctx, null, null)
             AppNav.playing = false
             if (RemoteHub.player === player) RemoteHub.player = null
             // Detail page remembers the last played episode (also after "Next episode")

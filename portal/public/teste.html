@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitar Teste Grátis — Korp TV</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          },
+          colors: {
+            brand: {
+              400: '#38bdf8',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985'
+            },
+            surface: {
+              900: '#06090e',
+              800: '#0c121e',
+              700: '#141e30',
+              600: '#1c2a42'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: radial-gradient(circle at top center, #111d33 0%, #06090e 70%);
+      min-height: 100vh;
+    }
+    .glass {
+      background: rgba(12, 18, 30, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .badge-glow {
+      box-shadow: 0 0 25px -5px rgba(2, 132, 199, 0.4);
+    }
+  </style>
+</head>
+<body class="text-gray-100 font-sans flex items-center justify-center p-4 min-h-screen">
+
+  <div class="max-w-md w-full space-y-6 my-8">
+
+    <!-- Header / Branding -->
+    <div class="text-center space-y-2">
+      <div class="inline-flex items-center justify-center w-20 h-20 mb-1">
+        <img src="/logo-icon.svg" alt="Korp TV" class="w-20 h-20 drop-shadow-2xl badge-glow" />
+      </div>
+      <h1 class="text-3xl font-extrabold text-white tracking-tight">Korp TV</h1>
+      <p class="text-sm text-gray-400">Solicite seu acesso de teste grátis instantâneo</p>
+    </div>
+
+    <!-- CARD PRINCIPAL: FORMULÁRIO -->
+    <div id="card-form" class="glass rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl">
+      <div class="space-y-1">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+          <span>⚡</span> Liberar Acesso Agora
+        </h2>
+        <p class="text-xs text-gray-400">Preencha seu WhatsApp para receber o link do app e os dados de login.</p>
+      </div>
+
+      <form id="form-teste" onsubmit="handleSolicitarTeste(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1.5">Seu Nome (opcional)</label>
+          <input type="text" id="input-name" placeholder="ex: João Silva"
+            class="w-full bg-surface-700/80 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1.5">WhatsApp com DDD <span class="text-brand-400">*</span></label>
+          <input type="tel" id="input-phone" required placeholder="(81) 98898-5300" oninput="formatPhoneInput(this)"
+            class="w-full bg-surface-700/80 border border-gray-700 rounded-xl px-4 py-3 text-sm font-mono text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition">
+          <p class="text-[11px] text-gray-500 mt-1">Você receberá o link do aplicativo no seu WhatsApp.</p>
+        </div>
+
+        <div id="section-type" class="space-y-2">
+          <label class="block text-xs font-semibold text-gray-300">Escolha o Pacote de Canais</label>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <label class="cursor-pointer">
+              <input type="radio" name="package-type" value="without_adults" checked class="peer sr-only">
+              <div class="p-3 rounded-xl border border-gray-700 bg-surface-700/60 peer-checked:border-emerald-500 peer-checked:bg-emerald-950/30 text-center space-y-1 transition">
+                <div class="text-base">🟢</div>
+                <div class="font-bold text-white peer-checked:text-emerald-300">Sem Adultos</div>
+                <div class="text-[10px] text-gray-400">Para toda a família</div>
+              </div>
+            </label>
+            <label id="label-with-adults" class="cursor-pointer">
+              <input type="radio" name="package-type" value="with_adults" class="peer sr-only">
+              <div class="p-3 rounded-xl border border-gray-700 bg-surface-700/60 peer-checked:border-purple-500 peer-checked:bg-purple-950/30 text-center space-y-1 transition">
+                <div class="text-base">🔞</div>
+                <div class="font-bold text-white peer-checked:text-purple-300">Com Adultos</div>
+                <div class="text-[10px] text-gray-400">Canais +18 liberados</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div id="form-error" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs"></div>
+
+        <button type="submit" id="btn-submit"
+          class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 hover:from-brand-500 hover:to-cyan-400 text-white font-bold text-sm shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 transition transform active:scale-95">
+          <span>🚀</span> Gerar Teste Grátis Instantâneo
+        </button>
+      </form>
+
+      <div class="pt-2 text-center text-[11px] text-gray-500">
+        Disponível para Celulares Android, TV Box, Fire Stick e Smart TVs.
+      </div>
+    </div>
+
+    <!-- CARD SUCESSO: TESTE LIBERADO -->
+    <div id="card-success" class="hidden glass rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl border-emerald-500/30">
+      <div class="text-center space-y-1">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 text-3xl font-bold mb-1">
+          ✓
+        </div>
+        <h2 class="text-xl font-extrabold text-white">Teste Liberado com Sucesso!</h2>
+        <p class="text-xs text-emerald-400 font-medium" id="txt-wa-status">Link do app e credenciais geradas.</p>
+      </div>
+
+      <!-- Botão Gigante de Download do APK -->
+      <a id="btn-download-apk" href="/app.apk" download
+        class="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-center block text-sm shadow-xl shadow-emerald-500/20 transform hover:-translate-y-0.5 transition">
+        📲 Baixar Aplicativo IPVIO Stream (.APK)
+      </a>
+
+      <!-- Dados de Acesso -->
+      <div class="p-4 rounded-2xl bg-surface-800 border border-gray-700/80 space-y-3 text-xs">
+        <div class="flex items-center justify-between border-b border-gray-700/60 pb-2">
+          <span class="text-gray-400">Usuário:</span>
+          <span id="res-user" class="font-mono font-bold text-cyan-300 text-sm select-all">-</span>
+        </div>
+        <div class="flex items-center justify-between border-b border-gray-700/60 pb-2">
+          <span class="text-gray-400">Senha:</span>
+          <span id="res-pass" class="font-mono font-bold text-cyan-300 text-sm select-all">-</span>
+        </div>
+        <div class="flex items-center justify-between border-b border-gray-700/60 pb-2">
+          <span class="text-gray-400">Servidor (DNS):</span>
+          <span id="res-dns" class="font-mono text-gray-200 truncate max-w-[180px] select-all">-</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-400">Válido até:</span>
+          <span id="res-exp" class="font-mono font-semibold text-yellow-300">-</span>
+        </div>
+      </div>
+
+      <!-- Botão de Pagamento / Renovação (quando retornado pelo painel) -->
+      <div id="box-pay-url" class="hidden">
+        <a id="btn-pay-url" href="#" target="_blank"
+          class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold text-center block text-xs shadow-lg shadow-yellow-500/20 transform hover:-translate-y-0.5 transition">
+          💳 Assinar / Renovar Plano Agora
+        </a>
+      </div>
+
+      <!-- QR Code para Instalar na TV ou outro aparelho -->
+      <div class="p-4 rounded-2xl bg-surface-800/80 border border-gray-700 text-center space-y-2">
+        <p class="text-xs font-semibold text-gray-300">Aponte a câmera da TV/Celular para Baixar:</p>
+        <div class="flex justify-center p-3 bg-white rounded-xl w-44 h-44 mx-auto shadow-inner" id="qrcode-container"></div>
+        <p class="text-[11px] text-gray-500" id="txt-app-url">Link direto: .../app.apk</p>
+      </div>
+
+      <div class="space-y-2">
+        <button onclick="copiarCredenciais()" class="w-full py-2.5 rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-200 text-xs font-semibold transition flex items-center justify-center gap-2">
+          <span>📋</span> Copiar Dados de Acesso
+        </button>
+        <button onclick="location.reload()" class="w-full py-2 text-center text-xs text-gray-500 hover:text-gray-300">
+          Solicitar para outro número
+        </button>
+      </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="text-center text-xs text-gray-600">
+      &copy; IPVIO Stream — Todos os direitos reservados.
+    </div>
+
+  </div>
+
+  <script>
+    let generatedData = null;
+
+    // Máscara dinâmica de telefone
+    function formatPhoneInput(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length > 6) {
+        input.value = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+      } else if (v.length > 2) {
+        input.value = `(${v.slice(0,2)}) ${v.slice(2)}`;
+      } else if (v.length > 0) {
+        input.value = `(${v}`;
+      } else {
+        input.value = '';
+      }
+    }
+
+    // Carrega informações públicas ao abrir
+    async function initPage() {
+      try {
+        const res = await fetch('/api/public/teste-info');
+        const data = await res.json();
+        if (data.success) {
+          if (!data.hasAdultOption) {
+            // Oculta opção com adultos caso o admin não tenha configurado
+            const lbl = document.getElementById('label-with-adults');
+            if (lbl) lbl.classList.add('opacity-40', 'pointer-events-none');
+          }
+          if (data.appUrl) {
+            document.getElementById('btn-download-apk').href = data.appUrl;
+          }
+        }
+      } catch (_) {}
+    }
+    initPage();
+
+    async function handleSolicitarTeste(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('form-error');
+      const btn = document.getElementById('btn-submit');
+      errBox.classList.add('hidden');
+
+      const name = document.getElementById('input-name').value.trim();
+      const phone = document.getElementById('input-phone').value.trim();
+      const type = document.querySelector('input[name="package-type"]:checked')?.value || 'without_adults';
+
+      if (!phone) {
+        errBox.innerText = 'Por favor, digite seu número de WhatsApp com DDD.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg class="animate-spin h-4 w-4 text-white inline-block" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+        <span>Gerando seu teste...</span>
+      `;
+
+      try {
+        const res = await fetch('/api/public/solicitar-teste', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, type })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Erro ao gerar teste.');
+        }
+
+        generatedData = data;
+
+        // Preenche dados do sucesso
+        document.getElementById('res-user').innerText = data.username;
+        document.getElementById('res-pass').innerText = data.password;
+        document.getElementById('res-dns').innerText = data.dns;
+        document.getElementById('res-exp').innerText = data.expiresAt;
+        document.getElementById('btn-download-apk').href = data.appUrl || '/app.apk';
+        document.getElementById('txt-app-url').innerText = data.appUrl || (window.location.origin + '/app.apk');
+
+        // Exibe botão de pagamento se retornado
+        const payBox = document.getElementById('box-pay-url');
+        const payBtn = document.getElementById('btn-pay-url');
+        if (data.payUrl) {
+          payBtn.href = data.payUrl;
+          payBox.classList.remove('hidden');
+        } else {
+          payBox.classList.add('hidden');
+        }
+
+        if (data.whatsappSent) {
+          document.getElementById('txt-wa-status').innerText = '✅ Enviamos o link do app e dados de login no seu WhatsApp!';
+        } else {
+          document.getElementById('txt-wa-status').innerText = 'Abaixo estão seus dados de acesso e o link de instalação.';
+        }
+
+        // Gera QR Code
+        const qrContainer = document.getElementById('qrcode-container');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+          text: data.appUrl || (window.location.origin + '/app.apk'),
+          width: 150,
+          height: 150,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+
+        // Alterna os cards
+        document.getElementById('card-form').classList.add('hidden');
+        document.getElementById('card-success').classList.remove('hidden');
+
+      } catch (err) {
+        errBox.innerText = err.message || 'Erro ao processar sua solicitação.';
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>🚀</span> Gerar Teste Grátis Instantâneo`;
+      }
+    }
+
+    function copiarCredenciais() {
+      if (!generatedData) return;
+      let text = `*ACESSO IPVIO STREAM*\n\n📲 Baixar App: ${generatedData.appUrl}\n👤 Usuário: ${generatedData.username}\n🔑 Senha: ${generatedData.password}\n🌐 Servidor: ${generatedData.dns}\n📅 Vencimento: ${generatedData.expiresAt}`;
+      if (generatedData.payUrl) {
+        text += `\n💳 Assinar/Renovar: ${generatedData.payUrl}`;
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Dados copiados para a área de transferência!');
+      }).catch(() => {
+        alert('Não foi possível copiar automaticamente.');
+      });
+    }
+  </script>
+</body>
+</html>
