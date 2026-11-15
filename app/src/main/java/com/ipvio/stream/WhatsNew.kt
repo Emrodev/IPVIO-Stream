@@ -72,6 +72,20 @@ object WhatsNew {
     const val BUG_FIXES = "## Bug fixes (hopefully lol)"
 
     val NOTES: Map<String, List<String>> = mapOf(
+        "1.4.3" to listOf(
+            "Handy: neue Einstellungen über das Zahnrad oben – Playlists, Kategorien sortieren und ausblenden, Jugendschutz, Sprache",
+            "Handy: neuer Reiter „Sport“ mit den Spielen von heute, deinen Lieblingsteams und „Meine Liste“; Spiele direkt am Fernseher starten",
+            "Filme und Serien: Kategorien mit Hoch/Runter verschieben, das Menü bleibt offen, neu „Ans Ende verschieben“",
+            "Playlist wechseln geht schneller: die gespeicherte Liste wird gelesen statt neu heruntergeladen",
+            "Bildformat: Hinweis, wenn das Bild schon das Format des Fernsehers hat",
+            BUG_FIXES,
+            "Playlist wechseln zeigt nicht mehr „Noch keine Sender“",
+            "Live TV: Links springt zur gewählten Kategorie, Rechts öffnet die Senderliste",
+            "Player: „Zuschneiden“ und „Strecken“ wirken wieder",
+            "Einstellungen: Meldungen unter den Knöpfen sind sofort zu sehen",
+            "WLAN-Übertragung: der Fokus bleibt nach Start und Stopp auf dem Knopf",
+            "„Was ist neu“ erscheint auch nach einer Test-Version"
+        ),
         "1.4.2" to listOf(
             "Google Drive: Favoriten, Verlauf, Einstellungen und Playlists zwischen Geräten sichern und wiederherstellen (Einstellungen > Speicher)",
             "Filme und Serien: auf Wunsch direkt zu den Kategorien (Einstellungen > Allgemein)",
