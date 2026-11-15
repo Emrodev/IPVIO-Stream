@@ -53,10 +53,6 @@ android {
             storePassword = keystore.getProperty("storePassword")
             keyAlias = keystore.getProperty("keyAlias")
             keyPassword = keystore.getProperty("keyPassword")
-            // v1 (JAR) in addition to v2/v3: older Android versions and the update check (UpdateVerify) can read the
-            // signer of a downloaded APK from it. Same key, so updates over earlier versions keep working.
-            enableV1Signing = true
-            enableV2Signing = true
         }
     }
 

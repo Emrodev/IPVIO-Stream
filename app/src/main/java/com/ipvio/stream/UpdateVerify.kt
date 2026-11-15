@@ -69,7 +69,11 @@ object UpdateVerify {
         return Signers(jarSigners(apk), emptySet())
     }
 
-    /** v1 (JAR) signature of the APK: certificates of AndroidManifest.xml, available after the entry was read completely. */
+    /**
+     * v1 (JAR) signature of the APK: certificates of AndroidManifest.xml, available after the entry was read completely.
+     * Release APKs are v2-only (minSdk 24, AGP signs v1 only below that), so this finds nothing for them; kept for APKs
+     * that carry a v1 signature. An empty result never blocks the update (see [UpdateLogic.signerVerdict]).
+     */
     private fun jarSigners(apk: File): Set<String> = runCatching {
         java.util.jar.JarFile(apk, true).use { jf ->
             val e = jf.getJarEntry("AndroidManifest.xml") ?: return@use emptySet<String>()
