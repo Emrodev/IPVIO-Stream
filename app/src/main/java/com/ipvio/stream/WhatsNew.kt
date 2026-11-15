@@ -49,6 +49,15 @@ object WhatsNewLogic {
      */
     fun shouldShow(lastSeenCode: Long, currentCode: Long, freshInstall: Boolean, hasNotes: Boolean): Boolean =
         hasNotes && !freshInstall && currentCode > 0 && lastSeenCode < currentCode
+
+    /**
+     * Same, and also when only the version name changed (issue 12): a test build and its release share the versionCode,
+     * so after "1.4.2-test" the release "1.4.2" counted as seen. [lastSeenName] null = stored by an older app version
+     * (only the code is known then).
+     */
+    fun shouldShow(lastSeenCode: Long, lastSeenName: String?, currentCode: Long, currentName: String, freshInstall: Boolean, hasNotes: Boolean): Boolean =
+        shouldShow(lastSeenCode, currentCode, freshInstall, hasNotes) ||
+            (hasNotes && !freshInstall && currentCode > 0 && lastSeenCode == currentCode && lastSeenName != null && lastSeenName != currentName)
 }
 
 /**
@@ -105,16 +114,24 @@ object WhatsNew {
             val pi = c.packageManager.getPackageInfo(c.packageName, 0)
             pi.firstInstallTime == pi.lastUpdateTime
         }.getOrDefault(true)
-        val last = prefs(c).getLong("seen_code", 0L)
-        show = WhatsNewLogic.shouldShow(last, code, fresh, NOTES[n].orEmpty().isNotEmpty())
+        val full = AppUpdate.currentName(c)
+        val p = prefs(c)
+        val last = p.getLong("seen_code", 0L)
+        val lastName = p.getString("seen_name", null)
+        show = WhatsNewLogic.shouldShow(last, lastName, code, full, fresh, NOTES[n].orEmpty().isNotEmpty())
         name = n
         // Fresh install or no notes: nothing to show, remember the version so a later update compares against it
-        if (!show && last < code) prefs(c).edit().putLong("seen_code", code).apply()
+        if (!show && (last < code || lastName != full)) markSeen(c)
     }
 
     fun dismiss(c: Context) {
         show = false
-        prefs(c).edit().putLong("seen_code", AppUpdate.currentCode(c)).apply()
+        markSeen(c)
+    }
+
+    /** Remembers code and full name ("1.4.2-test" differs from "1.4.2"), see [WhatsNewLogic.shouldShow]. */
+    private fun markSeen(c: Context) {
+        prefs(c).edit().putLong("seen_code", AppUpdate.currentCode(c)).putString("seen_name", AppUpdate.currentName(c)).apply()
     }
 }
 
