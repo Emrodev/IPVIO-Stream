@@ -17,9 +17,15 @@ data class UpdatePlan(
 /** Pure helper functions of the settings (without Android, hence testable). */
 object SettingsLogic {
 
-    /** Menu numbers: 0 Start, 1 Movies, 2 Series, 3 Live TV, 4 Search. If the chosen start page is hidden, the app starts on "Start". */
-    fun resolveStartTab(pref: Int, order: List<Int>, hidden: List<Int>): Int =
-        if (pref in 1..4 && pref in order && pref !in hidden) pref else 0
+    /**
+     * Menu numbers: 1 Movies, 2 Series, 3 Live TV, 4 Search (0 Home is not shown).
+     * A hidden or unknown choice, including a saved "Home", opens the first visible page instead.
+     */
+    fun resolveStartTab(pref: Int, order: List<Int>, hidden: List<Int>): Int {
+        val vis = MenuLogic.visible(order, hidden).filter { it != MenuLogic.SETTINGS }
+        if (pref in vis) return pref
+        return vis.firstOrNull() ?: MenuLogic.SETTINGS
+    }
 
     /** Last scheduled time (≤ now) for daily/weekly. */
     fun lastScheduled(plan: UpdatePlan, nowMs: Long, zone: TimeZone): Long {

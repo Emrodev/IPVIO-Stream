@@ -74,6 +74,13 @@ object GuideBack {
     @Volatile var mutedUntil = 0L
     /** Back step of the open guide (the player intercepts the Back key first and calls this). */
     var handler: (() -> Unit)? = null
+
+    /**
+     * A channel or archive show was started from the open guide. Back returns to the guide
+     * unless another layer (the guide itself, a panel, the channel list, or a seek) is in front.
+     */
+    fun reopenOnBack(armed: Boolean, guideOpen: Boolean, panelOpen: Boolean, channelsOpen: Boolean, catsOpen: Boolean, scrubbing: Boolean): Boolean =
+        armed && !guideOpen && !panelOpen && !channelsOpen && !catsOpen && !scrubbing
 }
 
 /** Remembers the view of the TV guide (zoom, row height, past shows). */

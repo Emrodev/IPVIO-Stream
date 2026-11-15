@@ -14,9 +14,14 @@ class SettingsLogicTest {
     @Test fun startTab() {
         val order = listOf(0, 4, 1, 2, 3, 5)
         assertEquals(3, SettingsLogic.resolveStartTab(3, order, emptyList()))
-        assertEquals(0, SettingsLogic.resolveStartTab(3, order, listOf(3)))
-        assertEquals(0, SettingsLogic.resolveStartTab(5, order, emptyList()))
-        assertEquals(0, SettingsLogic.resolveStartTab(2, listOf(0, 1, 5), emptyList()))
+        // Live TV hidden: first remaining page (search), not the removed home tab
+        assertEquals(4, SettingsLogic.resolveStartTab(3, order, listOf(3)))
+        // Settings is not a start page on its own
+        assertEquals(4, SettingsLogic.resolveStartTab(5, order, emptyList()))
+        // Series is not in this order: movies is the first real page
+        assertEquals(1, SettingsLogic.resolveStartTab(2, listOf(0, 1, 5), emptyList()))
+        // A saved "Home" (0) opens Live TV with the default menu
+        assertEquals(3, SettingsLogic.resolveStartTab(0, MenuLogic.DEFAULT_ORDER, MenuLogic.parseHidden(MenuLogic.DEFAULT_HIDDEN)))
     }
 
     @Test fun everyStartAndManual() {

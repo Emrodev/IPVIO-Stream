@@ -123,7 +123,20 @@ fun SearchScreen(
             runCatching { ContentFocus.req.requestFocus() }
         }
     }
-    BackHandler(enabled = inSidebar && tab != 0) { onTab(0) }
+    val rootTab = SettingsLogic.resolveStartTab(General.startTab, AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList())
+    var lastBack by remember { mutableLongStateOf(0L) }
+    BackHandler(enabled = inSidebar && tab != rootTab) { onTab(rootTab) }
+    BackHandler(enabled = inSidebar && tab == rootTab && General.confirmExit) {
+        val now = System.currentTimeMillis()
+        if (now - lastBack < 2500) {
+            val act = generateSequence<android.content.Context>(ctx) { (it as? android.content.ContextWrapper)?.baseContext }
+                .filterIsInstance<android.app.Activity>().firstOrNull()
+            act?.finishAffinity()
+        } else {
+            lastBack = now
+            android.widget.Toast.makeText(ctx, Lang.tr("Noch einmal Zurück drücken zum Beenden"), android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val q = SearchState.query.trim()
     val none = Triple(emptyList<Item>(), emptyList<Item>(), emptyList<Item>())

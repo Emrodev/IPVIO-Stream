@@ -189,7 +189,7 @@ fun Sidebar(tab: Int, onTab: (Int) -> Unit, modifier: Modifier, activeFocus: Foc
     val expanded = (focusIn && !ViewLive.active) || SidebarPrefs.labels
     val fm = LocalFocusManager.current
     val scope = rememberCoroutineScope()
-    val visible = AppSettings.menuOrder.filter { it !in AppSettings.menuHidden }
+    val visible = MenuLogic.visible(AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList())
     val activeVisible = tab in visible
     // Entry that receives the "active" focus requester: the active tab, or the first entry when the active tab is hidden
     // (Search is hidden by default); without it Back from the search results had no sidebar item to go to (T-013)

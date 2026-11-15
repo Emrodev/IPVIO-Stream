@@ -31,7 +31,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -46,17 +45,16 @@ object HeaderFocus {
     var returnTo: String? = null
 }
 
-/** Tabs at the top next to the search (movies/series: All, Newly added, Top rated, Categories). */
+/** Tabs at the top (movies/series: All, Newly added, Top rated, Categories). */
 class HeaderTab(val label: String, val icon: AIcon, val id: String, val onClick: () -> Unit)
 
 /**
- * Header (round 14): search field, on movies/series the tabs, on the right "View" (card size/images), bell (reminders)
- * and the profile circle. The functions behind it already existed; only tabs and View are new.
+ * Header: on movies/series the tabs, on the right "View" (card size/images), bell (reminders)
+ * and the profile circle. Search is a sidebar entry, not a field in this bar.
  */
 @Composable
 fun HeaderBar(
     modifier: Modifier,
-    onSearch: () -> Unit,
     onReminder: (Reminder) -> Unit,
     onProfile: () -> Unit,
     onNewEpisode: (String) -> Unit = {},
@@ -70,9 +68,7 @@ fun HeaderBar(
         modifier.fillMaxWidth().padding(start = dpx(38), end = dpx(36), top = dpx(14)).height(dpx(52)),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SearchPill(if (tabs.isEmpty()) 467 else 330, onSearch)
         if (tabs.isNotEmpty()) {
-            Spacer(Modifier.width(dpx(22)))
             Row(horizontalArrangement = Arrangement.spacedBy(dpx(8)), verticalAlignment = Alignment.CenterVertically) {
                 tabs.forEachIndexed { i, t ->
                     NavTab(t, if (i == 0) (if (firstIsContent) ContentFocus.req else HeaderFocus.firstTab) else null)
@@ -96,26 +92,6 @@ fun HeaderBar(
         BellButton(onReminder, onNewEpisode)
         Spacer(Modifier.width(dpx(14)))
         ProfileCircle(onProfile)
-    }
-}
-
-@Composable
-private fun SearchPill(w: Int, onClick: () -> Unit) {
-    var f by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(50)
-    Row(
-        Modifier.width(dpx(w)).height(dpx(50)).clip(shape)
-            .background(if (f) DS.FocusFill else Color(0xCC0E0E12))
-            .border(1.dp, if (f) DS.FocusFill else Color(0x33FFFFFF), shape)
-            .onFocusChanged { f = it.isFocused }
-            .trackFocus()
-            .clickable(onClick = onClick)
-            .padding(horizontal = dpx(20)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(dpx(14))
-    ) {
-        MenuIcon(4, if (f) DS.FocusInk else Color(0xFFD0D0D6), Modifier.size(dpx(22)))
-        Text("Suche nach Sendern, Filmen, Serien …", color = if (f) DS.FocusInk else Tok.TextLow, fontSize = spx(16), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

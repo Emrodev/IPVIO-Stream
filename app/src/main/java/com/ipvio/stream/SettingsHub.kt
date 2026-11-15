@@ -488,9 +488,14 @@ private fun GeneralPage(ctx: Context) {
         }
         Hint("Ab Android 10 erlaubt das System den Autostart nur mit dieser Berechtigung. Manche Geräte (z. B. einzelne Fire-TV-Modelle) blockieren den Autostart trotzdem; das kann die App nicht ändern.")
     }
-    val tabs = listOf("Start", "Filme", "Serien", "Live TV", "Suche")
+    // Stored values stay 1 movies, 2 series, 3 live TV, 4 search. 0 was Home and is no longer a page.
+    val startIds = listOf(3, 1, 2, 4)
+    val startLabels = startIds.map { MENU_LABELS[it] }
     val shown = SettingsLogic.resolveStartTab(General.startTab, AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList())
-    SelectRow("Startseite", tabs[shown], tabs, shown) { General.setStartTab(ctx, it) }
+    val sel = startIds.indexOf(shown).coerceAtLeast(0)
+    SelectRow("Startseite", if (shown in startIds) startLabels[sel] else MENU_LABELS.getOrElse(shown) { startLabels[0] }, startLabels, sel) {
+        General.setStartTab(ctx, startIds[it])
+    }
     Hint("Diese Seite öffnet sich beim Start der App. Versteckte Menüpunkte sind nicht wählbar.")
     ToggleRow("Letzten Sender beim Start abspielen", "Wenn du zuletzt Live TV gesehen hast, läuft dieser Sender direkt nach dem Start.", General.resumeLive) { General.setResumeLive(ctx, it) }
     ToggleRow("Letzten Film / letzte Serie beim Start fortsetzen", "Wenn du zuletzt einen Film oder eine Serie gesehen hast, läuft sie nach dem Start an der gemerkten Stelle weiter (bei einer fertigen Folge mit der nächsten).", General.resumeVod) { General.setResumeVod(ctx, it) }
@@ -635,8 +640,9 @@ private fun StoragePage(ctx: Context) {
 
 @Composable
 private fun MenuPage(ctx: Context) {
-    Hint("Verschiebe Einträge mit den Pfeil-Knöpfen oder blende sie aus. Start und Einstellungen bleiben immer sichtbar.")
+    Hint("Verschiebe Einträge mit den Pfeil-Knöpfen oder blende sie aus. Einstellungen bleiben immer sichtbar.")
     AppSettings.menuOrder.forEach { id ->
+        if (id == MenuLogic.HOME) return@forEach
         // key(id): the row (and the focus on its arrow) moves together with the entry, so the cursor follows it
         androidx.compose.runtime.key(id) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

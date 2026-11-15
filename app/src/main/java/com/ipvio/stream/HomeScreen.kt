@@ -374,7 +374,6 @@ fun HomeScreen(
     val header: @Composable (Modifier) -> Unit = { m ->
         HeaderBar(
             m.onFocusChanged { inHeader = it.hasFocus },
-            onSearch = { onTab(4) },
             onReminder = { r -> byId[r.chId]?.let(onOpen) },
             onNewEpisode = { id -> byId[id]?.let(onOpen) },
             // Only one profile: go directly to the profile page of settings (before: general settings)
@@ -505,8 +504,9 @@ fun HomeScreen(
             runCatching { sideFocus.requestFocus() }
         }
     }
-    BackHandler(enabled = inSidebar && tab != 0) { onTab(0) }
-    BackHandler(enabled = inSidebar && tab == 0 && General.confirmExit) {
+    val rootTab = SettingsLogic.resolveStartTab(General.startTab, AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList())
+    BackHandler(enabled = inSidebar && tab != rootTab) { onTab(rootTab) }
+    BackHandler(enabled = inSidebar && tab == rootTab && General.confirmExit) {
         val now = System.currentTimeMillis()
         if (now - lastBack < 2500) exitApp()
         else { lastBack = now; android.widget.Toast.makeText(ctx, Lang.tr("Noch einmal Zurück drücken zum Beenden"), android.widget.Toast.LENGTH_SHORT).show() }

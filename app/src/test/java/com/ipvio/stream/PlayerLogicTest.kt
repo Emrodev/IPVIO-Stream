@@ -1,12 +1,23 @@
 package com.ipvio.stream
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlayerLogicTest {
     private val now = System.currentTimeMillis() / 1000
     private fun e(start: Long, end: Long, title: String = "x") = EpgEntry(title, "", start, end)
+
+    @Test fun guide_zurueckNachSenderwahl() {
+        assertTrue(GuideBack.reopenOnBack(true, false, false, false, false, false))
+        assertFalse(GuideBack.reopenOnBack(false, false, false, false, false, false))
+        assertFalse(GuideBack.reopenOnBack(true, true, false, false, false, false))
+        assertFalse(GuideBack.reopenOnBack(true, false, true, false, false, false))
+        assertFalse(GuideBack.reopenOnBack(true, false, false, true, false, false))
+        assertFalse(GuideBack.reopenOnBack(true, false, false, false, true, false))
+        assertFalse(GuideBack.reopenOnBack(true, false, false, false, false, true))
+    }
 
     @Test fun fmtTime_unterEineStunde() = assertEquals("02:05", fmtTime(125_000))
     @Test fun fmtTime_mitStunden() = assertEquals("1:02:05", fmtTime(3_725_000))

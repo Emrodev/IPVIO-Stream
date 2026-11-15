@@ -143,12 +143,16 @@ http://h/x
         assertEquals(MenuLogic.COUNT, o.toSet().size)
     }
 
-    @Test fun menue_startUndEinstellungenBleibenImmerSichtbar() {
+    @Test fun menue_startIstWeg_einstellungenBleibenImmerSichtbar() {
         assertEquals(listOf(1, 2, 6), MenuLogic.parseHidden("0,1,2,5,6,19"))
         assertEquals(emptyList<Int>(), MenuLogic.toggle(emptyList(), 0))
         assertEquals(emptyList<Int>(), MenuLogic.toggle(emptyList(), 5))
         val all = MenuLogic.visible(MenuLogic.DEFAULT_ORDER, listOf(1, 2, 3, 4, 6, 7, 8, 9, 10))
-        assertEquals(listOf(0, 5), all)
+        assertEquals(listOf(5), all)
+        val shown = MenuLogic.visible(MenuLogic.DEFAULT_ORDER, MenuLogic.parseHidden(MenuLogic.DEFAULT_HIDDEN))
+        assertFalse(MenuLogic.HOME in shown)
+        assertTrue(MenuLogic.SEARCH in shown)
+        assertFalse(MenuLogic.EPG in shown)
     }
 
     @Test fun menue_verschiebenUndGrenzen() {

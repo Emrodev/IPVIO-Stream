@@ -1,6 +1,10 @@
-Last update: 2026-11-12 (release 1.4 prepared). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-14 (home tab, header search, guide back). Read `CLAUDE.md` first, then this file.
 
 ## Current task
+
+T-026 (remove the Home tab, remove the header search field, Back from a guide stream returns to the guide). Changed in the working tree. Not built, not run on a device. Task file: `docs/tasks/T-026-home-search-guide-back.md`. JVM tests for the menu, start page and guide-back rule were not run here (no Gradle).
+
+## Previous task
 
 Release 1.4 (`versionCode` 5): `main` plus the speed series (T-019 to T-023), R8 over the whole app (T-024) and the update card fix (T-025). Reported by the maintainer on 12 Nov 2026: built and tested on the device, works. The individual checks and any measurements were not recorded. The statuses "not built, not tested" further down for these tasks are older than this report. The maintainer builds the signed APK, creates `update.json` and publishes the GitHub release `v1.4` (steps in `docs/RELEASE.md`). The assistant did not build or publish anything. Rollback for R8 if users report a crash at start: `enable = false` in `app/build.gradle.kts` and a new release.
 

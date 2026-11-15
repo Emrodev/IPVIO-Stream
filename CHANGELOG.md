@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Menu: the Home tab is no longer shown. The app opens on the first visible page (Live TV with the default menu). Back from the sidebar returns to that start page, and Back again there still asks before leaving when "Beenden bestätigen" is on. A saved start page of "Home" follows the same rule. Settings > Menu no longer lists Home
+- Search: the search field at the top of the page is gone. Search is an entry in the sidebar. Existing installs that had it hidden only because the field was in the header see it in the sidebar once; it can be hidden again under Settings > Menu
+- TV guide: after you start a channel or an archive show from the guide, Back on the remote returns to the guide. Back from the guide itself is unchanged, and the next Back leaves the player
+
 ## 1.4.1
 - Fix: 1.4 did not open after the update on user devices. R8 over the whole app (T-024) is switched off again (`enable = false` in app/build.gradle.kts, the rollback from ADR 0005); versionCode 6. Cause not confirmed by a crash log (unverified). Install 1.4.1 over 1.4; data is kept (same signature)
 

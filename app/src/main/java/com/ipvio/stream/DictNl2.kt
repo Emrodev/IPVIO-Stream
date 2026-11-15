@@ -108,7 +108,7 @@ Kartengröße (Reihen)¦Kaartgrootte (rijen)
 Kategorien-Ansicht¦Categorieweergave
 Liste mit Vorschau¦Lijst met voorbeeld
 Das Raster kannst du zusätzlich direkt in der Rasteransicht mit dem Raster-Knopf ändern.¦Het raster kun je ook direct in de rasterweergave aanpassen met de rasterknop.
-Verschiebe Einträge mit den Pfeil-Knöpfen oder blende sie aus. Start und Einstellungen bleiben immer sichtbar.¦Verplaats items met de pijlknoppen of verberg ze. Start en instellingen blijven altijd zichtbaar.
+Verschiebe Einträge mit den Pfeil-Knöpfen oder blende sie aus. Einstellungen bleiben immer sichtbar.¦Verplaats items met de pijlknoppen of verberg ze. Instellingen blijven altijd zichtbaar.
 versteckt¦verborgen
 sichtbar¦zichtbaar
 Standard-Reihenfolge wiederherstellen¦Standaardvolgorde herstellen

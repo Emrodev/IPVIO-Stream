@@ -344,7 +344,11 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         if (now - lastStepT >= gap) stepSeek(d, turboStepMs(lvl, step, player.duration))
     }
 
+    /** Set when the channel now playing was chosen in the TV guide, so Back reopens the guide. */
+    var returnToGuide by remember { mutableStateOf(false) }
+
     fun switchTo(it: Item, src: List<Item>) {
+        if (showGuide) returnToGuide = true
         if ((cur.live || cur.archive != null) && cur.itemId != it.id) lastChId = cur.itemId
         History.add(ctx, it.id)
         cur = PlayReq(it.title, it.url, it.id, true, 0L)
@@ -598,6 +602,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
     fun playArchive(ch: Item, e: EpgEntry) {
         val url = Catchup.urlFor(ch, e)
         if (url == null) { flash = Flash(null, "Nicht im Archiv verfügbar"); return }
+        if (showGuide) returnToGuide = true
         if (cur.live && cur.itemId != ch.id) lastChId = cur.itemId
         scrubTarget = -1L
         cur = PlayReq(e.title, url, ch.id, false, 0L, archive = ArchiveRef(ch.id, ch.title, e))
@@ -642,6 +647,12 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             showGuide -> GuideBack.handler?.invoke() ?: run { showGuide = false }
             showCats -> showCats = false
             showChannels -> showChannels = false
+            // A stream started from the guide: Back returns to the guide instead of leaving the player.
+            GuideBack.reopenOnBack(returnToGuide, showGuide, panel != Panel.NONE, showChannels, showCats, scrubTarget >= 0) -> {
+                returnToGuide = false
+                controls = false
+                showGuide = true
+            }
             controls -> controls = false
             showNextCard -> nextDismissed = true
             cur.archive != null && curItem != null -> backToLive()

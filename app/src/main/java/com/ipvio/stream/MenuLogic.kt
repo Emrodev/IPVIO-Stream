@@ -2,7 +2,7 @@ package com.ipvio.stream
 
 /**
  * Pure rules for the navigation menu (without Android) so they can be tested.
- * Guarantees: every area occurs exactly once, "Start" (0) and "Settings" (5) can never be hidden.
+ * Guarantees: every area occurs exactly once. Home (0) is not shown. Settings (5) can never be hidden.
  */
 object MenuLogic {
     const val COUNT = 11
@@ -20,11 +20,11 @@ object MenuLogic {
     /** As in the draft: Home, Live TV, movies, series, EPG, favorites, "Meine Liste", (search), settings. */
     val DEFAULT_ORDER = listOf(0, 3, 1, 2, SPORT, EPG, FAVS, MYLIST, VERLAUF, SEARCH, 5)
     /**
-     * Search sits at the top in the header, not in the sidebar: hidden by default.
-     * EPG (round 14, user's wish): also hidden – the TV guide is reachable via Live TV.
-     * Both can be shown again under Settings > Menu.
+     * EPG is hidden: the TV guide opens from Live TV and from the player.
+     * Search used to sit in the header and was hidden here; the header field is gone, so Search is in the sidebar.
+     * It can still be hidden under Settings > Menu.
      */
-    const val DEFAULT_HIDDEN = "4,6"
+    const val DEFAULT_HIDDEN = "6"
 
     fun parseOrder(raw: String?): List<Int> {
         val order = (raw ?: DEFAULT_ORDER.joinToString(",")).split(",").mapNotNull { it.trim().toIntOrNull() }
@@ -55,5 +55,6 @@ object MenuLogic {
         return if (id in hidden) hidden - id else hidden + id
     }
 
-    fun visible(order: List<Int>, hidden: List<Int>): List<Int> = order.filter { it !in hidden }
+    /** Home is not a menu entry. Settings stays even when every other area is hidden. */
+    fun visible(order: List<Int>, hidden: List<Int>): List<Int> = order.filter { it != HOME && it !in hidden }
 }

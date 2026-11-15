@@ -228,13 +228,14 @@ private fun AppContent() {
         }
     }
 
-    // Back in the app after the Home key: to the home screen (a running playback and adding stay as they are)
+    // Back in the app after the Home key: to the start page (a running playback and adding stay as they are)
     LaunchedEffect(AppNav.homeSignal) {
         if (AppNav.homeSignal > 0 && playing == null && !adding) {
-            val changed = top != null || browse != null || cats != null || tab != 0
+            val root = SettingsLogic.resolveStartTab(General.startTab, AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList())
+            val changed = top != null || browse != null || cats != null || tab != root
             top = null; trail.clear(); browse = null; cats = null
-            if (changed) AppNav.focusTab = 0
-            if (tab != 0) { tab = 0; CatMemory.reset() }
+            if (changed) AppNav.focusTab = root
+            if (tab != root) { tab = root; CatMemory.reset() }
         }
     }
 
@@ -319,7 +320,9 @@ private fun AppContent() {
     }
     fun goTab(id: Int) {
         if (id == MenuLogic.EPG) { openEpg(); return }
-        tab = id; CatMemory.reset()
+        // Home is not a page any more. A saved "Home" (or an old call) opens the start page.
+        val target = if (id == MenuLogic.HOME) SettingsLogic.resolveStartTab(General.startTab, AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList()) else id
+        tab = target; CatMemory.reset()
         // W-002: movies/series straight to their categories (the area opens them when its data is ready)
         AppNav.pendingVodCats = if (General.vodCats && !ViewLive.active && (id == 1 || id == 2)) id else -1
         jumpTick++
