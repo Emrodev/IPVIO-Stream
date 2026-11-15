@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Sound: new "Ton angleichen" (sound levelling) in Settings > Sound & subtitles, off by default. Live channels are mixed to broadcast loudness (about −23 LUFS) and sounded 7–9 dB quieter than YouTube or Netflix; Standard raises them to about −16 LUFS with a limiter (no clipping), evens out loud and quiet parts and lifts dialogue a little. Modes: Off, Standard, Clear speech, Night mode, Custom (maximum boost, levelling strength, dialogue lift). Off is bit-identical to before; passthrough to a receiver is not processed (T-028)
 - Phone page: "Upload" for a playlist file, a list or a VPN configuration did nothing. The page script missed a closing brace, so the upload function was never defined. A rejected upload (wrong code) now shows the reply instead of a bare "Error"
 - Playlists: the "Edit" window never gets taller than the screen; "Apply" and "Cancel" stay visible on a phone in landscape and on a 1080p TV. Not device tested on a TV yet
 - Load errors: an unexpected error names the place in the app (file and line), so a screenshot is enough for a bug report

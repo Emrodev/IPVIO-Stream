@@ -10,7 +10,7 @@ All settings are on the **Settings** tab of the sidebar. They are grouped into t
 | Design | Colour theme, background, fonts (Outfit, Inter, system), text and display size, animations |
 | Menu | Order and visibility of sidebar entries |
 | Player | Seek steps, skip intro/credits, quality, 4K check, source fallback on broken links, frame-rate matching, aspect ratio |
-| Audio & subtitles | Preferred audio and subtitle languages, subtitle style, remember per title |
+| Audio & subtitles | Preferred audio and subtitle languages, sound levelling (louder quiet channels, clearer speech, night mode; on by default), subtitle style, remember per title |
 | Genres & categories | Automatic genres or provider categories, hide categories |
 | Live TV & guide | TV guide source, channel lists, reminders, rewind live TV (on-device buffer), recordings and their storage |
 | Playlists | Add, edit, remove playlists, show several at the same time ("Also show"), language filter, refresh interval or fixed time |

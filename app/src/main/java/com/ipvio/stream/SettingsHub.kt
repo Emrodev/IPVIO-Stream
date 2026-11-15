@@ -987,6 +987,7 @@ internal fun phoneDiagReport(ctx: Context): String {
 @Composable
 private fun AudioPage(ctx: Context) {
     TrackSettingsSection(ctx)
+    AudioLevelSettingsSection(ctx)
     // Round 14: subtitle style with live preview. Highlighting shows the effect immediately in the picture above, OK adopts it.
     Text("Untertitel-Stil", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     var pSize by remember { mutableStateOf<Int?>(null) }
