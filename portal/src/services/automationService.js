@@ -20,9 +20,10 @@ async function getSettings() {
     test_api_without_adults: map.test_api_without_adults || '',
     test_api_with_adults: map.test_api_with_adults || '',
     portal_public_domain: map.portal_public_domain || process.env.PORTAL_PUBLIC_DOMAIN || '',
+    downloader_code: map.downloader_code || '',
     test_app_url: map.test_app_url || '',
     test_auto_whatsapp: map.test_auto_whatsapp !== '0',
-    test_whatsapp_message: map.test_whatsapp_message || 'Olá {{nome}}! Seu teste do Korp TV foi liberado com sucesso 🎉\n\n📲 *Baixar Aplicativo:* {{app_url}}\n\n👤 *Usuário:* {{usuario}}\n🔑 *Senha:* {{senha}}\n📅 *Vencimento:* {{vencimento}}\n\nAbra o aplicativo e assista no seu celular, TV Box ou Smart TV!'
+    test_whatsapp_message: map.test_whatsapp_message || 'Olá {{nome}}! Seu teste do Korp TV foi liberado com sucesso 🎉\n\n📲 *Baixar Aplicativo:* {{app_url}}\n🔢 *Código no Downloader:* {{codigo_downloader}}\n\n👤 *Usuário:* {{usuario}}\n🔑 *Senha:* {{senha}}\n📅 *Vencimento:* {{vencimento}}\n\nAbra o aplicativo e assista no seu celular, TV Box ou Smart TV!'
   };
 }
 

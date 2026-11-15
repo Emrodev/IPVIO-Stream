@@ -70,6 +70,14 @@ PORTAL_PUBLIC_DOMAIN=https://seu-dominio.com
   - Se o campo for deixado em branco, a API utiliza esta URL por padrão, evitando falhas de verificação de expiração.
 * **Domínio Público do Portal (HTTPS):**
   - Utilizado para montar os links públicos de download do APK (`/app.apk`) enviados por WhatsApp e QR Code, garantindo que o link externo nunca seja enviado como `localhost`.
+* **Código do Downloader (AFTVnews):**
+  - Facilitador para Smart TVs, Android TV e Fire TV Stick. O cliente só precisa digitar um código numérico de 5 a 6 dígitos no aplicativo **Downloader** da Play Store/Amazon Store.
+  - Para gerar seu código permanente:
+    1. Acesse [go.aftvnews.com](https://go.aftvnews.com)
+    2. Digite o link direto do APK: `https://seu-dominio/app.apk`
+    3. Conclua o captcha e clique em **Shorten**.
+    4. Copie o código numérico gerado e cole no campo *Código do Downloader* nas configurações do portal.
+  - Ele aparecerá automaticamente na página `/teste`, no modal de QR Code e nas mensagens de WhatsApp para os clientes.
 * **Integração com API WhatsApp (ViperConnect / Cloud API):**
   - **URL da API:** Endpoint da instância (ex: `https://viper.dominio.com/v25/{SESSION}/messages`).
   - **Token de Acesso:** Bearer Token de autenticação.

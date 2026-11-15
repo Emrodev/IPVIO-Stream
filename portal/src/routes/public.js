@@ -40,7 +40,8 @@ router.get('/teste-info', async (req, res) => {
     res.json({
       success: true,
       hasAdultOption: Boolean(settings.test_api_with_adults && settings.test_api_with_adults.trim()),
-      appUrl
+      appUrl,
+      downloaderCode: settings.downloader_code || ''
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -177,6 +178,7 @@ router.post('/solicitar-teste', async (req, res) => {
       msg = msg.replace(/{{senha}}/g, password);
       msg = msg.replace(/{{vencimento}}/g, expiresAt);
       msg = msg.replace(/{{app_url}}/g, appUrl);
+      msg = msg.replace(/{{(codigo_downloader|downloader_code)}}/g, settings.downloader_code || '');
       msg = msg.replace(/{{dns}}/g, dns);
 
       const waRes = await sendWhatsAppMessage({
@@ -197,6 +199,7 @@ router.post('/solicitar-teste', async (req, res) => {
       expiresAt,
       packageName,
       appUrl,
+      downloaderCode: settings.downloader_code || '',
       payUrl,
       whatsappSent,
       whatsappError: waError

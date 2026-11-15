@@ -826,6 +826,9 @@ async function loadSettings() {
     if (document.getElementById('portal-public-domain')) {
       document.getElementById('portal-public-domain').value = s.portal_public_domain || '';
     }
+    if (document.getElementById('downloader-code')) {
+      document.getElementById('downloader-code').value = s.downloader_code || '';
+    }
     if (document.getElementById('test-app-url')) {
       document.getElementById('test-app-url').value = s.test_app_url || '';
     }
@@ -1019,6 +1022,7 @@ async function saveTestSettings() {
   const apiWithout = document.getElementById('test-api-without-adults').value.trim();
   const apiWith = document.getElementById('test-api-with-adults').value.trim();
   const portalDomain = document.getElementById('portal-public-domain')?.value.trim() || '';
+  const downloaderCode = document.getElementById('downloader-code')?.value.trim() || '';
   const appUrl = document.getElementById('test-app-url').value.trim();
   const autoWa = document.getElementById('test-auto-whatsapp').checked;
   const waMsg = document.getElementById('test-whatsapp-message').value.trim();
@@ -1031,6 +1035,7 @@ async function saveTestSettings() {
         test_api_without_adults: apiWithout,
         test_api_with_adults: apiWith,
         portal_public_domain: portalDomain,
+        downloader_code: downloaderCode,
         test_app_url: appUrl,
         test_auto_whatsapp: autoWa,
         test_whatsapp_message: waMsg
@@ -1166,7 +1171,28 @@ function openQrModal() {
     correctLevel: QRCode.CorrectLevel.H
   });
 
+  const downBox = document.getElementById('modal-downloader-box');
+  const downCode = document.getElementById('modal-downloader-code');
+  if (downBox && downCode) {
+    if (systemSettings && systemSettings.downloader_code && systemSettings.downloader_code.trim()) {
+      downCode.innerText = systemSettings.downloader_code.trim();
+      downBox.classList.remove('hidden');
+    } else {
+      downBox.classList.add('hidden');
+    }
+  }
+
   document.getElementById('qr-modal').classList.remove('hidden');
+}
+
+function copyModalDownloaderCode() {
+  const code = document.getElementById('modal-downloader-code')?.innerText || '';
+  if (!code) return;
+  navigator.clipboard.writeText(code).then(() => {
+    alert(`Código Downloader copiado: ${code}`);
+  }).catch(() => {
+    prompt('Copie o código abaixo:', code);
+  });
 }
 
 function copyModalQrLink() {

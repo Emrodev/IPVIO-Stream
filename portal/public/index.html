@@ -397,6 +397,12 @@
               </div>
 
               <div>
+                <label class="block font-semibold text-gray-300 mb-1">Código do Downloader (AFTVnews)</label>
+                <input type="text" id="downloader-code" placeholder="Ex: 123456" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                <p class="text-[11px] text-gray-400 mt-1">Gerado em <a href="https://go.aftvnews.com" target="_blank" class="text-cyan-400 hover:underline">go.aftvnews.com</a> para instalar na TV sem digitar o link.</p>
+              </div>
+
+              <div>
                 <label class="block font-semibold text-gray-300 mb-1">URL de Download do APK Enviada ao Cliente</label>
                 <input type="url" id="test-app-url" placeholder="Deixe em branco para usar {Dominio}/app.apk" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
                 <p class="text-[11px] text-gray-400 mt-1">Se preenchido, o WhatsApp e o QR Code direcionam para este link customizado.</p>
@@ -410,7 +416,7 @@
               <div class="md:col-span-2">
                 <label class="block font-semibold text-gray-300 mb-1">
                   Mensagem WhatsApp para o Cliente 
-                  <span class="text-gray-500 font-normal">(Variáveis: {{nome}}, {{usuario}}, {{senha}}, {{vencimento}}, {{app_url}}, {{dns}})</span>
+                  <span class="text-gray-500 font-normal">(Variáveis: {{nome}}, {{usuario}}, {{senha}}, {{vencimento}}, {{app_url}}, {{codigo_downloader}}, {{dns}})</span>
                 </label>
                 <textarea id="test-whatsapp-message" rows="3" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"></textarea>
               </div>
@@ -796,6 +802,20 @@
       <div class="text-center space-y-4">
         <!-- Renderização do QR Code -->
         <div class="p-4 bg-white rounded-2xl w-56 h-56 mx-auto flex items-center justify-center shadow-2xl" id="portal-qrcode-container"></div>
+
+        <!-- Opção: App Downloader para TV -->
+        <div id="modal-downloader-box" class="hidden p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/40 text-center space-y-1">
+          <div class="flex items-center justify-center gap-1.5 text-cyan-300 font-bold text-xs">
+            <span>📺</span> Opção para TV via App Downloader
+          </div>
+          <p class="text-[11px] text-gray-400">Abra o <strong>Downloader</strong> na TV e digite o código:</p>
+          <div class="flex items-center justify-center gap-2 pt-1">
+            <span id="modal-downloader-code" class="px-4 py-1 rounded-xl bg-surface-900 border border-cyan-500/50 font-mono text-2xl font-black text-cyan-400 tracking-widest select-all"></span>
+            <button onclick="copyModalDownloaderCode()" class="px-3 py-1.5 rounded-xl bg-cyan-600/40 hover:bg-cyan-600 text-cyan-300 hover:text-white text-xs font-semibold transition">
+              Copiar
+            </button>
+          </div>
+        </div>
 
         <div>
           <label class="block text-xs font-semibold text-gray-300 mb-1 text-left">Link Fixo Permanente de Download</label>
