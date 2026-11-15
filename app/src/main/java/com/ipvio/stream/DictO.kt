@@ -59,4 +59,45 @@ Setzt alle Einstellungen auf die Standardwerte zurück: Ansicht, Design, Menü, 
 Nur eine Seite zurücksetzen? Jede Einstellungsseite hat unten ihren eigenen Zurücksetzen-Knopf.¦Reset just one page? Every settings page has its own reset button at the bottom.¦Yalnızca bir sayfayı mı sıfırlamak istiyorsunuz? Her ayar sayfasının altında kendi sıfırlama düğmesi var.¦Želiš vratiti samo jednu stranicu? Svaka stranica postavki ima vlastiti gumb za vraćanje na dnu.¦¦¦¿Solo quieres restablecer una página? Cada página de ajustes tiene su propio botón de restablecer al final.¦Tu veux réinitialiser une seule page ? Chaque page de réglages a son propre bouton de réinitialisation en bas.¦Vuoi ripristinare solo una pagina? Ogni pagina delle impostazioni ha il proprio pulsante di ripristino in fondo.
 # Short form of an existing hint (the code no longer has the second sentence)
 Beim Markieren einer Auswahl zeigt die Vorschau sofort die Wirkung, OK übernimmt sie.¦When you highlight an option the preview shows the effect right away, OK applies it.¦Bir seçeneği işaretlediğinde önizleme etkiyi hemen gösterir, OK uygular.¦Kad označiš opciju, pregled odmah pokazuje efekat, OK je primjenjuje.¦Kad označiš opciju, pregled odmah pokazuje učinak, OK je primjenjuje.¦Kad označiš opciju, pregled odmah pokazuje efekat, OK je primenjuje.¦Al marcar una opción la vista previa muestra el efecto al instante, OK la aplica.¦Quand tu sélectionnes une option, l’aperçu montre l’effet tout de suite, OK l’applique.¦Quando evidenzi un’opzione l’anteprima mostra subito l’effetto, OK la applica.
+
+# Still rendered in 1.4.2 without a dictionary row (zh column needs these keys too)
+English¦English¦¦¦¦¦¦¦
+Türkçe¦Türkçe¦¦¦¦¦¦¦
+العربية¦العربية¦¦¦¦¦¦¦
+Français¦Français¦¦¦¦¦¦¦
+Español¦Español¦¦¦¦¦¦¦
+Italiano¦Italiano¦¦¦¦¦¦¦
+Nederlands¦Nederlands¦¦¦¦¦¦¦
+Polski¦Polski¦¦¦¦¦¦¦
+Português¦Português¦¦¦¦¦¦¦
+Русский¦Русский¦¦¦¦¦¦¦
+हिन्दी¦हिन्दी¦¦¦¦¦¦¦
+日本語¦日本語¦¦¦¦¦¦¦
+한국어¦한국어¦¦¦¦¦¦¦
+Shqip¦Shqip¦¦¦¦¦¦¦
+Ex-YU / Balkan¦Ex-YU / Balkan¦¦¦¦¦¦¦
+Ελληνικά¦Ελληνικά¦¦¦¦¦¦¦
+Română¦Română¦¦¦¦¦¦¦
+Magyar¦Magyar¦¦¦¦¦¦¦
+Čeština¦Čeština¦¦¦¦¦¦¦
+Svenska¦Svenska¦¦¦¦¦¦¦
+Dansk¦Dansk¦¦¦¦¦¦¦
+Norsk¦Norsk¦¦¦¦¦¦¦
+Suomi¦Suomi¦¦¦¦¦¦¦
+فارسی¦فارسی¦¦¦¦¦¦¦
+Kurdî¦Kurdî¦¦¦¦¦¦¦
+עברית¦עברית¦¦¦¦¦¦¦
+Українська¦Українська¦¦¦¦¦¦¦
+Български¦Български¦¦¦¦¦¦¦
+اردو¦اردو¦¦¦¦¦¦¦
+Tiếng Việt¦Tiếng Việt¦¦¦¦¦¦¦
+ไทย¦ไทย¦¦¦¦¦¦¦
+Filipino¦Filipino¦¦¦¦¦¦¦
+Boomer Mode¦Boomer Mode¦¦¦¦¦¦¦
+Das Portal hat die Anmeldung abgelehnt. Adresse und MAC-Adresse prüfen.¦The portal rejected the login. Check the address and MAC address.¦¦¦¦¦¦¦
+Erstelle ein Backup, installiere die App neu und stelle das Backup wieder her.¦Create a backup, reinstall the app and restore the backup.¦¦¦¦¦¦¦
+Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.¦Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.¦¦¦¦¦¦¦
+IPVIO Stream is free, ad-free and open source (GPL-3.0). Donations are voluntary and do not unlock any features.¦IPVIO Stream is free, ad-free and open source (GPL-3.0). Donations are voluntary and do not unlock any features.¦¦¦¦¦¦¦
+There are no live channels. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to movies & series only.¦There are no live channels. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to movies & series only.¦¦¦¦¦¦¦
+Alle paar Stunden¦Every few hours¦¦¦¦¦¦¦
 """
