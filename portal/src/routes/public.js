@@ -171,7 +171,7 @@ router.post('/solicitar-teste', async (req, res) => {
     let whatsappSent = false;
     let waError = null;
     if (settings.test_auto_whatsapp && settings.whatsapp_api_url && settings.whatsapp_api_token) {
-      let msg = settings.test_whatsapp_message || 'Olá {{nome}}! Seu teste do IPVIO Stream foi liberado com sucesso 🎉\n\n📲 *Baixar Aplicativo:* {{app_url}}\n\n👤 *Usuário:* {{usuario}}\n🔑 *Senha:* {{senha}}\n📅 *Vencimento:* {{vencimento}}\n\nAbra o aplicativo e assista no seu celular, TV Box ou Smart TV!';
+      let msg = settings.test_whatsapp_message || 'Olá {{nome}}! Seu teste do Korp TV foi liberado com sucesso 🎉\n\n📲 *Baixar Aplicativo:* {{app_url}}\n\n👤 *Usuário:* {{usuario}}\n🔑 *Senha:* {{senha}}\n📅 *Vencimento:* {{vencimento}}\n\nAbra o aplicativo e assista no seu celular, TV Box ou Smart TV!';
       msg = msg.replace(/{{nome}}/g, (name || 'Amigo(a)').trim());
       msg = msg.replace(/{{usuario}}/g, username);
       msg = msg.replace(/{{senha}}/g, password);
