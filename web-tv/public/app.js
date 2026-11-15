@@ -27,6 +27,7 @@ let deviceState = {
 };
 
 let hlsPlayer = null;
+let mpegtsPlayer = null;
 let osdTimer = null;
 let heartbeatInterval = null;
 
@@ -660,17 +661,20 @@ function playSeriesEpisode(episode, series) {
   deviceState.nowPlaying = `${series.name} — Ep. ${episode.episode_num || ''}`;
   deviceState.nowPlayingType = 'series';
 
+  destroyActivePlayers();
+
   document.getElementById('osd-channel-name').innerText = deviceState.nowPlaying;
   document.getElementById('osd-channel-logo').src = series.cover || '/logo-icon.svg';
+  document.getElementById('osd-program-name').innerText = 'Carregando episódio...';
   document.getElementById('player-container').classList.remove('hidden');
 
   const video = document.getElementById('main-video');
   video.style.objectFit = deviceState.aspectRatios[deviceState.aspectRatioIndex];
 
-  if (hlsPlayer) {
-    hlsPlayer.destroy();
-    hlsPlayer = null;
-  }
+  video.onplaying = () => {
+    document.getElementById('osd-program-name').innerText = 'Reproduzindo Episódio';
+  };
+
   video.src = `/api/proxy?url=${encodeURIComponent(streamUrl)}`;
   video.play().catch(() => {
     video.src = streamUrl;
@@ -691,47 +695,133 @@ function playStream(stream, type = 'live') {
   const cleanHost = host.replace(/\/+$/, '');
 
   deviceState.activeStream = stream;
-  deviceState.nowPlaying = stream.name || 'Canal ao Vivo';
+  deviceState.nowPlaying = stream.name || 'Canal';
   deviceState.nowPlayingType = type;
 
-  let streamUrl = '';
-  if (type === 'live') {
-    streamUrl = `${cleanHost}/live/${user}/${pass}/${stream.stream_id}.m3u8`;
-  } else {
-    const ext = stream.container_extension || 'mp4';
-    streamUrl = `${cleanHost}/movie/${user}/${pass}/${stream.stream_id}.${ext}`;
-  }
+  // Limpa instâncias anteriores de players
+  destroyActivePlayers();
 
   document.getElementById('osd-channel-name').innerText = stream.name || 'Canal';
   document.getElementById('osd-channel-logo').src = stream.stream_icon || '/logo-icon.svg';
+  document.getElementById('osd-program-name').innerText = 'Conectando ao canal...';
   document.getElementById('player-container').classList.remove('hidden');
 
   const video = document.getElementById('main-video');
   video.style.objectFit = deviceState.aspectRatios[deviceState.aspectRatioIndex];
 
-  if (Hls.isSupported() && (streamUrl.endsWith('.m3u8') || type === 'live')) {
-    if (hlsPlayer) hlsPlayer.destroy();
-    hlsPlayer = new Hls();
-    hlsPlayer.loadSource(`/api/proxy?url=${encodeURIComponent(streamUrl)}`);
-    hlsPlayer.attachMedia(video);
-    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-    hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
-      if (data.fatal) {
-        // Fallback direto
-        video.src = `/api/proxy?url=${encodeURIComponent(streamUrl)}`;
-        video.play().catch(() => {});
-      }
-    });
+  video.onplaying = () => {
+    document.getElementById('osd-program-name').innerText = (type === 'live' ? 'Ao Vivo • Reproduzindo' : 'Reproduzindo Conteúdo');
+  };
+
+  video.onerror = () => {
+    if (type === 'live') {
+      tryPlayMpegtsFallback(cleanHost, user, pass, stream.stream_id);
+    }
+  };
+
+  if (type === 'live') {
+    playLiveChannel(cleanHost, user, pass, stream.stream_id);
   } else {
-    video.src = `/api/proxy?url=${encodeURIComponent(streamUrl)}`;
+    const ext = stream.container_extension || 'mp4';
+    const movieUrl = `${cleanHost}/movie/${user}/${pass}/${stream.stream_id}.${ext}`;
+    video.src = `/api/proxy?url=${encodeURIComponent(movieUrl)}`;
     video.play().catch(() => {
-      video.src = streamUrl;
+      video.src = movieUrl;
       video.play().catch(() => {});
     });
   }
 
   showOsd();
   setFocus(document.getElementById('btn-osd-back'));
+}
+
+// Reprodução de canais ao vivo (HLS com fallback automático para MPEG-TS)
+function playLiveChannel(host, user, pass, streamId) {
+  const video = document.getElementById('main-video');
+  const hlsUrl = `${host}/live/${user}/${pass}/${streamId}.m3u8`;
+  const proxiedHlsUrl = `/api/proxy?url=${encodeURIComponent(hlsUrl)}`;
+
+  if (Hls.isSupported()) {
+    hlsPlayer = new Hls({
+      enableWorker: true,
+      lowLatencyMode: true,
+      manifestLoadingTimeOut: 8000,
+      manifestLoadingMaxRetry: 1
+    });
+
+    hlsPlayer.loadSource(proxiedHlsUrl);
+    hlsPlayer.attachMedia(video);
+
+    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.play().catch(() => {});
+    });
+
+    hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        console.warn('[HLS Fatal Error, tentando MPEG-TS]', data.type);
+        destroyActivePlayers();
+        tryPlayMpegtsFallback(host, user, pass, streamId);
+      }
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari / iOS / Mac onde HLS é nativo
+    video.src = proxiedHlsUrl;
+    video.play().catch(() => tryPlayMpegtsFallback(host, user, pass, streamId));
+  } else {
+    tryPlayMpegtsFallback(host, user, pass, streamId);
+  }
+}
+
+// Fallback de canal via fluxo MPEG-TS contínuo (compatível com 100% dos painéis Xtream)
+function tryPlayMpegtsFallback(host, user, pass, streamId) {
+  const video = document.getElementById('main-video');
+  const tsUrl = `${host}/live/${user}/${pass}/${streamId}.ts`;
+  const proxiedTsUrl = `/api/proxy?url=${encodeURIComponent(tsUrl)}`;
+  document.getElementById('osd-program-name').innerText = 'Sincronizando fluxo direto...';
+
+  if (window.mpegts && mpegts.isSupported()) {
+    try {
+      mpegtsPlayer = mpegts.createPlayer({
+        type: 'mse',
+        isLive: true,
+        url: proxiedTsUrl
+      }, {
+        enableWorker: true,
+        lazyLoadMaxDuration: 3 * 60,
+        seekType: 'range'
+      });
+
+      mpegtsPlayer.attachMediaElement(video);
+      mpegtsPlayer.load();
+      mpegtsPlayer.play().catch(err => {
+        console.warn('[MPEG-TS Play Error]', err);
+      });
+    } catch (err) {
+      console.warn('[MPEG-TS init error]', err);
+      video.src = proxiedTsUrl;
+      video.play().catch(() => {});
+    }
+  } else {
+    video.src = proxiedTsUrl;
+    video.play().catch(() => {});
+  }
+}
+
+function destroyActivePlayers() {
+  const video = document.getElementById('main-video');
+  if (hlsPlayer) {
+    try { hlsPlayer.destroy(); } catch (_) {}
+    hlsPlayer = null;
+  }
+  if (mpegtsPlayer) {
+    try { mpegtsPlayer.destroy(); } catch (_) {}
+    mpegtsPlayer = null;
+  }
+  if (video) {
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+  }
 }
 
 function showOsd() {
@@ -744,12 +834,7 @@ function showOsd() {
 }
 
 function closePlayer() {
-  const video = document.getElementById('main-video');
-  video.pause();
-  if (hlsPlayer) {
-    hlsPlayer.destroy();
-    hlsPlayer = null;
-  }
+  destroyActivePlayers();
   document.getElementById('player-container').classList.add('hidden');
   deviceState.nowPlaying = '';
   deviceState.activeStream = null;

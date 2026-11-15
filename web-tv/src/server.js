@@ -1,8 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const http = require('http');
-const https = require('https');
+const { Readable } = require('stream');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -27,74 +26,89 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// Helper para requisições seguindo redirecionamentos (301, 302, 307, 308)
-function requestWithRedirects(targetUrl, options, callback, maxRedirects = 5) {
-  if (maxRedirects <= 0) {
-    return callback(new Error('Muitos redirecionamentos'));
-  }
-
-  const parsed = new URL(targetUrl);
-  const client = parsed.protocol === 'https:' ? https : http;
-
-  const req = client.request(parsed, options, (res) => {
-    // Seguir redirecionamento
-    if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
-      const redirectUrl = new URL(res.headers.location, targetUrl).href;
-      return requestWithRedirects(redirectUrl, options, callback, maxRedirects - 1);
-    }
-    callback(null, res);
-  });
-
-  return req;
-}
-
-// Proxy de dados e streaming de vídeo com suporte a Range e Redirecionamentos
-app.all('/api/proxy', (req, res) => {
+// Proxy Universal com suporte a HLS Rewrite, MPEG-TS, Range e Redirecionamentos
+app.all('/api/proxy', async (req, res) => {
   const targetUrl = req.query.url;
   if (!targetUrl) {
     return res.status(400).json({ error: 'Parâmetro url é obrigatório' });
   }
 
+  const controller = new AbortController();
+  req.on('close', () => controller.abort());
+
   try {
-    const options = {
-      method: req.method,
-      headers: {
-        'User-Agent': 'IPTVSmarters/1.0.0 (Linux; Android TV 12)',
-        'Accept': '*/*'
-      }
+    const headers = {
+      'User-Agent': 'IPTVSmarters/1.0.0 (Linux; Android TV 12)',
+      'Accept': '*/*'
     };
 
     if (req.headers['range']) {
-      options.headers['range'] = req.headers['range'];
+      headers['Range'] = req.headers['range'];
     }
 
-    const proxyReq = requestWithRedirects(targetUrl, options, (err, proxyRes) => {
-      if (err) {
-        return res.status(502).json({ error: 'Falha no servidor de IPTV: ' + err.message });
-      }
-
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Headers', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-
-      if (proxyRes.headers['content-type']) res.setHeader('Content-Type', proxyRes.headers['content-type']);
-      if (proxyRes.headers['content-length']) res.setHeader('Content-Length', proxyRes.headers['content-length']);
-      if (proxyRes.headers['content-range']) res.setHeader('Content-Range', proxyRes.headers['content-range']);
-      if (proxyRes.headers['accept-ranges']) res.setHeader('Accept-Ranges', proxyRes.headers['accept-ranges']);
-
-      res.status(proxyRes.statusCode);
-      proxyRes.pipe(res);
+    const response = await fetch(targetUrl, {
+      method: req.method === 'OPTIONS' ? 'GET' : req.method,
+      headers,
+      redirect: 'follow',
+      signal: controller.signal
     });
 
-    proxyReq.on('error', (err) => {
-      if (!res.headersSent) {
-        res.status(502).json({ error: 'Erro de conexão: ' + err.message });
-      }
-    });
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
 
-    req.pipe(proxyReq);
+    const contentType = response.headers.get('content-type') || '';
+    const contentLength = response.headers.get('content-length');
+    const contentRange = response.headers.get('content-range');
+    const acceptRanges = response.headers.get('accept-ranges');
+
+    if (contentType) res.setHeader('Content-Type', contentType);
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+    if (contentRange) res.setHeader('Content-Range', contentRange);
+    if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
+
+    // Se for manifesto HLS (.m3u8), reescreve cada linha para passar pelo proxy seguro
+    // Isso evita Mixed Content (HTTPS -> HTTP) e bloqueios de CORS nos chunks de vídeo (.ts)
+    const isHls = contentType.includes('vnd.apple.mpegurl') ||
+                  contentType.includes('x-mpegurl') ||
+                  targetUrl.toLowerCase().includes('.m3u8');
+
+    if (isHls) {
+      const text = await response.text();
+      const finalBaseUrl = response.url || targetUrl;
+      const modified = text.split('\n').map(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return line;
+        if (trimmed.startsWith('#')) {
+          // Trata URI dentro de tags como #EXT-X-KEY:METHOD=...,URI="http..."
+          if (trimmed.includes('URI="')) {
+            return trimmed.replace(/URI="([^"]+)"/, (match, uri) => {
+              const fullKeyUrl = new URL(uri, finalBaseUrl).href;
+              return `URI="/api/proxy?url=${encodeURIComponent(fullKeyUrl)}"`;
+            });
+          }
+          return line;
+        }
+        // Segmento de vídeo
+        const segmentAbsoluteUrl = new URL(trimmed, finalBaseUrl).href;
+        return `/api/proxy?url=${encodeURIComponent(segmentAbsoluteUrl)}`;
+      }).join('\n');
+
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+      return res.status(response.status).send(modified);
+    }
+
+    res.status(response.status);
+    if (response.body) {
+      Readable.fromWeb(response.body).pipe(res);
+    } else {
+      res.end();
+    }
   } catch (err) {
-    res.status(400).json({ error: 'URL inválida: ' + err.message });
+    if (err.name === 'AbortError') return;
+    if (!res.headersSent) {
+      res.status(502).json({ error: 'Erro no stream de vídeo: ' + err.message });
+    }
   }
 });
 
@@ -103,5 +117,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📺 Korp TV Web & Smart TV App rodando na porta ${PORT}`);
   console.log(`🌐 Acesse em: http://localhost:${PORT}`);
   console.log(`📡 Conectado ao Portal: ${PUBLIC_PORTAL_URL}`);
+  console.log(`📡 Domínio WebTV: ${PUBLIC_WEBTV_URL}`);
   console.log(`====================================================`);
 });
