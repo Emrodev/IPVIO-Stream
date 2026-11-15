@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Sound: new "Ton angleichen" (sound levelling) in Settings > Sound & subtitles, on by default. Live channels are mixed to broadcast loudness (about −23 LUFS) and sounded 7–9 dB quieter than YouTube or Netflix; Standard raises them to about −16 LUFS with a limiter (no clipping), evens out loud and quiet parts and lifts dialogue a little. Modes: Off, Standard, Clear speech, Night mode, Custom (maximum boost, levelling strength, dialogue lift). Off is bit-identical to before; passthrough to a receiver is not processed (T-028)
 
 ## 1.4.1
 - Fix: 1.4 did not open after the update on user devices. R8 over the whole app (T-024) is switched off again (`enable = false` in app/build.gradle.kts, the rollback from ADR 0005); versionCode 6. Cause not confirmed by a crash log (unverified). Install 1.4.1 over 1.4; data is kept (same signature)
