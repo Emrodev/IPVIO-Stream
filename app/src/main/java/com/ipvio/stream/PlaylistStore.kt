@@ -930,6 +930,23 @@ object PlaylistStore {
 
     private val switchScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+    /** Add a playlist sent from the phone settings (issue 18): loaded and adopted like "Add playlist" on the TV. */
+    fun addAsync(c: Context, url: String) {
+        val app = c.applicationContext
+        switchScope.launch { if (!loadLock.isLocked) load(app, url, true) }
+    }
+
+    /** Delete a playlist from the phone settings, like "Delete" in Settings > Playlists: the next one is loaded if it was the main list. */
+    fun removeAsync(c: Context, i: Int) {
+        val app = c.applicationContext
+        switchScope.launch {
+            if (i !in lists.indices || loadLock.isLocked) return@launch
+            val wasActive = i == active
+            remove(app, i)
+            if (wasActive && lists.isNotEmpty()) load(app, lists[active].url, false)
+        }
+    }
+
     /** Show a playlist additionally (or no longer). Call [applyMulti] afterwards. */
     fun setShown(c: Context, i: Int, on: Boolean) {
         ensure(c)
