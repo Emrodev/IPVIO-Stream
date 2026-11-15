@@ -246,8 +246,6 @@ async function loadLiveContent() {
   try {
     const cats = await fetchXtream('get_live_categories');
     if (Array.isArray(cats)) {
-      // Ordena os grupos/categorias em ordem alfabética (A-Z)
-      cats.sort((a, b) => (a.category_name || '').localeCompare(b.category_name || '', 'pt-BR', { sensitivity: 'base', numeric: true }));
       deviceState.liveCategories = cats;
       renderLiveCategories(cats);
     }
