@@ -52,6 +52,9 @@ object CatOrder {
     fun toTop(c: Context, area: String, names: List<String>, name: String) =
         save(c, area, CatOrderLogic.toTop(sorted(area, names), name))
 
+    fun toBottom(c: Context, area: String, names: List<String>, name: String) =
+        save(c, area, CatOrderLogic.toBottom(sorted(area, names), name))
+
     private fun save(c: Context, area: String, order: List<String>) {
         init(c)
         // Keep places of categories that are not in the current list (e.g. other playlist shown at the moment)
