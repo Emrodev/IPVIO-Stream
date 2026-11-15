@@ -312,30 +312,61 @@
     </div>
   </div>
 
-  <!-- 4. REPRODUTOR DE VÍDEO EM TELA CHEIA (COM OSD) -->
+  <!-- 4. REPRODUTOR DE VÍDEO EM TELA CHEIA (COM CONTROLE TOTAL E VOLTAR) -->
   <div id="player-container" class="hidden">
     <video id="main-video" autoplay playsinline></video>
 
-    <div id="player-osd" class="player-osd">
+    <!-- Barra Superior: Botão Voltar Fixo e Relógio -->
+    <div id="player-top-bar" class="player-top-bar osd-element">
+      <button id="btn-player-back" class="focusable osd-btn flex items-center gap-2 px-5 py-3 rounded-2xl bg-black/80 hover:bg-cyan-600 text-white font-black text-sm border border-white/20 shadow-2xl">
+        <span class="text-lg">⬅</span> Voltar (Esc)
+      </button>
+
       <div class="flex items-center gap-4">
-        <button id="btn-osd-back" class="focusable osd-btn" title="Voltar (Esc)">
-          <span>⬅</span> Voltar
-        </button>
-        <img id="osd-channel-logo" src="/logo-icon.svg" alt="" class="w-12 h-12 object-contain bg-black/60 rounded-xl p-1 border border-gray-700">
+        <span id="player-clock" class="text-sm font-bold text-gray-300 font-mono bg-black/60 px-3 py-1.5 rounded-xl border border-white/10">--:--</span>
+        <span class="px-3 py-1.5 rounded-xl bg-cyan-600/40 text-cyan-300 font-extrabold text-xs uppercase tracking-wider border border-cyan-500/30">Ao Vivo</span>
+      </div>
+    </div>
+
+    <!-- Barra Inferior OSD: Informações do Canal e Controles de Reprodução -->
+    <div id="player-osd" class="player-osd osd-element">
+      <div class="flex items-center gap-4 max-w-xl">
+        <img id="osd-channel-logo" src="/logo-icon.svg" alt="" class="w-14 h-14 object-contain bg-black/80 rounded-2xl p-2 border border-gray-700 shadow-xl">
         <div class="osd-info">
-          <h2 id="osd-channel-name" class="text-xl font-black text-white">Canal</h2>
-          <p id="osd-program-name" class="text-xs text-cyan-400 font-semibold mt-1">Reproduzindo ao vivo em alta resolução</p>
+          <h2 id="osd-channel-name" class="text-2xl font-black text-white leading-tight">Canal</h2>
+          <p id="osd-program-name" class="text-xs text-cyan-400 font-semibold mt-1">Conectando ao canal...</p>
         </div>
       </div>
 
-      <div class="osd-controls flex gap-3">
-        <button id="btn-osd-aspect" class="focusable osd-btn">
+      <div class="osd-controls flex items-center gap-2">
+        <button id="btn-osd-prev" class="focusable osd-btn" title="Canal Anterior (Seta Cima)">
+          <span>⏮</span> Anterior
+        </button>
+        <button id="btn-osd-playpause" class="focusable osd-btn" title="Pausar / Reproduzir (Espaço / OK)">
+          <span id="playpause-icon">⏸</span> <span id="playpause-text">Pausar</span>
+        </button>
+        <button id="btn-osd-next" class="focusable osd-btn" title="Próximo Canal (Seta Baixo)">
+          <span>⏭</span> Próximo
+        </button>
+        <button id="btn-osd-drawer" class="focusable osd-btn" title="Guia Rápido de Canais">
+          <span>📋</span> Canais
+        </button>
+        <button id="btn-osd-aspect" class="focusable osd-btn" title="Proporção da Tela">
           <span>📐</span> <span id="osd-aspect-label">Ajustar</span>
         </button>
-        <button id="btn-osd-reload" class="focusable osd-btn">
+        <button id="btn-osd-reload" class="focusable osd-btn" title="Recarregar Sinal">
           <span>🔄</span> Recarregar
         </button>
       </div>
+    </div>
+
+    <!-- Gaveta Lateral Rápida de Canais (Quick Channel Drawer) -->
+    <div id="quick-channel-drawer" class="hidden">
+      <div class="p-4 border-b border-gray-800 flex justify-between items-center bg-surface-950">
+        <h3 class="text-sm font-bold text-cyan-400 uppercase tracking-wider">Lista de Canais</h3>
+        <button id="btn-close-drawer" class="focusable px-3 py-1 bg-surface-800 text-xs text-gray-300 rounded-lg">✕</button>
+      </div>
+      <div id="quick-channels-list" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
     </div>
   </div>
 

@@ -732,7 +732,7 @@ function playStream(stream, type = 'live') {
   }
 
   showOsd();
-  setFocus(document.getElementById('btn-osd-back'));
+  setFocus(document.getElementById('btn-player-back'));
 }
 
 // Reprodução de canais ao vivo (HLS com fallback automático para MPEG-TS)
@@ -825,20 +825,102 @@ function destroyActivePlayers() {
 }
 
 function showOsd() {
-  const osd = document.getElementById('player-osd');
-  osd.style.opacity = '1';
+  const elements = document.querySelectorAll('.osd-element');
+  elements.forEach(el => el.classList.remove('osd-hidden'));
+
+  updatePlayerClock();
+
   if (osdTimer) clearTimeout(osdTimer);
   osdTimer = setTimeout(() => {
-    osd.style.opacity = '0';
-  }, 4000);
+    // Se a gaveta de canais não estiver aberta, oculta o OSD
+    const drawer = document.getElementById('quick-channel-drawer');
+    if (!drawer || drawer.classList.contains('hidden')) {
+      elements.forEach(el => el.classList.add('osd-hidden'));
+    }
+  }, 4500);
+}
+
+function updatePlayerClock() {
+  const clock = document.getElementById('player-clock');
+  if (clock) {
+    const now = new Date();
+    clock.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
 }
 
 function closePlayer() {
   destroyActivePlayers();
   document.getElementById('player-container').classList.add('hidden');
+  document.getElementById('quick-channel-drawer').classList.add('hidden');
   deviceState.nowPlaying = '';
   deviceState.activeStream = null;
   setFocus(document.getElementById('side-home'));
+}
+
+function togglePlayPause() {
+  const video = document.getElementById('main-video');
+  const icon = document.getElementById('playpause-icon');
+  const text = document.getElementById('playpause-text');
+  if (video.paused) {
+    video.play();
+    if (icon) icon.innerText = '⏸';
+    if (text) text.innerText = 'Pausar';
+  } else {
+    video.pause();
+    if (icon) icon.innerText = '▶';
+    if (text) text.innerText = 'Reproduzir';
+  }
+  showOsd();
+}
+
+function playNextChannel() {
+  if (!deviceState.liveChannels || deviceState.liveChannels.length === 0) return;
+  const currentId = deviceState.activeStream?.stream_id;
+  const currIndex = deviceState.liveChannels.findIndex(c => String(c.stream_id) === String(currentId));
+  const nextIndex = (currIndex + 1) % deviceState.liveChannels.length;
+  playStream(deviceState.liveChannels[nextIndex], 'live');
+}
+
+function playPrevChannel() {
+  if (!deviceState.liveChannels || deviceState.liveChannels.length === 0) return;
+  const currentId = deviceState.activeStream?.stream_id;
+  const currIndex = deviceState.liveChannels.findIndex(c => String(c.stream_id) === String(currentId));
+  const prevIndex = (currIndex - 1 + deviceState.liveChannels.length) % deviceState.liveChannels.length;
+  playStream(deviceState.liveChannels[prevIndex], 'live');
+}
+
+function toggleQuickChannelDrawer() {
+  const drawer = document.getElementById('quick-channel-drawer');
+  drawer.classList.toggle('hidden');
+  if (!drawer.classList.contains('hidden')) {
+    renderQuickChannelList();
+  }
+  showOsd();
+}
+
+function renderQuickChannelList() {
+  const list = document.getElementById('quick-channels-list');
+  const channels = deviceState.liveChannels || [];
+  list.innerHTML = channels.slice(0, 100).map(c => `
+    <div class="quick-channel-item focusable" data-id="${c.stream_id}">
+      <img src="${c.stream_icon || '/logo-icon.svg'}" class="w-8 h-8 object-contain rounded-lg bg-surface-900 p-1" onerror="this.src='/logo-icon.svg'">
+      <span class="truncate flex-1">${escapeHtml(c.name)}</span>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.quick-channel-item').forEach(item => {
+    item.onclick = () => {
+      const id = item.getAttribute('data-id');
+      const stream = channels.find(x => String(x.stream_id) === String(id));
+      if (stream) {
+        document.getElementById('quick-channel-drawer').classList.add('hidden');
+        playStream(stream, 'live');
+      }
+    };
+  });
+
+  const first = list.querySelector('.quick-channel-item');
+  if (first) setFocus(first);
 }
 
 function toggleAspectRatio() {
@@ -862,14 +944,48 @@ function setupDpadNavigation() {
     const isRight = (e.key === 'ArrowRight' || e.keyCode === 39);
     const isEnter = (e.key === 'Enter' || e.keyCode === 13);
     const isBack = (e.key === 'Escape' || e.key === 'Backspace' || e.keyCode === 27 || e.keyCode === 10009 || e.keyCode === 461);
+    const isSpace = (e.key === ' ' || e.keyCode === 32);
 
-    // Se o player estiver ativo
-    if (!document.getElementById('player-container').classList.contains('hidden')) {
+    // SE O REPRODUTOR ESTIVER ATIVO
+    const isPlayerOpen = !document.getElementById('player-container').classList.contains('hidden');
+    if (isPlayerOpen) {
       showOsd();
+
+      // Tecla Voltar: fecha o player na hora
       if (isBack) {
         closePlayer();
         e.preventDefault();
         return;
+      }
+
+      // Tecla Espaço: Play/Pause direto
+      if (isSpace) {
+        togglePlayPause();
+        e.preventDefault();
+        return;
+      }
+
+      // Se nenhum botão do OSD estiver em foco, teclas de seta mudam de canal diretamente
+      const currentFocus = document.activeElement;
+      const isOsdFocused = currentFocus && currentFocus.classList.contains('focusable') &&
+                           document.getElementById('player-container').contains(currentFocus);
+
+      if (!isOsdFocused) {
+        if (isUp) {
+          playPrevChannel();
+          e.preventDefault();
+          return;
+        }
+        if (isDown) {
+          playNextChannel();
+          e.preventDefault();
+          return;
+        }
+        if (isEnter) {
+          setFocus(document.getElementById('btn-player-back'));
+          e.preventDefault();
+          return;
+        }
       }
     }
 
@@ -905,6 +1021,18 @@ function setupDpadNavigation() {
     if (isUp || isDown || isLeft || isRight) {
       navigateSpatial(currentFocus, isUp, isDown, isLeft, isRight);
       e.preventDefault();
+    }
+  });
+
+  // Interatividade com Mouse / Touch no player
+  const playerContainer = document.getElementById('player-container');
+  playerContainer.addEventListener('mousemove', showOsd);
+  playerContainer.addEventListener('touchstart', showOsd);
+  playerContainer.addEventListener('click', (e) => {
+    // Se clicou no fundo do vídeo, acorda o OSD e dá foco no botão voltar
+    if (e.target === playerContainer || e.target.id === 'main-video') {
+      showOsd();
+      setFocus(document.getElementById('btn-player-back'));
     }
   });
 }
@@ -969,7 +1097,15 @@ function setupEventListeners() {
     };
   });
 
-  document.getElementById('btn-osd-back').onclick = closePlayer;
+  // Controles do Player e OSD
+  document.getElementById('btn-player-back').onclick = closePlayer;
+  document.getElementById('btn-osd-playpause').onclick = togglePlayPause;
+  document.getElementById('btn-osd-next').onclick = playNextChannel;
+  document.getElementById('btn-osd-prev').onclick = playPrevChannel;
+  document.getElementById('btn-osd-drawer').onclick = toggleQuickChannelDrawer;
+  document.getElementById('btn-close-drawer').onclick = () => {
+    document.getElementById('quick-channel-drawer').classList.add('hidden');
+  };
   document.getElementById('btn-osd-aspect').onclick = toggleAspectRatio;
   document.getElementById('btn-osd-reload').onclick = () => {
     if (deviceState.activeStream) playStream(deviceState.activeStream, deviceState.nowPlayingType);
