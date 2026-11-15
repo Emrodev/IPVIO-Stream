@@ -1,4 +1,4 @@
-// Korp TV — Web & Smart TV Engine (Samsung Tizen, LG webOS, Browsers)
+// Korp TV — Smart TV & Web Engine (Samsung Tizen, LG webOS, Browsers)
 
 let config = {
   portalUrl: 'https://korp.kabaweb.in',
@@ -19,7 +19,9 @@ let deviceState = {
   liveCategories: [],
   liveChannels: [],
   vodCategories: [],
-  vodItems: [],
+  vodCache: {},
+  seriesCategories: [],
+  seriesCache: {},
   favorites: [],
   recent: []
 };
@@ -28,9 +30,9 @@ let hlsPlayer = null;
 let osdTimer = null;
 let heartbeatInterval = null;
 
-// ==============================================================================
-// 1. INICIALIZAÇÃO E IDENTIDADE DO DISPOSITIVO
-// ==============================================================================
+// =============================================================================
+// 1. INICIALIZAÇÃO E IDENTIDADE DA SMART TV
+// =============================================================================
 
 async function init() {
   loadConfig();
@@ -49,7 +51,8 @@ function loadConfig() {
     .then(data => {
       config.portalUrl = data.portalUrl || config.portalUrl;
       config.localPortalUrl = data.localPortalUrl || config.localPortalUrl;
-      document.getElementById('portal-url-display').innerText = config.portalUrl;
+      const display = document.getElementById('portal-url-display');
+      if (display) display.innerText = config.portalUrl;
     })
     .catch(() => {});
 }
@@ -57,7 +60,7 @@ function loadConfig() {
 function loadDeviceCredentials() {
   let devId = localStorage.getItem('korp_tv_device_id');
   if (!devId) {
-    devId = 'webtv_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
+    devId = 'webtv_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36).substring(4);
     localStorage.setItem('korp_tv_device_id', devId);
   }
   deviceState.id = devId;
@@ -75,17 +78,17 @@ function loadDeviceCredentials() {
   document.getElementById('pairing-code-display').innerText = code;
   document.getElementById('info-device-id').innerText = devId;
   document.getElementById('info-pairing-code').innerText = code;
+  document.getElementById('info-portal-url').innerText = config.portalUrl;
 
-  // Gera o QR Code de ativação na tela da TV
   const qrContainer = document.getElementById('pairing-qrcode');
   if (qrContainer && window.QRCode) {
     qrContainer.innerHTML = '';
     new QRCode(qrContainer, {
-      text: `${config.portalUrl}`,
+      text: config.portalUrl,
       width: 140,
       height: 140,
-      colorDark: "#000000",
-      colorLight: "#ffffff"
+      colorDark: '#000000',
+      colorLight: '#ffffff'
     });
   }
 }
@@ -94,44 +97,45 @@ function loadLocalStoredData() {
   try {
     deviceState.favorites = JSON.parse(localStorage.getItem('korp_tv_favs') || '[]');
     deviceState.recent = JSON.parse(localStorage.getItem('korp_tv_recent') || '[]');
-    const savedPlaylist = localStorage.getItem('korp_tv_manual_playlist');
-    if (savedPlaylist) {
-      deviceState.playlist = JSON.parse(savedPlaylist);
-    }
+    const saved = localStorage.getItem('korp_tv_manual_playlist');
+    if (saved) deviceState.playlist = JSON.parse(saved);
   } catch (_) {}
 }
 
-// ==============================================================================
-// 2. COMUNICAÇÃO COM O PORTAL KORP TV (REGISTER & HEARTBEAT)
-// ==============================================================================
+// =============================================================================
+// 2. SINCRONIZAÇÃO COM O PORTAL (REGISTER & HEARTBEAT)
+// =============================================================================
 
 async function registerDevice() {
   try {
     const payload = {
       deviceId: deviceState.id,
       pairingCode: deviceState.pairingCode,
-      model: 'Smart TV Web (Samsung/LG/Browser)',
+      model: 'Smart TV Web (Samsung/LG/Chromium)',
       appVersion: '1.0.0-web',
       versionCode: 100
     };
 
-    // Tenta primeiro o portal local se estiver na mesma rede, com fallback para o público
     const portalBase = config.localPortalUrl || config.portalUrl;
-    const res = await fetch(`${portalBase}/api/device/register`, {
+    let res = await fetch(`${portalBase}/api/device/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).catch(() => fetch(`${config.portalUrl}/api/device/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }));
+    }).catch(() => null);
 
-    if (!res.ok) return;
+    if (!res || !res.ok) {
+      res = await fetch(`${config.portalUrl}/api/device/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => null);
+    }
+
+    if (!res || !res.ok) return;
     const data = await res.json();
     handlePortalResponse(data);
   } catch (err) {
-    console.warn('[Portal Register Warning]', err.message);
+    console.warn('[Register Error]', err.message);
   }
 }
 
@@ -140,25 +144,27 @@ function startHeartbeat() {
   heartbeatInterval = setInterval(async () => {
     try {
       const portalBase = config.localPortalUrl || config.portalUrl;
-      const res = await fetch(`${portalBase}/api/device/heartbeat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deviceId: deviceState.id,
-          nowPlaying: deviceState.nowPlaying,
-          nowPlayingType: deviceState.nowPlayingType
-        })
-      }).catch(() => fetch(`${config.portalUrl}/api/device/heartbeat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deviceId: deviceState.id,
-          nowPlaying: deviceState.nowPlaying,
-          nowPlayingType: deviceState.nowPlayingType
-        })
-      }));
+      const payload = {
+        deviceId: deviceState.id,
+        nowPlaying: deviceState.nowPlaying,
+        nowPlayingType: deviceState.nowPlayingType
+      };
 
-      if (!res.ok) return;
+      let res = await fetch(`${portalBase}/api/device/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        res = await fetch(`${config.portalUrl}/api/device/heartbeat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => null);
+      }
+
+      if (!res || !res.ok) return;
       const data = await res.json();
       handlePortalResponse(data);
     } catch (_) {}
@@ -168,11 +174,10 @@ function startHeartbeat() {
 function handlePortalResponse(data) {
   if (!data || !data.success) return;
 
-  // Recebeu playlist do portal (Xtream ou M3U)
-  if (data.playlist && data.playlist.type !== 'none') {
+  if (data.playlist && data.playlist.type !== 'none' && data.playlist.host) {
     const p = data.playlist;
-    const isNew = !deviceState.playlist || 
-                  deviceState.playlist.host !== p.host || 
+    const isNew = !deviceState.playlist ||
+                  deviceState.playlist.host !== p.host ||
                   deviceState.playlist.user !== p.user;
 
     deviceState.playlist = p;
@@ -182,7 +187,7 @@ function handlePortalResponse(data) {
 
     if (isNew) {
       showMainScreen();
-      loadXtreamContent();
+      loadAllContent();
     }
   } else if (!deviceState.playlist) {
     showPairingScreen();
@@ -203,9 +208,9 @@ function showMainScreen() {
   switchTab('home');
 }
 
-// ==============================================================================
-// 3. CARREGAMENTO DE CONTEÚDO XTREAM CODES
-// ==============================================================================
+// =============================================================================
+// 3. CARREGAMENTO ROBUSTO DE DADOS XTREAM CODES
+// =============================================================================
 
 async function fetchXtream(action, extraParams = '') {
   if (!deviceState.playlist) return null;
@@ -215,71 +220,126 @@ async function fetchXtream(action, extraParams = '') {
   const cleanHost = host.replace(/\/+$/, '');
   const targetUrl = `${cleanHost}/player_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&action=${action}${extraParams}`;
 
-  // Tenta direto e, se falhar por CORS, usa o proxy do servidor
   try {
-    const res = await fetch(targetUrl);
-    if (res.ok) return await res.json();
-  } catch (_) {}
-
-  // Fallback transparente via proxy local
-  const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
-  const proxyRes = await fetch(proxyUrl);
-  return await proxyRes.json();
-}
-
-async function loadXtreamContent() {
-  try {
-    // 1. Categorias de TV ao Vivo
-    const liveCats = await fetchXtream('get_live_categories');
-    if (Array.isArray(liveCats)) {
-      deviceState.liveCategories = liveCats;
-      renderLiveCategories(liveCats);
+    const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      return await res.json();
     }
-
-    // 2. Canais ao Vivo
-    const liveStreams = await fetchXtream('get_live_streams');
-    if (Array.isArray(liveStreams)) {
-      deviceState.liveChannels = liveStreams;
-      renderLiveChannels(liveStreams);
-      updateHeroBillboard(liveStreams[0]);
-    }
-
-    // 3. Filmes (VOD)
-    const vodCats = await fetchXtream('get_vod_categories');
-    if (Array.isArray(vodCats)) {
-      deviceState.vodCategories = vodCats;
-      renderVodCategories(vodCats);
-    }
-
-    const vodStreams = await fetchXtream('get_vod_streams');
-    if (Array.isArray(vodStreams)) {
-      deviceState.vodItems = vodStreams;
-      renderVodItems(vodStreams);
-      renderHomeMoviesRow(vodStreams.slice(0, 15));
-    }
-
-    renderHomeFavsRow();
   } catch (err) {
-    console.error('[Load Xtream Content Error]', err);
+    console.warn(`[Xtream fetch failed: ${action}]`, err.message);
+  }
+  return null;
+}
+
+async function loadAllContent() {
+  loadLiveContent();
+  loadVodCategories();
+  loadSeriesCategories();
+}
+
+// 3.1 Canais ao Vivo
+async function loadLiveContent() {
+  try {
+    const cats = await fetchXtream('get_live_categories');
+    if (Array.isArray(cats)) {
+      deviceState.liveCategories = cats;
+      renderLiveCategories(cats);
+    }
+
+    const streams = await fetchXtream('get_live_streams');
+    if (Array.isArray(streams)) {
+      deviceState.liveChannels = streams;
+      renderLiveChannels(streams);
+      renderHomeChannelsRow(streams.slice(0, 15));
+      if (streams[0]) updateHeroBillboard(streams[0], 'live');
+    }
+  } catch (err) {
+    console.error('[Live Content Error]', err);
   }
 }
 
-// ==============================================================================
-// 4. RENDERIZAÇÃO DA INTERFACE (CANVAS DA TV)
-// ==============================================================================
+// 3.2 Filmes (VOD)
+async function loadVodCategories() {
+  try {
+    const cats = await fetchXtream('get_vod_categories');
+    if (Array.isArray(cats)) {
+      deviceState.vodCategories = cats;
+      renderVodCategories(cats);
+      // Carrega primeiros filmes para o Hero e a primeira categoria
+      if (cats.length > 0) {
+        selectVodCategory(cats[0].category_id);
+      }
+    }
+  } catch (err) {
+    console.error('[VOD Error]', err);
+  }
+}
 
-function updateHeroBillboard(item) {
+async function selectVodCategory(catId) {
+  if (deviceState.vodCache[catId]) {
+    renderVodItems(deviceState.vodCache[catId]);
+    return;
+  }
+  const items = await fetchXtream('get_vod_streams', `&category_id=${catId}`);
+  if (Array.isArray(items)) {
+    deviceState.vodCache[catId] = items;
+    renderVodItems(items);
+    if (!deviceState.homeMoviesLoaded && items.length > 0) {
+      renderHomeMoviesRow(items.slice(0, 15));
+      deviceState.homeMoviesLoaded = true;
+    }
+  }
+}
+
+// 3.3 Séries
+async function loadSeriesCategories() {
+  try {
+    const cats = await fetchXtream('get_series_categories');
+    if (Array.isArray(cats)) {
+      deviceState.seriesCategories = cats;
+      renderSeriesCategories(cats);
+      if (cats.length > 0) {
+        selectSeriesCategory(cats[0].category_id);
+      }
+    }
+  } catch (err) {
+    console.error('[Series Error]', err);
+  }
+}
+
+async function selectSeriesCategory(catId) {
+  if (deviceState.seriesCache[catId]) {
+    renderSeriesItems(deviceState.seriesCache[catId]);
+    return;
+  }
+  const items = await fetchXtream('get_series', `&category_id=${catId}`);
+  if (Array.isArray(items)) {
+    deviceState.seriesCache[catId] = items;
+    renderSeriesItems(items);
+    if (!deviceState.homeSeriesLoaded && items.length > 0) {
+      renderHomeSeriesRow(items.slice(0, 15));
+      deviceState.homeSeriesLoaded = true;
+    }
+  }
+}
+
+// =============================================================================
+// 4. RENDERIZAÇÃO DA INTERFACE (CANVAS DA SMART TV)
+// =============================================================================
+
+function updateHeroBillboard(item, type = 'live') {
   if (!item) return;
-  document.getElementById('hero-title').innerText = item.name || 'Canais em Alta Definição';
+  document.getElementById('hero-title').innerText = item.name || 'Destaques Korp TV';
   const heroCard = document.getElementById('hero-billboard');
-  if (item.stream_icon) {
-    heroCard.style.backgroundImage = `url('${item.stream_icon}')`;
-    heroCard.style.backgroundSize = 'cover';
-    heroCard.style.backgroundPosition = 'center';
+  const bgImg = item.stream_icon || item.cover;
+  if (bgImg) {
+    heroCard.style.backgroundImage = `url('${bgImg}')`;
   }
-  document.getElementById('btn-hero-play').onclick = () => playStream(item, 'live');
+  document.getElementById('btn-hero-play').onclick = () => playStream(item, type);
 }
 
+// 4.1 Renderizar Categorias e Canais de TV
 function renderLiveCategories(cats) {
   const container = document.getElementById('live-categories-list');
   document.getElementById('live-cat-count').innerText = cats.length;
@@ -299,35 +359,30 @@ function renderLiveCategories(cats) {
       el.classList.add('active');
       const catId = el.getAttribute('data-cat-id');
       document.getElementById('current-category-title').innerText = el.innerText.trim();
-      filterLiveChannelsByCategory(catId);
+      if (catId === 'all') {
+        renderLiveChannels(deviceState.liveChannels);
+      } else {
+        renderLiveChannels(deviceState.liveChannels.filter(c => String(c.category_id) === String(catId)));
+      }
     };
   });
-}
-
-function filterLiveChannelsByCategory(catId) {
-  if (catId === 'all') {
-    renderLiveChannels(deviceState.liveChannels);
-  } else {
-    const filtered = deviceState.liveChannels.filter(c => String(c.category_id) === String(catId));
-    renderLiveChannels(filtered);
-  }
 }
 
 function renderLiveChannels(channels) {
   const container = document.getElementById('live-channels-grid');
   document.getElementById('channel-count').innerText = `${channels.length} canais`;
-  
+
   if (channels.length === 0) {
     container.innerHTML = '<p class="text-sm text-gray-500 col-span-full">Nenhum canal encontrado nesta categoria.</p>';
     return;
   }
 
-  container.innerHTML = channels.slice(0, 100).map(c => `
+  container.innerHTML = channels.slice(0, 150).map(c => `
     <div class="channel-card focusable" data-stream-id="${c.stream_id}">
       <img src="${c.stream_icon || '/logo-icon.svg'}" class="channel-logo" onerror="this.src='/logo-icon.svg'">
-      <div class="channel-info truncate">
-        <h4 class="truncate">${escapeHtml(c.name)}</h4>
-        <p class="truncate">Canal ${c.num || ''} • Ao Vivo</p>
+      <div class="channel-info">
+        <h4>${escapeHtml(c.name)}</h4>
+        <p>Canal ${c.num || ''} • Ao Vivo</p>
       </div>
     </div>
   `).join('');
@@ -341,38 +396,119 @@ function renderLiveChannels(channels) {
   });
 }
 
+// 4.2 Renderizar Filmes (VOD com Pôsteres 2:3)
 function renderVodCategories(cats) {
   const container = document.getElementById('vod-categories-list');
-  container.innerHTML = cats.map(c => `
-    <div class="category-item focusable" data-cat-id="${c.category_id}">
+  document.getElementById('vod-cat-count').innerText = cats.length;
+  container.innerHTML = cats.map((c, i) => `
+    <div class="category-item focusable ${i === 0 ? 'active' : ''}" data-cat-id="${c.category_id}">
       <span>${escapeHtml(c.category_name)}</span>
     </div>
   `).join('');
+
+  container.querySelectorAll('.category-item').forEach(el => {
+    el.onclick = () => {
+      container.querySelectorAll('.category-item').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      const catId = el.getAttribute('data-cat-id');
+      document.getElementById('vod-category-title').innerText = el.innerText.trim();
+      selectVodCategory(catId);
+    };
+  });
 }
 
 function renderVodItems(items) {
   const container = document.getElementById('vod-items-grid');
   document.getElementById('vod-count').innerText = `${items.length} filmes`;
-  container.innerHTML = items.slice(0, 60).map(m => `
-    <div class="channel-card focusable" data-stream-id="${m.stream_id}">
-      <img src="${m.stream_icon || '/logo-icon.svg'}" class="channel-logo" onerror="this.src='/logo-icon.svg'">
-      <div class="channel-info truncate">
-        <h4 class="truncate">${escapeHtml(m.name)}</h4>
-        <p class="truncate">Avaliação: ⭐ ${m.rating || '8.0'}</p>
+
+  if (items.length === 0) {
+    container.innerHTML = '<p class="text-sm text-gray-500 col-span-full">Nenhum filme disponível nesta categoria.</p>';
+    return;
+  }
+
+  container.innerHTML = items.slice(0, 80).map(m => `
+    <div class="poster-card focusable" data-stream-id="${m.stream_id}">
+      <div class="poster-cover-box">
+        <img src="${m.stream_icon || '/logo-icon.svg'}" class="poster-cover" loading="lazy" onerror="this.src='/logo-icon.svg'">
+        <span class="poster-badge">★ ${m.rating || '8.2'}</span>
+      </div>
+      <div class="poster-info">
+        <h4>${escapeHtml(m.name)}</h4>
+        <p>${m.release_date || m.year || 'Filme'}</p>
       </div>
     </div>
   `).join('');
+
+  container.querySelectorAll('.poster-card').forEach(card => {
+    card.onclick = () => {
+      const id = card.getAttribute('data-stream-id');
+      const stream = items.find(x => String(x.stream_id) === String(id));
+      if (stream) playStream(stream, 'movie');
+    };
+  });
 }
 
-function renderHomeFavsRow() {
-  const container = document.getElementById('home-favs-row');
-  const items = deviceState.favorites.length > 0 ? deviceState.favorites : deviceState.liveChannels.slice(0, 10);
-  container.innerHTML = items.map(c => `
+// 4.3 Renderizar Séries (Com Pôsteres 2:3 e Modal de Episódios)
+function renderSeriesCategories(cats) {
+  const container = document.getElementById('series-categories-list');
+  document.getElementById('series-cat-count').innerText = cats.length;
+  container.innerHTML = cats.map((c, i) => `
+    <div class="category-item focusable ${i === 0 ? 'active' : ''}" data-cat-id="${c.category_id}">
+      <span>${escapeHtml(c.category_name)}</span>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.category-item').forEach(el => {
+    el.onclick = () => {
+      container.querySelectorAll('.category-item').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      const catId = el.getAttribute('data-cat-id');
+      document.getElementById('series-category-title').innerText = el.innerText.trim();
+      selectSeriesCategory(catId);
+    };
+  });
+}
+
+function renderSeriesItems(items) {
+  const container = document.getElementById('series-items-grid');
+  document.getElementById('series-count').innerText = `${items.length} séries`;
+
+  if (items.length === 0) {
+    container.innerHTML = '<p class="text-sm text-gray-500 col-span-full">Nenhuma série disponível nesta categoria.</p>';
+    return;
+  }
+
+  container.innerHTML = items.slice(0, 80).map(s => `
+    <div class="poster-card focusable" data-series-id="${s.series_id}">
+      <div class="poster-cover-box">
+        <img src="${s.cover || '/logo-icon.svg'}" class="poster-cover" loading="lazy" onerror="this.src='/logo-icon.svg'">
+        <span class="poster-badge">★ ${s.rating || '8.5'}</span>
+      </div>
+      <div class="poster-info">
+        <h4>${escapeHtml(s.name)}</h4>
+        <p>Série Completa</p>
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.poster-card').forEach(card => {
+    card.onclick = () => {
+      const id = card.getAttribute('data-series-id');
+      const series = items.find(x => String(x.series_id) === String(id));
+      if (series) openSeriesModal(series);
+    };
+  });
+}
+
+// 4.4 Fileiras da Home (Canais, Filmes, Séries)
+function renderHomeChannelsRow(channels) {
+  const container = document.getElementById('home-channels-row');
+  container.innerHTML = channels.map(c => `
     <div class="channel-card focusable min-w-[240px]" data-stream-id="${c.stream_id}">
       <img src="${c.stream_icon || '/logo-icon.svg'}" class="channel-logo" onerror="this.src='/logo-icon.svg'">
-      <div class="channel-info truncate">
-        <h4 class="truncate">${escapeHtml(c.name)}</h4>
-        <p class="truncate">Ao Vivo</p>
+      <div class="channel-info">
+        <h4>${escapeHtml(c.name)}</h4>
+        <p>Ao Vivo</p>
       </div>
     </div>
   `).join('');
@@ -380,7 +516,7 @@ function renderHomeFavsRow() {
   container.querySelectorAll('.channel-card').forEach(card => {
     card.onclick = () => {
       const id = card.getAttribute('data-stream-id');
-      const stream = items.find(x => String(x.stream_id) === String(id));
+      const stream = channels.find(x => String(x.stream_id) === String(id));
       if (stream) playStream(stream, 'live');
     };
   });
@@ -389,30 +525,175 @@ function renderHomeFavsRow() {
 function renderHomeMoviesRow(movies) {
   const container = document.getElementById('home-movies-row');
   container.innerHTML = movies.map(m => `
-    <div class="channel-card focusable min-w-[240px]" data-stream-id="${m.stream_id}">
-      <img src="${m.stream_icon || '/logo-icon.svg'}" class="channel-logo" onerror="this.src='/logo-icon.svg'">
-      <div class="channel-info truncate">
-        <h4 class="truncate">${escapeHtml(m.name)}</h4>
-        <p class="truncate">⭐ ${m.rating || '8.5'}</p>
+    <div class="poster-card focusable min-w-[160px] max-w-[160px]" data-stream-id="${m.stream_id}">
+      <div class="poster-cover-box">
+        <img src="${m.stream_icon || '/logo-icon.svg'}" class="poster-cover" loading="lazy" onerror="this.src='/logo-icon.svg'">
+        <span class="poster-badge">★ ${m.rating || '8.0'}</span>
+      </div>
+      <div class="poster-info">
+        <h4>${escapeHtml(m.name)}</h4>
+        <p>${m.release_date || m.year || 'Filme'}</p>
       </div>
     </div>
   `).join('');
+
+  container.querySelectorAll('.poster-card').forEach(card => {
+    card.onclick = () => {
+      const id = card.getAttribute('data-stream-id');
+      const stream = movies.find(x => String(x.stream_id) === String(id));
+      if (stream) playStream(stream, 'movie');
+    };
+  });
 }
 
-// ==============================================================================
-// 5. REPRODUTOR DE VÍDEO & OSD (HLS / MP4)
-// ==============================================================================
+function renderHomeSeriesRow(series) {
+  const container = document.getElementById('home-series-row');
+  container.innerHTML = series.map(s => `
+    <div class="poster-card focusable min-w-[160px] max-w-[160px]" data-series-id="${s.series_id}">
+      <div class="poster-cover-box">
+        <img src="${s.cover || '/logo-icon.svg'}" class="poster-cover" loading="lazy" onerror="this.src='/logo-icon.svg'">
+        <span class="poster-badge">★ ${s.rating || '8.5'}</span>
+      </div>
+      <div class="poster-info">
+        <h4>${escapeHtml(s.name)}</h4>
+        <p>Série</p>
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.poster-card').forEach(card => {
+    card.onclick = () => {
+      const id = card.getAttribute('data-series-id');
+      const item = series.find(x => String(x.series_id) === String(id));
+      if (item) openSeriesModal(item);
+    };
+  });
+}
+
+// =============================================================================
+// 5. MODAL DE SÉRIES (TEMPORADAS E EPISÓDIOS)
+// =============================================================================
+
+async function openSeriesModal(series) {
+  const modal = document.getElementById('modal-series-details');
+  document.getElementById('series-modal-title').innerText = series.name || 'Série';
+  document.getElementById('series-modal-cover').src = series.cover || '/logo-icon.svg';
+  document.getElementById('series-modal-desc').innerText = series.plot || 'Selecione uma temporada para ver os episódios disponíveis.';
+  modal.classList.remove('hidden');
+
+  setFocus(document.getElementById('btn-close-series-modal'));
+
+  const seasonsContainer = document.getElementById('series-seasons-list');
+  const episodesContainer = document.getElementById('series-episodes-list');
+  seasonsContainer.innerHTML = '<p class="text-xs text-gray-500">Carregando...</p>';
+  episodesContainer.innerHTML = '<p class="text-xs text-gray-500">Carregando episódios...</p>';
+
+  const details = await fetchXtream('get_series_info', `&series_id=${series.series_id}`);
+  if (!details || !details.episodes) {
+    episodesContainer.innerHTML = '<p class="text-xs text-red-400">Nenhum episódio encontrado para esta série.</p>';
+    return;
+  }
+
+  const seasonKeys = Object.keys(details.episodes).sort((a, b) => Number(a) - Number(b));
+  seasonsContainer.innerHTML = seasonKeys.map((s, idx) => `
+    <button class="focusable px-3 py-2 rounded-xl text-left text-xs font-bold border border-gray-800 ${idx === 0 ? 'bg-cyan-600 text-white' : 'bg-surface-800 text-gray-300'}" data-season="${s}">
+      Temporada ${s}
+    </button>
+  `).join('');
+
+  const renderEpisodesForSeason = (seasonKey) => {
+    const eps = details.episodes[seasonKey] || [];
+    episodesContainer.innerHTML = eps.map(ep => `
+      <div class="episode-card focusable" data-ep-id="${ep.id}">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-lg bg-surface-900 border border-gray-700 flex items-center justify-center font-bold text-xs text-cyan-400">
+            ${ep.episode_num || 'E'}
+          </span>
+          <div>
+            <h5 class="text-xs font-bold text-white">${escapeHtml(ep.title || `Episódio ${ep.episode_num}`)}</h5>
+            <p class="text-[10px] text-gray-400">${ep.info?.duration || ''}</p>
+          </div>
+        </div>
+        <button class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold">
+          ▶ Assistir
+        </button>
+      </div>
+    `).join('');
+
+    episodesContainer.querySelectorAll('.episode-card').forEach(card => {
+      card.onclick = () => {
+        const epId = card.getAttribute('data-ep-id');
+        const ep = eps.find(x => String(x.id) === String(epId));
+        if (ep) {
+          modal.classList.add('hidden');
+          playSeriesEpisode(ep, series);
+        }
+      };
+    });
+  };
+
+  if (seasonKeys.length > 0) {
+    renderEpisodesForSeason(seasonKeys[0]);
+  }
+
+  seasonsContainer.querySelectorAll('button').forEach(btn => {
+    btn.onclick = () => {
+      seasonsContainer.querySelectorAll('button').forEach(b => {
+        b.classList.remove('bg-cyan-600', 'text-white');
+        b.classList.add('bg-surface-800', 'text-gray-300');
+      });
+      btn.classList.add('bg-cyan-600', 'text-white');
+      btn.classList.remove('bg-surface-800', 'text-gray-300');
+      renderEpisodesForSeason(btn.getAttribute('data-season'));
+    };
+  });
+}
+
+function playSeriesEpisode(episode, series) {
+  if (!deviceState.playlist) return;
+  const { host, user, pass } = deviceState.playlist;
+  const cleanHost = host.replace(/\/+$/, '');
+  const ext = episode.container_extension || 'mp4';
+  const streamUrl = `${cleanHost}/series/${user}/${pass}/${episode.id}.${ext}`;
+
+  deviceState.activeStream = episode;
+  deviceState.nowPlaying = `${series.name} — Ep. ${episode.episode_num || ''}`;
+  deviceState.nowPlayingType = 'series';
+
+  document.getElementById('osd-channel-name').innerText = deviceState.nowPlaying;
+  document.getElementById('osd-channel-logo').src = series.cover || '/logo-icon.svg';
+  document.getElementById('player-container').classList.remove('hidden');
+
+  const video = document.getElementById('main-video');
+  video.style.objectFit = deviceState.aspectRatios[deviceState.aspectRatioIndex];
+
+  if (hlsPlayer) {
+    hlsPlayer.destroy();
+    hlsPlayer = null;
+  }
+  video.src = `/api/proxy?url=${encodeURIComponent(streamUrl)}`;
+  video.play().catch(() => {
+    video.src = streamUrl;
+    video.play().catch(() => {});
+  });
+
+  showOsd();
+  setFocus(document.getElementById('btn-osd-back'));
+}
+
+// =============================================================================
+// 6. REPRODUTOR DE VÍDEO & CONTROLES DO PLAYER (OSD)
+// =============================================================================
 
 function playStream(stream, type = 'live') {
   if (!deviceState.playlist) return;
   const { host, user, pass } = deviceState.playlist;
   const cleanHost = host.replace(/\/+$/, '');
-  
+
   deviceState.activeStream = stream;
-  deviceState.nowPlaying = stream.name || 'Canal';
+  deviceState.nowPlaying = stream.name || 'Canal ao Vivo';
   deviceState.nowPlayingType = type;
 
-  // Monta a URL de streaming Xtream
   let streamUrl = '';
   if (type === 'live') {
     streamUrl = `${cleanHost}/live/${user}/${pass}/${stream.stream_id}.m3u8`;
@@ -421,8 +702,7 @@ function playStream(stream, type = 'live') {
     streamUrl = `${cleanHost}/movie/${user}/${pass}/${stream.stream_id}.${ext}`;
   }
 
-  // Preenche dados do OSD
-  document.getElementById('osd-channel-name').innerText = stream.name || 'Canal ao Vivo';
+  document.getElementById('osd-channel-name').innerText = stream.name || 'Canal';
   document.getElementById('osd-channel-logo').src = stream.stream_icon || '/logo-icon.svg';
   document.getElementById('player-container').classList.remove('hidden');
 
@@ -431,26 +711,23 @@ function playStream(stream, type = 'live') {
 
   if (Hls.isSupported() && (streamUrl.endsWith('.m3u8') || type === 'live')) {
     if (hlsPlayer) hlsPlayer.destroy();
-    hlsPlayer = new Hls({
-      xhrSetup: (xhr, url) => {
-        // Redireciona requisições de fragmentos com proxy se necessário
-      }
-    });
-
-    // Se o servidor IPTV não suportar CORS no browser, usa o proxy
+    hlsPlayer = new Hls();
     hlsPlayer.loadSource(`/api/proxy?url=${encodeURIComponent(streamUrl)}`);
     hlsPlayer.attachMedia(video);
-    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
     hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
       if (data.fatal) {
-        // Fallback: tenta URL direta nativa
-        video.src = streamUrl;
+        // Fallback direto
+        video.src = `/api/proxy?url=${encodeURIComponent(streamUrl)}`;
         video.play().catch(() => {});
       }
     });
   } else {
-    video.src = streamUrl;
-    video.play().catch(() => {});
+    video.src = `/api/proxy?url=${encodeURIComponent(streamUrl)}`;
+    video.play().catch(() => {
+      video.src = streamUrl;
+      video.play().catch(() => {});
+    });
   }
 
   showOsd();
@@ -488,13 +765,12 @@ function toggleAspectRatio() {
   showOsd();
 }
 
-// ==============================================================================
-// 6. NAVEGAÇÃO ESPACIAL PARA CONTROLE REMOTO D-PAD (SAMSUNG / LG / TV BOX)
-// ==============================================================================
+// =============================================================================
+// 7. NAVEGAÇÃO ESPACIAL PARA CONTROLE REMOTO D-PAD
+// =============================================================================
 
 function setupDpadNavigation() {
   window.addEventListener('keydown', (e) => {
-    // Teclas de controle remoto (Samsung Tizen, LG webOS e Teclado PC)
     const isUp = (e.key === 'ArrowUp' || e.keyCode === 38);
     const isDown = (e.key === 'ArrowDown' || e.keyCode === 40);
     const isLeft = (e.key === 'ArrowLeft' || e.keyCode === 37);
@@ -502,7 +778,7 @@ function setupDpadNavigation() {
     const isEnter = (e.key === 'Enter' || e.keyCode === 13);
     const isBack = (e.key === 'Escape' || e.key === 'Backspace' || e.keyCode === 27 || e.keyCode === 10009 || e.keyCode === 461);
 
-    // Se o player estiver aberto
+    // Se o player estiver ativo
     if (!document.getElementById('player-container').classList.contains('hidden')) {
       showOsd();
       if (isBack) {
@@ -510,6 +786,14 @@ function setupDpadNavigation() {
         e.preventDefault();
         return;
       }
+    }
+
+    // Se o modal de séries estiver ativo
+    const seriesModal = document.getElementById('modal-series-details');
+    if (!seriesModal.classList.contains('hidden') && isBack) {
+      seriesModal.classList.add('hidden');
+      e.preventDefault();
+      return;
     }
 
     if (isBack) {
@@ -560,13 +844,13 @@ function navigateSpatial(current, up, down, left, right) {
     const dx = tCenter.x - currCenter.x;
     const dy = tCenter.y - currCenter.y;
 
-    let isValidDirection = false;
-    if (up && dy < -5 && Math.abs(dx) < Math.abs(dy) * 2) isValidDirection = true;
-    if (down && dy > 5 && Math.abs(dx) < Math.abs(dy) * 2) isValidDirection = true;
-    if (left && dx < -5 && Math.abs(dy) < Math.abs(dx) * 2) isValidDirection = true;
-    if (right && dx > 5 && Math.abs(dy) < Math.abs(dx) * 2) isValidDirection = true;
+    let isValid = false;
+    if (up && dy < -5 && Math.abs(dx) < Math.abs(dy) * 2.2) isValid = true;
+    if (down && dy > 5 && Math.abs(dx) < Math.abs(dy) * 2.2) isValid = true;
+    if (left && dx < -5 && Math.abs(dy) < Math.abs(dx) * 2.2) isValid = true;
+    if (right && dx > 5 && Math.abs(dy) < Math.abs(dx) * 2.2) isValid = true;
 
-    if (isValidDirection) {
+    if (isValid) {
       const dist = Math.hypot(dx, dy);
       if (dist < minDistance) {
         minDistance = dist;
@@ -588,12 +872,11 @@ function setFocus(element) {
   element.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
 }
 
-// ==============================================================================
-// 7. EVENTOS E NAVEGAÇÃO ENTRE ABAS
-// ==============================================================================
+// =============================================================================
+// 8. EVENTOS DE CLIQUE E NAVEGAÇÃO DE ABAS
+// =============================================================================
 
 function setupEventListeners() {
-  // Botões da sidebar
   document.querySelectorAll('.sidebar-btn').forEach(btn => {
     btn.onclick = () => {
       const tab = btn.getAttribute('data-tab');
@@ -601,25 +884,27 @@ function setupEventListeners() {
     };
   });
 
-  // Botões do Player OSD
   document.getElementById('btn-osd-back').onclick = closePlayer;
   document.getElementById('btn-osd-aspect').onclick = toggleAspectRatio;
   document.getElementById('btn-osd-reload').onclick = () => {
     if (deviceState.activeStream) playStream(deviceState.activeStream, deviceState.nowPlayingType);
   };
 
-  // Botão de verificar emparelhamento manual
   document.getElementById('btn-check-pairing').onclick = registerDevice;
-  
-  // Login Manual Xtream
+  document.getElementById('btn-close-series-modal').onclick = () => {
+    document.getElementById('modal-series-details').classList.add('hidden');
+  };
+
   document.getElementById('btn-manual-login').onclick = () => {
     document.getElementById('modal-manual-login').classList.remove('hidden');
     setFocus(document.getElementById('manual-host'));
   };
+
   document.getElementById('btn-cancel-manual').onclick = () => {
     document.getElementById('modal-manual-login').classList.add('hidden');
     setFocus(document.getElementById('btn-manual-login'));
   };
+
   document.getElementById('btn-save-manual').onclick = () => {
     const host = document.getElementById('manual-host').value.trim();
     const user = document.getElementById('manual-user').value.trim();
@@ -630,10 +915,15 @@ function setupEventListeners() {
     localStorage.setItem('korp_tv_manual_playlist', JSON.stringify(deviceState.playlist));
     document.getElementById('modal-manual-login').classList.add('hidden');
     showMainScreen();
-    loadXtreamContent();
+    loadAllContent();
   };
 
-  // Desconectar da Smart TV
+  document.getElementById('btn-reload-playlist').onclick = () => {
+    deviceState.vodCache = {};
+    deviceState.seriesCache = {};
+    loadAllContent();
+  };
+
   document.getElementById('btn-disconnect').onclick = () => {
     if (confirm('Deseja realmente desconectar esta Smart TV do portal?')) {
       localStorage.removeItem('korp_tv_manual_playlist');

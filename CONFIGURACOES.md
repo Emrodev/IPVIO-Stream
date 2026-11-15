@@ -119,15 +119,16 @@ PORTAL_PUBLIC_DOMAIN=https://seu-dominio.com
 ## 5. Aplicação Web & Smart TV (Samsung Tizen, LG webOS, Browsers)
 
 A aplicação **Korp TV Web** (`web-tv/`) replica fielmente a interface e o ecossistema do aplicativo Android TV:
-* **Porta Dedicada:** `3001` (acesso local: `http://localhost:3001`).
+* **Domínio Oficial de Acesso Web:** `https://playkorp.kabaweb.in`
+* **Porta Dedicada no Servidor:** `3001` (acesso local: `http://localhost:3001`).
 * **Navegação D-Pad / Controle Remoto:** Suporte nativo a Setas (Cima, Baixo, Esquerda, Direita), Enter/OK e Botão Voltar (Escape / Backspace / KeyCodes Tizen e webOS `10009` e `461`).
 * **Pareamento com o Portal:** Ao abrir, se ainda não estiver configurada, gera o código de vinculação e QR Code na tela da TV para ativação instantânea via portal (`/api/device/register` e `/api/device/heartbeat`).
-* **Player Integrado:** Hls.js com proxy reverso inteligente de streaming (`/api/proxy?url=...`) para contornar bloqueios de CORS de servidores IPTV.
+* **Player Integrado:** Hls.js com proxy reverso inteligente de streaming (`/api/proxy?url=...`) com suporte a redirecionamentos e cabeçalhos HTTP Range para contornar bloqueios de CORS de servidores IPTV.
 * **Empacotamento Smart TV:**
-  - **Samsung Tizen:** Manifesto pronto em `web-tv/tizen/config.xml` (Tizen Web Widget).
+  - **Samsung Tizen:** Manifesto pronto em `web-tv/tizen/config.xml` (Tizen Web Widget apontando para `https://playkorp.kabaweb.in`).
   - **LG webOS:** Manifesto pronto em `web-tv/webos/appinfo.json`.
 * **Execução via Docker:**
-  O serviço `webtv` já está integrado ao `docker-compose.yml` e ao pipeline do GitHub Actions para publicação automática em `ghcr.io/kabaweb/korp-webtv`.
+  O serviço `webtv` está integrado ao `docker-compose.yml` e ao pipeline do GitHub Actions para publicação automática em `ghcr.io/kabaweb/korp-webtv`.
 
 ---
 

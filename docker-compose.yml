@@ -60,6 +60,7 @@ services:
       - PORT=3001
       - PORTAL_URL=http://portal:3000
       - PUBLIC_PORTAL_URL=${PORTAL_PUBLIC_DOMAIN:-https://korp.kabaweb.in}
+      - PUBLIC_WEBTV_URL=${WEBTV_PUBLIC_URL:-https://playkorp.kabaweb.in}
     networks:
       - korp-network
 

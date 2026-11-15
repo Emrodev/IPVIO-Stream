@@ -8,6 +8,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const PORTAL_URL = process.env.PORTAL_URL || 'http://localhost:3000';
 const PUBLIC_PORTAL_URL = process.env.PUBLIC_PORTAL_URL || process.env.PORTAL_PUBLIC_DOMAIN || 'https://korp.kabaweb.in';
+const PUBLIC_WEBTV_URL = process.env.PUBLIC_WEBTV_URL || 'https://playkorp.kabaweb.in';
 
 app.use(cors());
 app.use(express.json());
@@ -20,12 +21,34 @@ app.get('/api/config', (req, res) => {
   res.json({
     portalUrl: PUBLIC_PORTAL_URL,
     localPortalUrl: PORTAL_URL,
+    webtvUrl: PUBLIC_WEBTV_URL,
     appName: 'Korp TV',
     version: '1.0.0-web'
   });
 });
 
-// Proxy leve de streaming e APIs para contornar restrições de CORS em servidores de IPTV
+// Helper para requisições seguindo redirecionamentos (301, 302, 307, 308)
+function requestWithRedirects(targetUrl, options, callback, maxRedirects = 5) {
+  if (maxRedirects <= 0) {
+    return callback(new Error('Muitos redirecionamentos'));
+  }
+
+  const parsed = new URL(targetUrl);
+  const client = parsed.protocol === 'https:' ? https : http;
+
+  const req = client.request(parsed, options, (res) => {
+    // Seguir redirecionamento
+    if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+      const redirectUrl = new URL(res.headers.location, targetUrl).href;
+      return requestWithRedirects(redirectUrl, options, callback, maxRedirects - 1);
+    }
+    callback(null, res);
+  });
+
+  return req;
+}
+
+// Proxy de dados e streaming de vídeo com suporte a Range e Redirecionamentos
 app.all('/api/proxy', (req, res) => {
   const targetUrl = req.query.url;
   if (!targetUrl) {
@@ -33,9 +56,6 @@ app.all('/api/proxy', (req, res) => {
   }
 
   try {
-    const parsed = new URL(targetUrl);
-    const client = parsed.protocol === 'https:' ? https : http;
-
     const options = {
       method: req.method,
       headers: {
@@ -48,12 +68,15 @@ app.all('/api/proxy', (req, res) => {
       options.headers['range'] = req.headers['range'];
     }
 
-    const proxyReq = client.request(parsed, options, (proxyRes) => {
+    const proxyReq = requestWithRedirects(targetUrl, options, (err, proxyRes) => {
+      if (err) {
+        return res.status(502).json({ error: 'Falha no servidor de IPTV: ' + err.message });
+      }
+
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Headers', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
 
-      // Propaga cabeçalhos importantes de vídeo
       if (proxyRes.headers['content-type']) res.setHeader('Content-Type', proxyRes.headers['content-type']);
       if (proxyRes.headers['content-length']) res.setHeader('Content-Length', proxyRes.headers['content-length']);
       if (proxyRes.headers['content-range']) res.setHeader('Content-Range', proxyRes.headers['content-range']);
@@ -64,7 +87,9 @@ app.all('/api/proxy', (req, res) => {
     });
 
     proxyReq.on('error', (err) => {
-      res.status(502).json({ error: 'Falha ao conectar no servidor de IPTV: ' + err.message });
+      if (!res.headersSent) {
+        res.status(502).json({ error: 'Erro de conexão: ' + err.message });
+      }
     });
 
     req.pipe(proxyReq);
