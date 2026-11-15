@@ -1,0 +1,15 @@
+{
+  "id": "com.kabaweb.korptv",
+  "version": "1.0.0",
+  "vendor": "Korp TV",
+  "type": "web",
+  "main": "index.html",
+  "title": "Korp TV",
+  "icon": "logo-icon.svg",
+  "largeIcon": "logo.svg",
+  "resolution": "1920x1080",
+  "bgColor": "#030712",
+  "requiredPermissions": [
+    "network"
+  ]
+}

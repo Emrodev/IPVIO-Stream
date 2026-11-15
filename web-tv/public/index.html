@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Korp TV</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css">
+  <!-- HLS.js para reprodução de streaming HLS em Smart TVs e navegadores -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <!-- QRCode.js para exibir o código de vinculação na tela -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-black text-white">
+
+  <!-- 1. TELA DE EMPARELHAMENTO / VINCULAÇÃO COM O PORTAL (Quando a TV ainda não tem lista configurada) -->
+  <div id="screen-pairing" class="screen flex-col items-center justify-center p-8 text-center">
+    <div class="pairing-card max-w-xl w-full p-8 rounded-3xl">
+      <div class="flex items-center justify-center gap-3 mb-4">
+        <img src="/logo.svg" alt="Korp TV" class="h-10">
+      </div>
+      <h2 class="text-2xl font-black text-white mb-2">Conecte sua Smart TV</h2>
+      <p class="text-sm text-gray-400 mb-6">No seu celular ou computador, acesse o portal para ativar este dispositivo:</p>
+
+      <div class="p-4 bg-surface-900 border border-cyan-500/30 rounded-2xl mb-6">
+        <p class="text-xs text-cyan-300 font-semibold mb-1">CÓDIGO DE VINCULAÇÃO DA TV</p>
+        <div id="pairing-code-display" class="pairing-code-badge select-all">--- ---</div>
+        <p id="portal-url-display" class="text-xs text-gray-400 font-mono">https://korp.kabaweb.in</p>
+      </div>
+
+      <div class="flex items-center justify-center p-3 bg-white rounded-2xl w-40 h-40 mx-auto mb-6 shadow-xl" id="pairing-qrcode"></div>
+
+      <div class="flex items-center justify-center gap-3">
+        <button id="btn-manual-login" class="focusable px-5 py-2.5 rounded-xl bg-surface-800 hover:bg-surface-700 text-xs font-bold text-gray-200 border border-gray-700">
+          Entrar com Usuário & Senha
+        </button>
+        <button id="btn-check-pairing" class="focusable px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white shadow-lg shadow-cyan-500/20">
+          Verificar Conexão
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LOGIN MANUAL XTREAM (Alternativa opcional à vinculação pelo portal) -->
+  <div id="modal-manual-login" class="screen hidden items-center justify-center bg-black/80 backdrop-blur-md z-50">
+    <div class="pairing-card max-w-md w-full p-6 space-y-4">
+      <h3 class="text-lg font-bold text-white text-left">Login Xtream Codes</h3>
+      <div class="space-y-3 text-left">
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Servidor (Host:Porta)</label>
+          <input type="text" id="manual-host" placeholder="http://servidor.com:80" class="focusable w-full bg-surface-800 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Usuário</label>
+          <input type="text" id="manual-user" placeholder="Seu usuário" class="focusable w-full bg-surface-800 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Senha</label>
+          <input type="password" id="manual-pass" placeholder="Sua senha" class="focusable w-full bg-surface-800 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="btn-cancel-manual" class="focusable px-4 py-2 rounded-xl bg-surface-800 text-xs text-gray-300">Voltar</button>
+        <button id="btn-save-manual" class="focusable px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white">Conectar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. APLICAÇÃO PRINCIPAL DA TV (LAYOUT IDÊNTICO AO ANDROID) -->
+  <div id="screen-main" class="screen hidden">
+
+    <!-- SIDEBAR RETRÁTIL (COM ÍCONES E EXPANSÃO NO FOCO) -->
+    <nav id="tv-sidebar" class="sidebar">
+      <div class="sidebar-brand mb-4 flex items-center justify-center">
+        <img src="/logo-icon.svg" alt="Korp TV" class="w-10 h-10">
+      </div>
+
+      <button id="side-home" class="sidebar-btn focusable active" data-tab="home" title="Início">
+        <span>🏠</span>
+        <span class="sidebar-label">Início</span>
+      </button>
+
+      <button id="side-live" class="sidebar-btn focusable" data-tab="live" title="TV ao Vivo">
+        <span>📺</span>
+        <span class="sidebar-label">TV ao Vivo</span>
+      </button>
+
+      <button id="side-movies" class="sidebar-btn focusable" data-tab="movies" title="Filmes">
+        <span>🎬</span>
+        <span class="sidebar-label">Filmes</span>
+      </button>
+
+      <button id="side-series" class="sidebar-btn focusable" data-tab="series" title="Séries">
+        <span>🎞️</span>
+        <span class="sidebar-label">Séries</span>
+      </button>
+
+      <button id="side-favs" class="sidebar-btn focusable" data-tab="favs" title="Favoritos">
+        <span>⭐</span>
+        <span class="sidebar-label">Favoritos</span>
+      </button>
+
+      <button id="side-search" class="sidebar-btn focusable" data-tab="search" title="Buscar">
+        <span>🔍</span>
+        <span class="sidebar-label">Buscar</span>
+      </button>
+
+      <div class="mt-auto flex flex-col gap-3">
+        <button id="side-settings" class="sidebar-btn focusable" data-tab="settings" title="Configurações">
+          <span>⚙️</span>
+          <span class="sidebar-label">Ajustes</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ÁREA DE CONTEÚDO PRINCIPAL -->
+    <main class="content-area">
+
+      <!-- ABA 1: INÍCIO (BILLBOARD HERO + FILEIRAS RECENTES & POPULARES) -->
+      <section id="tab-home" class="tab-pane active flex-col w-full h-full overflow-y-auto p-10 space-y-8">
+        <!-- Hero Billboard em Destaque -->
+        <div id="hero-billboard" class="hero-card relative rounded-3xl overflow-hidden p-8 flex flex-col justify-end shadow-2xl border border-gray-800">
+          <div class="hero-bg-overlay absolute inset-0"></div>
+          <div class="relative z-10 space-y-2 max-w-2xl">
+            <span class="px-2.5 py-1 rounded-md bg-cyan-600/30 text-cyan-300 font-bold text-xs uppercase tracking-wider border border-cyan-500/40">Destaque Korp TV</span>
+            <h1 id="hero-title" class="text-3xl font-black text-white">Carregando seus canais...</h1>
+            <p id="hero-desc" class="text-xs text-gray-300 line-clamp-2">Sua lista está pronta para assistir ao vivo em alta resolução com o player otimizado.</p>
+            <div class="pt-3 flex gap-3">
+              <button id="btn-hero-play" class="focusable px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs shadow-lg shadow-cyan-500/30 flex items-center gap-2">
+                <span>▶</span> Assistir Agora
+              </button>
+              <button id="btn-hero-guide" class="focusable px-5 py-2.5 rounded-xl bg-surface-800/80 hover:bg-surface-700 text-white font-semibold text-xs border border-gray-700">
+                Grade de Canais
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fileira: Canais Recentes / Favoritos -->
+        <div class="space-y-3">
+          <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+            <span>⭐</span> Canais Favoritos & Recentes
+          </h3>
+          <div id="home-favs-row" class="carousel-row flex gap-4 overflow-x-auto pb-4">
+            <!-- Cards preenchidos dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Fileira: Filmes em Alta -->
+        <div class="space-y-3">
+          <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+            <span>🍿</span> Filmes em Destaque
+          </h3>
+          <div id="home-movies-row" class="carousel-row flex gap-4 overflow-x-auto pb-4">
+            <!-- Cards preenchidos dinamicamente -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 2: TV AO VIVO (3 COLUNAS: CATEGORIAS, CANAIS E DETALHES/PREVIEW) -->
+      <section id="tab-live" class="tab-pane hidden w-full h-full flex">
+        <!-- Coluna 1: Categorias -->
+        <div class="category-pane">
+          <div class="category-header flex items-center justify-between">
+            <span>Categorias de TV</span>
+            <span id="live-cat-count" class="text-xs text-gray-500 font-mono">0</span>
+          </div>
+          <div id="live-categories-list" class="category-list">
+            <!-- Categorias renderizadas aqui -->
+          </div>
+        </div>
+
+        <!-- Coluna 2: Canais da Categoria -->
+        <div class="items-pane flex-1">
+          <div class="items-header">
+            <span id="current-category-title">Todos os Canais</span>
+            <span id="channel-count" class="text-xs text-gray-400 font-mono">0 canais</span>
+          </div>
+          <div id="live-channels-grid" class="items-grid">
+            <!-- Canais renderizados aqui -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 3: FILMES (VOD) -->
+      <section id="tab-movies" class="tab-pane hidden w-full h-full flex">
+        <div class="category-pane">
+          <div class="category-header">Gêneros de Filmes</div>
+          <div id="vod-categories-list" class="category-list"></div>
+        </div>
+        <div class="items-pane flex-1">
+          <div class="items-header">
+            <span id="vod-category-title">Filmes</span>
+            <span id="vod-count" class="text-xs text-gray-400 font-mono">0 filmes</span>
+          </div>
+          <div id="vod-items-grid" class="items-grid"></div>
+        </div>
+      </section>
+
+      <!-- ABA 4: SÉRIES -->
+      <section id="tab-series" class="tab-pane hidden w-full h-full flex">
+        <div class="category-pane">
+          <div class="category-header">Categorias de Séries</div>
+          <div id="series-categories-list" class="category-list"></div>
+        </div>
+        <div class="items-pane flex-1">
+          <div class="items-header">
+            <span id="series-category-title">Séries</span>
+            <span id="series-count" class="text-xs text-gray-400 font-mono">0 séries</span>
+          </div>
+          <div id="series-items-grid" class="items-grid"></div>
+        </div>
+      </section>
+
+      <!-- ABA 5: FAVORITOS -->
+      <section id="tab-favs" class="tab-pane hidden w-full h-full flex flex-col p-8">
+        <div class="items-header border-b border-gray-800 pb-4 mb-6">
+          <h2 class="text-2xl font-black text-white flex items-center gap-2">
+            <span>⭐</span> Meus Favoritos
+          </h2>
+        </div>
+        <div id="favs-items-grid" class="items-grid flex-1">
+          <!-- Favoritos salvos -->
+        </div>
+      </section>
+
+      <!-- ABA 6: BUSCAR -->
+      <section id="tab-search" class="tab-pane hidden w-full h-full flex flex-col p-8 space-y-6">
+        <div class="max-w-2xl w-full">
+          <label class="block text-xs font-semibold text-gray-400 mb-2 uppercase">Pesquisar Canal, Filme ou Série:</label>
+          <div class="flex gap-2">
+            <input type="text" id="search-input" placeholder="Digite o nome..." class="focusable w-full bg-surface-800 border border-gray-700 rounded-2xl px-4 py-3 text-white font-semibold text-sm">
+            <button id="btn-exec-search" class="focusable px-6 py-3 rounded-2xl bg-cyan-600 hover:bg-cyan-500 font-bold text-xs text-white">Buscar</button>
+          </div>
+        </div>
+        <div id="search-results-grid" class="items-grid flex-1"></div>
+      </section>
+
+      <!-- ABA 7: CONFIGURAÇÕES & DISPOSITIVO -->
+      <section id="tab-settings" class="tab-pane hidden w-full h-full flex flex-col p-10 max-w-4xl space-y-6 overflow-y-auto">
+        <h2 class="text-2xl font-black text-white border-b border-gray-800 pb-4">Ajustes & Informações da Smart TV</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Card de Conexão com o Portal -->
+          <div class="p-6 rounded-2xl bg-surface-900 border border-gray-800 space-y-3">
+            <h3 class="text-sm font-bold text-cyan-300">Conexão com o Portal Korp TV</h3>
+            <p class="text-xs text-gray-400">ID deste Aparelho: <span id="info-device-id" class="text-white font-mono font-bold select-all"></span></p>
+            <p class="text-xs text-gray-400">Código de Pareamento: <span id="info-pairing-code" class="text-cyan-400 font-mono font-bold select-all"></span></p>
+            <p class="text-xs text-gray-400">Servidor Portal: <span id="info-portal-url" class="text-white font-mono"></span></p>
+            <button id="btn-sync-portal" class="focusable px-4 py-2 rounded-xl bg-surface-800 hover:bg-surface-700 text-xs font-semibold text-gray-200 border border-gray-700">
+              🔄 Sincronizar com o Portal Agora
+            </button>
+          </div>
+
+          <!-- Card de Assinatura e Playlist -->
+          <div class="p-6 rounded-2xl bg-surface-900 border border-gray-800 space-y-3">
+            <h3 class="text-sm font-bold text-yellow-300">Dados da Playlist Ativa</h3>
+            <p class="text-xs text-gray-400">Servidor IPTV: <span id="info-iptv-host" class="text-white font-mono"></span></p>
+            <p class="text-xs text-gray-400">Usuário: <span id="info-iptv-user" class="text-white font-mono font-bold"></span></p>
+            <p class="text-xs text-gray-400">Tipo de Lista: <span id="info-iptv-type" class="text-cyan-300 font-semibold uppercase"></span></p>
+            <button id="btn-reload-playlist" class="focusable px-4 py-2 rounded-xl bg-cyan-600/30 hover:bg-cyan-600 text-cyan-300 hover:text-white text-xs font-semibold border border-cyan-500/40">
+              ⚡ Recarregar Grade de Canais
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-gray-800">
+          <button id="btn-disconnect" class="focusable px-5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold border border-red-500/40 transition">
+            Desconectar Esta Smart TV
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- 3. REPRODUTOR EM TELA CHEIA (PLAYER COM OSD COMPLETO) -->
+  <div id="player-container" class="hidden">
+    <video id="main-video" autoplay playsinline></video>
+
+    <!-- OSD (On-Screen Display que surge no controle remoto e some após 4 segundos) -->
+    <div id="player-osd" class="player-osd">
+      <div class="flex items-center gap-4">
+        <button id="btn-osd-back" class="focusable osd-btn" title="Voltar (Esc / Voltar)">
+          <span>⬅</span> Voltar
+        </button>
+        <img id="osd-channel-logo" src="" alt="" class="w-12 h-12 object-contain bg-black/50 rounded-xl p-1">
+        <div class="osd-info">
+          <h2 id="osd-channel-name">Nome do Canal</h2>
+          <p id="osd-program-name">Reproduzindo ao vivo em alta resolução</p>
+        </div>
+      </div>
+
+      <div class="osd-controls">
+        <button id="btn-osd-fav" class="focusable osd-btn" title="Favoritar">
+          <span>⭐</span> Favorito
+        </button>
+        <button id="btn-osd-aspect" class="focusable osd-btn" title="Proporção da Tela">
+          <span>📐</span> <span id="osd-aspect-label">Ajustar</span>
+        </button>
+        <button id="btn-osd-reload" class="focusable osd-btn" title="Recarregar Sinal">
+          <span>🔄</span> Recarregar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

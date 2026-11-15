@@ -45,6 +45,24 @@ services:
     networks:
       - korp-network
 
+  webtv:
+    build:
+      context: ./web-tv
+      dockerfile: Dockerfile
+    image: ghcr.io/kabaweb/korp-webtv:latest
+    container_name: korp-webtv
+    restart: unless-stopped
+    depends_on:
+      - portal
+    ports:
+      - "${WEBTV_PORT:-3001}:3001"
+    environment:
+      - PORT=3001
+      - PORTAL_URL=http://portal:3000
+      - PUBLIC_PORTAL_URL=${PORTAL_PUBLIC_DOMAIN:-https://korp.kabaweb.in}
+    networks:
+      - korp-network
+
 volumes:
   pgdata:
 

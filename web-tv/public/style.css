@@ -1,0 +1,283 @@
+/* Korp TV Web & Smart TV Theme */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  background-color: #030712;
+  color: #f3f4f6;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Indicador de Foco para Controle Remoto D-Pad */
+.focusable {
+  outline: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.focusable:focus,
+.focusable.focused {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px #06b6d4, 0 10px 25px -5px rgba(6, 182, 212, 0.4);
+  border-color: #06b6d4 !important;
+  z-index: 10;
+}
+
+/* Telas principais */
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Tela de Emparelhamento / Vinculação */
+#screen-pairing {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #082f49 0%, #030712 70%);
+  text-align: center;
+}
+
+.pairing-card {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 28px;
+  padding: 48px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+.pairing-code-badge {
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: #22d3ee;
+  background: #020617;
+  border: 2px dashed #06b6d4;
+  border-radius: 20px;
+  padding: 16px 32px;
+  display: inline-block;
+  margin: 24px 0;
+  font-family: monospace;
+}
+
+/* Layout Principal (Sidebar + Conteúdo) */
+.sidebar {
+  width: 90px;
+  background: #090e1a;
+  border-right: 1px solid #1f2937;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0;
+  gap: 16px;
+  z-index: 20;
+  transition: width 0.2s ease;
+}
+
+.sidebar:hover, .sidebar.expanded {
+  width: 220px;
+}
+
+.sidebar-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.sidebar-btn.active, .sidebar-btn:focus, .sidebar-btn.focused {
+  background: #0891b2;
+  color: #ffffff;
+  border-color: #22d3ee;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.category-pane {
+  width: 320px;
+  background: #0d1527;
+  border-right: 1px solid #1f2937;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.category-header {
+  padding: 24px 20px 16px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #22d3ee;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #1f2937;
+}
+
+.category-list, .items-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #06b6d4 transparent;
+}
+
+.category-item {
+  padding: 14px 18px;
+  border-radius: 14px;
+  margin-bottom: 8px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.category-item.active, .category-item:focus, .category-item.focused {
+  background: #0e7490;
+  color: #ffffff;
+}
+
+.items-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #030712;
+}
+
+.items-header {
+  padding: 20px 24px;
+  font-size: 20px;
+  font-weight: 800;
+  border-bottom: 1px solid #1f2937;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  padding: 24px;
+}
+
+.channel-card {
+  background: #0f172a;
+  border: 1px solid #1f2937;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.channel-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #1e293b;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.channel-info h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.channel-info p {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Player em Tela Cheia e OSD */
+#player-container {
+  position: fixed;
+  inset: 0;
+  background: #000000;
+  z-index: 100;
+}
+
+#main-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.player-osd {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 40px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: opacity 0.3s ease;
+}
+
+.osd-info h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.osd-info p {
+  font-size: 14px;
+  color: #22d3ee;
+  margin-top: 4px;
+}
+
+.osd-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.osd-btn {
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.osd-btn:focus, .osd-btn.focused {
+  background: #06b6d4;
+  color: #000000;
+}
