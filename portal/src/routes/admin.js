@@ -106,7 +106,7 @@ const upload = multer({
 
 // 1. Rota de Login (Pública com proteção contra força bruta)
 router.post('/login', loginLimiter, (req, res) => {
-  const { username, password } = req.body;
+  const { username, password } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ success: false, error: 'Usuário e senha são obrigatórios.' });
   }
