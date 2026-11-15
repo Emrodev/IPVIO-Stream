@@ -30,6 +30,8 @@ let hlsPlayer = null;
 let mpegtsPlayer = null;
 let osdTimer = null;
 let heartbeatInterval = null;
+let playbackWatchdogTimer = null;
+let errorCountdownTimer = null;
 
 // =============================================================================
 // 1. INICIALIZAÇÃO E IDENTIDADE DA SMART TV
@@ -698,24 +700,41 @@ function playStream(stream, type = 'live') {
   deviceState.nowPlaying = stream.name || 'Canal';
   deviceState.nowPlayingType = type;
 
-  // Limpa instâncias anteriores de players
+  // Limpa instâncias anteriores de players e timers
   destroyActivePlayers();
+
+  // Oculta tela de erro anterior
+  document.getElementById('player-error-overlay').classList.add('hidden');
 
   document.getElementById('osd-channel-name').innerText = stream.name || 'Canal';
   document.getElementById('osd-channel-logo').src = stream.stream_icon || '/logo-icon.svg';
   document.getElementById('osd-program-name').innerText = 'Conectando ao canal...';
+  document.getElementById('osd-program-time').innerText = '';
+  document.getElementById('osd-epg-progress').style.width = '0%';
+  document.getElementById('osd-next-program').innerText = '';
   document.getElementById('player-container').classList.remove('hidden');
 
   const video = document.getElementById('main-video');
   video.style.objectFit = deviceState.aspectRatios[deviceState.aspectRatioIndex];
 
+  // Inicia Watchdog de 8 segundos para evitar travamento em tela preta
+  startPlaybackWatchdog(stream, type);
+
   video.onplaying = () => {
-    document.getElementById('osd-program-name').innerText = (type === 'live' ? 'Ao Vivo • Reproduzindo' : 'Reproduzindo Conteúdo');
+    clearPlaybackWatchdog();
+    document.getElementById('player-error-overlay').classList.add('hidden');
+    if (type === 'live') {
+      loadEpgForChannel(stream.stream_id);
+    } else {
+      document.getElementById('osd-program-name').innerText = 'Reproduzindo Conteúdo';
+    }
   };
 
   video.onerror = () => {
     if (type === 'live') {
       tryPlayMpegtsFallback(cleanHost, user, pass, stream.stream_id);
+    } else {
+      triggerPlaybackError('Falha ao reproduzir o arquivo de mídia.');
     }
   };
 
@@ -727,12 +746,122 @@ function playStream(stream, type = 'live') {
     video.src = `/api/proxy?url=${encodeURIComponent(movieUrl)}`;
     video.play().catch(() => {
       video.src = movieUrl;
-      video.play().catch(() => {});
+      video.play().catch(() => triggerPlaybackError('Não foi possível iniciar o filme/série.'));
     });
   }
 
   showOsd();
   setFocus(document.getElementById('btn-player-back'));
+}
+
+// Watchdog de reprodução (se em 8s não reproduzir dados reais, aciona tela de erro)
+function startPlaybackWatchdog(stream, type) {
+  clearPlaybackWatchdog();
+  playbackWatchdogTimer = setTimeout(() => {
+    const video = document.getElementById('main-video');
+    if (!video || video.paused || video.currentTime === 0) {
+      console.warn('[Watchdog Triggered] Canal não reproduziu em 8s');
+      triggerPlaybackError('Sinal do canal indisponível ou offline no momento.');
+    }
+  }, 8500);
+}
+
+function clearPlaybackWatchdog() {
+  if (playbackWatchdogTimer) {
+    clearTimeout(playbackWatchdogTimer);
+    playbackWatchdogTimer = null;
+  }
+}
+
+function triggerPlaybackError(msg) {
+  clearPlaybackWatchdog();
+  destroyActivePlayers();
+
+  const overlay = document.getElementById('player-error-overlay');
+  document.getElementById('error-desc').innerText = msg || 'Não foi possível carregar a transmissão deste canal.';
+  overlay.classList.remove('hidden');
+
+  let seconds = 8;
+  const countdownEl = document.getElementById('error-countdown');
+  if (countdownEl) countdownEl.innerText = seconds;
+
+  if (errorCountdownTimer) clearInterval(errorCountdownTimer);
+  errorCountdownTimer = setInterval(() => {
+    seconds--;
+    if (countdownEl) countdownEl.innerText = seconds;
+    if (seconds <= 0) {
+      clearInterval(errorCountdownTimer);
+      errorCountdownTimer = null;
+      closePlayer();
+    }
+  }, 1000);
+
+  setFocus(document.getElementById('btn-error-back'));
+}
+
+// =============================================================================
+// EPG (GUIA DE PROGRAMAÇÃO ELETRÔNICA DO CANAL)
+// =============================================================================
+
+function decodeEpgText(str) {
+  if (!str) return '';
+  try {
+    const decoded = atob(str);
+    if (decoded && !/[\ufffd]/.test(decoded) && decoded.length > 2) {
+      return decoded;
+    }
+  } catch (_) {}
+  return str;
+}
+
+function formatEpgTime(timestamp) {
+  if (!timestamp) return '';
+  const d = new Date(Number(timestamp) * 1000);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+async function loadEpgForChannel(streamId) {
+  try {
+    const data = await fetchXtream('get_short_epg', `&stream_id=${streamId}&limit=6`);
+    if (!data || !Array.isArray(data.epg_listings) || data.epg_listings.length === 0) {
+      document.getElementById('osd-program-name').innerText = 'Ao Vivo • Programação não fornecida';
+      return;
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const listings = data.epg_listings.map(item => ({
+      title: decodeEpgText(item.title),
+      desc: decodeEpgText(item.description),
+      start: Number(item.start_timestamp),
+      stop: Number(item.stop_timestamp)
+    })).filter(x => x.start && x.stop).sort((a, b) => a.start - b.start);
+
+    // Encontra o programa que está passando agora
+    const current = listings.find(x => nowSec >= x.start && nowSec < x.stop);
+    const next = current ? listings.find(x => x.start >= current.stop) : listings[0];
+
+    if (current) {
+      document.getElementById('osd-program-name').innerText = current.title;
+      document.getElementById('osd-program-time').innerText = `${formatEpgTime(current.start)} – ${formatEpgTime(current.stop)}`;
+
+      const total = current.stop - current.start;
+      const progress = total > 0 ? Math.min(100, Math.max(0, ((nowSec - current.start) / total) * 100)) : 0;
+      document.getElementById('osd-epg-progress').style.width = `${progress}%`;
+    } else {
+      document.getElementById('osd-program-name').innerText = 'Ao Vivo';
+      document.getElementById('osd-program-time').innerText = '';
+      document.getElementById('osd-epg-progress').style.width = '100%';
+    }
+
+    if (next) {
+      document.getElementById('osd-next-program').innerText = `A seguir: ${next.title} (${formatEpgTime(next.start)})`;
+    } else {
+      document.getElementById('osd-next-program').innerText = '';
+    }
+  } catch (err) {
+    console.warn('[EPG Error]', err);
+    document.getElementById('osd-program-name').innerText = 'Ao Vivo';
+  }
 }
 
 // Reprodução de canais ao vivo (HLS com fallback automático para MPEG-TS)
@@ -808,6 +937,11 @@ function tryPlayMpegtsFallback(host, user, pass, streamId) {
 }
 
 function destroyActivePlayers() {
+  clearPlaybackWatchdog();
+  if (errorCountdownTimer) {
+    clearInterval(errorCountdownTimer);
+    errorCountdownTimer = null;
+  }
   const video = document.getElementById('main-video');
   if (hlsPlayer) {
     try { hlsPlayer.destroy(); } catch (_) {}
@@ -1110,6 +1244,13 @@ function setupEventListeners() {
   document.getElementById('btn-osd-reload').onclick = () => {
     if (deviceState.activeStream) playStream(deviceState.activeStream, deviceState.nowPlayingType);
   };
+
+  // Botões do Card de Erro
+  document.getElementById('btn-error-back').onclick = closePlayer;
+  document.getElementById('btn-error-retry').onclick = () => {
+    if (deviceState.activeStream) playStream(deviceState.activeStream, deviceState.nowPlayingType);
+  };
+  document.getElementById('btn-error-next').onclick = playNextChannel;
 
   document.getElementById('btn-check-pairing').onclick = registerDevice;
   document.getElementById('btn-close-series-modal').onclick = () => {
