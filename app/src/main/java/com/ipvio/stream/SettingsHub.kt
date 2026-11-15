@@ -1285,10 +1285,8 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
                 PlaylistStore.setShown(ctx, i, false)
                 scope.launch { PlaylistStore.applyMulti(ctx) }
             }
-            if (!isActive) SmallPill("Zur Hauptliste machen") {
-                PlaylistStore.activate(ctx, i)
-                scope.launch { PlaylistStore.load(ctx, pl.url, false) }
-            }
+            // Same as the playlist switch in Live TV: from the stored copy, without a new download
+            if (!isActive) SmallPill("Zur Hauptliste machen") { PlaylistStore.switchAsync(ctx, i) }
             // Content mode (Wishbox): Live TV + VOD / Live TV only / VOD only, cycles on OK
             val mode = remember(PlaylistMode.version, pl.url) { PlaylistMode.get(ctx, pl.url) }
             SmallPill(PlaylistMode.labels[mode]) {

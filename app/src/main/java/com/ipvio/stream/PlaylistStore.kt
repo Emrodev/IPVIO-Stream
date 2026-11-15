@@ -901,8 +901,9 @@ object PlaylistStore {
     }
 
     /**
-     * Switch playlist (Live TV, without settings): makes [i] the active playlist and immediately shows the cache
-     * of the new playlist; then it is refreshed from the server. The old display is discarded, otherwise it would stay visible.
+     * Switch playlist (Live TV, header, settings): makes [i] the active playlist and shows the copy stored on the device;
+     * the server is only asked when there is no stored copy yet. The old list is dropped first: keeping both lists in memory
+     * at once ran weak devices (Fire TV Stick) out of memory.
      */
     suspend fun switchTo(c: Context, i: Int) {
         ensure(c)
@@ -915,7 +916,9 @@ object PlaylistStore {
         primaryItems = emptyList(); primaryUrl = null
         merged = MultiLogic.Merged(emptyList(), emptySet(), emptyMap()); sourceNames = emptyList()
         setItems(emptyList())
-        load(c, lists[i].url, false)
+        // Read the playlist stored on the device; download only when there is none yet (a switch back must not reload
+        // the whole list from the server). Refreshing follows the refresh plan at app start or "Refresh" in the settings.
+        load(c, lists[i].url, false, skipNetworkWhenCached = true)
     }
 
     /**
@@ -943,7 +946,7 @@ object PlaylistStore {
             if (i !in lists.indices || loadLock.isLocked) return@launch
             val wasActive = i == active
             remove(app, i)
-            if (wasActive && lists.isNotEmpty()) load(app, lists[active].url, false)
+            if (wasActive && lists.isNotEmpty()) switchTo(app, active)
         }
     }
 
