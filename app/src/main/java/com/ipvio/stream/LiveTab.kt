@@ -187,6 +187,27 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     }
     var askDelete by remember { mutableStateOf(false) }
     val catState = remember { LazyListState() }
+    // Issue 15: Right (like OK) on a category enters the channel list. The first row is not composed when the list is still
+    // scrolled from another category; then scroll to the top first and focus it once it is laid out.
+    fun enterChannels() {
+        if (runCatching { firstChan.requestFocus() }.isSuccess) return
+        plScope.launch {
+            runCatching { chanState.scrollToItem(0) }
+            repeat(10) { kotlinx.coroutines.delay(30); if (runCatching { firstChan.requestFocus() }.isSuccess) return@launch }
+        }
+    }
+    // Issue 14: Left from the channel list goes back to the chosen category, not to whatever row is next to the focused channel.
+    // The chosen row may be scrolled out of the category column: bring it into view first. False = let the default handle it.
+    fun backToCategory(): Boolean {
+        val idx = names.indexOf(sel)
+        if (idx < 0) return false
+        if (catState.layoutInfo.visibleItemsInfo.any { it.index == idx } && runCatching { ContentFocus.req.requestFocus() }.isSuccess) return true
+        plScope.launch {
+            runCatching { catState.scrollToItem(maxOf(idx - 3, 0)) }
+            repeat(10) { kotlinx.coroutines.delay(30); if (runCatching { ContentFocus.req.requestFocus() }.isSuccess) return@launch }
+        }
+        return true
+    }
     var ask by remember { mutableStateOf<NameAsk?>(null) }
     SideEffect { ContentFocus.tab = 3 }
     // Selection points to a deleted list: back to "All channels"
@@ -336,10 +357,10 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         CatRow(
                             label, count, n == sel,
                             if (n == sel) Modifier.focusRequester(ContentFocus.req) else Modifier,
-                            onFocus = { sel = n }, onRight = { runCatching { firstChan.requestFocus() } },
+                            onFocus = { sel = n }, onRight = { enterChannels() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null
-                        ) { runCatching { firstChan.requestFocus() } }
+                        ) { enterChannels() }
                         // Menu of a provider category: favorite on/off, hide, move, sorting of all categories
                         var sortMenu by remember { mutableStateOf(false) }
                         // Menu of a genre category (Sports, Movies, ...): hide
@@ -426,7 +447,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     state = chanState,
                     // Held Down/Up key: at most ~9 steps per second, so a weak box is not flooded with scroll animations and rebinds
                     modifier = Modifier.onPreviewKeyEvent { e ->
-                        if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
+                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && e.nativeKeyEvent.repeatCount == 0 && backToCategory()) true
+                        else if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
                             val now = android.os.SystemClock.uptimeMillis()
                             LiveHold.lastRepeat = now
                             if (now - LiveHold.lastStep < 110) true else { LiveHold.lastStep = now; false }
