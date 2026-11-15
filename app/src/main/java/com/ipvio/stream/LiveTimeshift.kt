@@ -31,6 +31,9 @@ object LiveSettings {
     /** Minutes of overrun after the end of the show according to the TV guide. */
     var recPad by mutableIntStateOf(3)
         private set
+    /** Auto-record favorite channels when watching (using local buffer, 0 extra server connections). */
+    var autoRecFavs by mutableStateOf(false)
+        private set
     private var inited = false
 
     fun init(c: Context) {
@@ -41,15 +44,18 @@ object LiveSettings {
         bufferMb = p.getInt("mb", 512).takeIf { it in BUFFER_MB } ?: 512
         recDir = p.getInt("dir", 0).coerceAtLeast(0)
         recPad = p.getInt("pad", 3).coerceIn(0, 30)
+        autoRecFavs = p.getBoolean("auto_favs", false)
     }
 
     private fun save(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-        .putBoolean("ts", timeshift).putInt("mb", bufferMb).putInt("dir", recDir).putInt("pad", recPad).apply()
+        .putBoolean("ts", timeshift).putInt("mb", bufferMb).putInt("dir", recDir).putInt("pad", recPad)
+        .putBoolean("auto_favs", autoRecFavs).apply()
 
     fun setTimeshift(c: Context, v: Boolean) { timeshift = v; save(c) }
     fun setBufferMb(c: Context, v: Int) { bufferMb = v; save(c) }
     fun setRecDir(c: Context, v: Int) { recDir = v; save(c) }
     fun setRecPad(c: Context, v: Int) { recPad = v; save(c) }
+    fun setAutoRecFavs(c: Context, v: Boolean) { autoRecFavs = v; save(c) }
 }
 
 /**

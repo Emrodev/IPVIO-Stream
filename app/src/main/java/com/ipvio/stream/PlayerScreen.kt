@@ -799,6 +799,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             h.removeCallbacksAndMessages(null)
             player.removeListener(l)
             player.release()
+            Recorder.stopAutoExcept(ctx, null)
             // Release the buffer (a running recording keeps holding it)
             LiveTimeshift.stop()
         }
@@ -865,6 +866,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         if (cur.live) bannerTick++
         scrubTarget = -1L
         liveEnds = 0
+        // Stop any background auto-recordings on other channels so IPTV provider connection limit is never exceeded
+        Recorder.stopAutoExcept(ctx, if (cur.live) cur.itemId else null)
         // Recording of another channel keeps running: this needs a second connection to the provider
         if (cur.live && Recorder.active.any { it.running && it.channelId != cur.itemId }) notice = "Aufnahme läuft weiter – dafür braucht dein Anbieter 2 gleichzeitige Verbindungen"
         val loaded = player.currentMediaItem?.localConfiguration?.uri?.toString()
@@ -875,7 +878,9 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             return@LaunchedEffect
         }
         resolvedUrl = playUrl
-        if (cur.live && cur.archive == null && (LiveTimeshift.wanted(playUrl) || Recorder.isRecording(cur.itemId))) {
+        val shouldBuffer = LiveTimeshift.wanted(playUrl) || Recorder.isRecording(cur.itemId) ||
+            (LiveSettings.autoRecFavs && Library.isFav(cur.itemId) && TapLogic.tappable(playUrl))
+        if (cur.live && cur.archive == null && shouldBuffer) {
             // Live via the buffer on the device (rewind; with a running recording the same connection)
             if (!LiveTimeshift.start(ctx, player, playUrl)) {
                 LiveTimeshift.stop()
@@ -887,6 +892,17 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             // Unknown format (e.g. without a matching module): notice instead of a crash
             val item = if (cur.live) null else SubSearch.item(ctx, playUrl, subKey())
             if (!openStream(player, playUrl, if (cur.startMs > 0) cur.startMs else 0L, item)) { msg = PlayerLogic.MSG_FORMAT; buffering = false }
+        }
+        // Auto-record favorite channel if enabled (waits 15s so quick zapping does not start recording)
+        if (cur.live && LiveSettings.autoRecFavs && Library.isFav(cur.itemId) && !Recorder.isRecording(cur.itemId)) {
+            delay(15_000)
+            if (cur.live && Library.isFav(cur.itemId) && !Recorder.isRecording(cur.itemId) && player.isPlaying) {
+                val t = LiveTimeshift.tap
+                val ch = curItem
+                if (t != null && ch != null) {
+                    Recorder.start(ctx, ch, Epg.current(epg), t, auto = true)
+                }
+            }
         }
     }
     LaunchedEffect(Unit) {
