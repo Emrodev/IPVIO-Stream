@@ -121,14 +121,36 @@ PORTAL_PUBLIC_DOMAIN=https://seu-dominio.com
 A aplicação **Korp TV Web** (`web-tv/`) replica fielmente a interface e o ecossistema do aplicativo Android TV:
 * **Domínio Oficial de Acesso Web:** `https://playkorp.kabaweb.in`
 * **Porta Dedicada no Servidor:** `3001` (acesso local: `http://localhost:3001`).
-* **Navegação D-Pad / Controle Remoto:** Suporte nativo a Setas (Cima, Baixo, Esquerda, Direita), Enter/OK e Botão Voltar (Escape / Backspace / KeyCodes Tizen e webOS `10009` e `461`).
-* **Pareamento com o Portal:** Ao abrir, se ainda não estiver configurada, gera o código de vinculação e QR Code na tela da TV para ativação instantânea via portal (`/api/device/register` e `/api/device/heartbeat`).
-* **Player Integrado:** Hls.js com proxy reverso inteligente de streaming (`/api/proxy?url=...`) com suporte a redirecionamentos e cabeçalhos HTTP Range para contornar bloqueios de CORS de servidores IPTV.
+* **Navegação D-Pad / Controle Remoto:**
+  - Suporte nativo a Setas (Cima, Baixo, Esquerda, Direita), Enter/OK e Botão Voltar (Escape / Backspace / KeyCodes Tizen `10009` e webOS `461`).
+  - Durante o vídeo em tela cheia: Seta Cima/Baixo troca de canal, Espaço pausa/despausa, Enter ou toque/mouse acorda o OSD, Escape/Back fecha o player na hora.
+* **Guia de Programação (EPG) e Linha do Tempo:**
+  - Consulta automática em tempo real ao `get_short_epg` da API Xtream com decodificação Base64.
+  - Exibe no OSD o programa atual, horário (`20:30 – 21:30`), barra de progresso em tempo real e a próxima atração (`A seguir: ...`).
+* **Watchdog de Reprodução e Tratamento de Canais Offline:**
+  - Fim da tela preta: Se um canal não responder em até 8,5 segundos, exibe card de erro com opções: *Voltar*, *Tentar de Novo*, *Próximo Canal* e contagem regressiva de 8 segundos para auto-retorno à lista.
+* **Player Universal de Vídeo:**
+  - **HLS.js:** Com reescrita transparente de manifestos `.m3u8` no proxy para impedir bloqueios de Mixed Content (HTTPS -> HTTP) e CORS nos chunks de vídeo.
+  - **mpegts.js:** Demuxing em tempo real de fluxos contínuos MPEG-TS (`.ts`) para servidores IPTV sem HLS ativo.
+  - **Proxy Reverso Inteligente (`/api/proxy?url=...`):** Suporte a redirecionamentos HTTP (301/302) e cabeçalhos HTTP Range.
+* **Interface Imersiva (Zero Scrollbars):**
+  - Barras de rolagem nativas ocultadas via CSS global (`scrollbar-width: none`), garantindo estética 100% de Smart TV em qualquer navegador.
 * **Empacotamento Smart TV:**
   - **Samsung Tizen:** Manifesto pronto em `web-tv/tizen/config.xml` (Tizen Web Widget apontando para `https://playkorp.kabaweb.in`).
   - **LG webOS:** Manifesto pronto em `web-tv/webos/appinfo.json`.
 * **Execução via Docker:**
   O serviço `webtv` está integrado ao `docker-compose.yml` e ao pipeline do GitHub Actions para publicação automática em `ghcr.io/kabaweb/korp-webtv`.
+
+---
+
+## 6. Próximos Passos (Backlog para Continuação)
+
+1. **Ajuste Fino de Layout Smart TV:**
+   - Testar o comportamento específico no navegador nativo de TVs Samsung Tizen e LG webOS com o ponteiro do controle (Magic Remote).
+2. **Grade EPG Completa (TV Guide em Grade Horária):**
+   - Implementar tela de grade com múltiplos canais na mesma linha do tempo (grade completa estilo TV por assinatura).
+3. **Histórico e Favoritos Sincronizados:**
+   - Sincronização em nuvem dos favoritos e "Continuar Assistindo" entre o app Android TV e o Web TV via portal.
 
 ---
 
