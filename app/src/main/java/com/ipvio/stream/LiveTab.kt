@@ -89,7 +89,7 @@ private object LiveRecCache {
 private fun FocusedBackdrop(focused: State<Item?>, modifier: Modifier) { LiveBackdrop(focused.value, modifier) }
 
 @Composable
-private fun FocusedNowPanel(focused: State<Item?>, fallback: Item?) { LiveNowPanel(focused.value ?: fallback) }
+private fun FocusedNowPanel(focused: State<Item?>, fallback: Item?, compact: Boolean = false) { LiveNowPanel(focused.value ?: fallback, compact = compact) }
 
 @Composable
 fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: List<Item>, onOpen: (Item) -> Unit, onPlayNow: (Item) -> Unit = onOpen) {
@@ -431,7 +431,6 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     PillButton("Fertig", light = true) { finishAdd() }
                 }
-                if (sel == "SEARCH") Field(query, { query = it.take(40) }, "Sendername eingeben", Modifier.padding(bottom = 12.dp), inner = Modifier.focusRequester(searchReq))
                 if (list.isEmpty()) EmptyState(
                     if (sel == FAV_CAT) AIcon.Heart else AIcon.Live,
                     if (sel == FAV_CAT) "Noch keine Favoriten" else if (sel == "SEARCH") (if (query.isBlank()) "Sender suchen" else "Keine Treffer") else if (curList != null) "Diese Liste ist noch leer" else "Keine Sender",
@@ -480,23 +479,30 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                 }
             }
             // Right: what is on the selected channel
-            Box(Modifier.weight(1.1f).fillMaxHeight().padding(start = dpx(30), end = dpx(60), top = dpx(150))) {
+            Box(Modifier.weight(1.1f).fillMaxHeight().padding(start = dpx(30), end = dpx(60), top = dpx(if (sel == "SEARCH") 70 else 150))) {
                 if (sel == "SEARCH") Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f).fillMaxWidth()) { FocusedNowPanel(focusedState, list.firstOrNull()) }
+                    // Compact info on top, then the input field directly above the keyboard (the field has room, the info is smaller)
+                    Box(Modifier.weight(1f).fillMaxWidth()) { FocusedNowPanel(focusedState, list.firstOrNull(), compact = true) }
                     Spacer(Modifier.height(10.dp))
                     // Setting "device keyboard" (Wishbox): a normal text field opens Gboard & co. (all languages, voice input)
                     if (AppSettings.systemKeyboard) Field(
                         query, { query = it.take(40) }, "Sender suchen",
                         Modifier.fillMaxWidth().padding(bottom = dpx(24)), inner = Modifier.focusRequester(kbFirst)
-                    ) else SearchKeyboard(
-                        Modifier.fillMaxWidth().padding(bottom = dpx(24)),
-                        onKey = { query = (query + it).take(40) },
-                        onSpace = { if (query.isNotEmpty() && !query.endsWith(" ")) query += " " },
-                        onDelete = { query = query.dropLast(1) },
-                        onClear = { query = "" },
-                        onPhone = null, onVoice = null,
-                        firstKey = kbFirst, onFocusChange = {}, onRight = { true }
-                    )
+                    ) else {
+                        Field(
+                            query, { query = it.take(40) }, "Sender suchen",
+                            Modifier.fillMaxWidth().padding(bottom = 8.dp), inner = Modifier.focusRequester(searchReq)
+                        )
+                        SearchKeyboard(
+                            Modifier.fillMaxWidth().padding(bottom = dpx(24)),
+                            onKey = { query = (query + it).take(40) },
+                            onSpace = { if (query.isNotEmpty() && !query.endsWith(" ")) query += " " },
+                            onDelete = { query = query.dropLast(1) },
+                            onClear = { query = "" },
+                            onPhone = null, onVoice = null,
+                            firstKey = kbFirst, onFocusChange = {}, onRight = { true }
+                        )
+                    }
                 } else FocusedNowPanel(focusedState, list.firstOrNull())
             }
                     }
