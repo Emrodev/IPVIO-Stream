@@ -26,7 +26,12 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
      */
     var onTempBytes: (Long) -> Unit = {}
 
-    private fun req(url: String) = Request.Builder().url(url).header("User-Agent", ua).build()
+    private fun req(url: String) = Request.Builder().url(url)
+        .header("User-Agent", ua)
+        .header("Accept", "*/*")
+        .header("Accept-Language", "en-US,en;q=0.9,de;q=0.8")
+        .header("Connection", "keep-alive")
+        .build()
 
     private fun text(url: String): String {
         client.newCall(req(url)).execute().use { r ->
@@ -187,32 +192,12 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
         return out
     }
 
-    /** Movies as finished lines into [w]; returns their number. */
-    private fun writeMovies(a: XtreamLogic.Acct, w: Writer): Int {
-        var n = 0
-        val vodCats = categories(a, "get_vod_categories")
-        stream(XtreamLogic.api(a, "get_vod_streams")) { f ->
-            XtreamLogic.movieEntry(a, f, vodCats)?.let { w.write(it); w.write("\n"); n++ }
-        }
-        check()
-        return n
-    }
-
-    /** Series (one placeholder per series, the episodes come on opening via LazySeries) into [w]; returns their number. */
-    private fun writeSeries(a: XtreamLogic.Acct, w: Writer): Int {
-        val serCats = categories(a, "get_series_categories")
-        val series = ArrayList<XtreamLogic.Series>()
-        stream(XtreamLogic.api(a, "get_series")) { f -> XtreamLogic.seriesOf(f, serCats)?.let { series.add(it) } }
-        for (s in series) { w.write(XtreamLogic.lazyEntry(a, s)); w.write("\n") }
-        return series.size
-    }
-
     /**
      * Writes the whole list to [out]. Return value: number of entries (channels + movies + series).
      * For series only a placeholder arrives; [LazySeries] fetches the episodes only when a series is opened.
-     * Movies and series are fetched at the same time as the channels (into temporary files, appended in the old order):
-     * the three downloads no longer wait for each other, which is the biggest part of the first setup. If the provider refuses
-     * the parallel requests, the missing part is simply fetched again one after the other.
+     * Movies, series and live streams are fetched one after the other. Some providers reject parallel
+     * requests from the same client (they answer with their own error codes such as 884/885), so
+     * sequential loading avoids that.
      */
     fun write(a: XtreamLogic.Acct, out: Writer): Int {
         onPhase("Zugang wird geprüft …")
@@ -220,56 +205,25 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
         var n = 0
         out.write(XtreamLogic.header(a)); out.write("\n")
 
-        val vodFile = java.io.File.createTempFile("ipvio_vod", ".part")
-        val serFile = java.io.File.createTempFile("ipvio_ser", ".part")
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
-        val vodCount = java.util.concurrent.atomic.AtomicLong()
-        val serCount = java.util.concurrent.atomic.AtomicLong()
-        try {
-            // Writes one temporary file and reports its growth for the progress display. A repeated attempt starts the file
-            // again, so what the earlier attempt reported is taken back first.
-            fun fill(file: java.io.File, count: java.util.concurrent.atomic.AtomicLong, work: (Writer) -> Int): Int {
-                onTempBytes(-count.getAndSet(0))
-                return file.bufferedWriter(Charsets.UTF_8).use { w ->
-                    val cw = TempCounter(w) { k -> count.addAndGet(k); onTempBytes(k) }
-                    work(cw).also { cw.flush() }
-                }
-            }
-            fun job(file: java.io.File, count: java.util.concurrent.atomic.AtomicLong, work: (Writer) -> Int) =
-                pool.submit<Int> { fill(file, count, work) }
-            val vodJob = job(vodFile, vodCount) { writeMovies(a, it) }
-            val serJob = job(serFile, serCount) { writeSeries(a, it) }
-
-            onPhase("Sender werden geladen …")
-            val liveCats = categories(a, "get_live_categories")
-            stream(XtreamLogic.api(a, "get_live_streams")) { f ->
-                XtreamLogic.liveEntry(a, f, liveCats)?.let { out.write(it); out.write("\n"); n++ }
-            }
-            check()
-
-            fun take(f: java.util.concurrent.Future<Int>, file: java.io.File, tmp: java.util.concurrent.atomic.AtomicLong, again: (Writer) -> Int): Int {
-                val count = try { f.get() } catch (e: java.util.concurrent.ExecutionException) {
-                    val c = e.cause
-                    // Only a network problem of the parallel request is tried again one by one; abort and login errors pass on
-                    if (c is IOException) fill(file, tmp, again) else throw (c ?: e)
-                }
-                // From here the same characters are counted as part of the list: no longer count them as temporary
-                onTempBytes(-tmp.getAndSet(0))
-                file.reader(Charsets.UTF_8).use { it.copyTo(out) }
-                return count
-            }
-            onPhase("Filme werden geladen …")
-            n += take(vodJob, vodFile, vodCount) { writeMovies(a, it) }
-            check()
-            onPhase("Serien werden geladen …")
-            n += take(serJob, serFile, serCount) { writeSeries(a, it) }
-            out.flush()
-            return n
-        } finally {
-            pool.shutdownNow()
-            runCatching { vodFile.delete() }
-            runCatching { serFile.delete() }
+        onPhase("Filme werden geladen …")
+        val vodCats = categories(a, "get_vod_categories")
+        stream(XtreamLogic.api(a, "get_vod_streams")) { f ->
+            XtreamLogic.movieEntry(a, f, vodCats)?.let { out.write(it); out.write("\n"); n++ }
         }
+
+        onPhase("Serien werden geladen …")
+        val serCats = categories(a, "get_series_categories")
+        val series = ArrayList<XtreamLogic.Series>()
+        stream(XtreamLogic.api(a, "get_series")) { f -> XtreamLogic.seriesOf(f, serCats)?.let { series.add(it) } }
+        for (s in series) { out.write(XtreamLogic.lazyEntry(a, s)); out.write("\n"); n++ }
+
+        onPhase("Sender werden geladen …")
+        val liveCats = categories(a, "get_live_categories")
+        stream(XtreamLogic.api(a, "get_live_streams")) { f ->
+            XtreamLogic.liveEntry(a, f, liveCats)?.let { out.write(it); out.write("\n"); n++ }
+        }
+        check()
+        return n
     }
 
 }

@@ -1,6 +1,12 @@
 package com.ipvio.stream
 
-enum class Kind { LIVE, MOVIE, SERIES }
+enum class Kind {
+    LIVE { override val displayName = "Live TV" },
+    MOVIE { override val displayName = "Movies" },
+    SERIES { override val displayName = "Series" };
+
+    abstract val displayName: String
+}
 
 data class Variant(val url: String, val label: String, val quality: String?, val lang: String?)
 

@@ -1,0 +1,163 @@
+package com.ipvio.stream
+
+import org.junit.Assert.*
+import org.junit.Test
+
+class SublistLogicTest {
+
+    private fun item(
+        id: String = "1",
+        kind: Kind = Kind.LIVE,
+        title: String = "Channel",
+        group: String = "General",
+        logo: String? = null,
+        tvgId: String? = null,
+        lang: String = LangTagLogic.UNKNOWN,
+        quality: String? = null,
+        adult: Boolean = false
+    ): Item = Item(
+        id = id, kind = kind, title = title, year = null, url = "http://x/$id",
+        logo = logo, group = if (adult) "Adult | XXX" else group,
+        quality = quality, lang = lang,
+        tvgId = tvgId
+    )
+
+    @Test fun disabledFilter_matchesEverything() {
+        val f = SublistFilter(enabled = false)
+        assertTrue(f.matches(item()))
+        assertTrue(f.matches(item(kind = Kind.MOVIE)))
+        assertTrue(f.matches(item(kind = Kind.SERIES)))
+    }
+
+    @Test fun kindFilter_liveOnly() {
+        val f = SublistFilter(enabled = true, kind = Kind.LIVE)
+        assertTrue(f.matches(item(kind = Kind.LIVE)))
+        assertFalse(f.matches(item(kind = Kind.MOVIE)))
+        assertFalse(f.matches(item(kind = Kind.SERIES)))
+    }
+
+    @Test fun groupsByKind_filterLiveOnly() {
+        val f = SublistFilter(enabled = true, groupsByKind = mapOf(Kind.LIVE to listOf("UK")))
+        assertTrue(f.matches(item(kind = Kind.LIVE, group = "UK | Entertainment")))
+        assertTrue(f.matches(item(kind = Kind.LIVE, group = "uk movies")))
+        // Per-kind filter: MOVIE has no group filter, so passes through
+        assertTrue(f.matches(item(kind = Kind.MOVIE, group = "UK | Entertainment")))
+        assertFalse(f.matches(item(kind = Kind.LIVE, group = "DE | News")))
+    }
+
+    @Test fun langsByKind_filterLiveOnly() {
+        val f = SublistFilter(enabled = true, langsByKind = mapOf(Kind.LIVE to listOf("de")))
+        assertTrue(f.matches(item(kind = Kind.LIVE, lang = "de")))
+        assertFalse(f.matches(item(kind = Kind.LIVE, lang = "en")))
+        // Per-kind filter: MOVIE has no lang filter, so passes through
+        assertTrue(f.matches(item(kind = Kind.MOVIE, lang = "de")))
+        assertFalse(f.matches(item(kind = Kind.LIVE, lang = LangTagLogic.UNKNOWN)))
+    }
+
+    @Test fun qualityFilter() {
+        val f = SublistFilter(enabled = true, quality = "4K")
+        assertTrue(f.matches(item(quality = "4K")))
+        assertFalse(f.matches(item(quality = "HD")))
+        assertFalse(f.matches(item(quality = null)))
+    }
+
+    @Test fun hasLogoFilter() {
+        val f = SublistFilter(enabled = true, hasLogo = true)
+        assertTrue(f.matches(item(logo = "http://x/logo.png")))
+        assertFalse(f.matches(item(logo = null)))
+
+        val f2 = SublistFilter(enabled = true, hasLogo = false)
+        assertFalse(f2.matches(item(logo = "http://x/logo.png")))
+        assertTrue(f2.matches(item(logo = null)))
+    }
+
+    @Test fun hasTvgIdFilter() {
+        val f = SublistFilter(enabled = true, hasTvgId = true)
+        assertTrue(f.matches(item(tvgId = "bbc.one")))
+        assertFalse(f.matches(item(tvgId = null)))
+
+        val f2 = SublistFilter(enabled = true, hasTvgId = false)
+        assertFalse(f2.matches(item(tvgId = "bbc.one")))
+        assertTrue(f2.matches(item(tvgId = null)))
+    }
+
+    @Test fun includeAdultFilter() {
+        val f = SublistFilter(enabled = true, includeAdult = false)
+        assertFalse(f.matches(item(adult = true)))
+        assertTrue(f.matches(item(adult = false)))
+
+        val f2 = SublistFilter(enabled = true, includeAdult = true)
+        assertTrue(f2.matches(item(adult = true)))
+    }
+
+    @Test fun combinedFilters_allMustMatch() {
+        val f = SublistFilter(
+            enabled = true,
+            kind = Kind.MOVIE,
+            groupsByKind = mapOf(Kind.MOVIE to listOf("Action")),
+            langsByKind = mapOf(Kind.MOVIE to listOf("en")),
+            quality = "HD",
+            includeAdult = false
+        )
+        assertTrue(f.matches(item(kind = Kind.MOVIE, group = "Action Movies", lang = "en", quality = "HD")))
+        assertFalse(f.matches(item(kind = Kind.LIVE, group = "Action Movies", lang = "en", quality = "HD")))
+        assertFalse(f.matches(item(kind = Kind.MOVIE, group = "Drama", lang = "en", quality = "HD")))
+        assertFalse(f.matches(item(kind = Kind.MOVIE, group = "Action Movies", lang = "de", quality = "HD")))
+        assertFalse(f.matches(item(kind = Kind.MOVIE, group = "Action Movies", lang = "en", quality = "4K")))
+        assertFalse(f.matches(item(kind = Kind.MOVIE, group = "Action XXX", lang = "en", quality = "HD")))
+    }
+
+    @Test fun countMatching() {
+        val f = SublistFilter(enabled = true, kind = Kind.MOVIE)
+        val items = listOf(
+            item(kind = Kind.MOVIE),
+            item(kind = Kind.MOVIE),
+            item(kind = Kind.LIVE),
+            item(kind = Kind.SERIES)
+        )
+        assertEquals(2, f.countMatching(items))
+    }
+
+    @Test fun encodeDecodeRoundTrip() {
+        val original = SublistFilter(
+            enabled = true,
+            groupsByKind = mapOf(Kind.MOVIE to listOf("UK")),
+            kind = Kind.MOVIE,
+            langsByKind = mapOf(Kind.MOVIE to listOf("en")),
+            quality = "HD",
+            hasLogo = true,
+            hasTvgId = false,
+            includeAdult = false
+        )
+        val decoded = SublistFilter.decode(original.encode())
+        assertEquals(original.enabled, decoded.enabled)
+        assertEquals(original.kind, decoded.kind)
+        assertEquals(original.groupsByKind, decoded.groupsByKind)
+        assertEquals(original.langsByKind, decoded.langsByKind)
+        assertEquals(original.quality, decoded.quality)
+        assertEquals(original.hasLogo, decoded.hasLogo)
+        assertEquals(original.hasTvgId, decoded.hasTvgId)
+        assertEquals(original.includeAdult, decoded.includeAdult)
+    }
+
+    @Test fun encodeDecodeEmptyRoundTrip() {
+        val original = SublistFilter()
+        val decoded = SublistFilter.decode(original.encode())
+        assertEquals(original, decoded)
+    }
+
+    @Test fun sublistDefEncodeDecodeRoundTrip() {
+        val original = SublistDef(
+            name = "UK 4K Movies",
+            filter = SublistFilter(enabled = true, groupsByKind = mapOf(Kind.MOVIE to listOf("UK")), kind = Kind.MOVIE, quality = "4K")
+        )
+        val decoded = SublistDef.decode(original.encode())!!
+        assertEquals(original.name, decoded.name)
+        assertEquals(original.filter, decoded.filter)
+    }
+
+    @Test fun sublistDefDecodeNull() {
+        assertNull(SublistDef.decode(null))
+        assertNull(SublistDef.decode(""))
+    }
+}

@@ -198,6 +198,40 @@ object PlaylistStore {
     val shownUrl: String? get() = primaryUrl
     private var primaryEpg: List<String> = emptyList()
     private var primaryOrder: Map<String, Int> = emptyMap()
+    /** The active sublist name for the current playlist (null = full playlist). */
+    @Volatile private var sublistName: String? = null
+    /** The active sublist filter (null = none). Set before show() is called. */
+    @Volatile private var sublistFilter: SublistFilter? = null
+    /** Number of items that passed the sublist filter on the last load (for UI preview). */
+    var sublistMatchCount by mutableStateOf(0)
+        private set
+    /** Total number of items parsed before sublist filtering (for UI preview). */
+    var sublistTotalCount by mutableStateOf(0)
+        private set
+
+    /** Unique group/category values found in the loaded playlist at [url], sorted alphabetically. Used by the regular UI to show what is currently loaded. */
+    suspend fun playlistGroups(url: String): List<String> = withContext(Dispatchers.IO) {
+        if (primaryUrl != url) emptyList() else primaryItems.map { it.group }.distinct().sorted()
+    }
+
+    /** Unique language values found in the loaded playlist at [url], sorted alphabetically. Used by the regular UI to show what is currently loaded. */
+    suspend fun playlistLanguages(url: String): List<String> = withContext(Dispatchers.IO) {
+        if (primaryUrl != url) emptyList() else primaryItems.map { it.lang }.distinct().sorted()
+    }
+
+    /** All group/category values in the cached playlist at [url], before any sublist filtering, per kind (LIVE/MOVIE/SERIES). */
+    suspend fun cachedPlaylistGroupsByKind(c: Context, url: String): Map<Kind, List<String>> = withContext(Dispatchers.IO) {
+        readCache(c, url, emptySet())?.let {
+            it.items.groupBy { it.kind }.mapValues { it.value.map { it.group }.distinct().sorted() }
+        } ?: emptyMap()
+    }
+
+    /** All language values in the cached playlist at [url], before any sublist filtering, per kind (LIVE/MOVIE/SERIES). */
+    suspend fun cachedPlaylistLanguagesByKind(c: Context, url: String): Map<Kind, List<String>> = withContext(Dispatchers.IO) {
+        readCache(c, url, emptySet())?.let {
+            it.items.groupBy { it.kind }.mapValues { it.value.map { it.lang }.distinct().sorted() }
+        } ?: emptyMap()
+    }
     private var epgSig = 0L
     private var inited = false
     private val loadLock = Mutex()
@@ -210,7 +244,7 @@ object PlaylistStore {
 
     private val XTREAM = Regex("""^(https?://[^/]+)/get\.php\?.*?username=([^&]+).*?password=([^&]+)""")
     // Common player identifier: some providers throttle unknown identifiers heavily (browser/VLC then load much faster)
-    private const val UA = "VLC/3.0.21 LibVLC/3.0.21"
+    private const val UA = "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
     /** A fully downloaded but not yet parsed list is reused for this long. */
     private const val RAW_MAX_AGE = 12 * 3_600_000L
     /** Free space that should remain at least after the download. */
@@ -378,6 +412,47 @@ object PlaylistStore {
 
     fun savedUrl(c: Context): String? { ensure(c); return lists.getOrNull(active)?.url }
 
+    /** Resolve the active sublist filter for [url] (null = load the full playlist). */
+    fun activeSublist(c: Context, url: String): SublistFilter? {
+        ensure(c)
+        val name = SublistStore.active(c, key(url))
+        if (name == null) return null
+        return SublistStore.allFor(c, key(url)).firstOrNull { it.name == name }?.filter
+    }
+
+    /** How many entries of [url] match the active sublist filter: (matching, total). Computes by parsing once without storing. */
+    suspend fun previewCount(c: Context, url: String): Pair<Int, Int> {
+        ensure(c)
+        val u = PlaylistLogic.normalizeUrl(url) ?: return Pair(0, 0)
+        val f = activeSublist(c, u)
+        if (f == null || !f.enabled) return Pair(0, 0)
+        return previewCount(c, u, f)
+    }
+
+    /** How many entries of [url] match [f]: (matching, total). Uses already-loaded items when possible, otherwise reads from cache (fast). */
+    suspend fun previewCount(c: Context, url: String, f: SublistFilter): Pair<Int, Int> {
+        ensure(c)
+        if (!f.enabled) return Pair(0, 0)
+        val u = PlaylistLogic.normalizeUrl(url) ?: return Pair(0, 0)
+        return withContext(Dispatchers.IO) {
+            try {
+                val items: List<Item> = if (primaryUrl == u) {
+                    primaryItems
+                } else {
+                    val cached = readCache(c, u, emptySet())
+                    if (cached != null) cached.items else {
+                        val (src, cs) = downloadWithRetry(c, u)
+                        val b = build(c, u, src, false, cs, ask = false, null)
+                        b.parsed.items
+                    }
+                }
+                val total = items.size
+                val matching = items.count { f.matches(it) }
+                Pair(matching, total)
+            } catch (e: Exception) { Pair(0, 0) }
+        }
+    }
+
     /** Xtream address (user and password URL-encoded) or null if a value is missing or invalid. */
     fun xtreamUrl(host: String, user: String, pass: String): String? = PlaylistLogic.xtreamUrl(host, user, pass)
 
@@ -480,7 +555,12 @@ object PlaylistStore {
         val out = LinkedHashMap<String, Int>()
         for (act in listOf("get_vod_categories", "get_series_categories", "get_live_categories")) {
             try {
-                val body = client.newCall(Request.Builder().url(base + act).build()).execute().use { r ->
+                val body = client.newCall(Request.Builder().url(base + act)
+                    .header("User-Agent", UA)
+                    .header("Accept", "*/*")
+                    .header("Accept-Language", "en-US,en;q=0.9,de;q=0.8")
+                    .header("Connection", "keep-alive")
+                    .build()).execute().use { r ->
                     if (r.isSuccessful) r.body?.string() else null
                 } ?: continue
                 val a = JSONArray(body)
@@ -496,7 +576,7 @@ object PlaylistStore {
 
     // ------------------------------------------------------------------ files per playlist
 
-    private fun key(url: String) = url.trim().hashCode()
+    internal fun key(url: String) = url.trim().hashCode()
     private fun cacheFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".bin")
     private fun gzFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".m3u.gz")
     private fun rawFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".m3u")
@@ -741,7 +821,11 @@ object PlaylistStore {
         if (offset > 0) { offset = maxOf(0L, offset - 65_536); RandomAccessFile(part, "rw").use { it.setLength(offset) } }
         val extra = if (pi != null) LoadLogic.resumeHeaders(offset, pi.etag, pi.lastModified) else emptyMap()
         if (extra.isEmpty()) offset = 0L
-        val rb = Request.Builder().url(u).header("User-Agent", UA)
+        val rb = Request.Builder().url(u)
+            .header("User-Agent", UA)
+            .header("Accept", "*/*")
+            .header("Accept-Language", "en-US,en;q=0.9,de;q=0.8")
+            .header("Connection", "keep-alive")
         extra.forEach { (k, v) -> rb.header(k, v) }
         phase = if (offset > 0) "Download wird fortgesetzt …" else "Verbindung zum Server wird aufgebaut …"
         bytesRead = offset; totalBytes = -1L; downloadDone = false
@@ -943,8 +1027,35 @@ object PlaylistStore {
         langCounts = counts
         langBytes = bytes
         shownHidden = hidden
-        primaryItems = items; primaryUrl = u; primaryEpg = epg; primaryOrder = order
+        // Apply sublist filter before storing: only matching items enter primaryItems / rawChannels.
+        val filteredBySublist = if (sublistFilter?.enabled == true) {
+            val f = sublistFilter!!
+            sublistTotalCount = items.size
+            val kept = items.filter { f.matches(it) }
+            sublistMatchCount = kept.size
+            kept
+        } else {
+            sublistTotalCount = items.size
+            sublistMatchCount = items.size
+            items
+        }
+        primaryItems = filteredBySublist; primaryUrl = u; primaryEpg = epg; primaryOrder = order
         rebuild(c)
+    }
+
+    /** Set the active sublist for the playlist at [url] before it is loaded. [null] = full playlist. */
+    fun setSublistForLoad(c: Context, url: String, filter: SublistFilter?, name: String?) {
+        ensure(c)
+        sublistFilter = filter
+        sublistName = name
+        val h = key(url)
+        SublistStore.setActive(c, h, name)
+    }
+
+    /** Clear any pending sublist so the next load uses the full playlist. */
+    fun clearSublistForLoad() {
+        sublistFilter = null
+        sublistName = null
     }
 
     /** Further shown playlists (without the active one), in list order. */
@@ -1258,6 +1369,11 @@ object PlaylistStore {
     private suspend fun loadInner(c: Context, url: String, save: Boolean, skipNetworkWhenCached: Boolean, ask: Boolean, resumed: Boolean): Boolean {
         ensure(c)
         val u = PlaylistLogic.normalizeUrl(url) ?: run { error = "Bitte eine gültige Adresse eingeben (beginnt mit http:// oder https://)."; return false }
+        // Restore the saved sublist for this playlist so the filter is applied while loading.
+        val h = key(u)
+        val savedName = SublistStore.active(c, h)
+        val savedFilter = savedName?.let { SublistStore.allFor(c, h).firstOrNull { it.name == savedName }?.filter }
+        if (savedFilter != null) setSublistForLoad(c, u, savedFilter, savedName)
         job = currentCoroutineContext()[Job]
         loading = true; error = null; heavy = false
         phase = "Gespeicherte Playlist wird gelesen …"; bytesRead = 0L; totalBytes = -1L; downloadDone = false
