@@ -48,6 +48,19 @@ Untertitel-Suche (SubDL) findet bei Serien wieder Treffer¦Subtitle search (SubD
 Bildformate heißen so, wie sie wirken („Zuschneiden“)¦Aspect modes are named after what they do (“Crop”)
 Viele fehlende Übersetzungen ergänzt¦Many missing translations added
 Hoch/Runter blättert¦Up/Down scrolls
+# What's new 1.4.3
+Handy: neue Einstellungen über das Zahnrad oben – Playlists, Kategorien sortieren und ausblenden, Jugendschutz, Sprache¦Phone: new settings behind the gear at the top – playlists, sort and hide categories, parental control, language
+Handy: neuer Reiter „Sport“ mit den Spielen von heute, deinen Lieblingsteams und „Meine Liste“; Spiele direkt am Fernseher starten¦Phone: new “Sport” tab with today’s games, your favorite teams and “My list”; start games right on the TV
+Filme und Serien: Kategorien mit Hoch/Runter verschieben, das Menü bleibt offen, neu „Ans Ende verschieben“¦Movies and series: move categories with Up/Down, the menu stays open, new “Move to bottom”
+Playlist wechseln geht schneller: die gespeicherte Liste wird gelesen statt neu heruntergeladen¦Switching playlists is faster: the stored list is read instead of downloaded again
+Bildformat: Hinweis, wenn das Bild schon das Format des Fernsehers hat¦Aspect ratio: a hint when the picture already has the shape of the TV
+Playlist wechseln zeigt nicht mehr „Noch keine Sender“¦Switching playlists no longer shows “No channels yet”
+Live TV: Links springt zur gewählten Kategorie, Rechts öffnet die Senderliste¦Live TV: Left goes to the chosen category, Right opens the channel list
+Player: „Zuschneiden“ und „Strecken“ wirken wieder¦Player: “Crop” and “Stretch” work again
+Einstellungen: Meldungen unter den Knöpfen sind sofort zu sehen¦Settings: messages below the buttons are visible right away
+WLAN-Übertragung: der Fokus bleibt nach Start und Stopp auf dem Knopf¦Wi-Fi transfer: the focus stays on the button after start and stop
+„Was ist neu“ erscheint auch nach einer Test-Version¦“What’s new” also appears after a test version
+Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Update nicht mehr¦In-app update: “The signature could not be checked” no longer stops the update
 """
 
 /**

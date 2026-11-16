@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 1.4.3 (versionCode 9)
+- Live sync (Google Drive): favorites and history follow your devices automatically. Switch it on in Settings > Storage > Google Drive on each device; it is off by default. Upload a few seconds after a change, download when the app is in front (about every minute). Merged on the device, a safety copy is kept before each merge. Not device tested yet
+- Live TV: a provider category can float like in Movies and Series ("Mit Hoch/Runter verschieben"): Up/Down move it, OK or Back puts it down; new menu entry "Ans Ende verschieben" (move to the end)
+- Live TV: BACK in the channel list goes to the chosen category, like Left; BACK from a stream returns to the channel list with the last channel and category; OK and Right enter the channel list again after returning to the categories (Fire TV focus fix)
+- Search: the background image is darker behind the info text, and the results column lines up with the search field (including the Sports Hub button)
+- Update card: smaller, placed at the bottom right so it does not cover the content
+- Build: the release build receives the Google client keys from the GitHub secrets GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+
 ## 1.4.1
 - Fix: 1.4 did not open after the update on user devices. R8 over the whole app (T-024) is switched off again (`enable = false` in app/build.gradle.kts, the rollback from ADR 0005); versionCode 6. Cause not confirmed by a crash log (unverified). Install 1.4.1 over 1.4; data is kept (same signature)
 
@@ -9,7 +17,7 @@
 - Sport: the tab no longer matches games to channels on the main thread; the channels of a game appear shortly after the page. Not measured (T-023)
 - Performance (not measured): home poster cards no longer compute their screen position on every scroll frame (T-020); small devices decode two images at a time instead of four (T-021); the settings files needed at start are loaded in parallel (T-022)
 - Live TV: moving the focus through the channel list no longer rebuilds the content of the rows (guide times, status icons); only the highlight frame changes. Not measured (T-019)
-- Settings > Playlists: switching the content mode no longer jumps back to the first settings page. When the switch re-read the stored playlist copy, the loading screen briefly replaced the settings; it now stays on the settings tab unless a language choice is waiting
+>- Settings > Playlists: switching the content mode no longer jumps back to the first settings page. When the switch re-read the stored playlist copy, the loading screen briefly replaced the settings; it now stays on the settings tab unless a language choice is waiting
 - Remote: a long OK (menu on channels, categories and favorites, marking an episode as seen) now triggers after 0.35 s instead of the system long press (about 0.5 s or more)
 - Playlist refresh: existing installs that still use "at every start" switch once to "daily"; choosing "at every start" again later is kept
 - Donate page and README: new support text, Ko-fi and PayPal links in the README
@@ -20,7 +28,9 @@
 - App update: the app reads `update.json` from the latest release first (GitHub API as fallback; a custom address still works). Before the installer opens it checks the SHA-256, the package name, the version number and that the new APK is signed with the same key as the installed app, and shows a clear message instead of Android's "App not installed". `update.json` can mark an update as required (T-015, not device tested yet)
 - First start: a small card at the bottom checks for an app update once and shows the result (checking / up to date / update available / error with "Retry"), with the switch for the automatic check. It appears only once and only on a start without a playlist, never takes the focus from the add-playlist screen, and works with the TV remote (T-014)
 - First start: the update check card now closes by itself as soon as a playlist is added (loading starts) or "Weiter ohne Playlist" is chosen; it no longer stays on top of the home screen. (T-025)
-- Internal: player helper code split from Media3 (no user-visible change).
+- Favorites: sort your favorite channels, movies and series by hand. In Favorites (and in Live TV > Favorites) press the menu key or hold OK on an entry and choose Move up / Move down / Move to top; the focus follows the entry. In the Favorites tab this menu also holds "Remove from favorites" (before, the menu key removed it at once). The order is saved with the favorites, part of the backup, and used for zapping (T-014)
+- Onboarding: "Weiter ohne Playlist" now opens a demo mode with sample channels, movies and series so the UI can be explored without connecting anything; artwork is replaced by neutral placeholder blocks, no images or metadata are requested, playback is disabled, and nothing is saved (leaves when a playlist is added)
+>- Internal: player helper code split from Media3 (no user-visible change).
 - Build: the release build uses R8 again, now over the whole app, with the app's own code kept unchanged and no renaming or repackaging of classes. Expected: smoother UI and a smaller APK. Rollback is `enable = false` in `app/build.gradle.kts` (T-024)
 - Search: the query box above the app keyboard can now be selected; OK or a tap opens the device keyboard for typing
 - TV guide in the player: a playback error box (for example "check username, password or subscription") no longer sits on top of the guide

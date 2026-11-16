@@ -56,27 +56,28 @@ fun UpdateCardHost() {
 
     Box(Modifier.fillMaxSize()) {
         Column(
-            Modifier.align(Alignment.BottomCenter).padding(start = 40.dp, end = 40.dp, bottom = 28.dp)
-                .widthIn(max = 880.dp).fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp)).background(Tok.GlassStrong).padding(22.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            // Compact card in the bottom-right corner, so it does not cover the content of the start screen.
+            Modifier.align(Alignment.BottomEnd).padding(end = 40.dp, bottom = 28.dp)
+                .widthIn(max = 560.dp)
+                .clip(RoundedCornerShape(14.dp)).background(Tok.GlassStrong).padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                Text("Auf Updates prüfen", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                Text("Dieser Hinweis erscheint nur einmal.", color = Muted, fontSize = 13.sp)
+                Text("Auf Updates prüfen", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Dieser Hinweis erscheint nur einmal.", color = Muted, fontSize = 12.sp)
             }
             when (state.phase) {
-                Phase.CHECKING -> Text("Suche nach Updates …", color = Tok.TextMid, fontSize = 17.sp)
+                Phase.CHECKING -> Text("Suche nach Updates …", color = Tok.TextMid, fontSize = 14.sp)
                 Phase.UP_TO_DATE -> Text(
                     Lang.tr("Du hast die neueste Version ({0}).").replace("{0}", AppUpdate.currentName(ctx)),
-                    color = Accent2, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, raw = true
+                    color = Accent2, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, raw = true
                 )
                 Phase.AVAILABLE -> Text(
                     Lang.tr("Neue Version {0} (installiert: {1})").replace("{0}", state.version).replace("{1}", AppUpdate.currentName(ctx)),
-                    color = Accent2, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, raw = true
+                    color = Accent2, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, raw = true
                 )
-                Phase.OFFLINE -> Text("Keine Verbindung. Prüfe das Netzwerk und versuche es erneut.", color = Tok.TextMid, fontSize = 17.sp)
-                Phase.ERROR -> Text(state.message, color = Tok.TextMid, fontSize = 17.sp)
+                Phase.OFFLINE -> Text("Keine Verbindung. Prüfe das Netzwerk und versuche es erneut.", color = Tok.TextMid, fontSize = 14.sp)
+                Phase.ERROR -> Text(state.message, color = Tok.TextMid, fontSize = 14.sp)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f)) {

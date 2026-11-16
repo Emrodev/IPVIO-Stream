@@ -41,6 +41,9 @@ object CatOrderLogic {
     /** Moves [name] to the first place. */
     fun toTop(shown: List<String>, name: String): List<String> = move(shown, name, -shown.size)
 
+    /** Moves [name] to the last place. */
+    fun toBottom(shown: List<String>, name: String): List<String> = move(shown, name, shown.size)
+
     /** Stored form: one name per line (category names never contain a line break). */
     fun encode(list: List<String>): String = list.joinToString("\n")
 

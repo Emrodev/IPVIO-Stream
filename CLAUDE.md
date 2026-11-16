@@ -8,7 +8,7 @@ Working rules for AI-assisted changes to this repository. Read this file first i
 - Stack (from project notes, re-verify in the code): Kotlin, Jetpack Compose without material3, Media3/ExoPlayer, OkHttp, Coil, WorkManager. Package `com.ipvio.stream`.
 - The app is in active use. Existing features and user data must be preserved.
 - Persistence seen so far: SharedPreferences and app files. Verify whether a database exists before writing anything about migrations.
-- Google Drive sync was removed in 1.2 and is planned again for 1.4 (LiveSync). Keep the BuildConfig fields and docs until then.
+- Google Drive backup and sync are in the code again since 1.4.2 (`DriveSync.kt`, `drive.file` scope). Keep the BuildConfig fields and `docs/GOOGLE_DRIVE.md` in line with the code.
 
 ## 2. Principles
 
@@ -25,7 +25,7 @@ Working rules for AI-assisted changes to this repository. Read this file first i
 - Checks that can run: syntax checks of changed files and pure-Kotlin logic tests (JUnit, no Android imports).
 - The maintainer builds in Android Studio and tests on device or Fire TV. Every change ends with concrete test steps for the maintainer.
 - Never report tests as passed unless they were actually run. State which checks ran and which did not.
-- The maintainer commits and pushes. Commit messages are proposed in English.
+- Work reaches the repository through feature branches and pull requests into `dev`. Nothing goes straight to `main` (section 16). Commit messages are in English.
 
 ## 4. Language
 
@@ -106,16 +106,18 @@ ktlint, detekt, Android Lint, mobsfscan, OSV-Scanner. Rules:
 
 ## 12. CI
 
-- Existing workflow: .github/workflows/build.yml (unit tests and debug build on push). Do not change without approval.
-- Pin actions to reviewed versions or commit SHAs.
-- Do not overwrite existing workflows without approval.
-- README badges only show results of workflows that exist and succeed.
+- `.github/workflows/build.yml`: unit tests and a debug build on push to `main` and `dev` and on pull requests.
+- `.github/workflows/release.yml`: runs on push to `main` (a merge from `dev`). Steps: unit tests, lint report, signed release build, then a GitHub release `v<versionName>` with `IPVIO-Stream.apk` and `update.json`. The publish step runs only when the tests are green. An existing tag stops the run.
+- Changing either workflow needs the maintainer's approval (section 6).
+- Actions in `release.yml` are pinned to commit SHAs. `build.yml` still uses `@v4` tags (open item).
+- The signing key and its passwords are GitHub secrets only. Never in the repository or in logs.
+- README badges only show workflows that exist and succeed.
 
 ## 13. Documentation
 
 Maintained in `docs/` (English), kept in line with the code:
 
-- `ARCHITECTURE.md` – compact arc42-style overview; unverified parts marked TODO
+- `ARCHITECTURE.md` – arc42 overview (12 chapters). Start here when you need the structure. Facts are checked against the code; unknowns are marked TODO.
 - `DIAGRAMS.md` – C4 level 1 and 2 in Mermaid
 - `adr/NNNN-title.md` – one decision record per architectural decision (not for every small change)
 - `FEATURES.md`, `IPTV.md`, `PLAYER.md`, `SECURITY.md`, `TESTING.md`, `TECH-DEBT.md`, `REFACTORING-PROGRESS.md`
@@ -131,8 +133,20 @@ If you do not know how something works: read the code first. Do not guess. Ask b
 
 ## 15. Current state
 
-- Current phase: **P2 (comments to English) done** with batch 8 (final sweep). Next: restructuring steps U-1 to U-5 (P4 names, P5 file splits, package structure). P1 still has PENDING values (T-004). S1 from P3 was done early as T-002.
-- Completed tasks: T-001 (test expectation for 10 languages), T-001b (`org.json` test dependency), T-002 (`/listimport` needs the access code, upload limit 16 MiB), T-003 (repo hygiene: `*.apk` ignored, CLAUDE.md corrected), T-005 (documentation skeleton and CHANGELOG for 1.2 and 1.3), P2 batches 1-8 (comments to English), P6 (repository documents checked, already English).
-- Open tasks: T-004 (quality baseline, values pending), U-2 to U-5. T-006 (backup `NAMES`) is done.
-- U-1 (Media3 code out of `PlayerLogic.kt`) is done (PR #30). Next step: see `docs/tasks/WORK_STATE.md`.
-- Details: `docs/REFACTORING-PROGRESS.md` and `docs/tasks/WORK_STATE.md`.
+The status list lives only in `docs/tasks/WORK_STATE.md` and `docs/REFACTORING-PROGRESS.md`. It is not repeated here, because it went stale.
+
+## 16. Branches and releases
+
+- `main`: releases only. It changes only through a merge commit from `dev`, via a pull request. No direct commits.
+- `dev`: development. Feature and fix branches start from `dev`; pull requests go into `dev`.
+- Merge `dev` into `main` with **"Create a merge commit"**, not squash. This keeps `dev` related to `main`.
+- Prepare a release in `dev`: raise `versionCode` and `versionName` in `app/build.gradle.kts`, add the CHANGELOG entry. After the merge into `main`, `release.yml` publishes `v<versionName>`. Manual fallback: `docs/RELEASE.md`.
+- No force pushes to `main` or `dev`.
+
+## 17. Tests for every change
+
+- Every feature, bug fix or change of existing behaviour in `app/src/main` comes with a test in `app/src/test/java/com/ipvio/stream/`. If that is not possible (device-only behaviour), the pull request says why and lists the manual test steps.
+- Test names are in English. Put logic that can run without Android into `*Logic.kt` files without Android imports, so JVM tests can cover it.
+- The test list (planned and existing checks) is in `docs/TESTING.md`.
+- CI warns when `app/src/main` changes without a change under `app/src/test`. The warning does not block.
+- Claude cannot run Gradle here. Report a test as passed only when CI or the maintainer shows it.

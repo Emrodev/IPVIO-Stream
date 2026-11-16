@@ -48,4 +48,20 @@ class RemoteLogicTest {
             assertTrue("$li", RemoteLogic.page(li).contains("'/listimport?name='+encodeURIComponent(x.name)+'&code='+encodeURIComponent(code)"))
         }
     }
+
+    @Test fun page_has_settings_and_sport_calls_issues_17_to_21() {
+        for (li in listOf(0, 1, 9)) {
+            val p = RemoteLogic.page(li)
+            for (a in listOf("'pls'", "'vcats'", "'vmove'", "'vhide'", "'adultset'", "'setlang'", "'sport'", "'steams'", "'stfav'", "'spin'", "'swatch'", "id=\"gear\"", "data-k=\"sp\""))
+                assertTrue("$li $a", p.contains(a))
+            // Issue 17: the list import is no longer a row under the Live TV categories
+            assertFalse(p.contains("list.appendChild(row(L.imp,null,null,importList))"))
+        }
+    }
+
+    @Test fun game_json() {
+        val j = RemoteLogic.game("Bundesliga|1", "Bundesliga", "", "Bayern \"FC\"", "Dortmund", "2", "1", 1, "67'", 1700000000L, true, false, true)
+        assertEquals("{\"k\":\"Bundesliga|1\",\"lg\":\"Bundesliga\",\"ti\":\"\",\"h\":\"Bayern \\\"FC\\\"\",\"a\":\"Dortmund\",\"hs\":\"2\",\"as\":\"1\"," +
+            "\"st\":1,\"d\":\"67'\",\"t\":1700000000,\"w\":true,\"f\":false,\"p\":true}", j)
+    }
 }
