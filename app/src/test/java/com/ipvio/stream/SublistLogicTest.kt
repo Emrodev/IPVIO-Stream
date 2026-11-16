@@ -107,6 +107,60 @@ class SublistLogicTest {
         assertFalse(f.matches(item(kind = Kind.MOVIE, group = "Action XXX", lang = "en", quality = "HD")))
     }
 
+    /** A title rule alone keeps items whose title contains a pattern, whatever their group. */
+    @Test fun titlesByKind_matchesTitleRegardlessOfGroup() {
+        val f = SublistFilter(enabled = true, titlesByKind = mapOf(Kind.SERIES to listOf("-eng", "_eng")))
+        assertTrue(f.matches(item(kind = Kind.SERIES, title = "Kingdom-eng S01E01", group = "|EN| ✪ SERIES")))
+        assertTrue(f.matches(item(kind = Kind.SERIES, title = "Cashero (2025)_eng S01E01", group = "|EN| ✪ NEW RELEASE")))
+        assertFalse(f.matches(item(kind = Kind.SERIES, title = "Merlin (2008) S01E01", group = "|EN| ✪ SERIES")))
+        // Per-kind: LIVE has no title rule, so it passes through
+        assertTrue(f.matches(item(kind = Kind.LIVE, title = "Some Channel", group = "|US| ✪ NFL")))
+    }
+
+    /** Group rule OR title rule: English-dubbed dramas inside big English groups must get through. */
+    @Test fun titlesByKind_orWithGroupRule() {
+        val f = SublistFilter(
+            enabled = true,
+            groupsByKind = mapOf(Kind.SERIES to listOf("|IN| ✪ SERIES")),
+            titlesByKind = mapOf(Kind.SERIES to listOf("Extraordinary Attorney Woo"))
+        )
+        assertTrue(f.matches(item(kind = Kind.SERIES, title = "IN - Some Show S01E01", group = "|IN| ✪ SERIES")))
+        assertTrue(f.matches(item(kind = Kind.SERIES, title = "Extraordinary Attorney Woo-eng S01E01", group = "|EN| ✪ SERIES")))
+        assertFalse(f.matches(item(kind = Kind.SERIES, title = "Merlin (2008) S01E01", group = "|EN| ✪ SERIES")))
+    }
+
+    /** The title rule is still AND-ed with the other axes. */
+    @Test fun titlesByKind_stillAndWithOtherAxes() {
+        val f = SublistFilter(
+            enabled = true,
+            kind = Kind.SERIES,
+            titlesByKind = mapOf(Kind.SERIES to listOf("-eng"))
+        )
+        assertTrue(f.matches(item(kind = Kind.SERIES, title = "Kingdom-eng S01E01")))
+        assertFalse(f.matches(item(kind = Kind.MOVIE, title = "Kingdom-eng")))
+
+        val noAdult = f.copy(includeAdult = false)
+        assertFalse(noAdult.matches(item(kind = Kind.SERIES, title = "Kingdom-eng S01E01", adult = true)))
+        assertTrue(noAdult.matches(item(kind = Kind.SERIES, title = "Kingdom-eng S01E01")))
+    }
+
+    /** Title patterns may contain '|', ',' and spaces and must survive both encoding layers. */
+    @Test fun encodeDecodeKeepsTitlesWithSpecialCharacters() {
+        val titles = mapOf(
+            Kind.SERIES to listOf("Kingdom-eng", "Cashero (2025)_eng", "Genie‚ Make a Wish (2025)_eng"),
+            Kind.MOVIE to listOf("EN - The Deal - 2022_eng")
+        )
+        val original = SublistFilter(
+            enabled = true,
+            groupsByKind = mapOf(Kind.LIVE to listOf("|US| ✪ NFL")),
+            titlesByKind = titles
+        )
+        val decoded = SublistFilter.decode(SublistDef("x", original).encode().let { SublistDef.decode(it)!!.filter.encode() })
+        assertEquals(titles, decoded.titlesByKind)
+        assertEquals(original.groupsByKind, decoded.groupsByKind)
+        assertEquals(original, decoded)
+    }
+
     @Test fun countMatching() {
         val f = SublistFilter(enabled = true, kind = Kind.MOVIE)
         val items = listOf(

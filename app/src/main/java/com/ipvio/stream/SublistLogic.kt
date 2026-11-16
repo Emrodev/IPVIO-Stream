@@ -18,8 +18,18 @@ data class SublistFilter(
     val enabled: Boolean = false,
     /** Keep items of this kind only (LIVE / MOVIE / SERIES). Null = all kinds. */
     val kind: Kind? = null,
-    /** Groups required per kind, e.g. {LIVE: ["UK"], MOVIE: ["News"]}. Empty = no group filter for that kind. */
+    /**
+     * Groups required per kind, e.g. {LIVE: ["UK"], MOVIE: ["News"]}. Empty = no group filter for that kind.
+     * A group rule and a [titlesByKind] rule for the same kind are OR-ed: an item passes when its
+     * group matches OR its title contains one of the patterns.
+     */
     val groupsByKind: Map<Kind, List<String>> = emptyMap(),
+    /**
+     * Title patterns per kind, e.g. {SERIES: ["-eng", "_eng"]}. Empty = no title filter for that kind.
+     * Needed for content the provider does not separate by group, such as English-dubbed Asian dramas
+     * that sit inside large English groups.
+     */
+    val titlesByKind: Map<Kind, List<String>> = emptyMap(),
     /** Languages required per kind, e.g. {LIVE: ["en"], MOVIE: ["de"]}. Empty = no lang filter for that kind. */
     val langsByKind: Map<Kind, List<String>> = emptyMap(),
     /** Keep items with this quality ("HD", "FHD", "4K"). Null = any quality. */
@@ -44,6 +54,7 @@ data class SublistFilter(
             "e" to enabled.toString(),
             "k" to kind?.name,
             "g" to encodeMap(groupsByKind),
+            "t" to encodeMap(titlesByKind),
             "l" to encodeMap(langsByKind),
             "q" to quality,
             "h" to hasLogo?.toString(),
@@ -65,6 +76,7 @@ data class SublistFilter(
                 enabled = o["e"]?.toBoolean() ?: false,
                 kind = o["k"]?.let { runCatching { Kind.valueOf(it) }.getOrNull() },
                 groupsByKind = decodeMap(o["g"]),
+                titlesByKind = decodeMap(o["t"]),
                 langsByKind = decodeMap(o["l"]),
                 quality = o["q"],
                 hasLogo = o["h"]?.toBoolean(),
@@ -102,8 +114,15 @@ data class SublistFilter(
         if (!enabled) return true
         if (!includeAdult && ParentalLogic.isAdult(item.group, item.title)) return false
         if (kind != null && item.kind != kind) return false
-        val groups = groupsByKind[item.kind]
-        if (groups != null && groups.isNotEmpty() && !groups.any { item.group.contains(it, ignoreCase = true) }) return false
+        val groups = groupsByKind[item.kind].orEmpty()
+        val titles = titlesByKind[item.kind].orEmpty()
+        if (groups.isNotEmpty() || titles.isNotEmpty()) {
+            // OR on purpose: a title rule exists to pull a few items out of big groups that the
+            // group rule would otherwise reject (e.g. English-dubbed dramas inside |EN| groups).
+            // The title check is skipped when the group already matched (65k series × 46 patterns).
+            val groupOk = groups.any { item.group.contains(it, ignoreCase = true) }
+            if (!groupOk && !titles.any { item.title.contains(it, ignoreCase = true) }) return false
+        }
         val langs = langsByKind[item.kind]
         if (langs != null && langs.isNotEmpty() && !langs.contains(item.lang)) return false
         if (quality != null && item.quality != quality) return false

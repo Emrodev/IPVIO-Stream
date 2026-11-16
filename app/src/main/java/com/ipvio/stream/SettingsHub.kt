@@ -1575,7 +1575,10 @@ private fun SublistsPage(ctx: Context) {
 
         PillButton("Save sublist") {
             if (newSublistName.isBlank()) return@PillButton
-            SublistStore.upsert(ctx, h, SublistDef(newSublistName, f))
+            // The form has no title rule field, so keep one from an imported sublist with this
+            // name instead of silently dropping it (e.g. an English-dub sublist).
+            val kept = SublistStore.allFor(ctx, h).firstOrNull { it.name == newSublistName }?.filter?.titlesByKind
+            SublistStore.upsert(ctx, h, SublistDef(newSublistName, if (kept.isNullOrEmpty()) f else f.copy(titlesByKind = kept)))
             Toast.makeText(ctx, "Saved ${newSublistName}", Toast.LENGTH_SHORT).show()
             // Reset form
             newSublistName = ""
