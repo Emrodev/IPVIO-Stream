@@ -116,8 +116,9 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     ChannelLists.init(ctx)
     remember { LiveQuality.init(ctx) }
     // Last chosen category / list (round 14): the same one again after Back from the player and after a restart
-    // The tab always opens on "Start" (home), so the cursor lands there instead of on the last category or "Alle Sender"
-    var sel by remember { mutableStateOf("HOME") }
+    // The tab opens on "Start" (home), except when coming back from a stream: then the last category with its channel list.
+    // LastFocus.pending is set exactly in that case (MainActivity, back from the player).
+    var sel by remember { mutableStateOf(if (LastFocus.pending != null) LiveMemory.sel(ctx) ?: "HOME" else "HOME") }
     HiddenCats.init(ctx)
     CatOrder.init(ctx)
     // Channel name search ("SEARCH" entry): text is kept while the tab is open
@@ -470,7 +471,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                                 // Favorites: the focus follows a channel that was just moved
                                 .then(if (sel == FAV_CAT) Modifier.followFav(ch.id) else Modifier), curList,
                             onNewList = { newList(ch.id) },
-                            onFocus = { focusTarget = ch; plScope.launch { holdJump(chanState, i) } },
+                            onFocus = { focusTarget = ch; inChannels = true; plScope.launch { holdJump(chanState, i) } },
                             variants = variantsOf[ch.id].orEmpty(),
                             favShown = if (sel == FAV_CAT) list else null,
                             onVariant = { v -> ZapContext.list = list; ZapContext.key = sel; LiveMemory.setSel(ctx, sel); onOpen(v) }
