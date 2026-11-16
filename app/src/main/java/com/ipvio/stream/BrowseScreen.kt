@@ -1,6 +1,7 @@
 package com.ipvio.stream
 
 import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.offset
@@ -190,6 +191,27 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
     BackHandler(enabled = inSidebar || inFilters) { onBack() }
     BackHandler(enabled = !inFilters && !inSidebar) { runCatching { filterFocus.requestFocus() } }
 
+    val isDownloadsScreen = req.title.startsWith("Arquivos Baixados")
+    var deleteTarget by remember { mutableStateOf<Item?>(null) }
+    if (deleteTarget != null) {
+        OptionPopup(listOf("Reproduzir", "Excluir arquivo baixado"), -1, { deleteTarget = null }) { i ->
+            val tgt = deleteTarget
+            deleteTarget = null
+            if (tgt != null) {
+                if (i == 0) onOpen(tgt)
+                else {
+                    val rawFile = tgt.url.removePrefix("file://")
+                    val found = VodDownloader.list(ctx).firstOrNull { it.file.absolutePath == rawFile || tgt.id.endsWith(it.file.name.hashCode().toString()) }
+                    if (found != null) {
+                        VodDownloader.delete(ctx, found)
+                        Toast.makeText(ctx, "Arquivo baixado excluído", Toast.LENGTH_SHORT).show()
+                        onBack()
+                    }
+                }
+            }
+        }
+    }
+
     // Filter choices and result list are computed in the background ("All movies" can have 60,000 titles)
     val facets by produceState(state.lastFacets?.takeIf { it.first == ver }?.second, req, ver) {
         value = withContext(Dispatchers.Default) { facetsOf(req.items) }.also { state.lastFacets = ver to it }
@@ -375,6 +397,7 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
                             val mod = Modifier
                                 .onFocusChanged { st -> if (st.hasFocus) state.focused = idx }
                                 .then(if (idx == restoreIdx) Modifier.focusRequester(restoreFocus) else Modifier)
+                                .then(if (isDownloadsScreen) Modifier.menuKeys({ deleteTarget = item }, { deleteTarget = item }) else Modifier)
                             when {
                                 item.kind == Kind.LIVE -> PosterCard(item, { onOpen(item) }, Modifier.width(cardW).then(mod), fixedPosterHeight = cardW * 1.5f - 42.dp)
                                 land -> LandscapeCard(item, Modifier.width(cardW).then(mod)) { onOpen(item) }

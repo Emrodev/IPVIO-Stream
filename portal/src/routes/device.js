@@ -58,6 +58,7 @@ async function buildDeviceResponse(device, currentCode = 0, req = null) {
     success: true,
     status: device.status || 'active',
     name: device.name || 'Dispositivo sem nome',
+    expDate: device.playlist_exp_date || null,
     playlist: {
       type: device.playlist_type || 'none',
       url: device.playlist_url || '',

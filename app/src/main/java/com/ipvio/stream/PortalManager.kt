@@ -80,6 +80,10 @@ object PortalManager {
         return if (stored.isNotBlank()) stored else BuildConfig.PORTAL_URL
     }
 
+    fun getExpDate(ctx: Context): String? {
+        return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("exp_date", null)
+    }
+
     fun setPortalUrl(ctx: Context, url: String) {
         val clean = url.trim().removeSuffix("/")
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -200,6 +204,10 @@ object PortalManager {
     private suspend fun handleServerResponse(ctx: Context, baseUrl: String, json: JSONObject) {
         val status = json.optString("status", "active")
         isBlocked = (status == "blocked")
+        val expDateStr = json.optString("expDate", "")
+        if (expDateStr.isNotBlank()) {
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("exp_date", expDateStr).apply()
+        }
 
         // 1. Mensagem na tela (Push)
         val msgObj = json.optJSONObject("message")
