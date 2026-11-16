@@ -148,9 +148,10 @@ http://h/x
 
     @Test fun vorauswahlNachGeraetesprache() {
         val counts = mapOf("de" to 50, "en" to 80, "tr" to 20, "yu" to 5, "?" to 3)
-        assertEquals(setOf("de"), LoadLogic.systemPreselect(counts, "de"))
-        assertEquals(setOf("yu"), LoadLogic.systemPreselect(counts, "sr"))       // Serbian → Ex-YU
-        assertEquals(setOf("en"), LoadLogic.systemPreselect(counts, "fr"))       // not present → English
+        // Untagged ("?") buckets are preselected too (commit 3114773: untagged and adult buckets)
+        assertEquals(setOf("de", LangTagLogic.UNKNOWN), LoadLogic.systemPreselect(counts, "de"))
+        assertEquals(setOf("yu", LangTagLogic.UNKNOWN), LoadLogic.systemPreselect(counts, "sr"))       // Serbian → Ex-YU
+        assertEquals(setOf("en", LangTagLogic.UNKNOWN), LoadLogic.systemPreselect(counts, "fr"))       // not present → English
         assertEquals(emptySet<String>(), LoadLogic.systemPreselect(mapOf("tr" to 1), "fr"))
         assertEquals("he", LoadLogic.langCodeOf("iw"))
         assertEquals("nb", LoadLogic.langCodeOf("no"))
