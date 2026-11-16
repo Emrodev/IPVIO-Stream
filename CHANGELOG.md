@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 1.4.3 (versionCode 9)
+- Live sync (Google Drive): favorites and history follow your devices automatically. Switch it on in Settings > Storage > Google Drive on each device; it is off by default. Upload a few seconds after a change, download when the app is in front (about every minute). Merged on the device, a safety copy is kept before each merge. Not device tested yet
+- Live TV: a provider category can float like in Movies and Series ("Mit Hoch/Runter verschieben"): Up/Down move it, OK or Back puts it down; new menu entry "Ans Ende verschieben" (move to the end)
+- Live TV: BACK in the channel list goes to the chosen category, like Left; BACK from a stream returns to the channel list with the last channel and category; OK and Right enter the channel list again after returning to the categories (Fire TV focus fix)
+- Search: the background image is darker behind the info text, and the results column lines up with the search field (including the Sports Hub button)
+- Update card: smaller, placed at the bottom right so it does not cover the content
+- Build: the release build receives the Google client keys from the GitHub secrets GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+
 ## 1.4.1
 - Fix: 1.4 did not open after the update on user devices. R8 over the whole app (T-024) is switched off again (`enable = false` in app/build.gradle.kts, the rollback from ADR 0005); versionCode 6. Cause not confirmed by a crash log (unverified). Install 1.4.1 over 1.4; data is kept (same signature)
 

@@ -90,6 +90,10 @@ jobs:
             "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
 
       - name: Build signed release APK
+        # Google sign-in for Drive and live sync: without these the release hides the Drive section (see app/build.gradle.kts)
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: ./gradlew --no-daemon assembleRelease
 
       - name: Verify signature
