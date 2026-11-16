@@ -8,6 +8,8 @@ A free, open-source IPTV player for **Android TV, Google TV and Amazon Fire TV**
 
 > **IPVIO Stream does not provide any content.** It contains no channels, playlists, films or series. It is only a player for playlists that **you** add yourself (Xtream Codes login or M3U address). Only use sources that you are legally allowed to use.
 
+> 🇧🇷 Para a versão desta documentação em Português do Brasil com o guia completo de recursos e configurações, veja: **[README.pt-BR.md](README.pt-BR.md)**.
+
 ## Install
 
 **Download:** [IPVIO-Stream.apk (latest release)](https://github.com/Emrodev/IPVIO-Stream/releases/latest/download/IPVIO-Stream.apk)
@@ -43,7 +45,14 @@ Allow "Install unknown apps" for Downloader (or your file manager) when asked, t
 - Categories, favourites and your own channel lists
 - TV guide, catch-up/archive ("from the beginning"), reminders with notification
 - Rewind live TV with an on-device buffer, record the current show (internal storage or USB)
+- Direct recording deletion and safe scheduled auto-recording for favorite channels
 - Sports section: sports on now and coming up, all sports channels
+
+**Offline Downloads (VOD)**
+- Download movies and individual series episodes for offline viewing
+- Dedicated "Arquivos Baixados" (Downloaded Files) category tab and home row
+- Integrated subscription validity check: playback of downloaded files is gated by IPTV account validity from the portal
+- In-app file management: delete downloaded media directly from details or context menus
 
 **Player** (Media3 / ExoPlayer)
 - Audio and subtitle selection (remembered per title), preferred languages, subtitle style
