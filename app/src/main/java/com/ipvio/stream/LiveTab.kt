@@ -171,6 +171,9 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     val bundled = remember(rawList, bundleOn) { if (bundleOn) LiveBundleLogic.bundle(rawList) else null }
     val list = bundled?.list ?: rawList
     val variantsOf = bundled?.variants.orEmpty()
+    // requestFocus() returns false (no exception) when the row is not composed (scrolled away). Check that result,
+    // otherwise runCatching reports success and no retry happens.
+    fun focusOk(r: FocusRequester): Boolean = runCatching { r.requestFocus() }.getOrDefault(false)
     val firstChan = remember { FocusRequester() }
     // Back from the player: the last watched channel gets the focus (not the sidebar)
     val chanState = remember { LazyListState() }
@@ -183,7 +186,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         runCatching { chanState.scrollToItem(maxOf(i - 2, 0)) }
         repeat(15) {
             kotlinx.coroutines.delay(80)
-            if (runCatching { restoreReq.requestFocus() }.isSuccess) { LastFocus.pending = null; return@LaunchedEffect }
+            if (focusOk(restoreReq)) { LastFocus.pending = null; return@LaunchedEffect }
         }
     }
     var askDelete by remember { mutableStateOf(false) }
@@ -194,10 +197,10 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // scrolled from another category; then scroll to the top first and focus it once it is laid out.
     fun enterChannels() {
         inChannels = true
-        if (runCatching { firstChan.requestFocus() }.isSuccess) return
+        if (focusOk(firstChan)) return
         plScope.launch {
             runCatching { chanState.scrollToItem(0) }
-            repeat(10) { kotlinx.coroutines.delay(30); if (runCatching { firstChan.requestFocus() }.isSuccess) return@launch }
+            repeat(10) { kotlinx.coroutines.delay(30); if (focusOk(firstChan)) return@launch }
         }
     }
     // Issue 14: Left from the channel list goes back to the chosen category, not to whatever row is next to the focused channel.
@@ -206,10 +209,10 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         inChannels = false
         val idx = names.indexOf(sel)
         if (idx < 0) return false
-        if (catState.layoutInfo.visibleItemsInfo.any { it.index == idx } && runCatching { ContentFocus.req.requestFocus() }.isSuccess) return true
+        if (catState.layoutInfo.visibleItemsInfo.any { it.index == idx } && focusOk(ContentFocus.req)) return true
         plScope.launch {
             runCatching { catState.scrollToItem(maxOf(idx - 3, 0)) }
-            repeat(10) { kotlinx.coroutines.delay(30); if (runCatching { ContentFocus.req.requestFocus() }.isSuccess) return@launch }
+            repeat(10) { kotlinx.coroutines.delay(30); if (focusOk(ContentFocus.req)) return@launch }
         }
         return true
     }
@@ -252,7 +255,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     val ml = ChannelLists.byKey(n)
                     if (n == "GUIDE") {
                         // TV guide as in the design: starts the last watched (otherwise first) channel of the selection and opens the guide
-                        CatRow("TV-Guide", -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Grid) {
+                        CatRow("TV-Guide", -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Grid) {
                             val src = list.ifEmpty { live }
                             val ch = History.ids.firstNotNullOfOrNull { id -> src.firstOrNull { it.id == id && !ParentalLogic.isAdult(it.group, it.title) } } ?: src.firstOrNull()
                             if (ch != null) { ZapContext.list = src; ZapContext.key = sel; AppNav.openGuide = true; onOpen(ch) }
@@ -260,7 +263,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "MULTI") {
-                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
+                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
                         return@itemsIndexed
                     }
                     if (n == "SEARCH") {
@@ -287,7 +290,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         }
                         val lbl = Lang.tr("Playlist") + ": " + (opts.getOrNull(curIdx) ?: "")
                         Box {
-                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Download, raw = true) { plOpen = true }
+                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Download, raw = true) { plOpen = true }
                             if (plOpen) OptionPopup(opts, curIdx, { plOpen = false; plBack = true }) { pick ->
                                 plOpen = false; plBack = true
                                 if (multiView && pick == 0) LiveSource.k = -1
@@ -308,7 +311,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     }
                     if (n == "SRC") {
                         val lbl = Lang.tr("Quelle") + ": " + (if (srcK < 0) Lang.tr("Alle") else srcNames[srcK])
-                        CatRow(lbl, -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Sliders, raw = true) {
+                        CatRow(lbl, -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Sliders, raw = true) {
                             LiveSource.k = if (srcK + 1 >= srcNames.size) -1 else srcK + 1
                             // The chosen category may not exist in the other source: then "All channels"
                             if (sel != FAV_CAT && sel != "ALL" && ChannelLists.byKey(sel) == null) sel = "ALL"
@@ -328,7 +331,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "NEW") {
-                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = {}, onRight = { runCatching { firstChan.requestFocus() } }, onFav = {}, icon = AIcon.Plus) { newList(null) }
+                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Plus) { newList(null) }
                         return@itemsIndexed
                     }
                     val label = when {
