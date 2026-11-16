@@ -238,6 +238,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
     var sleepIdx by remember { mutableIntStateOf(0) }
     var sleepAt by remember { mutableLongStateOf(0L) }
     var aspect by remember { mutableIntStateOf(General.defaultAspect) }
+    // Display aspect ratio of the current video (width × pixel ratio / height), 0 = not known yet (issue 10)
+    var videoAr by remember { mutableStateOf(0f) }
     var interact by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var flash by remember { mutableStateOf<Flash?>(null) }
     var info by remember { mutableStateOf<String?>(null) }
@@ -782,7 +784,10 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                 val vf = player.videoFormat
                 if (vf != null) showInfo(vf.width, vf.height)
             }
-            override fun onVideoSizeChanged(videoSize: VideoSize) { showInfo(videoSize.width, videoSize.height) }
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                if (videoSize.width > 0 && videoSize.height > 0) videoAr = videoSize.width * videoSize.pixelWidthHeightRatio / videoSize.height
+                showInfo(videoSize.width, videoSize.height)
+            }
         }
         player.addListener(l)
         applyTrackPrefs()
@@ -1160,8 +1165,17 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                 }
             }
             5 -> Modifier.align(Alignment.Center).fillMaxHeight().aspectRatio(4f / 3f)
+            // Issue 10: fit / crop / stretch are laid out here from the real video aspect ratio instead of relying on the resize
+            // mode of the player view (which showed no difference); the view then only fills the area it gets
+            in 0..2 -> if (videoAr > 0f) Modifier.fillMaxSize().layout { m, c ->
+                val (w, hh) = AspectLogic.box(am, videoAr, c.maxWidth, c.maxHeight)
+                val pl = m.measure(androidx.compose.ui.unit.Constraints.fixed(w, hh))
+                layout(c.maxWidth, c.maxHeight) { pl.place((c.maxWidth - w) / 2, (c.maxHeight - hh) / 2) }
+            } else Modifier.fillMaxSize()
             else -> Modifier.fillMaxSize()
         }
+        // Area sized by the layout above: the view fills it exactly
+        val sized = !showGuide && am in 0..2 && videoAr > 0f
         AndroidView(
             factory = { c ->
                 PlayerView(c).apply {
@@ -1172,10 +1186,10 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             },
             update = { v ->
                 // apply only if something really changed (saves work on every redraw)
-                val styleKey = "$am|${AppSettings.subSize}|${AppSettings.subColor}|${AppSettings.subBg}|${AppSettings.subEdge}"
+                val styleKey = "$am|$sized|${AppSettings.subSize}|${AppSettings.subColor}|${AppSettings.subBg}|${AppSettings.subEdge}"
                 if (v.tag != styleKey) {
                     v.tag = styleKey
-                    v.resizeMode = when (am) {
+                    v.resizeMode = if (sized) AspectRatioFrameLayout.RESIZE_MODE_FILL else when (am) {
                         1 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                         2, 5 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
                         else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
@@ -1738,7 +1752,12 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                 }
 
                 Panel.ASPECT -> PSimplePanel(440.dp, "Bildformat", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {
-                    PChoiceList(ASPECTS, aspect, panelFocus) { aspect = it; flash = Flash(null, ASPECTS[it]) }
+                    PChoiceList(ASPECTS, aspect, panelFocus) {
+                        aspect = it
+                        // Crop and stretch change nothing when the picture already has the shape of the screen: say so
+                        val same = it in 1..2 && AspectLogic.sameShape(videoAr, 16f / 9f)
+                        flash = Flash(null, Lang.tr(ASPECTS[it]) + if (same) " – " + Lang.tr("Das Bild hat schon das Format des Fernsehers") else "")
+                    }
                 }
 
                 Panel.CLOCK -> PSimplePanel(440.dp, "Uhrzeit im Bild", back, { closePanel() }, leftBack = panelParent != Panel.NONE) {

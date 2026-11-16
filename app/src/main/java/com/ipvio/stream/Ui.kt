@@ -7,6 +7,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,6 +58,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 
 // Colors come from the design state (Look.kt): when the theme is switched the whole app changes immediately.
@@ -288,4 +292,17 @@ fun shimmerColor(): Color {
 @Composable
 fun SkeletonBox(modifier: Modifier, color: Color = shimmerColor(), shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(DS.RadiusXs)) {
     Box(modifier.clip(shape).background(color))
+}
+
+/**
+ * Message under the buttons of a settings page (issue 11). The settings page only scrolls to the focused button, so a text
+ * below it stayed outside the screen on TV ("nothing happens"): every new message scrolls itself into view.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun StatusLine(text: String?, color: Color = Accent2, fontSize: TextUnit = 16.sp, modifier: Modifier = Modifier) {
+    if (text.isNullOrBlank()) return
+    val req = remember { BringIntoViewRequester() }
+    LaunchedEffect(text) { runCatching { req.bringIntoView() } }
+    Text(text, color = color, fontSize = fontSize, fontWeight = FontWeight.SemiBold, modifier = modifier.bringIntoViewRequester(req))
 }

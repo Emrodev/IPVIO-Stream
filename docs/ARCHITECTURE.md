@@ -1,6 +1,6 @@
 # Architecture
 
-Compact arc42-style overview. Facts come from the refactoring audit of 2026-11-11 (commit `b65e838`, tag `V1.3`), sections 3, 5 and 9. Anything not verified in the audit is marked **TODO**. See [DIAGRAMS.md](DIAGRAMS.md) for the C4 diagrams.
+arc42 overview for version 1.4.2 (versionCode 7). Counts, versions, R8, CI and release were checked against branch `dev` on 15 Nov 2026. Other facts come from the refactoring audit of 2026-11-11 (commit `b65e838`, tag `V1.3`) and are not re-checked unless marked. Unknowns are marked **TODO**. See [DIAGRAMS.md](DIAGRAMS.md) for the C4 diagrams.
 
 All Kotlin files are in `app/src/main/java/com/ipvio/stream/`, so file names below carry no path.
 
@@ -54,7 +54,7 @@ Technology stack (audit section 3):
 | Area | Current state | Source |
 |---|---|---|
 | Navigation | no navigation library; `tab` state in `MainActivity` (`remember`) plus focus objects | `MainActivity.kt:196`, `Nav.kt:15-26` |
-| Dependency injection | none; 179 `object` singletons in 110 files (e.g. `PlaylistStore`, `AppSettings`, `Config`, `Profiles`) | `PlaylistStore.kt:54`, `Store.kt:43` |
+| Dependency injection | none; 207 `object` declarations in 132 files (count 15 Nov 2026) (e.g. `PlaylistStore`, `AppSettings`, `Config`, `Profiles`) | `PlaylistStore.kt:54`, `Store.kt:43` |
 | State | global Compose states in singletons (`Store.kt` 18 `mutableStateOf`, `PlaylistStore.kt` 16) | audit count |
 | ViewModel | none | audit count |
 | Player | Media3 ExoPlayer, HLS, DASH, UI 1.11.1 | `app/build.gradle.kts:96-102` |
@@ -62,8 +62,8 @@ Technology stack (audit section 3):
 | Images | Coil 2.7.0, memory share depends on RAM class | `MainActivity.kt:58`, `Mem.kt:23` |
 | Background work | WorkManager 2.10.0, only playlist refresh | `Updater.kt:14, 48` |
 | Storage | SharedPreferences and files | see ADR 0003 |
-| JSON | `org.json`, used in 19 files | audit count |
-| Package layout | flat: 162 files, about 36,800 lines in `com.ipvio.stream` | audit count |
+| JSON | `org.json`, used in 23 files | count 15 Nov 2026 |
+| Package layout | flat: 193 files, 42,242 lines in `com.ipvio.stream` (main source) | count 15 Nov 2026 |
 
 Android components declared in `AndroidManifest.xml:39-71`: `MainActivity`, `RestartActivity` (process `:restart`), `FileProvider`, `ReminderReceiver`, `RecordService` (type dataSync), `BootReceiver` (exported).
 
@@ -109,7 +109,8 @@ TODO: not covered by the audit. Candidates: app start, playback start, playlist 
 ## 7. Deployment view
 
 - Distribution: APK in GitHub Releases. In-app update checks GitHub Releases once a day (`AppUpdate.kt:20-34`). Signing: see [RELEASE.md](RELEASE.md).
-- CI: `.github/workflows/build.yml` runs unit tests and a debug build on every push. Actions are pinned to `@v4`, not to commit SHAs.
+- CI: `build.yml` runs unit tests and a debug build on push to `main` and `dev` and on pull requests. `release.yml` runs on push to `main`: tests, lint report (not blocking yet), signed release APK, then the GitHub release `v<versionName>` with `IPVIO-Stream.apk` and `update.json`. `pr-checks.yml` warns when app code changes without test changes. `build.yml` uses `@v4` tags; `release.yml` pins commit SHAs.
+- Branches and release rules: [CLAUDE.md](../CLAUDE.md) section 16 and [ADR 0006](adr/0006-branch-model-and-release-pipeline.md).
 - Network ports: the phone server uses ports 8765-8775 (`PhoneImport.kt:195`).
 
 ## 8. Cross-cutting concepts
@@ -121,7 +122,8 @@ TODO: not covered by the audit. Candidates: app start, playback start, playlist 
 
 ## 9. Architecture decisions
 
-- [ADR 0001](adr/0001-no-r8-for-now.md): R8 stays off for now.
+- [ADR 0001](adr/0001-no-r8-for-now.md): R8 off (superseded by ADR 0005).
+- [ADR 0006](adr/0006-branch-model-and-release-pipeline.md): branches `main` and `dev`, release pipeline, test rule.
 - [ADR 0002](adr/0002-german-text-as-i18n-key.md): German text is the translation key.
 - [ADR 0003](adr/0003-shared-prefs-no-database.md): SharedPreferences and files, no database.
 - [ADR 0005](adr/0005-r8-whole-app.md): R8 over the whole app, own code kept (0004 exists only on the old branch `perf/T-007`).

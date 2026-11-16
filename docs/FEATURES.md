@@ -26,7 +26,8 @@ Feature status at version 1.3 (commit `b65e838`, tag `V1.3`). Source: refactorin
 | Phone search (`/r`, `/api/...`) | present | `PhoneImport.kt:373-380`, `RemoteLogic.kt:67`, `RemoteHub.kt:21` |
 | List import (Letterboxd, MAL, Trakt) | present | `ListImport.kt:6-10` |
 | Favorites for channels, movies and series with manual order | present (order: T-018) | `Store.kt` (`Library`), `FavOrderLogic.kt`, `FavReorder.kt`, `HomeScreen.kt` (Favorites tab), `LiveTab.kt` |
-| Hide categories, ignore groups, language filter | present | `HiddenCats.kt:6`, `IgnoredGroups.kt:8`, `LangFilter.kt:20` |
+| Favorites for channels, movies and series with manual order | present (order: T-014, device test pending) | `Store.kt` (`Library`), `FavOrderLogic.kt`, `FavReorder.kt`, `HomeScreen.kt` (Favorites tab), `LiveTab.kt` |
+>| Hide categories, ignore groups, language filter | present | `HiddenCats.kt:6`, `IgnoredGroups.kt:8`, `LangFilter.kt:20` |
 | Live quality bundles | present | `LiveBundle.kt:3` |
 | Voice search, reminders, screen-edge calibration | present | `VoiceSearch.kt:8`, `Live.kt:71, 192`, `FitCalibration.kt:35` |
 | Updates via GitHub Releases | present | verified by Android signature, no hash check (`AppUpdate.kt:20-34`, `Round17Logic.kt:14-45`) |

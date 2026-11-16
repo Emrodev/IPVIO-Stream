@@ -9,7 +9,7 @@ Accepted. Documents the current state. The part "no Room during the refactoring"
 Audit source: section 3 (storage), section 6 (technical debt) and section 9.
 
 - Data is stored in SharedPreferences and files. There is no Room, SQLite or DataStore (audit search: no hits).
-- 32 own `prefs(c)` helpers are spread over many files. There is no central list of store names.
+- 37 `fun prefs(` definitions are spread over many files (count on `dev`, 15 Nov 2026; the 2026-11-11 audit said 32). There is no central list of store names.
 - Profile-specific stores use the suffix `_p<ID>`; profile 0 keeps the original names (CLAUDE.md section 5).
 - `Backup.kt` has a list `NAMES` of stores that go into the backup. Five profile-related stores were missing: `ipvio_dual`, `ipvio_live`, `ipvio_newep`, `ipvio_importedlists`, `ipvio_resumelog`. Task T-006 added them. Restore skips unknown names, so old backups stay readable.
 - The app is in active use. Renaming a store or key loses user data.

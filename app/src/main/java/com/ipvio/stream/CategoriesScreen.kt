@@ -157,7 +157,11 @@ fun CategoriesScreen(
                 // Menu key / long OK on a provider category: move it (switches to the own order)
                 val onMove: ((String, Int) -> Unit)? = if (saved && area != null) { name, how ->
                     val names = map.keys.toList()
-                    if (how == 0) CatOrder.toTop(ctx, area, names, name) else CatOrder.move(ctx, area, names, name, how)
+                    when (how) {
+                        MOVE_TOP -> CatOrder.toTop(ctx, area, names, name)
+                        MOVE_BOTTOM -> CatOrder.toBottom(ctx, area, names, name)
+                        else -> CatOrder.move(ctx, area, names, name, how)
+                    }
                 } else null
                 if (CatPrefs.listView) ListMode(req.title, entries, catSort, firstFocus, pillFocus, onPick, onOpen, onMove) { bgItem = it }
                 else TileMode(entries, catSort, firstFocus, onPick)
@@ -166,6 +170,10 @@ fun CategoriesScreen(
         Sidebar(tab, onGoTab, Modifier.align(SidebarPrefs.align()), sideFocus) { inSidebar = it }
     }
 }
+
+/** Codes for onMove in [ListMode] besides a plain step (-1 / +1). */
+private const val MOVE_TOP = Int.MIN_VALUE
+private const val MOVE_BOTTOM = Int.MAX_VALUE
 
 object CatMemory {
     val sel = HashMap<String, Int>()
@@ -223,8 +231,15 @@ private fun ListMode(
         val m = movedName ?: return@LaunchedEffect
         movedName = null
         val j = entries.indexOfFirst { it.first == m }
-        if (j >= 0) sel = j
+        if (j >= 0) {
+            sel = j
+            // Keep the moved row in view (moving to the top or the bottom jumps far)
+            if (catState.layoutInfo.visibleItemsInfo.none { it.index == j }) catState.scrollToItem(maxOf(j - 3, 0))
+        }
     }
+    // Issue 19: "Move with Up/Down" lets the category float: Up/Down move it, OK or Back puts it down
+    var floating by remember { mutableStateOf<String?>(null) }
+    BackHandler(enabled = floating != null) { floating = null }
     BackHandler(enabled = inPreview) { runCatching { firstFocus.requestFocus() } }
     LaunchedEffect(cur?.first) {
         focusedItem = prev.firstOrNull()
@@ -259,17 +274,40 @@ private fun ListMode(
             itemsIndexed(entries, key = { i, e -> rowKeys.getOrElse(i) { e.first + "#" + i } }) { i, e ->
                 var moveMenu by remember { mutableStateOf(false) }
                 val all = if (isTopEntry(e.first)) e.second else StalkerMore.withAdded(e.first, e.second)
+                val isFloating = floating == e.first
                 Box {
                     CatListRow(
                         e.first, StalkerMore.total(ctx, e.first, setOfNotNull(e.second.firstOrNull()?.kind)) ?: all.size, i == sel,
-                        if (i == sel) Modifier.focusRequester(firstFocus) else Modifier,
+                        (if (i == sel) Modifier.focusRequester(firstFocus) else Modifier).then(
+                            if (isFloating && onMove != null) Modifier.onPreviewKeyEvent { k ->
+                                // While floating every key belongs to the move: Up/Down move, OK puts it down, Left/Right do nothing
+                                if (k.type != KeyEventType.KeyDown) return@onPreviewKeyEvent k.key != Key.Back
+                                when (k.key) {
+                                    Key.DirectionUp -> { movedName = e.first; onMove(e.first, -1); true }
+                                    Key.DirectionDown -> { movedName = e.first; onMove(e.first, 1); true }
+                                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> { floating = null; true }
+                                    Key.Back -> false
+                                    else -> true
+                                }
+                            } else Modifier
+                        ),
                         onFocus = { sel = i }, onRight = { focusPreview() },
-                        onMenu = if (onMove != null && !isTopEntry(e.first)) ({ moveMenu = true }) else null
-                    ) { onPick(e.first, all, sortFor(e.first, sort)) }
-                    if (moveMenu && onMove != null) OptionPopup(listOf("Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben"), -1, { moveMenu = false }) { k ->
-                        moveMenu = false
+                        onMenu = if (onMove != null && !isTopEntry(e.first)) ({ moveMenu = true }) else null,
+                        floating = isFloating
+                    ) { if (!isFloating) onPick(e.first, all, sortFor(e.first, sort)) }
+                    // Issue 19: the menu stays open while moving step by step; the row (and with it the menu) follows the category
+                    if (moveMenu && onMove != null) OptionPopup(
+                        listOf("Mit Hoch/Runter verschieben", "Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben", "Ans Ende verschieben"),
+                        -1, { moveMenu = false }
+                    ) { k ->
                         movedName = e.first
-                        onMove(e.first, when (k) { 0 -> -1; 1 -> 1; else -> 0 })
+                        when (k) {
+                            0 -> { moveMenu = false; floating = e.first }
+                            1 -> onMove(e.first, -1)
+                            2 -> onMove(e.first, 1)
+                            3 -> { moveMenu = false; onMove(e.first, MOVE_TOP) }
+                            else -> { moveMenu = false; onMove(e.first, MOVE_BOTTOM) }
+                        }
                     }
                 }
             }
@@ -316,15 +354,17 @@ private fun ListMode(
 @Composable
 private fun CatListRow(
     name: String, count: Int, selected: Boolean, modifier: Modifier,
-    onFocus: () -> Unit, onRight: () -> Unit, onMenu: (() -> Unit)? = null, onClick: () -> Unit
+    onFocus: () -> Unit, onRight: () -> Unit, onMenu: (() -> Unit)? = null, floating: Boolean = false, onClick: () -> Unit
 ) {
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(DS.RadiusS)
     Row(
         modifier.fillMaxWidth().clip(shape)
-            .then(if (onMenu != null) Modifier.favKeys(onMenu) else Modifier)
-            .background(if (f) DS.Overlay4 else if (selected) DS.Overlay2 else Color.Transparent)
-            .border(DS.Border, if (f) Accent2 else Color.Transparent, shape)
+            .then(if (onMenu != null && !floating) Modifier.favKeys(onMenu) else Modifier)
+            // Floating (being moved): lifted look, so it is clear that Up/Down now move the category
+            .graphicsLayer { if (floating) { scaleX = 1.04f; scaleY = 1.04f } }
+            .background(if (floating) Accent2.copy(alpha = 0.30f) else if (f) DS.Overlay4 else if (selected) DS.Overlay2 else Color.Transparent)
+            .border(DS.Border, if (f || floating) Accent2 else Color.Transparent, shape)
             .onFocusChanged { f = it.isFocused; if (it.isFocused) onFocus() }
             .onPreviewKeyEvent { k ->
                 if (k.type == KeyEventType.KeyDown && k.key == Key.DirectionRight && k.nativeKeyEvent.repeatCount == 0) { onRight(); true } else false
@@ -335,7 +375,7 @@ private fun CatListRow(
     ) {
         Text(name, color = if (isTopEntry(name)) Accent2 else Color.White, fontSize = 14.sp, fontWeight = if (selected || isTopEntry(name)) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-        Text("$count", color = Muted, fontSize = 13.sp)
+        if (floating) AppIcon(AIcon.Sliders, Accent2, size = 16.dp) else Text("$count", color = Muted, fontSize = 13.sp)
     }
 }
 

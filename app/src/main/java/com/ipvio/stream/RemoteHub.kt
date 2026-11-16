@@ -184,6 +184,12 @@ object RemoteHub {
                 "{\"ok\":true}"
             }
             "ctl" -> control(q["c"].orEmpty(), q["v"].orEmpty())
+            // Settings and Sports Hub on the phone (issues 17, 18, 20, 21)
+            "pls", "plmain", "plren", "pldel", "vcats", "vhide", "vfav", "vmove", "adult", "adultset", "langs", "setlang",
+            "sport", "sleagues", "steams", "stfav", "spin", "swatch" -> {
+                val c = appCtx ?: return null
+                RemoteMore.handle(name, q, c, { f -> main.post { f() } }, { f -> onMain(false, f) })
+            }
             "state" -> onMain(RemoteLogic.state(false, "", false, 0, 0, false)) {
                 val p = player
                 if (p == null) RemoteLogic.state(false, "", false, 0, 0, false)

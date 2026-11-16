@@ -106,6 +106,19 @@ object UpdateLogic {
         if (installed.isEmpty() || apkCurrent.isEmpty()) return false
         return installed == apkCurrent || installed.all { it in apkHistory }
     }
+
+    enum class SignerVerdict { MATCH, MISMATCH, UNKNOWN }
+
+    /**
+     * Result of the signer check before the installer opens. UNKNOWN = one side could not be read (Android 9 / Fire OS 7
+     * leaves the signing data of a downloaded APK empty): that must never block the update, because Android checks the
+     * signature itself at install time. Only a real MISMATCH stops it (with a clear text instead of "App not installed").
+     */
+    fun signerVerdict(installed: Set<String>, apkCurrent: Set<String>, apkHistory: Set<String>): SignerVerdict = when {
+        installed.isEmpty() || apkCurrent.isEmpty() -> SignerVerdict.UNKNOWN
+        sameSigners(installed, apkCurrent, apkHistory) -> SignerVerdict.MATCH
+        else -> SignerVerdict.MISMATCH
+    }
 }
 
 

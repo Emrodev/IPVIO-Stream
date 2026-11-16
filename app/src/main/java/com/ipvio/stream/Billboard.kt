@@ -95,7 +95,7 @@ class PivotSpec(private val pivot: Float, private val list: () -> androidx.compo
 
 /** Full-screen background with the scene image of the title; without an image a gradient from the title color. */
 @Composable
-fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier) {
+fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier, dim: Float = 0f) {
     Box(modifier.background(Bg)) {
         // 17c: calm picture (no constant zoom), medium image size (w780) instead of full resolution – saves memory and computing time
         Crossfade(item, animationSpec = tween(if (Look.motion == 0) 0 else 600), label = "bb") { it0 ->
@@ -109,6 +109,8 @@ fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier) {
         // Gradients: strong on the left (text), at the bottom into the background (rows), subtle at the top
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Bg, 0.24f to Bg.copy(alpha = .94f), 0.48f to Bg.copy(alpha = .5f), 0.72f to Color.Transparent)))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Bg.copy(alpha = .5f), 0.16f to Color.Transparent, 0.38f to Color.Transparent, 0.58f to Bg.copy(alpha = .82f), 0.78f to Bg)))
+        // Optional extra darkening (search): white text stays readable on bright scene images
+        if (dim > 0f) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)))
     }
 }
 
