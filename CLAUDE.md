@@ -160,10 +160,10 @@ Whenever a release is prepared (version bump in `app/build.gradle.kts`, a `relea
 2. **Release notes:** create `docs/release-notes/vX.Y.md` from `docs/release-notes/TEMPLATE.md`. Source is the CHANGELOG section of this version (and of any version users may skip, e.g. a broken release). Rules:
    - Written for users, not developers: no task IDs, class names, file paths or build internals. Internal-only changes go into one line "Internal changes" or are left out.
    - English (section 4). German UI labels are quoted as they appear in the app.
-   - The first four bullet lines under the first heading are the highlights: the app's GitHub API fallback shows the first four non-heading lines of the release text (`AppUpdate.kt`). Keep each short.
+   - The first four bullet lines under the first heading are the highlights. The update dialog shows them: `release.yml` copies them into the `notes` of `update.json`, and the app's GitHub API fallback reads the same lines (`AppUpdate.kt`). Joined with " · " they must stay within 300 characters (`Round17Logic.kt` cuts the rest).
    - State known limits honestly (e.g. "not measured", "needs your own API key").
    - Say whether the update keeps user data and whether it must be installed by hand.
-3. **update.json `notes`:** propose one line, at most 300 characters (`Round17Logic.kt` cuts the rest).
-4. **Report:** give the maintainer the release title (`IPVIO Stream X.Y`), the tag (`vX.Y`) and point to the notes file to paste into GitHub (`docs/RELEASE.md`, section 2).
+3. **Publishing:** the file must be in `dev` before the merge into `main`. `release.yml` then uses it as the GitHub release text; without the file it falls back to GitHub's list of pull requests.
+4. **Report:** tell the maintainer which notes file the release will use.
 
 The assistant does not publish releases; the maintainer does.

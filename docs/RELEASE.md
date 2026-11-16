@@ -38,7 +38,7 @@ Users of an APK signed with a different key have to uninstall once (Settings > S
 
 ## 2. Every release
 
-Since 15 Nov 2026, `.github/workflows/release.yml` does steps 1 to 6 after a merge from `dev` into `main`. It runs the tests first and publishes only if they pass. It refuses to overwrite an existing tag, and it writes `update.json` with the SHA-256 itself. The manual steps below are the fallback and still define the file format.
+Since 15 Nov 2026, `.github/workflows/release.yml` does steps 1 to 6 after a merge from `dev` into `main`. It runs the tests first and publishes only if they pass. It refuses to overwrite an existing tag, and it writes `update.json` with the SHA-256 itself. If `docs/release-notes/v<versionName>.md` exists, it is the release text and its first four highlight lines become the `notes` in `update.json`; without it, GitHub lists the merged pull requests and the update dialog shows no notes. The manual steps below are the fallback and still define the file format.
 
 **Required before the first automatic release:** the GitHub secrets `ANDROID_KEYSTORE_BASE64` (base64 of the keystore file), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` must hold the **same key** that signed 1.4.2. A different key means that no user can install the update over the app.
 

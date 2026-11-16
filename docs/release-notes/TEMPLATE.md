@@ -1,9 +1,11 @@
 <!--
-Release notes template. Copy to docs/release-notes/vX.Y.md and paste the result
-(without this comment) into the GitHub release. Rules: CLAUDE.md section 18.
+Release notes template. Copy to docs/release-notes/vX.Y.md and delete this comment.
+release.yml uses the file as the GitHub release text. Rules: CLAUDE.md section 18.
 - Users, not developers: no task IDs, class names, file paths.
-- The first four bullet lines under "Highlights" are what the app shows when it
-  falls back to the GitHub API (AppUpdate.kt). Keep them short.
+- The first four bullet lines under "Highlights" are what the app shows in the
+  update dialog: release.yml copies them into update.json "notes", and the GitHub
+  API fallback (AppUpdate.kt) reads them too. Together, joined with " · ", at most
+  300 characters, or the app cuts them off (Round17Logic.kt).
 - Leave out empty sections.
 -->
 ## Highlights
