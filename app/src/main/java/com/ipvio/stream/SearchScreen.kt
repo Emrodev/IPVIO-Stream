@@ -25,6 +25,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -158,13 +160,17 @@ fun SearchScreen(
         if (!toInput) runCatching { sideFocus.requestFocus() }
     }
 
+    // Window positions of the search row and of its input field: the results column starts at the field's top edge
+    var rowY by remember { mutableStateOf(0f) }
+    var fieldY by remember { mutableStateOf(0f) }
     Box(Modifier.fillMaxSize()) {
         // Cinema view: the scene image of the highlighted title fills the screen, the info sits big on top of it
         val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: hist.firstOrNull())
-        BillboardBackdrop(preview, Modifier.fillMaxSize())
+        // Darkened (dim 0.5) so white text stays readable on bright scene images
+        BillboardBackdrop(preview, Modifier.fillMaxSize(), dim = 0.5f)
         Column(Modifier.fillMaxSize().sidebarPad()) {
             SearchHeroInfo(preview, Modifier.fillMaxWidth().height(196.dp).padding(start = DS.PageX, end = DS.PageX, top = 22.dp))
-        Row(Modifier.weight(1f).fillMaxWidth()) {
+        Row(Modifier.weight(1f).fillMaxWidth().onGloballyPositioned { rowY = it.positionInWindow().y }) {
             // Left: input, quick filters, suggestions and last searches above the keyboard, the keyboard at the bottom
             Column(
                 Modifier.width(430.dp).fillMaxHeight().padding(start = DS.PageX, top = 8.dp, bottom = 12.dp),
@@ -195,7 +201,7 @@ fun SearchScreen(
                     // The device's own keyboard (e.g. Gboard) in a normal text field: OK or a tap opens it
                     Field(
                         SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
-                        Modifier.fillMaxWidth(),
+                        Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
                         inner = Modifier.focusRequester(ContentFocus.req).onFocusChanged { fieldFocused = it.isFocused || it.hasFocus },
                         onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
                     )
@@ -204,7 +210,7 @@ fun SearchScreen(
                 // Deliberately not wired to fieldFocused: that flag belongs to the BackHandler and tracks the app keyboard only.
                 Field(
                     SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
                     onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
                 )
                 // Own on-screen keyboard (instead of the TV's keyboard): hits appear while typing
@@ -226,7 +232,9 @@ fun SearchScreen(
                 }
             }
             // Right: the hits
-            Column(Modifier.weight(1f).fillMaxHeight()) {
+            // Starts at the height of the input field (the results sit level with the search bar, the Sports Hub button too)
+            val resultsTop = with(androidx.compose.ui.platform.LocalDensity.current) { (fieldY - rowY).coerceAtLeast(0f).toDp() }
+            Column(Modifier.weight(1f).fillMaxHeight().padding(top = resultsTop)) {
                 CompositionLocalProvider(LocalSearchFocus provides { focusItem = it }) {
                     LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = state, contentPadding = PaddingValues(bottom = 48.dp)) {
                 if (fl == 4) item(key = "hubbtn") {

@@ -89,8 +89,8 @@ object LiveSync {
     private fun drivePrefs(c: Context) = c.applicationContext.getSharedPreferences(DRIVE_PREFS, Context.MODE_PRIVATE)
     private fun basePrefs(c: Context) = c.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** Live sync switched on for this device (default on once Drive is connected). */
-    fun isOn(c: Context): Boolean = drivePrefs(c).getBoolean("auto", true)
+    /** Live sync switched on for this device. Off by default: the user switches it on in the Drive settings of each device. */
+    fun isOn(c: Context): Boolean = drivePrefs(c).getBoolean("auto", false)
     fun favoritesOn(c: Context): Boolean = drivePrefs(c).getBoolean("auto_fav", true)
     fun historyOn(c: Context): Boolean = drivePrefs(c).getBoolean("auto_hist", true)
 

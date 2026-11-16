@@ -50,6 +50,28 @@ internal fun DriveSection(ctx: Context) {
     if (!DriveSync.connected) {
         DriveConnect(ctx) { status = it }
     } else {
+        // Live sync: favorites and history follow this device without a button, only when switched on here
+        var liveOn by remember { mutableStateOf(LiveSync.isOn(ctx)) }
+        var liveFav by remember { mutableStateOf(LiveSync.favoritesOn(ctx)) }
+        var liveHist by remember { mutableStateOf(LiveSync.historyOn(ctx)) }
+        // English for now (not yet in the translation dictionaries)
+        ToggleRow(
+            "Live sync",
+            "Syncs favorites and history with your other devices automatically whenever something changes. Switch it on separately on each device.",
+            liveOn
+        ) { liveOn = it; LiveSync.setSwitches(ctx, it, liveFav, liveHist) }
+        if (liveOn) {
+            ToggleRow("Favorites and lists", null, liveFav) { liveFav = it; LiveSync.setSwitches(ctx, liveOn, it, liveHist) }
+            ToggleRow("History and continue watching", null, liveHist) { liveHist = it; LiveSync.setSwitches(ctx, liveOn, liveFav, it) }
+            val at = LiveSync.lastOk
+            Text(
+                if (at > 0) "Last synced: " + dayLabel(at / 1000) + " " + hhmm(at / 1000)
+                else "Not synced yet.",
+                color = Muted, fontSize = 15.sp
+            )
+            if (LiveSync.lastError.isNotEmpty()) Text("Live sync error: " + LiveSync.lastError, color = Muted, fontSize = 14.sp)
+        }
+
         var pass by remember { mutableStateOf(DriveSync.passphrase(ctx).orEmpty()) }
         var withPl by remember { mutableStateOf(pass.isNotEmpty()) }
         var remotes by remember { mutableStateOf<List<DriveSync.Remote>?>(null) }
