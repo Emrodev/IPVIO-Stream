@@ -1,7 +1,7 @@
 // Korp TV — Smart TV & Web Engine (Samsung Tizen, LG webOS, Browsers)
 
 let config = {
-  portalUrl: 'https://korp.kabaweb.in',
+  portalUrl: 'http://localhost:3000',
   localPortalUrl: 'http://localhost:3000'
 };
 

@@ -6,8 +6,8 @@ const { Readable } = require('stream');
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const PORTAL_URL = process.env.PORTAL_URL || 'http://localhost:3000';
-const PUBLIC_PORTAL_URL = process.env.PUBLIC_PORTAL_URL || process.env.PORTAL_PUBLIC_DOMAIN || 'https://korp.kabaweb.in';
-const PUBLIC_WEBTV_URL = process.env.PUBLIC_WEBTV_URL || 'https://playkorp.kabaweb.in';
+const PUBLIC_PORTAL_URL = process.env.PUBLIC_PORTAL_URL || process.env.PORTAL_PUBLIC_DOMAIN || 'http://localhost:3000';
+const PUBLIC_WEBTV_URL = process.env.PUBLIC_WEBTV_URL || 'http://localhost:3001';
 
 app.use(cors());
 app.use(express.json());

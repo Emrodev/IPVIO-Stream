@@ -119,7 +119,7 @@ PORTAL_PUBLIC_DOMAIN=https://seu-dominio.com
 ## 5. Aplicação Web & Smart TV (Samsung Tizen, LG webOS, Browsers)
 
 A aplicação **Korp TV Web** (`web-tv/`) replica fielmente a interface e o ecossistema do aplicativo Android TV:
-* **Domínio Oficial de Acesso Web:** `https://playkorp.kabaweb.in`
+* **Acesso Web:** `http://localhost:3001` (ou domínio configurado no servidor)
 * **Porta Dedicada no Servidor:** `3001` (acesso local: `http://localhost:3001`).
 * **Navegação D-Pad / Controle Remoto:**
   - Suporte nativo a Setas (Cima, Baixo, Esquerda, Direita), Enter/OK e Botão Voltar (Escape / Backspace / KeyCodes Tizen `10009` e webOS `461`).
@@ -136,7 +136,7 @@ A aplicação **Korp TV Web** (`web-tv/`) replica fielmente a interface e o ecos
 * **Interface Imersiva (Zero Scrollbars):**
   - Barras de rolagem nativas ocultadas via CSS global (`scrollbar-width: none`), garantindo estética 100% de Smart TV em qualquer navegador.
 * **Empacotamento Smart TV:**
-  - **Samsung Tizen:** Manifesto pronto em `web-tv/tizen/config.xml` (Tizen Web Widget apontando para `https://playkorp.kabaweb.in`).
+  - **Samsung Tizen:** Manifesto pronto em `web-tv/tizen/config.xml` (Tizen Web Widget apontando para a aplicação).
   - **LG webOS:** Manifesto pronto em `web-tv/webos/appinfo.json`.
 * **Execução via Docker:**
   O serviço `webtv` está integrado ao `docker-compose.yml` e ao pipeline do GitHub Actions para publicação automática em `ghcr.io/kabaweb/korp-webtv`.

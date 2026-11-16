@@ -84,8 +84,8 @@ async function checkWhatsAppNumber({ apiUrl, apiToken, phone }) {
     cleanPhone = '55' + cleanPhone;
   }
 
-  // Se a apiUrl for do tipo https://viper.kabaweb.in/v25/5581988985300/messages
-  // o endpoint de contatos da ViperConnect é https://viper.kabaweb.in/{sessionPhone}/contacts?search={cleanPhone}
+  // Se a apiUrl for do tipo https://api.whatsapp-gateway.com/v25/5511999999999/messages
+  // o endpoint de contatos é https://api.whatsapp-gateway.com/{sessionPhone}/contacts?search={cleanPhone}
   try {
     const urlObj = new URL(apiUrl.trim());
     const match = urlObj.pathname.match(/\/(?:v\d+\/)?(\d{10,15})\/?/);

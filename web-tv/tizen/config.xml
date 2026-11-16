@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://playkorp.kabaweb.in/KorpTV" version="1.0.0" viewmodes="fullscreen">
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://localhost:3001/KorpTV" version="1.0.0" viewmodes="fullscreen">
     <tizen:application id="Xk8s9p2w1q.KorpTV" exec="index.html" screen-orientation="landscape" required_version="3.0"/>
     <name>Korp TV</name>
     <description>Korp TV Smart TV IPTV Player</description>

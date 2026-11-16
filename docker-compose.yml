@@ -38,7 +38,7 @@ services:
       - ADMIN_PASS=${ADMIN_PASS:-admin123}
       - ADMIN_KEY=${ADMIN_KEY:-admin123}
       - SESSION_SECRET=${SESSION_SECRET:-korp-tv-session-secret-token-2026}
-      - PORTAL_PUBLIC_DOMAIN=${PORTAL_PUBLIC_DOMAIN:-https://korp.kabaweb.in}
+      - PORTAL_PUBLIC_DOMAIN=${PORTAL_PUBLIC_DOMAIN:-http://localhost:3000}
     volumes:
       - ./portal/data:/app/data
       - ./portal/public/apks:/app/public/apks
@@ -59,8 +59,8 @@ services:
     environment:
       - PORT=3001
       - PORTAL_URL=http://portal:3000
-      - PUBLIC_PORTAL_URL=${PORTAL_PUBLIC_DOMAIN:-https://korp.kabaweb.in}
-      - PUBLIC_WEBTV_URL=${WEBTV_PUBLIC_URL:-https://playkorp.kabaweb.in}
+      - PUBLIC_PORTAL_URL=${PORTAL_PUBLIC_DOMAIN:-http://localhost:3000}
+      - PUBLIC_WEBTV_URL=${WEBTV_PUBLIC_URL:-http://localhost:3001}
     volumes:
       - ./web-tv/public:/app/public
     networks:
