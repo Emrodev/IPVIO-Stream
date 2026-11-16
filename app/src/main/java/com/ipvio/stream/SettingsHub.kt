@@ -627,7 +627,7 @@ private fun StoragePage(ctx: Context) {
             catch (e: Exception) { backupMsg = "Auf diesem Gerät gibt es keine Dateiauswahl." }
         }
     }
-    backupMsg?.let { Text(it, color = Accent2, fontSize = 14.sp, modifier = Modifier.widthIn(max = 680.dp)) }
+    StatusLine(backupMsg, fontSize = 14.sp, modifier = Modifier.widthIn(max = 680.dp))
     Hint("„Speichern unter“ lässt dich den Ort wählen, zum Beispiel Google Drive, Downloads oder einen USB-Stick – so nimmst du die Sicherung auf ein anderes Gerät mit.")
     Hint("Gesichert werden Einstellungen, Favoriten, Verlauf, Weiterschauen und Profile. Playlists und Zugangsdaten sind nur in „Sicherung mit Playlists“ enthalten (die Datei enthält Passwörter, gib sie nicht weiter). Beim Wiederherstellen startet die App neu. Auf einem neuen Gerät geht das gleich beim Hinzufügen der ersten Playlist.")
     TransferSection(ctx)
@@ -1285,10 +1285,8 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
                 PlaylistStore.setShown(ctx, i, false)
                 scope.launch { PlaylistStore.applyMulti(ctx) }
             }
-            if (!isActive) SmallPill("Zur Hauptliste machen") {
-                PlaylistStore.activate(ctx, i)
-                scope.launch { PlaylistStore.load(ctx, pl.url, false) }
-            }
+            // Same as the playlist switch in Live TV: from the stored copy, without a new download
+            if (!isActive) SmallPill("Zur Hauptliste machen") { PlaylistStore.switchAsync(ctx, i) }
             // Content mode (Wishbox): Live TV + VOD / Live TV only / VOD only, cycles on OK
             val mode = remember(PlaylistMode.version, pl.url) { PlaylistMode.get(ctx, pl.url) }
             SmallPill(PlaylistMode.labels[mode]) {
@@ -1326,7 +1324,7 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
         BackupFields(backups)
         PillButton("+ Backup-Server") { backups.add("") }
         Hint(BACKUP_HINT)
-        backupErr?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 15.sp) }
+        StatusLine(backupErr, color = Color(0xFFFF8A80), fontSize = 15.sp)
         PillButton("Backup-Server speichern", light = true) {
             if (!backupsValid(backups)) backupErr = BACKUP_INVALID
             else { PlaylistStore.setBackups(ctx, PlaylistStore.lists[editingB].url, backups.toList()); editingB = -1 }
@@ -1527,7 +1525,7 @@ private fun ApiKeysPhoneEntry(ctx: Context, onKeys: (Map<String, String>) -> Uni
                     Text("Code", color = Muted, fontSize = 16.sp)
                     Text(server.code, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, raw = true)
                 }
-                if (received) Text("Schlüssel vom Handy erhalten und gespeichert. Jetzt „Speichern und prüfen“ drücken.", color = Accent2, fontSize = 16.sp)
+                if (received) StatusLine("Schlüssel vom Handy erhalten und gespeichert. Jetzt „Speichern und prüfen“ drücken.")
             }
         }
     }
@@ -1608,7 +1606,6 @@ private fun UpdateSection(ctx: Context) {
     val scope = rememberCoroutineScope()
     Text("Installiert: Version " + AppUpdate.currentName(ctx), color = Muted, fontSize = 16.sp)
     ToggleRow("Automatisch nach Updates suchen", "Einmal am Tag. Ein neues Update erscheint in der Glocke oben rechts.", auto) { auto = it; AppUpdate.setAuto(ctx, it) }
-    Hint("Die Schlüssel bleiben nur auf diesem Gerät. Nach dem Eintragen die App einmal neu starten, damit alle Bereiche die Infos laden. Intro- und Abspann-Zeiten kommen von TheIntroDB und brauchen keinen Schlüssel.")
     // Buttons last: text below the last focusable element was cut off at the bottom of the page
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton(if (busy) "Bitte warten …" else "Jetzt nach Update suchen") {
@@ -1629,7 +1626,7 @@ private fun UpdateSection(ctx: Context) {
             }
         }
     }
-    if (status.isNotBlank()) Text(status, color = Muted, fontSize = 16.sp)
+    StatusLine(status, color = Muted)
     Hint("Updates kommen von der Projektseite auf GitHub. Deine Playlists, Favoriten, der Verlauf und die Einstellungen bleiben bei einem Update erhalten. Android fragt vor der Installation einmal nach.")
     var url by remember { mutableStateOf(AppUpdate.url(ctx).takeIf { it != AppUpdate.DEFAULT_URL }.orEmpty()) }
     Field(url, { url = it; AppUpdate.setUrl(ctx, it) }, "Eigene Update-Adresse (leer = GitHub)")

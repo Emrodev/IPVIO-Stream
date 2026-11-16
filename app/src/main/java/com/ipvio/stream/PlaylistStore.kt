@@ -901,18 +901,53 @@ object PlaylistStore {
     }
 
     /**
-     * Switch playlist (Live TV, without settings): makes [i] the active playlist and immediately shows the cache
-     * of the new playlist; then it is refreshed from the server. The old display is discarded, otherwise it would stay visible.
+     * Switch playlist (Live TV, header, settings): makes [i] the active playlist and shows the copy stored on the device;
+     * the server is only asked when there is no stored copy yet. The old list is dropped first: keeping both lists in memory
+     * at once ran weak devices (Fire TV Stick) out of memory.
      */
     suspend fun switchTo(c: Context, i: Int) {
         ensure(c)
         if (i !in lists.indices) return
         if (loadLock.isLocked) return   // a load is already running: do not interfere
         activate(c, i)
+        // Mark the load before the list is emptied: otherwise one frame shows "No channels yet" instead of the loading screen.
+        // No suspension point between here and load(), so its lock is still free.
+        loading = true
         primaryItems = emptyList(); primaryUrl = null
         merged = MultiLogic.Merged(emptyList(), emptySet(), emptyMap()); sourceNames = emptyList()
         setItems(emptyList())
-        load(c, lists[i].url, false)
+        // Read the playlist stored on the device; download only when there is none yet (a switch back must not reload
+        // the whole list from the server). Refreshing follows the refresh plan at app start or "Refresh" in the settings.
+        load(c, lists[i].url, false, skipNetworkWhenCached = true)
+    }
+
+    /**
+     * Runs [switchTo] in a scope that outlives the screen that started it. The switch empties the list, the home screen then
+     * replaces Live TV / the movie or series page by the loading screen, and a scope remembered there was cancelled with it:
+     * the load stopped half way and "No channels yet" stayed until a restart (issues 1 and 16).
+     */
+    fun switchAsync(c: Context, i: Int) {
+        val app = c.applicationContext
+        switchScope.launch { switchTo(app, i) }
+    }
+
+    private val switchScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** Add a playlist sent from the phone settings (issue 18): loaded and adopted like "Add playlist" on the TV. */
+    fun addAsync(c: Context, url: String) {
+        val app = c.applicationContext
+        switchScope.launch { if (!loadLock.isLocked) load(app, url, true) }
+    }
+
+    /** Delete a playlist from the phone settings, like "Delete" in Settings > Playlists: the next one is loaded if it was the main list. */
+    fun removeAsync(c: Context, i: Int) {
+        val app = c.applicationContext
+        switchScope.launch {
+            if (i !in lists.indices || loadLock.isLocked) return@launch
+            val wasActive = i == active
+            remove(app, i)
+            if (wasActive && lists.isNotEmpty()) switchTo(app, active)
+        }
     }
 
     /** Show a playlist additionally (or no longer). Call [applyMulti] afterwards. */

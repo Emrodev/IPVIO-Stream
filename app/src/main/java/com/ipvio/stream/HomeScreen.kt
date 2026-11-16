@@ -427,7 +427,8 @@ fun HomeScreen(
         }
         ready.clear()
         for (c in candidates) {
-            val m = MetaRepo.basic(ctx, c)
+            // Without a TMDB key the info comes straight from the provider (Xtream); before, the slideshow stayed empty then
+            val m = MetaRepo.basic(ctx, c) ?: MetaRepo.providerMeta(ctx, c)
             if (m?.backdrop != null) ready.add(c)
             if (ready.size >= 6) break
         }

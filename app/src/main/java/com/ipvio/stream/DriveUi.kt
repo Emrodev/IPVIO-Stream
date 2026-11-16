@@ -107,19 +107,6 @@ internal fun DriveSection(ctx: Context) {
     StatusLine(status)
 }
 
-/**
- * Message under the buttons. The settings page only scrolls to the focused button, so a text below it would stay
- * outside the screen on TV ("nothing happens"): every new message scrolls itself into view.
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun StatusLine(text: String) {
-    if (text.isBlank()) return
-    val req = remember { BringIntoViewRequester() }
-    LaunchedEffect(text) { runCatching { req.bringIntoView() } }
-    Text(text, color = Accent2, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.bringIntoViewRequester(req))
-}
-
 /** Sign-in: code and QR code for google.com/device; waits in the background until the user agreed on the phone. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

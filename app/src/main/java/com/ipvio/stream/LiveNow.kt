@@ -97,7 +97,7 @@ private fun BackdropTint(c: Item, modifier: Modifier) {
 
 /** What is on the highlighted channel: large, with timeline and the next shows. */
 @Composable
-fun LiveNowPanel(ch: Item?, modifier: Modifier = Modifier) {
+fun LiveNowPanel(ch: Item?, modifier: Modifier = Modifier, compact: Boolean = false) {
     if (ch == null) return
     Crossfade(ch, animationSpec = tween(if (Look.motion == 0) 0 else 400), label = "liveNow", modifier = modifier) { c ->
         // null = still loading (cached data is shown right away); parsing off the main thread
@@ -105,16 +105,20 @@ fun LiveNowPanel(ch: Item?, modifier: Modifier = Modifier) {
         val epg = loaded ?: emptyList()
         val nowE = Epg.current(epg)
         val next = if (nowE != null) epg.filter { it.start >= nowE.end }.take(2) else epg.take(2)
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(dpx(18))) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(dpx(if (compact) 8 else 18))) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(14))) {
                 LiveBadge()
                 Text(raw = true, text = c.title + (nowE?.let { "  ·  " + hhmm(it.start) + " – " + hhmm(it.end) } ?: ""),
-                    color = Tok.TextMid, fontSize = spx(20), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    color = Tok.TextMid, fontSize = spx(if (compact) 16 else 20), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(raw = true, text = nowE?.title ?: c.title, color = Tok.TextHi, fontSize = spx(68), lineHeight = spx(70),
-                fontWeight = FontWeight.ExtraBold, letterSpacing = (-1.2).sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            // Compact (channel search): smaller title and a short description so the input field above the keyboard has room
+            Text(raw = true, text = nowE?.title ?: c.title, color = Tok.TextHi,
+                fontSize = spx(if (compact) 34 else 68), lineHeight = spx(if (compact) 36 else 70),
+                fontWeight = FontWeight.ExtraBold, letterSpacing = (if (compact) -0.5 else -1.2).sp,
+                maxLines = if (compact) 1 else 2, overflow = TextOverflow.Ellipsis)
             nowE?.desc?.takeIf { it.isNotBlank() }?.let {
-                Text(raw = true, text = it, color = Tok.TextMid, fontSize = spx(21), lineHeight = spx(30), maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Text(raw = true, text = it, color = Tok.TextMid, fontSize = spx(if (compact) 16 else 21), lineHeight = spx(if (compact) 22 else 30),
+                    maxLines = if (compact) 2 else 3, overflow = TextOverflow.Ellipsis)
             }
             if (nowE != null) {
                 val frac = ((System.currentTimeMillis() / 1000 - nowE.start).toFloat() / (nowE.end - nowE.start).coerceAtLeast(1)).coerceIn(0f, 1f)
@@ -126,7 +130,7 @@ fun LiveNowPanel(ch: Item?, modifier: Modifier = Modifier) {
                     Text(raw = true, text = hhmm(nowE.end), color = Muted, fontSize = spx(17))
                 }
             }
-            if (next.isNotEmpty()) Row(Modifier.padding(top = dpx(12)), horizontalArrangement = Arrangement.spacedBy(dpx(16))) {
+            if (!compact && next.isNotEmpty()) Row(Modifier.padding(top = dpx(12)), horizontalArrangement = Arrangement.spacedBy(dpx(16))) {
                 next.forEachIndexed { i, e ->
                     Column(
                         Modifier.weight(1f).clip(RoundedCornerShape(dpx(18))).background(Color(0x12FFFFFF))

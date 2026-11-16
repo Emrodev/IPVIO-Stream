@@ -30,6 +30,21 @@ class DriveLogicTest {
         assertTrue(thrown)
     }
 
+    @Test fun liveFiles() {
+        assertEquals("ipvio_live_ab12cd34.json", DriveLogic.liveFileName("ab12cd34"))
+        assertEquals("ab12cd34", DriveLogic.liveDeviceIdOf("ipvio_live_ab12cd34.json"))
+        assertNull(DriveLogic.liveDeviceIdOf("ipvio_sync_ab12cd34.json"))
+        assertNull(DriveLogic.liveDeviceIdOf("ipvio_live_a'b.json"))
+        assertNull(DriveLogic.liveDeviceIdOf("ipvio_live_.json"))
+        // The backup list never shows live files and the other way round
+        assertFalse(DriveLogic.isSyncFile("ipvio_live_ab12cd34.json"))
+        assertEquals("'1AbC' in parents and name contains 'ipvio_live_' and trashed = false", DriveLogic.liveListQuery("1AbC"))
+        assertEquals("'1AbC' in parents and name = 'ipvio_live_ab12.json' and trashed = false", DriveLogic.liveFileQuery("1AbC", "ab12"))
+        var thrown = false
+        try { DriveLogic.liveListQuery("x' or '1'='1") } catch (e: IllegalArgumentException) { thrown = true }
+        assertTrue(thrown)
+    }
+
     @Test fun driveTimes() {
         assertEquals(1794652530123L, DriveLogic.parseTime("2026-11-14T10:35:30.123Z"))
         assertEquals(1794652530000L, DriveLogic.parseTime("2026-11-14T10:35:30Z"))

@@ -49,6 +49,15 @@ object WhatsNewLogic {
      */
     fun shouldShow(lastSeenCode: Long, currentCode: Long, freshInstall: Boolean, hasNotes: Boolean): Boolean =
         hasNotes && !freshInstall && currentCode > 0 && lastSeenCode < currentCode
+
+    /**
+     * Same, and also when only the version name changed (issue 12): a test build and its release share the versionCode,
+     * so after "1.4.2-test" the release "1.4.2" counted as seen. [lastSeenName] null = stored by an older app version
+     * (only the code is known then).
+     */
+    fun shouldShow(lastSeenCode: Long, lastSeenName: String?, currentCode: Long, currentName: String, freshInstall: Boolean, hasNotes: Boolean): Boolean =
+        shouldShow(lastSeenCode, currentCode, freshInstall, hasNotes) ||
+            (hasNotes && !freshInstall && currentCode > 0 && lastSeenCode == currentCode && lastSeenName != null && lastSeenName != currentName)
 }
 
 /**
@@ -63,6 +72,21 @@ object WhatsNew {
     const val BUG_FIXES = "## Bug fixes (hopefully lol)"
 
     val NOTES: Map<String, List<String>> = mapOf(
+        "1.4.3" to listOf(
+            "Handy: neue Einstellungen über das Zahnrad oben – Playlists, Kategorien sortieren und ausblenden, Jugendschutz, Sprache",
+            "Handy: neuer Reiter „Sport“ mit den Spielen von heute, deinen Lieblingsteams und „Meine Liste“; Spiele direkt am Fernseher starten",
+            "Filme und Serien: Kategorien mit Hoch/Runter verschieben, das Menü bleibt offen, neu „Ans Ende verschieben“",
+            "Playlist wechseln geht schneller: die gespeicherte Liste wird gelesen statt neu heruntergeladen",
+            "Bildformat: Hinweis, wenn das Bild schon das Format des Fernsehers hat",
+            BUG_FIXES,
+            "Playlist wechseln zeigt nicht mehr „Noch keine Sender“",
+            "Live TV: Links springt zur gewählten Kategorie, Rechts öffnet die Senderliste",
+            "Player: „Zuschneiden“ und „Strecken“ wirken wieder",
+            "Einstellungen: Meldungen unter den Knöpfen sind sofort zu sehen",
+            "WLAN-Übertragung: der Fokus bleibt nach Start und Stopp auf dem Knopf",
+            "„Was ist neu“ erscheint auch nach einer Test-Version",
+            "Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Update nicht mehr"
+        ),
         "1.4.2" to listOf(
             "Google Drive: Favoriten, Verlauf, Einstellungen und Playlists zwischen Geräten sichern und wiederherstellen (Einstellungen > Speicher)",
             "Filme und Serien: auf Wunsch direkt zu den Kategorien (Einstellungen > Allgemein)",
@@ -105,16 +129,24 @@ object WhatsNew {
             val pi = c.packageManager.getPackageInfo(c.packageName, 0)
             pi.firstInstallTime == pi.lastUpdateTime
         }.getOrDefault(true)
-        val last = prefs(c).getLong("seen_code", 0L)
-        show = WhatsNewLogic.shouldShow(last, code, fresh, NOTES[n].orEmpty().isNotEmpty())
+        val full = AppUpdate.currentName(c)
+        val p = prefs(c)
+        val last = p.getLong("seen_code", 0L)
+        val lastName = p.getString("seen_name", null)
+        show = WhatsNewLogic.shouldShow(last, lastName, code, full, fresh, NOTES[n].orEmpty().isNotEmpty())
         name = n
         // Fresh install or no notes: nothing to show, remember the version so a later update compares against it
-        if (!show && last < code) prefs(c).edit().putLong("seen_code", code).apply()
+        if (!show && (last < code || lastName != full)) markSeen(c)
     }
 
     fun dismiss(c: Context) {
         show = false
-        prefs(c).edit().putLong("seen_code", AppUpdate.currentCode(c)).apply()
+        markSeen(c)
+    }
+
+    /** Remembers code and full name ("1.4.2-test" differs from "1.4.2"), see [WhatsNewLogic.shouldShow]. */
+    private fun markSeen(c: Context) {
+        prefs(c).edit().putLong("seen_code", AppUpdate.currentCode(c)).putString("seen_name", AppUpdate.currentName(c)).apply()
     }
 }
 

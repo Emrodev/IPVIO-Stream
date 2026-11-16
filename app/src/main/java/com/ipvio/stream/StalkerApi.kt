@@ -540,7 +540,7 @@ object StalkerApi {
     /** Short form of a portal entry for [lastSeriesDetail]: the fields that decide how it is read. */
     private fun shape(o: JSONObject): String {
         val keys = listOf("id", "name", "cmd", "is_season", "is_episode", "is_file", "is_series", "has_files", "series", "season_id", "series_number")
-        return keys.filter { o.has(it) }.joinToString(",", "{", "}") { k -> "$k=" + o.opt(k).toString().take(40) }
+        return keys.filter { o.has(it) }.joinToString(",", "{", "}") { k -> "$k=" + "${o.opt(k)}".take(40) }
     }
 
     /** Why the episodes of a series could not be loaded (masked like [lastDetail]). Empty = nothing. */

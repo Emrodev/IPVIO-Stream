@@ -32,6 +32,11 @@ class CatOrderLogicTest {
     @Test fun toTop_movesToFirstPlace() =
         assertEquals(listOf("Movies", "DE News", "de Sport", "AT Kids"), CatOrderLogic.toTop(provider, "Movies"))
 
+    @Test fun toBottom_movesToLastPlace() {
+        assertEquals(listOf("de Sport", "AT Kids", "Movies", "DE News"), CatOrderLogic.toBottom(provider, "DE News"))
+        assertEquals(provider, CatOrderLogic.toBottom(provider, "Movies"))
+    }
+
     @Test fun encodeDecode_roundTrip() {
         assertEquals(provider, CatOrderLogic.decode(CatOrderLogic.encode(provider)))
         assertEquals(emptyList<String>(), CatOrderLogic.decode(null))

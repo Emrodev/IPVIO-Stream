@@ -32,6 +32,32 @@ object DriveLogic {
     fun deviceIdOf(name: String): String? =
         if (name.startsWith(PREFIX) && name.endsWith(SUFFIX)) name.removePrefix(PREFIX).removeSuffix(SUFFIX).ifEmpty { null } else null
 
+    /**
+     * Live sync (W-010b): a second, small file per device with only the merge logs. It is kept apart from the backup
+     * file above, so the manual backup (with the encrypted playlists) is never replaced by the automatic upload.
+     */
+    const val LIVE_PREFIX = "ipvio_live_"
+
+    fun liveFileName(deviceId: String): String {
+        require(ID.matches(deviceId)) { "bad device id" }
+        return LIVE_PREFIX + deviceId + SUFFIX
+    }
+
+    fun liveDeviceIdOf(name: String): String? =
+        if (name.startsWith(LIVE_PREFIX) && name.endsWith(SUFFIX))
+            name.removePrefix(LIVE_PREFIX).removeSuffix(SUFFIX).takeIf { ID.matches(it) }
+        else null
+
+    fun liveListQuery(folderId: String): String {
+        require(validDriveId(folderId)) { "bad folder id" }
+        return "'$folderId' in parents and name contains '$LIVE_PREFIX' and trashed = false"
+    }
+
+    fun liveFileQuery(folderId: String, deviceId: String): String {
+        require(validDriveId(folderId)) { "bad folder id" }
+        return "'$folderId' in parents and name = '${liveFileName(deviceId)}' and trashed = false"
+    }
+
     fun validDriveId(id: String): Boolean = DRIVE_ID.matches(id)
 
     /** Drive queries: only fixed names and checked ids go into them, nothing typed by the user. */
