@@ -1444,6 +1444,8 @@ private fun SublistsPage(ctx: Context) {
     var newSublistHasLogo by remember { mutableIntStateOf(0) } // 0=any, 1=with, 2=without
     var newSublistHasTvgId by remember { mutableIntStateOf(0) } // 0=any, 1=with, 2=without
     var newSublistIncludeAdult by remember { mutableStateOf(true) }
+    // Bumped after any sublist change so the active/list display recomposes
+    var sublistTick by remember { mutableIntStateOf(0) }
 
     Text("Sublists", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     Hint("Set which channels of a playlist are loaded. Only matching entries make it into the list.")
@@ -1574,6 +1576,7 @@ private fun SublistsPage(ctx: Context) {
         PillButton("Save sublist") {
             if (newSublistName.isBlank()) return@PillButton
             SublistStore.upsert(ctx, h, SublistDef(newSublistName, f))
+            Toast.makeText(ctx, "Saved ${newSublistName}", Toast.LENGTH_SHORT).show()
             // Reset form
             newSublistName = ""
             newSublistGroupsByKind = emptyMap()
@@ -1583,6 +1586,7 @@ private fun SublistsPage(ctx: Context) {
             newSublistHasLogo = 0
             newSublistHasTvgId = 0
             newSublistIncludeAdult = true
+            sublistTick++
             scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
         }
 
@@ -1590,8 +1594,25 @@ private fun SublistsPage(ctx: Context) {
 
         // --- Existing sublist management ---
         SectionTitle("Existing sublists for ${pl.name}")
-        val activeName = SublistStore.active(ctx, h)
-        val sublists = SublistStore.allFor(ctx, h)
+        val activeName = remember(h, sublistTick) { SublistStore.active(ctx, h) }
+        val sublists = remember(h, sublistTick) { SublistStore.allFor(ctx, h) }
+        Text(
+            if (activeName != null) "Active: $activeName" else "Active: full playlist (no filter)",
+            color = if (activeName != null) Accent2 else Muted,
+            fontSize = 13.sp, fontWeight = FontWeight.Medium
+        )
+        if (activeName != null) {
+            // Proof that the filter really ran: how many titles of the playlist are kept.
+            val kept = PlaylistStore.sublistMatchCount
+            val total = PlaylistStore.sublistTotalCount
+            if (total > 0) {
+                Text(
+                    "$kept of $total titles in the playlist match this sublist",
+                    color = Muted, fontSize = 12.sp
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
         if (sublists.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 sublists.forEach { def ->
@@ -1600,16 +1621,27 @@ private fun SublistsPage(ctx: Context) {
                         Text(def.name + if (isActive) "  ·  " + Lang.tr("active") else "", color = if (isActive) Accent2 else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (!isActive) SmallPill("Set active") {
                             SublistStore.setActive(ctx, h, def.name)
+                            sublistTick++
+                            Toast.makeText(ctx, "Active: ${def.name}", Toast.LENGTH_SHORT).show()
                             scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
                         }
                         SmallPill("Delete") {
                             SublistStore.remove(ctx, h, def.name)
-                            if (isActive) {
-                                SublistStore.setActive(ctx, h, null)
-                                scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
-                            }
+                            Toast.makeText(ctx, "Deleted ${def.name}", Toast.LENGTH_SHORT).show()
+                            if (isActive) SublistStore.setActive(ctx, h, null)
+                            sublistTick++
+                            scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
                         }
                     }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            if (activeName != null) {
+                PillButton("Load full playlist (clear active)") {
+                    SublistStore.setActive(ctx, h, null)
+                    sublistTick++
+                    Toast.makeText(ctx, "Active: full playlist", Toast.LENGTH_SHORT).show()
+                    scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
                 }
             }
         } else {
@@ -1624,17 +1656,22 @@ private fun SublistsPage(ctx: Context) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             PillButton("Export JSON") {
                 SublistStore.exportFor(ctx, h)?.let { json ->
-                    val file = File(ctx.filesDir, "sublists_export_${playlistUrl.hashCode()}.json")
+                    val fname = "sublists_export_${PlaylistStore.key(playlistUrl)}.json"
+                    val file = File(ctx.filesDir, fname)
                     file.writeText(json)
                     Toast.makeText(ctx, "Exported to ${file.absolutePath}", Toast.LENGTH_LONG).show()
                 } ?: Toast.makeText(ctx, "No sublists to export", Toast.LENGTH_SHORT).show()
             }
             PillButton("Import JSON") {
-                val file = File(ctx.filesDir, "sublists_export_${playlistUrl.hashCode()}.json")
+                val fname = "sublists_export_${PlaylistStore.key(playlistUrl)}.json"
+                val file = File(ctx.filesDir, fname)
                 if (file.exists()) {
                     val ok = SublistStore.importFor(ctx, h, file.readText())
                     if (ok) {
+                        sublistTick++
                         Toast.makeText(ctx, "Imported ${SublistStore.allFor(ctx, h).size} sublists", Toast.LENGTH_LONG).show()
+                        // Re-apply right away, so an already active sublist takes effect without a restart
+                        scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
                     } else {
                         Toast.makeText(ctx, "Import failed", Toast.LENGTH_SHORT).show()
                     }

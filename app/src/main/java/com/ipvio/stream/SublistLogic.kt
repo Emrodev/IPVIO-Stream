@@ -31,13 +31,20 @@ data class SublistFilter(
     /** Whether adult content may pass the filter. */
     val includeAdult: Boolean = true
 ) {
-    /** Encode to a simple "key=value" text form (no org.json, so JVM tests work). */
+    /**
+     * Encode to a simple "key=value" text form (no org.json, so JVM tests work).
+     *
+     * Group and language names are arbitrary user/provider text: real IPTV group names look like
+     * "|US| ✪ NFL" and may contain '|' and ','. Those two characters therefore cannot be used as
+     * separators – doing so split the names on decode and silently dropped every group filter
+     * (the whole playlist stayed visible). Control characters cannot appear in a group name.
+     */
     fun encode(): String =
         kv(
             "e" to enabled.toString(),
             "k" to kind?.name,
-            "g" to if (groupsByKind.isEmpty()) null else groupsByKind.entries.joinToString("|") { "${it.key.name}:${it.value.joinToString(",")}" },
-            "l" to if (langsByKind.isEmpty()) null else langsByKind.entries.joinToString("|") { "${it.key.name}:${it.value.joinToString(",")}" },
+            "g" to encodeMap(groupsByKind),
+            "l" to encodeMap(langsByKind),
             "q" to quality,
             "h" to hasLogo?.toString(),
             "v" to hasTvgId?.toString(),
@@ -45,11 +52,18 @@ data class SublistFilter(
         )
 
     companion object {
+        /** Marks the current value format: separator-safe group names. */
+        private const val MAP_V2 = "v2"
+        /** Separates the per-kind blocks ("LIVE:…", "MOVIE:…"). */
+        private const val KIND_SEP = '\u001F'
+        /** Separates the values inside one per-kind block. */
+        private const val VALUE_SEP = '\u001E'
+
         fun decode(s: String?): SublistFilter {
             val o = unkv(s) ?: return SublistFilter()
             return SublistFilter(
                 enabled = o["e"]?.toBoolean() ?: false,
-                kind = o["k"]?.let { Kind.valueOf(it) },
+                kind = o["k"]?.let { runCatching { Kind.valueOf(it) }.getOrNull() },
                 groupsByKind = decodeMap(o["g"]),
                 langsByKind = decodeMap(o["l"]),
                 quality = o["q"],
@@ -59,16 +73,27 @@ data class SublistFilter(
             )
         }
 
+        private fun encodeMap(m: Map<Kind, List<String>>): String? {
+            val parts = m.entries.filter { it.value.isNotEmpty() }
+            if (parts.isEmpty()) return null
+            return MAP_V2 + KIND_SEP + parts.joinToString(KIND_SEP.toString()) { "${it.key.name}:${it.value.joinToString(VALUE_SEP.toString())}" }
+        }
+
         private fun decodeMap(s: String?): Map<Kind, List<String>> {
             if (s.isNullOrBlank()) return emptyMap()
-            return s.split('|').mapNotNull { part ->
+            // Old saved data had no marker and used '|' (kinds) and ',' (values).
+            val head = MAP_V2 + KIND_SEP
+            val body = if (s.startsWith(head)) s.substring(head.length) else s
+            val kindSep = if (s.startsWith(head)) KIND_SEP else '|'
+            val valueSep = if (s.startsWith(head)) VALUE_SEP else ','
+            return body.split(kindSep).mapNotNull { part ->
                 val i = part.indexOf(':')
                 if (i <= 0) null else {
-                    val k = Kind.valueOf(part.substring(0, i))
-                    val vals = part.substring(i + 1).split(',').filter { it.isNotEmpty() }
+                    val k = runCatching { Kind.valueOf(part.substring(0, i)) }.getOrNull() ?: return@mapNotNull null
+                    val vals = part.substring(i + 1).split(valueSep).filter { it.isNotEmpty() }
                     k to vals
                 }
-            }.toMap()
+            }.filter { it.second.isNotEmpty() }.toMap()
         }
     }
 

@@ -720,7 +720,7 @@ object PlaylistStore {
         StalkerLogic.parse(u)?.let { return downloadStalker(c, u, it) }
         val acct = XtreamLogic.fromUrl(u) ?: return downloadList(c, u)
         // If get.php has already failed once for this login, use the API right away
-        if (useApi(c, u)) return downloadApi(c, u, acct)
+        if (useApi(c, u)) return apiOrList(c, u, acct)
         val got = try {
             downloadList(c, u)
         } catch (e: PlaylistError) {
@@ -743,6 +743,18 @@ object PlaylistStore {
 
     private fun apiKey(u: String) = "xt_api_" + key(u)
     private fun useApi(c: Context, u: String) = prefs(c).getBoolean(apiKey(u), false)
+
+    /**
+     * The API is the known-good path for this login. If it delivers an incomplete list (e.g. no films although the
+     * provider has film categories), the marker is dropped and the complete M3U (get.php) is tried once.
+     */
+    private fun apiOrList(c: Context, u: String, acct: XtreamLogic.Acct): Pair<File, Charset> = try {
+        downloadApi(c, u, acct)
+    } catch (e: PlaylistError) {
+        if (!e.incomplete) throw e
+        prefs(c).edit().remove(apiKey(u)).apply()
+        downloadList(c, u)
+    }
 
     /** get.php failed: load via player_api.php and remember that for this login. If that fails too, the clearer error counts. */
     private fun apiInstead(c: Context, u: String, acct: XtreamLogic.Acct, first: PlaylistError): Pair<File, Charset> {

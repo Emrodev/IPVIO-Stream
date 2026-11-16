@@ -140,6 +140,37 @@ class SublistLogicTest {
         assertEquals(original.includeAdult, decoded.includeAdult)
     }
 
+    /** Real IPTV group names contain '|' and ',' – they must survive encode/decode unchanged. */
+    @Test fun encodeDecodeKeepsGroupNamesWithPipesAndCommas() {
+        val groups = mapOf(
+            Kind.LIVE to listOf("|KO| ✪ KOREA", "|US| ✪ HAITI | DOMINICAN", "|US| ✪ LOCAL - ABC"),
+            Kind.MOVIE to listOf("|IN| ✪ CAM & NEW RELEASE", "|IN| ✪ TELUGU  2022/2024"),
+            Kind.SERIES to listOf("|IN| ✪ SERIES WEB")
+        )
+        val original = SublistFilter(enabled = true, groupsByKind = groups, includeAdult = true)
+        val decoded = SublistFilter.decode(original.encode())
+        assertEquals(groups, decoded.groupsByKind)
+        assertEquals(original, decoded)
+
+        // And after the second encoding layer used by SublistDef
+        val def = SublistDef("Korean + USA + India", original)
+        val roundTripped = SublistDef.decode(def.encode())!!
+        assertEquals(groups, roundTripped.filter.groupsByKind)
+    }
+
+    /** After a round trip the filter must really exclude other groups. */
+    @Test fun decodedFilterStillFiltersLiveGroups() {
+        val f = SublistFilter(
+            enabled = true,
+            groupsByKind = mapOf(Kind.LIVE to listOf("|KO| ✪ KOREA", "|US| ✪ NFL"))
+        )
+        val live = SublistFilter.decode(SublistDef.decode(SublistDef("x", f).encode())!!.filter.encode())
+        assertTrue(live.matches(item(kind = Kind.LIVE, group = "|KO| ✪ KOREA")))
+        assertTrue(live.matches(item(kind = Kind.LIVE, group = "|US| ✪ NFL")))
+        assertFalse(live.matches(item(kind = Kind.LIVE, group = "|BE| ✪ CINEMA")))
+        assertFalse(live.matches(item(kind = Kind.LIVE, group = "|CA| ✪ CRAVE MOVIES")))
+    }
+
     @Test fun encodeDecodeEmptyRoundTrip() {
         val original = SublistFilter()
         val decoded = SublistFilter.decode(original.encode())

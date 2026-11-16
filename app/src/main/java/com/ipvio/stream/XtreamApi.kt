@@ -91,14 +91,17 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
         return f
     }
 
-    /** Goes through a (large) list entry by entry. If the provider does not answer with a list, nothing happens. */
-    private fun stream(url: String, each: (Map<String, String>) -> Unit) {
+    /**
+     * Goes through a (large) list entry by entry. Return value false = the provider did not answer with a list
+     * (error object, empty body, …) – the caller decides whether that is an error (see [write]).
+     */
+    private fun stream(url: String, each: (Map<String, String>) -> Unit): Boolean {
         client.newCall(req(url)).execute().use { r ->
             if (!r.isSuccessful) throw PlaylistError(PlaylistLogic.httpError(r.code))
-            val body = r.body ?: return
+            val body = r.body ?: return false
             JsonReader(body.charStream()).use { jr ->
                 jr.isLenient = true
-                if (jr.peek() != JsonToken.BEGIN_ARRAY) return
+                if (jr.peek() != JsonToken.BEGIN_ARRAY) return false
                 jr.beginArray()
                 var k = 0
                 while (jr.hasNext()) {
@@ -106,6 +109,7 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
                     if (++k % 1000 == 0) check()
                 }
                 jr.endArray()
+                return true
             }
         }
     }
@@ -207,20 +211,42 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
 
         onPhase("Filme werden geladen …")
         val vodCats = categories(a, "get_vod_categories")
-        stream(XtreamLogic.api(a, "get_vod_streams")) { f ->
-            XtreamLogic.movieEntry(a, f, vodCats)?.let { out.write(it); out.write("\n"); n++ }
+        var movies = 0
+        val vodList = stream(XtreamLogic.api(a, "get_vod_streams")) { f ->
+            XtreamLogic.movieEntry(a, f, vodCats)?.let { out.write(it); out.write("\n"); n++; movies++ }
+        }
+        // The provider does list film categories but delivers no film list: only the categories were answered.
+        // Loading would end with a list without any film – the previous (complete) list must stay instead.
+        if (movies == 0 && (vodCats.isNotEmpty() || !vodList)) {
+            throw PlaylistError(
+                "Der Anbieter hat die Filmliste nicht geliefert. Die bisherige Liste bleibt erhalten – bitte später erneut versuchen.",
+                incomplete = true
+            )
         }
 
         onPhase("Serien werden geladen …")
         val serCats = categories(a, "get_series_categories")
         val series = ArrayList<XtreamLogic.Series>()
-        stream(XtreamLogic.api(a, "get_series")) { f -> XtreamLogic.seriesOf(f, serCats)?.let { series.add(it) } }
+        val serList = stream(XtreamLogic.api(a, "get_series")) { f -> XtreamLogic.seriesOf(f, serCats)?.let { series.add(it) } }
+        if (series.isEmpty() && (serCats.isNotEmpty() || !serList)) {
+            throw PlaylistError(
+                "Der Anbieter hat die Serienliste nicht geliefert. Die bisherige Liste bleibt erhalten – bitte später erneut versuchen.",
+                incomplete = true
+            )
+        }
         for (s in series) { out.write(XtreamLogic.lazyEntry(a, s)); out.write("\n"); n++ }
 
         onPhase("Sender werden geladen …")
         val liveCats = categories(a, "get_live_categories")
-        stream(XtreamLogic.api(a, "get_live_streams")) { f ->
-            XtreamLogic.liveEntry(a, f, liveCats)?.let { out.write(it); out.write("\n"); n++ }
+        var live = 0
+        val liveList = stream(XtreamLogic.api(a, "get_live_streams")) { f ->
+            XtreamLogic.liveEntry(a, f, liveCats)?.let { out.write(it); out.write("\n"); n++; live++ }
+        }
+        if (live == 0 && (liveCats.isNotEmpty() || !liveList)) {
+            throw PlaylistError(
+                "Der Anbieter hat die Senderliste nicht geliefert. Die bisherige Liste bleibt erhalten – bitte später erneut versuchen.",
+                incomplete = true
+            )
         }
         check()
         return n
