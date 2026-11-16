@@ -193,6 +193,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     val catState = remember { LazyListState() }
     // Focus is in the channel list (set by enterChannels, cleared when the focus goes back to the categories)
     var inChannels by remember { mutableStateOf(false) }
+    // Like Movies/Series ("Mit Hoch/Runter verschieben"): the category floats, Up/Down move it, OK or Back puts it down
+    var floatingCat by remember { mutableStateOf<String?>(null) }
     // Issue 15: Right (like OK) on a category enters the channel list. The first row is not composed when the list is still
     // scrolled from another category; then scroll to the top first and focus it once it is laid out.
     fun enterChannels() {
@@ -219,6 +221,14 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // Focus is in the channel list: BACK goes to the chosen category like Left does, instead of opening the sidebar.
     // Not while an own list is being filled (there BACK finishes adding, see BackHandler below).
     androidx.activity.compose.BackHandler(enabled = inChannels && addTo == null) { backToCategory() }
+    // Floating category: Back puts it down (does not leave the tab)
+    androidx.activity.compose.BackHandler(enabled = floatingCat != null) { floatingCat = null }
+    // Keep the floating category in view while it moves (moving to the top or bottom jumps far)
+    LaunchedEffect(names, floatingCat) {
+        val f = floatingCat ?: return@LaunchedEffect
+        val j = names.indexOf(f)
+        if (j >= 0 && catState.layoutInfo.visibleItemsInfo.none { it.index == j }) runCatching { catState.scrollToItem(maxOf(j - 3, 0)) }
+    }
     var ask by remember { mutableStateOf<NameAsk?>(null) }
     SideEffect { ContentFocus.tab = 3 }
     // Selection points to a deleted list: back to "All channels"
@@ -367,11 +377,24 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     Box {
                         CatRow(
                             label, count, n == sel,
-                            if (n == sel) Modifier.focusRequester(ContentFocus.req) else Modifier,
+                            (if (n == sel) Modifier.focusRequester(ContentFocus.req) else Modifier).then(
+                                if (plainCat && floatingCat == n) Modifier.onPreviewKeyEvent { k ->
+                                    // While floating every key belongs to the move: Up/Down move, OK puts it down, Left/Right do nothing
+                                    if (k.type != KeyEventType.KeyDown) return@onPreviewKeyEvent k.key != Key.Back
+                                    when (k.key) {
+                                        Key.DirectionUp -> { CatOrder.move(ctx, CatOrder.LIVE, groupsAll.keys.toList(), n, -1); true }
+                                        Key.DirectionDown -> { CatOrder.move(ctx, CatOrder.LIVE, groupsAll.keys.toList(), n, 1); true }
+                                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> { floatingCat = null; true }
+                                        Key.Back -> false
+                                        else -> true
+                                    }
+                                } else Modifier
+                            ),
                             onFocus = { sel = n; inChannels = false }, onRight = { enterChannels() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
-                            icon = icon, raw = ml != null
-                        ) { enterChannels() }
+                            icon = icon, raw = ml != null,
+                            floating = plainCat && floatingCat == n
+                        ) { if (floatingCat == null) enterChannels() }
                         // Menu of a provider category: favorite on/off, hide, move, sorting of all categories
                         var sortMenu by remember { mutableStateOf(false) }
                         // Menu of a genre category (Sports, Movies, ...): hide
@@ -383,7 +406,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         if (catMenu && plainCat) OptionPopup(
                             listOf(
                                 if (n in CatFavs.list) "Aus Favoriten entfernen" else "Zu Favoriten hinzufügen", "Kategorie ausblenden",
-                                "Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben", "Kategorien sortieren …"
+                                "Mit Hoch/Runter verschieben", "Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben", "Ans Ende verschieben", "Kategorien sortieren …"
                             ), -1, { catMenu = false }
                         ) { i ->
                             catMenu = false
@@ -391,9 +414,11 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             when (i) {
                                 0 -> CatFavs.toggle(ctx, n)
                                 1 -> { if (sel == n) sel = "ALL"; HiddenCats.hide(ctx, n) }
-                                2 -> CatOrder.move(ctx, CatOrder.LIVE, all, n, -1)
-                                3 -> CatOrder.move(ctx, CatOrder.LIVE, all, n, 1)
-                                4 -> CatOrder.toTop(ctx, CatOrder.LIVE, all, n)
+                                2 -> floatingCat = n
+                                3 -> CatOrder.move(ctx, CatOrder.LIVE, all, n, -1)
+                                4 -> CatOrder.move(ctx, CatOrder.LIVE, all, n, 1)
+                                5 -> CatOrder.toTop(ctx, CatOrder.LIVE, all, n)
+                                6 -> CatOrder.toBottom(ctx, CatOrder.LIVE, all, n)
                                 else -> sortMenu = true
                             }
                         }
@@ -548,13 +573,14 @@ private fun NameDialog(title: String, initial: String, onDismiss: () -> Unit, on
 @Composable
 private fun CatRow(
     label: String, count: Int, selected: Boolean, modifier: Modifier,
-    onFocus: () -> Unit, onRight: () -> Unit, onFav: () -> Unit, icon: AIcon? = null, raw: Boolean = false, onClick: () -> Unit
+    onFocus: () -> Unit, onRight: () -> Unit, onFav: () -> Unit, icon: AIcon? = null, raw: Boolean = false, floating: Boolean = false, onClick: () -> Unit
 ) {
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(DS.RadiusS)
     Row(
         modifier.fillMaxWidth().clip(shape)
-            .background(if (f) Color(0x33FFFFFF) else if (selected) Accent1.copy(alpha = 0.16f) else Color.Transparent)
+            .graphicsLayer { if (floating) { scaleX = 1.04f; scaleY = 1.04f } }
+            .background(if (floating) Accent2.copy(alpha = 0.30f) else if (f) Color(0x33FFFFFF) else if (selected) Accent1.copy(alpha = 0.16f) else Color.Transparent)
             .onFocusChanged { f = it.isFocused; if (it.isFocused) onFocus() }
             .onPreviewKeyEvent { e ->
                 if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight && e.nativeKeyEvent.repeatCount == 0) { onRight(); true } else false
@@ -569,7 +595,8 @@ private fun CatRow(
             Text(label, color = Color.White, fontSize = 16.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, raw = raw)
         }
-        if (count >= 0) Text("$count", color = Muted, fontSize = 13.sp)
+        if (floating) AppIcon(AIcon.Sliders, Accent2, size = 16.dp)
+        else if (count >= 0) Text("$count", color = Muted, fontSize = 13.sp)
     }
 }
 
