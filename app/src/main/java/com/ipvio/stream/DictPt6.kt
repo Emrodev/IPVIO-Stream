@@ -172,6 +172,9 @@ Dieses Update ist erforderlich.¦Esta actualización es obligatoria.
 // Format: de¦es
 Diese Seite zurücksetzen¦Restablecer esta página
 Diese Seite wurde zurückgesetzt.¦Esta página se ha restablecido.
+Ans Ende verschieben¦Mover para o final
+Mit Hoch/Runter verschieben¦Mover com Cima/Baixo
+Das Bild hat schon das Format des Fernsehers¦A imagem já está no formato da TV
 Version, Quellen, Updates¦Versión, fuentes, actualizaciones
 Alles zurücksetzen¦Restablecer todo
 Alle Einstellungen auf Standard¦Todos los ajustes a su valor predeterminado

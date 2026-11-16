@@ -138,5 +138,18 @@ Untertitel-Suche (SubDL) findet bei Serien wieder Treffer¦Busca de legendas (Su
 Bildformate heißen so, wie sie wirken („Zuschneiden“)¦Formatos de tela nomeados conforme seu efeito („Cortar bordas“)
 Viele fehlende Übersetzungen ergänzt¦Diversas traduções adicionadas
 Hoch/Runter blättert¦Cima/Baixo navega
+# What's new 1.4.3
+Handy: neue Einstellungen über das Zahnrad oben – Playlists, Kategorien sortieren und ausblenden, Jugendschutz, Sprache¦Celular: novas configurações pela engrenagem no topo – listas, ordenar e ocultar categorias, controle parental, idioma
+Handy: neuer Reiter „Sport“ mit den Spielen von heute, deinen Lieblingsteams und „Meine Liste“; Spiele direkt am Fernseher starten¦Celular: nova aba „Esportes“ com os jogos de hoje, times favoritos e „Minha Lista“; inicie jogos direto na TV
+Filme und Serien: Kategorien mit Hoch/Runter verschieben, das Menü bleibt offen, neu „Ans Ende verschieben“¦Filmes e séries: mova categorias com Cima/Baixo, o menu permanece aberto, novo „Mover para o final“
+Playlist wechseln geht schneller: die gespeicherte Liste wird gelesen statt neu heruntergeladen¦Trocar de lista é mais rápido: a lista salva é lida em vez de baixada novamente
+Bildformat: Hinweis, wenn das Bild schon das Format des Fernsehers hat¦Formato de tela: aviso quando a imagem já tem a proporção da TV
+Playlist wechseln zeigt nicht mehr „Noch keine Sender“¦Trocar de lista não exibe mais „Nenhum canal ainda“
+Live TV: Links springt zur gewählten Kategorie, Rechts öffnet die Senderliste¦TV ao vivo: Esquerda vai para a categoria selecionada, Direita abre a lista de canais
+Player: „Zuschneiden“ und „Strecken“ wirken wieder¦Player: „Cortar“ e „Esticar“ voltam a funcionar
+Einstellungen: Meldungen unter den Knöpfen sind sofort zu sehen¦Configurações: mensagens abaixo dos botões ficam visíveis imediatamente
+WLAN-Übertragung: der Fokus bleibt nach Start und Stopp auf dem Knopf¦Transferência Wi-Fi: o foco permanece no botão após iniciar e parar
+„Was ist neu“ erscheint auch nach einer Test-Version¦„O que há de novo“ também é exibido após uma versão de teste
+Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Update nicht mehr¦Atualização no app: „Não foi possível verificar a assinatura“ não bloqueia mais o update
 """
 
