@@ -187,9 +187,12 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     }
     var askDelete by remember { mutableStateOf(false) }
     val catState = remember { LazyListState() }
+    // Focus is in the channel list (set by enterChannels, cleared when the focus goes back to the categories)
+    var inChannels by remember { mutableStateOf(false) }
     // Issue 15: Right (like OK) on a category enters the channel list. The first row is not composed when the list is still
     // scrolled from another category; then scroll to the top first and focus it once it is laid out.
     fun enterChannels() {
+        inChannels = true
         if (runCatching { firstChan.requestFocus() }.isSuccess) return
         plScope.launch {
             runCatching { chanState.scrollToItem(0) }
@@ -199,6 +202,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // Issue 14: Left from the channel list goes back to the chosen category, not to whatever row is next to the focused channel.
     // The chosen row may be scrolled out of the category column: bring it into view first. False = let the default handle it.
     fun backToCategory(): Boolean {
+        inChannels = false
         val idx = names.indexOf(sel)
         if (idx < 0) return false
         if (catState.layoutInfo.visibleItemsInfo.any { it.index == idx } && runCatching { ContentFocus.req.requestFocus() }.isSuccess) return true
@@ -208,6 +212,9 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         }
         return true
     }
+    // Focus is in the channel list: BACK goes to the chosen category like Left does, instead of opening the sidebar.
+    // Not while an own list is being filled (there BACK finishes adding, see BackHandler below).
+    androidx.activity.compose.BackHandler(enabled = inChannels && addTo == null) { backToCategory() }
     var ask by remember { mutableStateOf<NameAsk?>(null) }
     SideEffect { ContentFocus.tab = 3 }
     // Selection points to a deleted list: back to "All channels"
@@ -357,7 +364,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         CatRow(
                             label, count, n == sel,
                             if (n == sel) Modifier.focusRequester(ContentFocus.req) else Modifier,
-                            onFocus = { sel = n }, onRight = { enterChannels() },
+                            onFocus = { sel = n; inChannels = false }, onRight = { enterChannels() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null
                         ) { enterChannels() }
