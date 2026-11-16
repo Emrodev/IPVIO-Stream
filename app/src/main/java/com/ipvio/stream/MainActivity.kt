@@ -435,7 +435,11 @@ private fun AppContent() {
                 key(p) {
                     PlayerScreen(p, zap, liveAll, seriesItem) {
                         // Live: back in Live TV on the last watched channel (also after switching in the player)
-                        if (p.live || p.archive != null) LastFocus.pending = History.ids.firstOrNull { id -> liveAll.any { it.id == id } }
+                        // Live TV tab is 3 (see LiveTab: ContentFocus.tab = 3). Without this, a stream started from Home returns to Home.
+                        if (p.live || p.archive != null) {
+                            LastFocus.pending = History.ids.firstOrNull { id -> liveAll.any { it.id == id } }
+                            tab = 3
+                        }
                         playing = null
                     }
                 }
