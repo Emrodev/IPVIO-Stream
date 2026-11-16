@@ -292,6 +292,28 @@ object Backup {
         e.commit()
     }
 
+    /** Copy of the data right before the last automatic merge of the live sync (W-010b); kept apart from the restore copy. */
+    private fun autoSafetyFile(c: Context): File = File(c.filesDir, "ipvio_before_autosync.json")
+
+    /** Saves the current data before the live sync writes merged data. False = could not save (then nothing is merged). */
+    fun saveAutoSafety(c: Context): Boolean = runCatching {
+        val now = exportText(c, false, true) ?: return false
+        val f = autoSafetyFile(c)
+        val tmp = File(f.path + ".tmp")
+        tmp.writeText(now)
+        tmp.renameTo(f) || run { f.writeText(now); true }
+    }.getOrDefault(false)
+
+    /** Time of the safety copy from the last automatic merge (ms), 0 = none. */
+    fun autoUndoAvailableAt(c: Context): Long = autoSafetyFile(c).let { if (it.exists()) it.lastModified() else 0L }
+
+    /** Puts back the data from right before the last automatic merge. Returns the number of files, below zero on error. */
+    fun undoLastAutoSync(c: Context): Int = runCatching {
+        val f = autoSafetyFile(c)
+        if (!f.exists() || f.length() > MAX_BYTES) return ERR_INVALID
+        restoreText(c, f.readText(), safety = false)
+    }.getOrDefault(ERR_INVALID)
+
     /** Time of the safety copy from the last restore (ms), 0 = none. */
     fun undoAvailableAt(c: Context): Long = safetyFile(c).let { if (it.exists()) it.lastModified() else 0L }
 

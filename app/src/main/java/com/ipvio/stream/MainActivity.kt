@@ -79,10 +79,14 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         Reminders.foreground = true
+        // W-010b: fetch changes from the other devices (only once AppContent has started the live sync)
+        LiveSync.onForeground()
     }
 
     override fun onStop() {
         Reminders.foreground = false
+        // W-010b: upload pending changes when leaving the app
+        LiveSync.onBackground()
         super.onStop()
     }
 
@@ -183,7 +187,9 @@ private fun AppContent() {
     val ctx = LocalContext.current
     remember {
         AppSettings.init(ctx); WatchStore.init(ctx); History.init(ctx); Library.init(ctx); QualityStore.init(ctx)
-        PlaybackPrefs.init(ctx); PlayerSync.init(ctx); loadWishboxTexts(); DeadLinks.init(ctx); ChannelLists.init(ctx); Reminders.init(ctx); Reminders.schedule(ctx); 0
+        PlaybackPrefs.init(ctx); PlayerSync.init(ctx); loadWishboxTexts(); DeadLinks.init(ctx); ChannelLists.init(ctx); Reminders.init(ctx); Reminders.schedule(ctx)
+        // W-010b: live sync of favorites and history (silent; only when Google Drive is connected)
+        LiveSync.start(ctx); 0
     }
     // Interrupted in the middle of adding last time (crash, power loss): the add screen automatically continues loading
     val resumeAdd = remember { PlaylistStore.pending(ctx)?.autoResume == true }

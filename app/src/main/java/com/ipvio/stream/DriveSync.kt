@@ -214,27 +214,85 @@ object DriveSync {
     suspend fun upload(c: Context, text: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             net {
-                val t = token(c)
                 val devId = Backup.deviceId(c)
-                val name = DriveLogic.fileName(devId)
-                val dir = folder(c, t, create = true)!!
-                val q = URLEncoder.encode(DriveLogic.fileQuery(dir, devId), "UTF-8")
-                val existing = JSONObject(get(t, "$FILES?q=$q&fields=files(id)"))
-                    .optJSONArray("files")?.optJSONObject(0)?.optString("id")?.ifBlank { null }
-                val props = JSONObject().put("deviceId", devId).put("deviceName", Backup.deviceName())
-                val meta = JSONObject().put("appProperties", props)
-                if (existing == null) meta.put("name", name).put("parents", JSONArray().put(dir))
-                val body = MultipartBody.Builder().setType("multipart/related".toMediaType())
-                    .addPart(meta.toString().toRequestBody(JSON))
-                    .addPart(text.toRequestBody(JSON))
-                    .build()
-                val req = Request.Builder().header("Authorization", "Bearer $t").let {
-                    if (existing != null) it.url("$UPLOAD/$existing?uploadType=multipart").patch(body)
-                    else it.url("$UPLOAD?uploadType=multipart").post(body)
-                }.build()
-                client.newCall(req).execute().use { r -> if (!r.isSuccessful) throw DriveException(Reason.GOOGLE, r.code) }
+                put(c, DriveLogic.fileName(devId), { dir -> DriveLogic.fileQuery(dir, devId) }, text)
                 lastBackup = System.currentTimeMillis()
                 prefs(c).edit().putLong("last", lastBackup).apply()
+            }
+        }
+    }
+
+    /** Drive id of this device's live file, so later uploads need one request less. */
+    @Volatile private var liveFileId: String? = null
+
+    /** Writes [text] into the file [name] in the app folder: replaces it if it exists, otherwise creates it. Returns its id. */
+    private fun put(c: Context, name: String, query: (String) -> String, text: String, knownId: String? = null): String {
+        val t = token(c)
+        val devId = Backup.deviceId(c)
+        var dir: String? = null
+        val existing = knownId ?: run {
+            dir = folder(c, t, create = true)!!
+            val q = URLEncoder.encode(query(dir!!), "UTF-8")
+            JSONObject(get(t, "$FILES?q=$q&fields=files(id)"))
+                .optJSONArray("files")?.optJSONObject(0)?.optString("id")?.ifBlank { null }
+        }
+        val props = JSONObject().put("deviceId", devId).put("deviceName", Backup.deviceName())
+        val meta = JSONObject().put("appProperties", props)
+        if (existing == null) meta.put("name", name).put("parents", JSONArray().put(dir))
+        val body = MultipartBody.Builder().setType("multipart/related".toMediaType())
+            .addPart(meta.toString().toRequestBody(JSON))
+            .addPart(text.toRequestBody(JSON))
+            .build()
+        val req = Request.Builder().header("Authorization", "Bearer $t").let {
+            if (existing != null) it.url("$UPLOAD/$existing?uploadType=multipart&fields=id").patch(body)
+            else it.url("$UPLOAD?uploadType=multipart&fields=id").post(body)
+        }.build()
+        return client.newCall(req).execute().use { r ->
+            // The remembered id may be stale (file deleted in Drive): the caller tries again without it
+            if (r.code == 404 && knownId != null) throw DriveException(Reason.NOT_FOUND)
+            if (!r.isSuccessful) throw DriveException(Reason.GOOGLE, r.code)
+            runCatching { JSONObject(r.body?.string().orEmpty()).optString("id") }.getOrNull()?.takeIf { DriveLogic.validDriveId(it) }
+                ?: existing ?: ""
+        }
+    }
+
+    /** Live sync (W-010b): uploads this device's live file. */
+    suspend fun uploadLive(c: Context, text: String): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            net {
+                val devId = Backup.deviceId(c)
+                val name = DriveLogic.liveFileName(devId)
+                val q = { dir: String -> DriveLogic.liveFileQuery(dir, devId) }
+                val id = try {
+                    put(c, name, q, text, liveFileId)
+                } catch (e: DriveException) {
+                    if (e.reason != Reason.NOT_FOUND || liveFileId == null) throw e
+                    liveFileId = null
+                    put(c, name, q, text)
+                }
+                if (DriveLogic.validDriveId(id)) liveFileId = id
+            }
+        }
+    }
+
+    /** Live sync (W-010b): the live files of all devices (this one included), with their change times. */
+    suspend fun listLive(c: Context): Result<List<Remote>> = withContext(Dispatchers.IO) {
+        runCatching {
+            net {
+                val t = token(c)
+                val dir = folder(c, t, create = false) ?: return@net emptyList<Remote>()
+                val q = URLEncoder.encode(DriveLogic.liveListQuery(dir), "UTF-8")
+                val body = get(t, "$FILES?q=$q&pageSize=50&fields=files(id,name,modifiedTime,size,appProperties)")
+                val a = JSONObject(body).optJSONArray("files") ?: JSONArray()
+                (0 until a.length()).mapNotNull { i ->
+                    val f = a.optJSONObject(i) ?: return@mapNotNull null
+                    val dev = DriveLogic.liveDeviceIdOf(f.optString("name")) ?: return@mapNotNull null
+                    val id = f.optString("id").takeIf { DriveLogic.validDriveId(it) } ?: return@mapNotNull null
+                    Remote(
+                        id, dev, f.optJSONObject("appProperties")?.optString("deviceName")?.ifBlank { null },
+                        DriveLogic.parseTime(f.optString("modifiedTime")), f.optString("size").toLongOrNull() ?: 0L
+                    )
+                }
             }
         }
     }
@@ -265,6 +323,7 @@ object DriveSync {
         prefs(c).edit().remove("rt").remove("pp").apply()
         access = null
         accessUntil = 0L
+        liveFileId = null
         connected = false
     }
 }
