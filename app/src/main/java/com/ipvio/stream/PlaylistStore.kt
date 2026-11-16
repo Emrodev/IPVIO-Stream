@@ -232,6 +232,28 @@ object PlaylistStore {
             it.items.groupBy { it.kind }.mapValues { it.value.map { it.lang }.distinct().sorted() }
         } ?: emptyMap()
     }
+
+    /** Export all categories and languages from the cached playlist at [url] as CSV text.
+     * Returns null if no cache exists for this playlist. No network access. */
+    suspend fun exportPlaylistInfo(c: Context, url: String): String? = withContext(Dispatchers.IO) {
+        val groups = cachedPlaylistGroupsByKind(c, url)
+        val langs = cachedPlaylistLanguagesByKind(c, url)
+        if (groups.isEmpty() && langs.isEmpty()) null else {
+            val sb = StringBuilder()
+            sb.append("Kind,Type,Value\n")
+            for (kind in Kind.entries) {
+                for (g in groups.getOrDefault(kind, emptyList()).sorted()) {
+                    sb.append("${kind.displayName},Category,$g\n")
+                }
+            }
+            for (kind in Kind.entries) {
+                for (l in langs.getOrDefault(kind, emptyList()).sorted()) {
+                    sb.append("${kind.displayName},Language,$l\n")
+                }
+            }
+            sb.toString()
+        }
+    }
     private var epgSig = 0L
     private var inited = false
     private val loadLock = Mutex()

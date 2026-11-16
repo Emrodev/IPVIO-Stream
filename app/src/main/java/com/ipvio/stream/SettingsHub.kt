@@ -1,6 +1,8 @@
 package com.ipvio.stream
 
 import android.content.Context
+import android.widget.Toast
+import java.io.File
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -1612,6 +1614,34 @@ private fun SublistsPage(ctx: Context) {
             }
         } else {
             Text("No sublists yet for this playlist.", color = Muted, fontSize = 15.sp)
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // --- Export / Import ---
+        SectionTitle("Export / Import")
+        Text("Export sublists to edit on your computer, then import back.", color = Muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PillButton("Export JSON") {
+                SublistStore.exportFor(ctx, h)?.let { json ->
+                    val file = File(ctx.filesDir, "sublists_export_${playlistUrl.hashCode()}.json")
+                    file.writeText(json)
+                    Toast.makeText(ctx, "Exported to ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                } ?: Toast.makeText(ctx, "No sublists to export", Toast.LENGTH_SHORT).show()
+            }
+            PillButton("Import JSON") {
+                val file = File(ctx.filesDir, "sublists_export_${playlistUrl.hashCode()}.json")
+                if (file.exists()) {
+                    val ok = SublistStore.importFor(ctx, h, file.readText())
+                    if (ok) {
+                        Toast.makeText(ctx, "Imported ${SublistStore.allFor(ctx, h).size} sublists", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(ctx, "Import failed", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(ctx, "No export file found", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

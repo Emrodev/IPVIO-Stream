@@ -1,6 +1,7 @@
 package com.ipvio.stream
 
 import android.content.Context
+import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -85,5 +86,54 @@ object SublistStore {
         if (name == null) e.remove("sublist_active_$urlHash")
         else e.putString("sublist_active_$urlHash", name)
         e.apply()
+    }
+
+    // ------------------------------------------------------------------ Export / Import (edit on computer, import back on TV)
+
+    /** Export all sublists for one playlist as a pretty-printed JSON string. */
+    fun exportFor(c: Context, urlHash: Int): String? {
+        val list = allFor(c, urlHash)
+        if (list.isEmpty()) return null
+        val o = JSONObject()
+        val arr = JSONArray()
+        list.forEach { arr.put(it.encode()) }
+        o.put(urlHash.toString(), arr)
+        return o.toString(2) // 2-space indent for easy editing
+    }
+
+    /** Import sublists from a JSON string exported by [exportFor]. Replaces existing sublists for this playlist. */
+    fun importFor(c: Context, urlHash: Int, json: String): Boolean {
+        return runCatching {
+            val o = JSONObject(json)
+            val k = urlHash.toString()
+            val a = o.optJSONArray(k) ?: return@runCatching false
+            val list = (0 until a.length()).mapNotNull { i -> SublistDef.decode(a.optString(i)) }
+            saveFor(c, urlHash, list)
+            true
+        }.getOrDefault(false)
+    }
+
+    /** Export all sublists across all playlists as a pretty-printed JSON string. */
+    fun exportAll(c: Context): String? {
+        val all = decodeAll(prefs(c).getString(KEY, null))
+        if (all.isEmpty()) return null
+        val o = JSONObject()
+        all.forEach { (hash, list) ->
+            val arr = JSONArray()
+            list.forEach { arr.put(it.encode()) }
+            o.put(hash.toString(), arr)
+        }
+        return o.toString(2)
+    }
+
+    /** Import all sublists from a JSON string exported by [exportAll]. Merges with existing data. */
+    fun importAll(c: Context, json: String): Boolean {
+        return runCatching {
+            val incoming = decodeAll(json)
+            val existing = decodeAll(prefs(c).getString(KEY, null)).toMutableMap()
+            incoming.forEach { (hash, list) -> existing[hash] = list }
+            prefs(c).edit().putString(KEY, encodeAll(existing)).apply()
+            true
+        }.getOrDefault(false)
     }
 }
