@@ -146,6 +146,36 @@ object RemoteHub {
                 val byId = all.associateBy { it.id }
                 RemoteLogic.arr(l.ids.mapNotNull { byId[it] }.filter { it.kind == Kind.LIVE }.take(CHANNEL_LIMIT).map(::liveJson))
             }
+            // Editing own channel lists from a browser (/lists page). Same storage and rules as on the TV (ChannelLists);
+            // runs on the main thread, as the TV's own edits do. The page reads the list again with "list" afterwards.
+            "lnew" -> {
+                val c = appCtx ?: return null
+                val name = q["name"].orEmpty()
+                val id = onMain(-1) { ChannelLists.init(c); ChannelLists.create(c, name) }
+                if (id < 0) null else "{\"ok\":true,\"i\":$id}"
+            }
+            "lren", "ldel", "ladd", "lrem", "lmove" -> {
+                val c = appCtx ?: return null
+                val i = q["i"]?.toIntOrNull() ?: return null
+                val ch = q["id"].orEmpty()
+                // Only live channels of the loaded playlist go in; removing or moving works for any id already in the
+                // list, so a channel the provider dropped can still be taken out.
+                if (name == "ladd" && all.none { it.id == ch && it.kind == Kind.LIVE }) return null
+                if (name in setOf("ladd", "lrem", "lmove") && ch.isEmpty()) return null
+                val done = onMain(false) {
+                    ChannelLists.init(c)
+                    if (ChannelLists.lists.none { it.id == i }) return@onMain false
+                    when (name) {
+                        "lren" -> ChannelLists.rename(c, i, q["name"].orEmpty())
+                        "ldel" -> ChannelLists.delete(c, i)
+                        "ladd" -> ChannelLists.add(c, i, ch)
+                        "lrem" -> ChannelLists.remove(c, i, ch)
+                        else -> ChannelLists.move(c, i, ch, if ((q["d"]?.toIntOrNull() ?: 0) < 0) -1 else 1)
+                    }
+                    true
+                }
+                if (!done) null else "{\"ok\":true}"
+            }
             "eps" -> {
                 val i = all.firstOrNull { it.id == q["id"] && it.kind == Kind.SERIES } ?: return null
                 var full = LazySeries.full(i)

@@ -32,14 +32,16 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.ipvio.stream"
+        // LNKtwo's own version: its own app ID, so it installs beside Emrodev's IPVIO Stream instead of over it
+        // (namespace and code stay com.ipvio.stream).
+        applicationId = "com.ipvio.stream.lnk"
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 7
-        versionName = "1.4.2"
+        versionCode = 8
+        versionName = "1.4.2-lnk1"
         // Name under the icon; the debug build overrides it (see buildTypes)
-        manifestPlaceholders["appLabel"] = "IPVIO Stream"
+        manifestPlaceholders["appLabel"] = "IPVIO LNK"
 
         buildConfigField("String", "TMDB_KEY", "\"${secret("TMDB_KEY")}\"")
         buildConfigField("String", "OMDB_KEY", "\"${secret("OMDB_KEY")}\"")
@@ -61,7 +63,7 @@ android {
         // is not overwritten. Both apps can be installed side by side (own data, own name).
         debug {
             applicationIdSuffix = ".test"
-            manifestPlaceholders["appLabel"] = "IPVIO Stream"
+            manifestPlaceholders["appLabel"] = "IPVIO LNK Test"
         }
         release {
             if (hasKeystore) signingConfig = signingConfigs.getByName("release")

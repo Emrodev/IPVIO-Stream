@@ -1044,8 +1044,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                 // Boomer mode: only left/right (switch channel); everything else does nothing, no menu opens
                 if (Boomer.enabled && cur.live && cur.archive == null) {
                     when (k) {
-                        Key.DirectionLeft, Key.MediaPrevious -> zap(-1)
-                        Key.DirectionRight, Key.MediaNext -> zap(1)
+                        Key.DirectionLeft, Key.MediaPrevious, Key.ChannelDown -> zap(-1)
+                        Key.DirectionRight, Key.MediaNext, Key.ChannelUp -> zap(1)
                         else -> {}
                     }
                     return@onKeyEvent true
@@ -1059,6 +1059,9 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     // Live with buffer: seek keys jump within the buffer (not beyond the live picture)
                     k == Key.MediaRewind && cur.live && LiveTimeshift.active -> { LiveTimeshift.seekBy(player, -step); flash = Flash(PIcon.Replay, "−" + step / 1000 + " s"); true }
                     k == Key.MediaFastForward && cur.live && LiveTimeshift.active -> { LiveTimeshift.seekBy(player, step); flash = Flash(PIcon.Forward, "+" + step / 1000 + " s"); true }
+                    // The remote's channel keys (P+ / P-, e.g. Sony's PROG): next / previous channel, as Down / Up do
+                    k == Key.ChannelUp && cur.live -> { zap(1); true }
+                    k == Key.ChannelDown && cur.live -> { zap(-1); true }
                     k == Key.MediaNext && cur.live -> { zap(1); true }
                     k == Key.MediaPrevious && cur.live -> { zap(-1); true }
                     k == Key.MediaNext && cur.archive != null -> { val ch = curItem; val nx = archNext; if (ch != null && nx != null) playArchive(ch, nx) else backToLive(); true }

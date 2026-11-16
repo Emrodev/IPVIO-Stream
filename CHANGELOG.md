@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.4.2-lnk1 (LNKtwo's own version, based on Emrodev's 1.4.2)
+- Own app: app ID `com.ipvio.stream.lnk`, name "IPVIO LNK", so it installs beside Emrodev's IPVIO Stream; the update check reads LNKtwo/IPVIO-Stream's releases. versionCode 8
+- Player: the remote's channel keys (P+ / P−, e.g. Sony's PROG) switch to the next / previous channel in live TV, also in Boomer mode
+- Channel lists in a browser: new page `/lists` on the phone-remote server (same port and access code as `/r`): all live channels by category or search on the left, the chosen list on the right; create, rename and delete lists, add, remove and move channels. New `/api` calls `lnew`, `lren`, `ldel`, `ladd`, `lrem`, `lmove` use `ChannelLists` as the TV does. The `/r` page shows the address
+
 ## 1.4.1
 - Fix: 1.4 did not open after the update on user devices. R8 over the whole app (T-024) is switched off again (`enable = false` in app/build.gradle.kts, the rollback from ADR 0005); versionCode 6. Cause not confirmed by a crash log (unverified). Install 1.4.1 over 1.4; data is kept (same signature)
 

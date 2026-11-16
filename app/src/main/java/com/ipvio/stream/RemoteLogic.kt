@@ -108,7 +108,7 @@ main{padding:6px 14px}
 <div id="toast"></div>
 <script>
 var L={code:'${js(t("Code vom Fernseher:", "Code from the TV:"))}',none:'${js(t("Nichts gefunden.", "Nothing found."))}',hint:'${js(t("Tippe einen Titel ein.", "Type a title."))}',
-cats:'${js(t("Kategorien", "Categories"))}',favs:'${js(t("Meine Favoriten", "My favorites"))}',manage:'${js(t("Kategorien ein-/ausblenden", "Show / hide categories"))}',manageHint:'${js(t("Tippen blendet eine Kategorie am Fernseher ein oder aus.", "Tap to show or hide a category on the TV."))}',hidden:'${js(t("ausgeblendet", "hidden"))}',shown:'${js(t("sichtbar", "visible"))}',mylists:'${js(t("Meine Senderlisten", "My channel lists"))}',imp:'${js(t("Liste importieren (Letterboxd, MyAnimeList, Trakt)", "Import list (Letterboxd, MyAnimeList, Trakt)"))}',impDone:'${js(t("Liste wurde an den Fernseher gesendet", "List sent to the TV"))}',back:'${js(t("Zurück", "Back"))}',season:'${js(t("Staffel", "Season"))}',ep:'${js(t("Folge", "Episode"))}',
+cats:'${js(t("Kategorien", "Categories"))}',favs:'${js(t("Meine Favoriten", "My favorites"))}',manage:'${js(t("Kategorien ein-/ausblenden", "Show / hide categories"))}',manageHint:'${js(t("Tippen blendet eine Kategorie am Fernseher ein oder aus.", "Tap to show or hide a category on the TV."))}',hidden:'${js(t("ausgeblendet", "hidden"))}',shown:'${js(t("sichtbar", "visible"))}',mylists:'${js(t("Meine Senderlisten", "My channel lists"))}',pc:'${js(t("Am Computer bearbeiten:", "Edit on a computer:"))}',imp:'${js(t("Liste importieren (Letterboxd, MyAnimeList, Trakt)", "Import list (Letterboxd, MyAnimeList, Trakt)"))}',impDone:'${js(t("Liste wurde an den Fernseher gesendet", "List sent to the TV"))}',back:'${js(t("Zurück", "Back"))}',season:'${js(t("Staffel", "Season"))}',ep:'${js(t("Folge", "Episode"))}',
 ok:'${js(t("Läuft auf dem Fernseher.", "Playing on the TV."))}',err:'${js(t("Fehler. Ist der Fernseher noch an?", "Error. Is the TV still on?"))}',
 load:'${js(t("Lädt …", "Loading …"))}',cont:'${js(t("Weiterschauen", "Continue watching"))}',idle:'${js(t("Es läuft nichts.", "Nothing is playing."))}',wait:'${js(t("Die Playlist wird noch geladen.", "The playlist is still loading."))}'};
 var code='';try{code=new URLSearchParams(location.search).get('code')||sessionStorage.getItem('ipvio_code')||''}catch(e){}
@@ -147,6 +147,7 @@ function cats(){msg(L.load);api('cats').then(function(a){list.innerHTML='';
  list.appendChild(row(L.manage,null,null,manage));
  list.appendChild(row(L.imp,null,null,importList));
  list.appendChild(el('div','msg',L.mylists));
+ list.appendChild(el('div','msg',L.pc+' http://'+location.host+'/lists'));
  api('lists').then(function(ls){ls.forEach(function(l){list.insertBefore(row(l.g,l.n+'',null,function(){chList('list',{i:l.i},cats,L.cats,l.g)}),mark)})}).catch(function(){});
  var mark=el('div','msg',L.cats);list.appendChild(mark);if(!a.length){return}
  a.forEach(function(c){list.appendChild(row(c.g,c.n+'',null,function(){chans(c.g)}))})}).catch(function(e){if(e!==0)msg(L.err)})}
@@ -182,6 +183,98 @@ function clock(s){s=Math.max(0,s|0);var h=(s/3600)|0,m=((s%3600)/60)|0,r=s%60;re
 function poll(){api('state').then(function(d){var n=document.getElementById('now');
  n.textContent=d.a?(d.t?d.t+'  ':'')+(d.live?'LIVE':clock(d.pos)+(d.dur>0?' / '+clock(d.dur):''))+(d.pl?'':'  ||'):L.idle}).catch(function(){})}
 setInterval(poll,3000);poll();show();
+</script></body></html>"""
+    }
+
+    /**
+     * The page for a computer (/lists): edit the own channel lists in a browser. All live channels on the left (by
+     * category or search), the chosen list on the right. Uses the same /api calls and access code as [page].
+     */
+    fun listsPage(li: Int): String {
+        fun t(de: String, en: String) = tr(li, de, en)
+        val lang = I18nCore.CODES.getOrElse(li) { "en" }
+        return """<!doctype html><html lang="$lang"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1220">
+<title>IPVIO Stream · ${h(t("Senderlisten", "Channel lists"))}</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1220;color:#fff;font:15px/1.35 system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:14px 18px;border-bottom:1px solid #243052}
+h1{font-size:20px;margin:0 12px 0 0}
+select,input{padding:10px 12px;border-radius:10px;border:1px solid #2a3550;background:#16203a;color:#fff;font-size:15px}
+button{padding:10px 14px;border-radius:10px;border:0;background:#1b2750;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+button.go{background:#2ee59d;color:#06121f}
+button.del{background:#5a1f2b}
+button:disabled{opacity:.4;cursor:default}
+#cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:14px 18px;height:calc(100vh - 70px)}
+@media(max-width:800px){#cols{grid-template-columns:1fr;height:auto}}
+.col{display:flex;flex-direction:column;min-height:0;background:#0f1730;border-radius:14px;padding:12px}
+.col h2{font-size:16px;margin:0 0 10px;color:#9fb0d0}
+.tools{display:flex;gap:8px;margin-bottom:10px}.tools>*{flex:1}
+.items{overflow:auto;flex:1}
+.it{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#121b31;margin:5px 0}
+.it .m{flex:1;min-width:0}.it b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it small{color:#8ea0c4}.it .n{color:#8ea0c4;width:2.5em;text-align:right}
+.it button{padding:6px 10px}
+.msg{color:#8ea0c4;text-align:center;padding:24px 10px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#000c;padding:10px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.on{opacity:1}
+</style></head><body>
+<header><h1>${h(t("Senderlisten", "Channel lists"))}</h1>
+<select id="ls"></select>
+<button id="new" class="go">${h(t("Neue Liste", "New list"))}</button><button id="ren">${h(t("Umbenennen", "Rename"))}</button><button id="del" class="del">${h(t("Liste löschen", "Delete list"))}</button></header>
+<div id="cols">
+<div class="col"><h2>${h(t("Alle Sender", "All channels"))}</h2><div class="tools"><select id="cat"></select><input id="q" type="search" placeholder="${h(t("Sender suchen …", "Search channels …"))}" autocomplete="off"></div><div id="all" class="items"></div></div>
+<div class="col"><h2 id="lt"></h2><div id="cur" class="items"></div></div>
+</div><div id="toast"></div>
+<script>
+var L={code:'${js(t("Code vom Fernseher:", "Code from the TV:"))}',none:'${js(t("Nichts gefunden.", "Nothing found."))}',load:'${js(t("Lädt …", "Loading …"))}',
+err:'${js(t("Fehler. Ist der Fernseher noch an?", "Error. Is the TV still on?"))}',wait:'${js(t("Die Playlist wird noch geladen.", "The playlist is still loading."))}',
+pick:'${js(t("Kategorie wählen …", "Choose a category …"))}',nolist:'${js(t("Noch keine Liste. Lege eine neue an.", "No list yet. Create a new one."))}',
+empty:'${js(t("Die Liste ist leer. Füge links Sender hinzu.", "The list is empty. Add channels on the left."))}',
+name:'${js(t("Name der Liste:", "Name of the list:"))}',sure:'${js(t("Diese Liste wirklich löschen?", "Really delete this list?"))}',
+add:'${js(t("Hinzufügen", "Add"))}',inl:'${js(t("In der Liste", "In the list"))}',chans:'${js(t("Sender", "channels"))}'};
+var code='';try{code=new URLSearchParams(location.search).get('code')||sessionStorage.getItem('ipvio_code')||''}catch(e){}
+var lists=[],cur=null,curIds=[],shown=[],seq=0,tm=null;
+function $(i){return document.getElementById(i)}
+function toast(s){$('toast').textContent=s;$('toast').className='on';clearTimeout(toast.t);toast.t=setTimeout(function(){$('toast').className=''},2200)}
+function api(p,o){var u='/api/'+p+'?code='+encodeURIComponent(code);for(var k in o||{})u+='&'+k+'='+encodeURIComponent(o[k]);
+ return fetch(u).then(function(r){if(r.status==403||r.status==429){var c=r.status==403?prompt(L.code):null;if(c){code=c;try{sessionStorage.setItem('ipvio_code',c)}catch(e){}}throw 0}
+  if(!r.ok)throw 1;return r.json()})}
+function fail(e){if(e!==0)toast(L.err)}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function msg(box,s){box.innerHTML='';box.appendChild(el('div','msg',s))}
+function btn(label,fn,cls){var b=el('button',cls||null,label);b.onclick=fn;return b}
+function loadLists(sel){return api('lists').then(function(a){lists=a;var s=$('ls');s.innerHTML='';
+ a.forEach(function(l){var o=el('option',null,l.g+' ('+l.n+')');o.value=l.i;s.appendChild(o)});
+ if(sel!=null)cur=sel;if(!a.some(function(l){return l.i==cur}))cur=a.length?a[0].i:null;if(cur!=null)s.value=cur;
+ $('ren').disabled=$('del').disabled=cur==null;return loadCur()})}
+function loadCur(){var box=$('cur');var l=lists.filter(function(x){return x.i==cur})[0];$('lt').textContent=l?l.g:'';
+ if(!l){curIds=[];msg(box,L.nolist);drawAll();return Promise.resolve()}
+ return api('list',{i:cur}).then(function(a){curIds=a.map(function(x){return x.id});box.innerHTML='';
+  if(!a.length)msg(box,L.empty);
+  a.forEach(function(it,k){var r=el('div','it');r.appendChild(el('span','n',(k+1)+'.'));var m=el('div','m');m.appendChild(el('b',null,it.t));m.appendChild(el('small',null,it.g));r.appendChild(m);
+   var up=btn('↑',function(){edit('lmove',{id:it.id,d:-1})});up.disabled=k==0;
+   var dn=btn('↓',function(){edit('lmove',{id:it.id,d:1})});dn.disabled=k==a.length-1;
+   r.appendChild(up);r.appendChild(dn);r.appendChild(btn('✕',function(){edit('lrem',{id:it.id})},'del'));box.appendChild(r)});
+  drawAll()}).catch(fail)}
+function edit(call,o){o.i=cur;return api(call,o).then(function(){return loadLists()}).catch(fail)}
+function drawAll(){var box=$('all');if(!shown.length)return;box.innerHTML='';
+ shown.forEach(function(it){var r=el('div','it'),m=el('div','m');m.appendChild(el('b',null,it.t));m.appendChild(el('small',null,it.g));r.appendChild(m);
+  var inList=curIds.indexOf(it.id)>=0,b=btn(inList?L.inl:L.add,function(){edit('ladd',{id:it.id})},inList?null:'go');b.disabled=inList||cur==null;r.appendChild(b);box.appendChild(r)})}
+function showChans(a){shown=a;if(!a.length)msg($('all'),L.none);else drawAll()}
+function byCat(){var g=$('cat').value;if(!g){shown=[];msg($('all'),L.pick);return}msg($('all'),L.load);api('channels',{g:g}).then(showChans).catch(fail)}
+function search(){var q=$('q').value.trim(),me=++seq;if(!q){byCat();return}
+ api('search',{q:q}).then(function(d){if(me!=seq)return;if(d.loading){msg($('all'),L.wait);return}showChans(d.l)}).catch(fail)}
+$('q').oninput=function(){clearTimeout(tm);tm=setTimeout(search,300)};
+$('cat').onchange=function(){$('q').value='';byCat()};
+$('ls').onchange=function(){cur=+$('ls').value;loadCur()};
+$('new').onclick=function(){var n=prompt(L.name);if(n==null)return;api('lnew',{name:n}).then(function(d){return loadLists(d.i)}).catch(fail)};
+$('ren').onclick=function(){var l=lists.filter(function(x){return x.i==cur})[0];if(!l)return;var n=prompt(L.name,l.g);if(n==null||!n.trim())return;edit('lren',{name:n})};
+$('del').onclick=function(){if(cur==null||!confirm(L.sure))return;edit('ldel',{})};
+api('cats').then(function(a){var s=$('cat');s.appendChild(el('option',null,L.pick)).value='';
+ a.forEach(function(c){var o=el('option',null,c.g+' ('+c.n+' '+L.chans+')');o.value=c.g;s.appendChild(o)});msg($('all'),L.pick)}).catch(fail);
+loadLists();
 </script></body></html>"""
     }
 }

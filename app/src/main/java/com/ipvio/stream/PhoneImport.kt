@@ -428,6 +428,8 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
                 }
             }
             "GET /r" -> if (api != null) html(200, RemoteLogic.page(li)) else html(404, PhoneImportLogic.message(li, "bad"))
+            // Own channel lists, edited on a computer (the edits go through /api with the access code, as on /r)
+            "GET /lists" -> if (api != null) html(200, RemoteLogic.listsPage(li)) else html(404, PhoneImportLogic.message(li, "bad"))
             else -> {
                 val a = api
                 if (h.method == "GET" && a != null && h.path.startsWith("/api/")) {
