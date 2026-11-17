@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Xtream: movies and series are also loaded per category and merged without duplicates. Some providers cut the full list (and their get.php M3U) short but answer per category completely, like TiviMate loads. The first load takes longer (one request per category). Not device tested yet
+- Language: Polish (Polski) is the 11th app language (Settings > Language & region); TMDB info is loaded in Polish too
 
 ## 1.4.3 (versionCode 9)
 - Live sync (Google Drive): favorites and history follow your devices automatically. Switch it on in Settings > Storage > Google Drive on each device; it is off by default. Upload a few seconds after a change, download when the app is in front (about every minute). Merged on the device, a safety copy is kept before each merge. Not device tested yet
