@@ -45,7 +45,7 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
     }
 
     private fun categories(a: XtreamLogic.Acct, action: String): Map<String, String> {
-        val out = HashMap<String, String>()
+        val out = LinkedHashMap<String, String>()
         val arr = runCatching { JSONArray(text(XtreamLogic.api(a, action))) }.getOrNull() ?: return out
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
@@ -184,11 +184,23 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
         return out
     }
 
+    /**
+     * Full list plus the list of every category, each entry once (see [XtreamLogic.eachUnique]). A failed category request is
+     * skipped (network or HTTP error), an abort is passed on. Costs one request per category, so the first load takes longer.
+     */
+    private fun eachUnique(a: XtreamLogic.Acct, action: String, key: String, catIds: Collection<String>, sink: (Map<String, String>) -> Unit) {
+        XtreamLogic.eachUnique(key, catIds,
+            fetchAll = { each -> stream(XtreamLogic.api(a, action), each) },
+            fetchCategory = { cid, each -> check(); stream(XtreamLogic.api(a, action, "&category_id=" + java.net.URLEncoder.encode(cid, "UTF-8")), each) },
+            skippable = { e -> (e is IOException || e is PlaylistError) && !Thread.currentThread().isInterrupted },
+            sink = sink)
+    }
+
     /** Movies as finished lines into [w]; returns their number. */
     private fun writeMovies(a: XtreamLogic.Acct, w: Writer): Int {
         var n = 0
         val vodCats = categories(a, "get_vod_categories")
-        stream(XtreamLogic.api(a, "get_vod_streams")) { f ->
+        eachUnique(a, "get_vod_streams", "stream_id", vodCats.keys) { f ->
             XtreamLogic.movieEntry(a, f, vodCats)?.let { w.write(it); w.write("\n"); n++ }
         }
         check()
@@ -199,7 +211,7 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
     private fun writeSeries(a: XtreamLogic.Acct, w: Writer): Int {
         val serCats = categories(a, "get_series_categories")
         val series = ArrayList<XtreamLogic.Series>()
-        stream(XtreamLogic.api(a, "get_series")) { f -> XtreamLogic.seriesOf(f, serCats)?.let { series.add(it) } }
+        eachUnique(a, "get_series", "series_id", serCats.keys) { f -> XtreamLogic.seriesOf(f, serCats)?.let { series.add(it) } }
         for (s in series) { w.write(XtreamLogic.lazyEntry(a, s)); w.write("\n") }
         return series.size
     }

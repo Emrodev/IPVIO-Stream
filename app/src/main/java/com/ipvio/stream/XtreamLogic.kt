@@ -169,6 +169,46 @@ object XtreamLogic {
         return sb.append('\n').append(episodeUrl(a, id, f["container_extension"])).toString()
     }
 
+    /**
+     * Movies or series of a login, each only once (by [key], e.g. "stream_id"): first the full list ([fetchAll]), then the list of
+     * every category ([fetchCategory]). Some providers cut the full list (and their get.php list) short, but answer per category
+     * completely; this is how TiviMate loads too. An entry from a category list without its own category_id gets the requested one.
+     * A category whose request fails is skipped when [skippable] says so; anything else (e.g. abort) is passed on.
+     * If a category answer is mostly entries of other categories, the provider ignores the filter: the rest is skipped.
+     */
+    fun eachUnique(
+        key: String,
+        catIds: Collection<String>,
+        fetchAll: ((Map<String, String>) -> Unit) -> Unit,
+        fetchCategory: (String, (Map<String, String>) -> Unit) -> Unit,
+        skippable: (Exception) -> Boolean,
+        sink: (Map<String, String>) -> Unit,
+    ) {
+        val seen = HashSet<String>()
+        fun take(f: Map<String, String>, cid: String?) {
+            val id = idOf(f, key) ?: return
+            if (!seen.add(id)) return
+            sink(if (cid != null && f["category_id"].isNullOrBlank()) f + ("category_id" to cid) else f)
+        }
+        fetchAll { take(it, null) }
+        for (cid in catIds) {
+            var total = 0
+            var foreign = 0
+            try {
+                fetchCategory(cid) { f ->
+                    total++
+                    val c = f["category_id"]?.trim()
+                    if (!c.isNullOrEmpty() && c != cid) foreign++
+                    take(f, cid)
+                }
+            } catch (e: Exception) {
+                if (!skippable(e)) throw e
+                continue
+            }
+            if (total > 0 && foreign * 2 > total) break
+        }
+    }
+
     /** Response without action: login valid? null = unknown (response not readable), otherwise true/false. */
     fun authOk(auth: String?, status: String?): Boolean? {
         val a = auth?.trim()

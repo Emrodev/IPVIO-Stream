@@ -2,12 +2,12 @@ package com.ipvio.stream
 
 /**
  * Translation core (without Android, testable). Source texts are the German UI texts.
- * Line format: de ¦ en ¦ tr ¦ bs ¦ hr ¦ sr ¦ es ¦ fr ¦ it ¦ nl   (hr/sr empty = same as bs; others empty = same as en)
+ * Line format: de ¦ en ¦ tr ¦ bs ¦ hr ¦ sr ¦ es ¦ fr ¦ it   (nl and pl are added as single columns via loadColumn; hr/sr empty = same as bs; others empty = same as en)
  * Placeholders: {0} any text, {#0} number. A line break is written as \n.
  */
 object I18nCore {
-    val CODES = listOf("de", "en", "tr", "bs", "hr", "sr", "es", "fr", "it", "nl")
-    val NATIVE = listOf("Deutsch", "English", "Türkçe", "Bosanski", "Hrvatski", "Srpski", "Español", "Français", "Italiano", "Nederlands")
+    val CODES = listOf("de", "en", "tr", "bs", "hr", "sr", "es", "fr", "it", "nl", "pl")
+    val NATIVE = listOf("Deutsch", "English", "Türkçe", "Bosanski", "Hrvatski", "Srpski", "Español", "Français", "Italiano", "Nederlands", "Polski")
 
     private class Pat(val src: String, val re: Regex, val tr: Array<String>, val numeric: BooleanArray)
 
