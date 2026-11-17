@@ -45,6 +45,10 @@ Playlist mode switch fix (see Completed steps, 12 Nov 2026): implemented, **open
 
 >## Open problems
 
+- Wishes noted on 17 Nov 2026 (not planned, not implemented, need approval before work):
+  - T-026 `docs/tasks/T-026-category-cursor-memory.md`: Movies and Series category list should remember the last selected category like Live TV. Reported: after a search in the title grid and back, the cursor jumps to another category. Hypothesis: `CatMemory.restore` suppresses the focus on entry in `CategoriesScreen.kt`; not verified.
+  - T-027 `docs/tasks/T-027-settings-top-tabs.md`: top navigation strip inside Settings that jumps to a section directly. Maintainer decision needed on which sections go into the strip.
+
 - PR #40 (`integration/2026-11-11`, fork `browanoncoder/IPVIO-Stream`, 32 commits, 66 files) still has 10 conflicting files with `main` (CategoriesScreen, HomeScreen, LiveGenre, LiveTab, Models, PlaylistStore, SearchLogic, SearchScreen, CHANGELOG, WORK_STATE). Much of it is already in `main` in another form (Stalker #7, subtitle search #9). A comment asks the author to update the branch. Unique parts that are not in `main`: Live TV focus fixes, MKV seeking (#10), tap-to-seek (#25), Recently added (#22), translations. If the author does not react, port those parts one by one.
 - PR #47 (Stalker: on-demand loading, playback port, review fixes) is merged. CI green, **no device test** (no real Stalker portal). Closed in favour of it: #7, #19 (Stalker part only; its other topics were not taken over), #36, #38, #39.
 - Closed without merging (conflicts with `main` after #41, areas were reworked in T-007): #8 (Fire TV Live TV stalls), #13 (content mode; `main` has its own `PlaylistMode`), #14 (search ANR), their follow-ups #32, #33, #34, and #31 (obsolete). Reopen if the problems still show on `main`.
