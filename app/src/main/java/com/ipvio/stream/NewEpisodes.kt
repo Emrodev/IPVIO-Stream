@@ -1,6 +1,14 @@
 package com.ipvio.stream
 
+import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.runtime.mutableStateListOf
 
 /**
@@ -45,11 +53,38 @@ object NewEpisodes {
         for (n in r.notices) {
             val old = list.firstOrNull { it.id == n.id }
             if (old != null) list.remove(old)
-            list.add(0, if (old != null) n.copy(added = n.added + old.added) else n)
+            val shown = if (old != null) n.copy(added = n.added + old.added) else n
+            list.add(0, shown)
+            // #105: a system notification as well as the bell ("Serie XY hat eine neue Folge")
+            systemNotice(c, shown)
         }
         // Remove notices for series that are no longer favorites
         list.removeAll { it.id !in ids }
         save(c)
+    }
+
+    private const val CHANNEL = "ipvio_newep"
+
+    /** Android notification for a new episode of a favorite series (#105). Skipped without the permission (Android 13+). */
+    private fun systemNotice(c: Context, n: NewEpisodeLogic.Notice) {
+        runCatching {
+            val nm = c.getSystemService(NotificationManager::class.java) ?: return
+            if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(
+                NotificationChannel(CHANNEL, Lang.tr("Neue Folgen"), NotificationManager.IMPORTANCE_DEFAULT)
+            )
+            if (Build.VERSION.SDK_INT >= 33 && c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+            val open = Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            val pi = PendingIntent.getActivity(c, n.id.hashCode(), open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            @Suppress("DEPRECATION")
+            val b = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(c, CHANNEL) else Notification.Builder(c)
+            val note = b.setSmallIcon(android.R.drawable.ic_popup_reminder)
+                .setContentTitle(n.title)
+                .setContentText(Lang.tr(NewEpisodeLogic.text(n)))
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
+            nm.notify(("newep:" + n.id).hashCode(), note)
+        }
     }
 
     /** Series opened: notice dismissed. */
