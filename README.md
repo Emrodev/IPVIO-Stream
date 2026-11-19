@@ -4,7 +4,11 @@
 
 ![IPVIO Stream home screen](docs/screenshots/homescreen.jpg)
 
+> **IPVIO Stream is free and open source, and it stays free.** No ads, no subscription, no paid unlock. Donations are voluntary (see [Support the project](#support-the-project)).
+
 > **IPVIO Stream does not provide any content.** It contains no channels, playlists, films or series. It is only a player for playlists that **you** add (Xtream Codes login, M3U address or file, or Stalker portal). Only use sources you are legally allowed to use.
+
+**A note from the developer:** I try to keep everything free for myself too. Some features may therefore never come, if they would cost money to run (for example a paid server or a paid service). That is a deliberate decision.
 
 ---
 
@@ -20,7 +24,7 @@ Or download the APK directly: [IPVIO-Stream.apk (latest release)](https://github
 
 **Requirements:** Android 7.0 (API 24) or newer. No account or registration needed.
 
-**Tip:** no TV remote with a keyboard? Under *Playlists > Enter from phone* the app shows an address. Open it on your phone in the same Wi-Fi and type the login there.
+No keyboard for the remote? Under *Playlists > Enter from phone* the app shows an address. Open it on your phone in the same Wi-Fi and type the login there.
 
 ---
 
@@ -30,21 +34,63 @@ Or download the APK directly: [IPVIO-Stream.apk (latest release)](https://github
 - **Rewind live TV and record.** Pause and rewind the running channel with an on-device buffer (256 MB to 2 GB). Record the current show to internal storage or a USB stick.
 - **Catch-up.** Watch from the beginning or the archive, if your provider supplies it.
 - **Movies and series.** Rotating header, rows like *Continue watching*, *Top 10 today* and *Because you watched*, filters by genre, year, rating and country. Series with seasons, episodes and "go to episode" for very long series.
-- **Several playlists at once.** Combine playlists with *Also show*. Movies and series appear together, with the same title only once. Filter by source.
+- **Several playlists at once.** Combine playlists with *Also show*. Movies and series appear together, with the same title only once.
 - **Sports hub.** Sports on now and coming up, tables and all sports channels.
-- **Player that works hard for you.** Audio and subtitle choice (remembered per title), AC3/E-AC3/DTS sound (also over Bluetooth), skip intro and credits, next episode automatically, quality choice with fallback to another source on errors. HLS, MPEG-DASH and MPEG-TS.
-- **Built for the remote.** Navigation is designed around the D-pad, OK and the menu key. *Boomer mode* is a simplified player: left and right switch channels, nothing else opens.
+- **Player.** Audio and subtitle choice (remembered per title), AC3/E-AC3/DTS sound (also over Bluetooth), skip intro and credits, next episode automatically, quality choice with fallback to another source on errors. HLS, MPEG-DASH and MPEG-TS.
 - **Profiles and parental controls.** "Who's watching?" with a separate history and favourites per person. Parental controls with a PIN.
-- **Your data stays on your device.** Keys, logins and favourites are stored only on the device, unless you turn on the optional Google Drive backup. The app is ad-free.
-- **Optional metadata.** Posters, descriptions, cast and ratings from TMDB and OMDb, with your own free keys. Without keys, Xtream providers supply the data.
-- **Backup, transfer and updates.** Back up and restore settings and favourites, move them to another device over Wi-Fi, optional Google Drive backup, and in-app updates from GitHub Releases.
-- **Look and feel.** IPVIO green on navy plus colour themes, backgrounds, custom colours, three font choices, adjustable text and display size. Sidebar left, right or top. 10 languages.
+- **Live sync over your own Google Drive.** Favourites and history follow you between devices, with no button to press. Details below.
+- **Backup, transfer and updates.** Back up and restore settings, move them to another device over Wi-Fi, and in-app updates from GitHub Releases.
+- **Look and feel.** IPVIO green on navy, colour themes, backgrounds, custom colours, three font choices, adjustable text and display size. Sidebar left, right or top. 10 languages.
 
 ---
 
-## Good to know: remote control tips
+## Cool features
 
-Some things are not obvious at first. This is what the buttons do.
+These are the things that make IPVIO Stream different. Most of them are on by default or one setting away.
+
+### Live sync between your TVs (Google Drive)
+
+Your favourites and history follow you from one device to another, automatically. Turn it on under **Settings > Storage > Google Drive** on each device. Sign in on the TV with the code it shows, and confirm on your phone at google.com/device; this works on Fire TV too. The app only sees the folder it creates itself in your Drive. Playlists and your API keys are optional, and they are encrypted with a sync password you choose. The parental-control PIN never leaves the device. Full description: [docs/GOOGLE_DRIVE.md](docs/GOOGLE_DRIVE.md).
+
+### Your own API keys for posters, ratings and subtitles
+
+You can add free keys yourself: TMDB and OMDb for posters, descriptions, cast and ratings, and SubDL or OpenSubtitles for subtitles. Enter them under **Settings > API keys** and press **Save and check**. Without keys the app still works: Xtream providers supply the data. Instructions are in the [API keys section](#your-own-api-keys-optional) and in [docs/SUBTITLES.md](docs/SUBTITLES.md).
+
+### Search for subtitles in the player
+
+*Audio & subtitles > Search subtitles online* searches SubDL and OpenSubtitles, lets you pick a file and attaches it to the running stream. A subtitle you chose once is attached automatically the next time.
+
+### Boomer mode
+
+A very simple interface for people who should not need the whole app: big channel tiles, no menu and no search. Set it up under **Settings > Boomer Mode**. In the player, only left and right change the channel.
+
+### Picture-in-picture and multi view
+
+**Dual view** shows a second stream next to or on top of the first one. **Multi view** lets you watch several channels at the same time.
+
+### Import your lists
+
+Export your data from **Letterboxd**, **MyAnimeList** or **Trakt** and import it. Watched titles and watchlists are matched against your playlist.
+
+### Voice search
+
+Say the title instead of typing it with the remote.
+
+### Your favourites in your order
+
+Sort your favourite channels, movies and series by hand: press the menu key (or hold OK) and choose *Move up*, *Move down* or *Move to top*. The order also decides the zapping order in Live TV.
+
+### Automatic genres
+
+Without a provider category list, the app detects genres in the background and builds genre rows for you.
+
+### Try it without a playlist
+
+On the first start you can continue without a playlist. The app opens a demo mode with sample channels, movies and series, so you can explore the interface first. Nothing is saved, and the samples disappear as soon as you add a real playlist.
+
+---
+
+## Good to know: remote control
 
 ### Live TV (playing a channel)
 
@@ -53,57 +99,32 @@ Some things are not obvious at first. This is what the buttons do.
 | **Left** | Opens the channel list |
 | **Up / Down** | Zap to the previous / next channel |
 | **Right** | Opens the TV guide |
-| **OK** | Shows the player controls |
 | **Number keys** | Type a channel number and press OK |
 | **0** | Jumps back to the last channel |
 | **Red button** | Records the current show (until its end in the TV guide) |
-| **Menu key** or **long OK** (in the channel list) | Opens the menu for the channel |
 
 ### Lists and cards
 
 - **Long OK** (hold about 0.35 s) or the **menu key** on a card opens a menu. A short OK still opens the title or channel.
-- On **favourites** (channels, movies and series) the menu holds Move up, Move down and Move to top.
-- On **Favourites**, the menu also holds *Remove from favourites*. Some remotes (Fire TV) have no menu key. On those, use long OK.
-- Long OK also marks an episode as seen on a series page.
+- On **favourites**, the menu holds Move up, Move down and Move to top. In the Favourites tab it also holds *Remove from favourites*. Fire TV remotes have no menu key: use long OK there.
+- Long OK on a series page marks an episode as seen.
 
 ### Movies and series (playing a title)
 
 - **Left / Right** seek back and forth (step length in *Settings > Player*).
 - **Number keys 0 to 9** jump to 0 % to 90 % of the movie.
-- **OK** after a seek confirms the target position and keeps playing.
 
-### Favourites, My list and History
+### Sidebar and menu
 
-- **Favourites** (heart in the sidebar): channels, movies and series you starred. Add them with long OK or the menu key on a card, or with the favourite button on the detail page. In Favourites and in *Live TV > Favourites* you can sort them by hand: long OK or menu key, then move them up, down or to the top. The order also decides the zapping order.
-- **My list** (bookmark in the sidebar): movies and series you want to watch later. Add them on the title's detail page with "My list". It is not used for live channels.
-- **History** (clock): what you watched recently, movies and series separately.
-
-### Customise the sidebar
-
-- **Settings > View > Sidebar**: put it on the left, right or top, with icons only or with labels.
+- **Settings > View > Sidebar**: left, right or top, with icons only or with labels.
 - **Settings > Menu**: change the order of the entries and hide the ones you do not use.
-- **Search** and the **TV guide (EPG)** are hidden in the sidebar by default. Search is in the header. The TV guide is reachable from Live TV, and you can show it again under *Settings > Menu*.
-
-### Playlists
-
-- **Several playlists:** *Settings > Playlists > Also show* adds a second playlist to the active one.
-- **Content mode:** *Settings > Playlists* can limit a playlist to live TV only or movies and series only.
-- **Refresh:** the playlist is refreshed automatically in the background, not during playback. You can choose the interval or a fixed time.
-- **Xtream with blocked `get.php`:** the app loads the account through `player_api.php` automatically.
-
-### Live TV rewind and recordings
-
-- *Settings > Live TV & guide > Rewind live TV* keeps the running channel in a buffer. Press **Back to live** to return to the live picture.
-- Recordings are listed under *Live TV > Recordings*. You can choose internal storage or a USB stick in the settings.
+- **Favourites** (heart) are channels, movies and series you starred. **My list** (bookmark) is for movies and series you want to watch later; it is not used for live channels. **History** (clock) is what you watched recently.
+- **Search** and the **TV guide (EPG)** are hidden in the sidebar by default. Search is in the header. You can show the TV guide again under *Settings > Menu*.
 
 ### Settings and resets
 
 - Every settings page has its own reset button at the bottom. It resets only that page.
 - *Settings > Reset all* resets all settings. Playlists, favourites, history, resume points, API keys, the parental-control PIN, the custom TV guide address and reminders are **not** touched.
-
-### Try the app before you add a playlist
-
-- On the first start, choose the option to continue without a playlist. The app opens a demo mode with sample channels, movies and series so you can explore the interface. Nothing is saved, nothing plays, and the samples disappear as soon as you add a real playlist.
 
 ### On a phone
 
@@ -132,6 +153,8 @@ The app ships **without any API keys**. You can add your own free keys under **S
 |---|---|---|
 | TMDB | posters, descriptions in your language, cast, trailers, automatic genres, episode info, similar titles | free, see below |
 | OMDb | IMDb and Rotten Tomatoes ratings | free, see below |
+| SubDL | online subtitle search | free, see [docs/SUBTITLES.md](docs/SUBTITLES.md) |
+| OpenSubtitles | online subtitle search (limited free access) | see [docs/SUBTITLES.md](docs/SUBTITLES.md) |
 | TheIntroDB | intro, recap and credits times | no key needed |
 
 **Without keys** the app still works. With an Xtream Codes playlist it takes description, cover, rating, genres, running time and trailer **directly from your provider**. With a TMDB key it uses TMDB first and falls back to the provider when a title is not found. Keys are stored only on the device.
@@ -154,15 +177,23 @@ The app ships **without any API keys**. You can add your own free keys under **S
 
 ---
 
+## Community
+
+- **Reddit:** [r/ipvio](https://www.reddit.com/r/ipvio). Questions, news, tips and feedback from other users.
+- **GitHub:** [Emrodev/IPVIO-Stream](https://github.com/Emrodev/IPVIO-Stream). Source code, releases and issues.
+
+---
+
 ## Documentation
 
 | Document | For |
 |---|---|
 | [FAQ](docs/FAQ.md) | Common questions and problems |
+| [SUBTITLES](docs/SUBTITLES.md) | SubDL and OpenSubtitles keys, step by step |
 | [SETTINGS](docs/SETTINGS.md) | Overview of every settings page |
+| [GOOGLE_DRIVE](docs/GOOGLE_DRIVE.md) | Live sync and backup over Google Drive |
 | [FEATURES](docs/FEATURES.md) | Feature list with the code locations |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | How the app is structured |
-| [GOOGLE_DRIVE](docs/GOOGLE_DRIVE.md) | Optional Google Drive backup and live sync |
 | [RELEASE](docs/RELEASE.md) | Signing, releases and in-app updates |
 | [SECURITY](docs/SECURITY.md) | Security notes and known open items |
 | [CHANGELOG](CHANGELOG.md) | What changed in each version |
@@ -181,7 +212,7 @@ cd IPVIO-Stream
 
 The APK is then in `app/build/outputs/apk/debug/`. For releases and in-app updates see [docs/RELEASE.md](docs/RELEASE.md). Every release must be signed with the same key (`keystore.properties`), otherwise users lose their data when updating.
 
-Optional Google Drive backup: [docs/GOOGLE_DRIVE.md](docs/GOOGLE_DRIVE.md).
+Optional Google Drive sync and backup: [docs/GOOGLE_DRIVE.md](docs/GOOGLE_DRIVE.md).
 
 Developers can optionally copy `secrets.properties.example` to `secrets.properties` (ignored by Git) and put their keys there. They are only used when no key was entered in the app.
 
@@ -197,10 +228,6 @@ app/src/test/java/com/ipvio/stream/   JUnit tests
 app/src/main/res/font/                Outfit and Inter (SIL Open Font License)
 licenses/                             font licences
 ```
-
-## Contributing
-
-Changes go through feature branches and pull requests into `dev`. See [docs/RELEASE.md](docs/RELEASE.md) for releases and [CLAUDE.md](CLAUDE.md) for the working rules.
 
 ## Support the project
 

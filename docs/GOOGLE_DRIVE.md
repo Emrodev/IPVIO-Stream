@@ -46,4 +46,5 @@ GOOGLE_CLIENT_SECRET=GOCSPX-...
 6. Build the app again. Settings > Storage now shows **Google Drive > Connect with Google**.
 
 For this client type Google does not treat the client secret as a real secret (it is part of every APK), but keep it
-out of the repository anyway. APKs built by the GitHub workflow have no client and therefore no Google Drive section.
+out of the repository anyway. Since 1.4.3 the release build gets the two values from the GitHub secrets
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, so the official release APK shows the Google Drive section. Your own builds need the values above.

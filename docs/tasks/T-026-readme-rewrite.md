@@ -9,7 +9,10 @@ Rewrite `README.md` so the most important facts come first (what the app is, the
 ## Affected files
 
 - `README.md`: rewritten (English, as required by CLAUDE.md section 4).
-- `CHANGELOG.md`: entry under "Unreleased".
+- `docs/FAQ.md`: extended.
+- `docs/SUBTITLES.md`: new (SubDL and OpenSubtitles keys).
+- `docs/GOOGLE_DRIVE.md`: one paragraph corrected (release APK has the Drive section since 1.4.3).
+- `CHANGELOG.md`: entries under "Unreleased".
 - `docs/tasks/T-026-readme-rewrite.md`: this file.
 
 ## Acceptance criteria
@@ -23,9 +26,11 @@ Rewrite `README.md` so the most important facts come first (what the app is, the
 - Public text: wrong claims mislead users. Items that are not verified in the code were removed (store names for the Downloader app, theme and background counts, "no tracking", "Reset all" as a label).
 - Live sync (Google Drive, version 1.4.3) is not device tested. The README mentions only the optional Google Drive backup.
 
-## Documentation needed
+## Open checks
 
-- `docs/FAQ.md` still says "Stalker: series are not supported yet". The code loads Stalker series when they are opened (`StalkerApi.kt`). Not changed in this task; the FAQ needs its own check.
+- SubDL steps (`docs/SUBTITLES.md`) were **not** checked against subdl.com: the fetch of subdl.com and opensubtitles.tawk.help failed (DNS not resolvable from the session). The steps follow the app's own hints (`SettingsHub.kt`, `DictL.kt`) and third-party guides.
+- OpenSubtitles: the sources disagree on the free limit (5, 20 or 200 downloads per day). The doc says only "limited" and gives no number.
+- Reddit link `https://www.reddit.com/r/ipvio` was not opened from the session.
 
 ## Test steps for the maintainer
 

@@ -1,7 +1,11 @@
 # Changelog
 
 ## Unreleased
-- Docs: README rewritten. Quick start and Downloader code first, then key features, a remote-control tips section (Live TV keys, long OK and menu key, favourites vs My list, sidebar and menu settings, resets, demo mode). Screenshots still the old ones (T-026)
+- Docs: README rewritten. Free and open-source notice and a developer note at the top, quick start with the Downloader code, key features, a "Cool features" section (live sync, API keys, subtitle search, Boomer mode, dual and multi view, list import, favourites order, demo mode), remote-control tips, Reddit community link. Screenshots still the old ones (T-026)
+- Docs: new `docs/SUBTITLES.md` with step-by-step keys for SubDL and OpenSubtitles (T-026)
+- Docs: `docs/FAQ.md` extended (free, installing, playlists, subtitles, live sync, troubleshooting); Stalker series now described as loaded when opened (T-026)
+- Docs: `docs/GOOGLE_DRIVE.md` corrected: since 1.4.3 the release APK shows the Google Drive section (T-026)
+- Live sync (Google Drive) is confirmed working on the devices by the maintainer
 
 ## 1.4.3 (versionCode 9)
 - Live sync (Google Drive): favorites and history follow your devices automatically. Switch it on in Settings > Storage > Google Drive on each device; it is off by default. Upload a few seconds after a change, download when the app is in front (about every minute). Merged on the device, a safety copy is kept before each merge. Not device tested yet
