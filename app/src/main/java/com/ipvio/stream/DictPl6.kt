@@ -17,4 +17,7 @@ Kleinere Zeilen zeigen mehr Sender auf einmal, das hilft auf großen Fernsehern.
 Setzt alle Einstellungen auf die Standardwerte zurück: Ansicht, Design, Menü, Player, Ton, Genres, Live TV und mehr. Playlists, Favoriten, Verlauf, Fortsetzen-Positionen und die PIN der Kindersicherung bleiben erhalten. Den Cache leerst du unter Speicher.¦Przywraca wszystkie ustawienia domyślne: widok, wygląd, menu, odtwarzacz, dźwięk, gatunki, TV na żywo i inne. Playlisty, ulubione, historia, pozycje wznawiania i PIN kontroli rodzicielskiej zostają zachowane. Pamięć podręczną czyścisz w Pamięć.
 Nur eine Seite zurücksetzen? Jede Einstellungsseite hat unten ihren eigenen Zurücksetzen-Knopf.¦Zresetować tylko jedną stronę? Każda strona ustawień ma na dole własny przycisk resetu.
 Beim Markieren einer Auswahl zeigt die Vorschau sofort die Wirkung, OK übernimmt sie.¦Gdy zaznaczysz opcję, podgląd od razu pokaże efekt, OK ją stosuje.
+Die Playlist kam nur unvollständig an. Bitte später erneut versuchen.¦Playlista dotarła tylko częściowo. Spróbuj ponownie później.
+Aktualisierung fehlgeschlagen: {0}¦Aktualizacja nie powiodła się: {0}
+Playlist komplett neu laden¦Załaduj playlistę od nowa
 """
