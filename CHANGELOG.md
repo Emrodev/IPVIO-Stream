@@ -3,6 +3,13 @@
 ## Unreleased
 - Xtream: movies and series are also loaded per category and merged without duplicates. Some providers cut the full list (and their get.php M3U) short but answer per category completely, like TiviMate loads. The first load takes longer (one request per category). Not device tested yet
 - Language: Polish (Polski) is the 11th app language (Settings > Language & region); TMDB info is loaded in Polish too
+- Live TV: channels with a live address stay in Live TV even when their category is called "Movies", "Kino", "VOD" and so on (e.g. "EU | DE | Movies and Series"); before they were sorted into Movies and hidden with "Live TV only" (T-026)
+- Playlist loading: a download without a known size whose end looks cut off is no longer stored as the playlist; Xtream lists from get.php are also checked against the provider's live categories and loaded through the API when most are missing (T-026)
+- Settings > Playlists: a failed refresh is shown instead of staying silent, and the new button "Playlist komplett neu laden" deletes everything stored for the active playlist and downloads it again (T-026)
+- Diagnostics: logcat tag `IPVIO-PL` with counts per step of playlist loading (no addresses or passwords) (T-026)
+- Live TV channel list: Up on the first channel jumps to the last channel, Down on the last channel jumps to the first (issue #107). Held keys keep scrolling normally
+- TV guide: Up on the first channel jumps to the last channel, Down on the last channel jumps to the first (issue #107). Held keys keep scrolling normally
+- Movies and series filter: the language filter has its own icon (speech bubble) instead of the country globe (issue #26)
 
 ## 1.4.3 (versionCode 9)
 - Live sync (Google Drive): favorites and history follow your devices automatically. Switch it on in Settings > Storage > Google Drive on each device; it is off by default. Upload a few seconds after a change, download when the app is in front (about every minute). Merged on the device, a safety copy is kept before each merge. Not device tested yet
