@@ -6,8 +6,8 @@ package com.ipvio.stream
  * Placeholders: {0} any text, {#0} number. A line break is written as \n.
  */
 object I18nCore {
-    val CODES = listOf("de", "en", "tr", "bs", "hr", "sr", "es", "fr", "it", "nl")
-    val NATIVE = listOf("Deutsch", "English", "Türkçe", "Bosanski", "Hrvatski", "Srpski", "Español", "Français", "Italiano", "Nederlands")
+    val CODES = listOf("de", "en", "tr", "bs", "hr", "sr", "es", "fr", "it", "nl", "pt")
+    val NATIVE = listOf("Deutsch", "English", "Türkçe", "Bosanski", "Hrvatski", "Srpski", "Español", "Français", "Italiano", "Nederlands", "Português (Brasil)")
 
     private class Pat(val src: String, val re: Regex, val tr: Array<String>, val numeric: BooleanArray)
 
