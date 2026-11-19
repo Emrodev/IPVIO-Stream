@@ -21,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -179,6 +180,8 @@ fun SearchScreen(
                 Spacer(Modifier.weight(1f))
                 // Everything sits directly above the keyboard and is fully visible (wraps into more rows instead of scrolling away)
                 val recent = AppSettings.searchHistory.toList().take(6)
+                // #101: history and suggestions take at most two rows. The area has a fixed height, so the keyboard below never moves.
+                Column(Modifier.fillMaxWidth().height(70.dp).clipToBounds(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (recent.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     recent.forEachIndexed { i, term ->
                         // OK searches again, long OK / menu key removes just this entry
@@ -197,6 +200,7 @@ fun SearchScreen(
                         }
                     }
                 }
+                }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SEARCH_FILTERS.forEachIndexed { i, name -> MiniChip(name, SearchState.filter == i) { SearchState.filter = i } }
                 }
@@ -206,7 +210,8 @@ fun SearchScreen(
                         SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
                         Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
                         inner = Modifier.focusRequester(ContentFocus.req).onFocusChanged { fieldFocused = it.isFocused || it.hasFocus },
-                        onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
+                        onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
+                        height = 48.dp
                     )
                 } else {
                 // Tappable: OK or a tap opens the device keyboard for typing (the app keyboard below stays available).
@@ -214,7 +219,8 @@ fun SearchScreen(
                 Field(
                     SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
                     Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
-                    onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
+                    onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
+                    height = 48.dp
                 )
                 // Own on-screen keyboard (instead of the TV's keyboard): hits appear while typing
                 SearchKeyboard(
