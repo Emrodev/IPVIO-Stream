@@ -147,6 +147,9 @@ private fun DetailScreenFull(
     BackHandler(enabled = !embedded, onBack = onBack)
     var meta by remember(item.id) { mutableStateOf(MetaRepo.cached(item)) }
     var metaDone by remember(item.id) { mutableStateOf(!MetaRepo.usable(item) || item.kind == Kind.LIVE) }
+    // #15: trailer in the app (WebView) when TMDB gave a video id; otherwise the external search as before
+    var trailerKey by remember(item.id) { mutableStateOf<String?>(null) }
+    TrailerDialog(trailerKey) { trailerKey = null }
     LaunchedEffect(item.id) {
         MetaRepo.extended(ctx, item)?.let { meta = it }
         metaDone = true
@@ -521,7 +524,10 @@ private fun DetailScreenFull(
                                 // Round 14: movies and series as favorites (appear under "Favorites")
                                 val fav = Library.isFav(item.id)
                                 HeroButton(if (fav) "Favorit" else "Zu Favoriten", if (fav) AIcon.HeartFilled else AIcon.Heart, false, Modifier, bh) { Library.toggleFav(ctx, item.id) }
-                                HeroButton("Trailer", AIcon.Play, false, Modifier, bh) { openTrailer(ctx, meta?.trailerKey, item.title) }
+                                HeroButton("Trailer", AIcon.Play, false, Modifier, bh) {
+                                    if (TrailerLogic.validKey(meta?.trailerKey)) trailerKey = meta?.trailerKey
+                                    else openTrailer(ctx, meta?.trailerKey, item.title)
+                                }
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)
