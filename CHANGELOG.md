@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Movies and series: the info line shows the age rating, e.g. "FSK 12" (from TMDB for the country of the app language; otherwise the US rating marked "(US)"). Needs your own TMDB key; with only an OMDb key, Xtream titles show the US rating. Titles opened before load it once more (T-032)
 - Live TV: channels with a live address stay in Live TV even when their category is called "Movies", "Kino", "VOD" and so on (e.g. "EU | DE | Movies and Series"); before they were sorted into Movies and hidden with "Live TV only" (T-026)
 - Playlist loading: a download without a known size whose end looks cut off is no longer stored as the playlist; Xtream lists from get.php are also checked against the provider's live categories and loaded through the API when most are missing (T-026)
 - Settings > Playlists: a failed refresh is shown instead of staying silent, and the new button "Playlist komplett neu laden" deletes everything stored for the active playlist and downloads it again (T-026)
