@@ -156,7 +156,10 @@ fun App(pick: Boolean = false) {
     CompositionLocalProvider(
         LocalDensity provides scaled,
         LocalBringIntoViewSpec provides SmoothSpec,
-        LocalOverscrollFactory provides null
+        LocalOverscrollFactory provides null,
+        // T-029: Arabic is laid out right to left (the other languages stay left to right)
+        androidx.compose.ui.platform.LocalLayoutDirection provides
+            (if (Lang.code() == "ar") androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr)
     ) {
         val c = LocalContext.current
         var picked by remember { mutableStateOf(!pick) }
