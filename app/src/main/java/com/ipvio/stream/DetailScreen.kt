@@ -451,6 +451,8 @@ private fun DetailScreenFull(
                         Text(raw = true, text = item.title, color = Tok.TextHi, fontSize = spx(84), lineHeight = spx(84), fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-1.5).sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         HeroMetaLine(item, meta, dots = false)
+                        // Tracks of the file read from its header (T-033, issue #24); series: first episode of the shown season
+                        if (showActions && item.kind != Kind.LIVE && !DemoMode.active) playUrl?.let { ProbeLine(it) }
                         // Movie started: small progress bar with remaining time
                         if (item.kind != Kind.SERIES && resume != null && resume.dur > 0 && !ResumeLogic.finished(resume.pos, resume.dur)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(10))) {
