@@ -16,6 +16,10 @@ Branch: `claude/jolly-ride-mr9tgm`.
 | #102 | Live channels in a movie group | Implemented: live address stays live | `9086e1b` | `LiveUrlLogicTest` 4/4 |
 | #112 | Playlist vanishes | Partly: unreadable list is no longer overwritten | `bc9e0a9` | none |
 | #82 | PIN could be changed without the current PIN | Implemented: "PIN ändern" asks for the current PIN first (removing it already did) | see git log | none (UI) |
+| #22 | "Neu hinzugefügt" by the provider's date | Implemented (approved 19 Nov): cache format version 6, movies only | `cb9bb32` | RecentSortLogicTest 3/3, PlaylistCacheAddedTest 2/2 |
+| #75 | Stalker box model | Implemented (approved 19 Nov): "STB <model>" button, default MAG250 | `c5c093a` | StalkerModelLogicTest 6/6 |
+| #107 | TV-guide wrap-around | Reported as done by the maintainer (19 Nov) | — | — |
+| #68 | Signed release APK with provenance in CI | Decision: no workflow change without a separate approval. Proposal below | — | — |
 | #28 | Resume after leaving a film | No code change: progress is saved and the detail page offers resume | — | — |
 | #73 | "Content too large" with one language | Analysed, no change (see below) | — | — |
 | #108, #104 | "Connection lost" during playback | Analysed, no change (see below) | — | — |
@@ -49,6 +53,10 @@ All 41 pure JVM test classes that compile without Android (281 tests) pass, afte
 5. **#95:** Settings > "Bildschirm beim Stöbern wach halten" on, leave the app idle on a screen for longer than the screensaver delay: the screen stays on. Off: as before.
 6. **#102:** in a playlist with a "Movies" group that contains live channels (e.g. HBO Comedy): the channel is in Live TV, not under Movies.
 7. **#112:** no test possible without the broken state. Check that a normal load, saving and restarting still keeps the playlists.
+
+## #68 (release provenance) — decision
+
+The maintainer left the choice to the assistant. CI workflows need approval (CLAUDE.md section 6), so nothing was changed. Proposal for a later, separately approved change: a tag-triggered workflow that builds the signed release APK, `actions/attest-build-provenance` on it, and the SHA-256 of the signing certificate in the README.
 
 ## Not done
 
