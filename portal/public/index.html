@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Korp TV · Gerenciador de Dispositivos</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              800: '#5b21b6',
+              900: '#4c1d95',
+            },
+            surface: {
+              900: '#0b0c14',
+              800: '#13141f',
+              700: '#1b1d2d',
+              600: '#26293f',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .glass { background: rgba(19, 20, 31, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .badge-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+  </style>
+</head>
+<body class="bg-[#08090f] text-gray-100 min-h-screen flex flex-col antialiased">
+
+  <!-- TELA DE LOGIN (Exibida se não autenticado) -->
+  <div id="login-screen" class="fixed inset-0 z-50 bg-[#08090f] flex items-center justify-center p-4">
+    <div class="glass rounded-3xl border border-gray-800 max-w-md w-full p-8 space-y-6 shadow-2xl relative overflow-hidden">
+      <div class="absolute -top-12 -right-12 w-40 h-40 bg-brand-600/20 rounded-full blur-3xl"></div>
+      
+      <div class="text-center space-y-2">
+        <div class="w-16 h-16 mx-auto flex items-center justify-center mb-2">
+          <img src="/logo-icon.svg" alt="Korp TV" class="w-16 h-16 drop-shadow-xl" />
+        </div>
+        <h2 class="text-2xl font-bold text-white tracking-tight">Korp TV Portal</h2>
+        <p class="text-xs text-gray-400">Entre com usuário e senha para gerenciar os dispositivos</p>
+      </div>
+
+      <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Usuário</label>
+          <input type="text" id="login-user" required placeholder="admin" value="admin"
+            class="w-full bg-surface-700 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Senha</label>
+          <input type="password" id="login-pass" required placeholder="••••••••" value="admin123"
+            class="w-full bg-surface-700 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition">
+        </div>
+
+        <div id="login-error" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2.5 text-center"></div>
+
+        <button type="submit" id="login-btn"
+          class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold transition shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2">
+          <span>Acessar Painel</span>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONTEÚDO AUTENTICADO DO PAINEL -->
+  <div id="app-container" class="hidden flex flex-col min-h-screen">
+    <!-- Header -->
+    <header class="glass sticky top-0 z-30 border-b border-gray-800/80 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <img src="/logo-icon.svg" alt="Korp TV" class="w-10 h-10 drop-shadow-md rounded-xl" />
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            Korp TV
+            <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-semibold border border-cyan-500/30">Portal Admin</span>
+          </h1>
+          <p class="text-xs text-gray-400">Gerenciamento Remoto de Dispositivos, Playlists & OTA</p>
+        </div>
+      </div>
+
+      <!-- Navegação de abas & Logout -->
+      <div class="flex items-center gap-3">
+        <button onclick="openQrModal()" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 flex items-center gap-1.5 transition">
+          <span>📱</span> QR Code & Download APK
+        </button>
+
+        <nav class="flex bg-surface-800 p-1 rounded-xl border border-gray-800">
+          <button id="tab-devices-btn" onclick="switchTab('devices')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow">Dispositivos</button>
+          <button id="tab-tests-btn" onclick="switchTab('tests')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white flex items-center gap-1.5">
+            <span>⚡</span> Testes Solicitados
+          </button>
+          <button id="tab-automations-btn" onclick="switchTab('automations')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white">Automações & WhatsApp</button>
+          <button id="tab-ota-btn" onclick="switchTab('ota')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white">Atualizações OTA</button>
+        </nav>
+
+        <div class="flex items-center gap-3 pl-2 border-l border-gray-800">
+          <div class="text-xs text-right hidden sm:block">
+            <p id="user-display" class="font-bold text-white">admin</p>
+            <p class="text-[10px] text-emerald-400">Autenticado</p>
+          </div>
+          <button onclick="handleLogout()" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-red-900/40 text-gray-300 hover:text-red-300 transition flex items-center gap-1.5" title="Sair da conta">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            Sair
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+      <!-- Métricas -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass rounded-2xl p-5 border border-gray-800/80 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Dispositivos</p>
+            <p id="stat-total" class="text-3xl font-extrabold text-white mt-1">0</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-5 border border-gray-800/80 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Online Agora</p>
+            <p id="stat-online" class="text-3xl font-extrabold text-emerald-400 mt-1">0</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-5 border border-gray-800/80 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Com Playlist Ativa</p>
+            <p id="stat-playlists" class="text-3xl font-extrabold text-purple-400 mt-1">0</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-5 border border-gray-800/80 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Versão OTA Ativa</p>
+            <p id="stat-ota-version" class="text-2xl font-extrabold text-cyan-400 mt-1">-</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 1: DISPOSITIVOS -->
+      <section id="section-devices" class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <input type="text" id="search-input" onkeyup="filterDevices()" placeholder="Buscar por Nome, MAC, ID ou IP..." 
+              class="bg-surface-800 border border-gray-800 text-sm rounded-xl px-4 py-2 w-72 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500">
+            <select id="status-filter" onchange="filterDevices()" class="bg-surface-800 border border-gray-800 text-sm rounded-xl px-3 py-2 text-white focus:outline-none">
+              <option value="all">Todos os status</option>
+              <option value="online">Online</option>
+              <option value="offline">Offline</option>
+              <option value="blocked">Bloqueados</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openLinkCodeModal()" class="px-4 py-2 text-sm font-semibold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/25 transition flex items-center gap-2">
+              <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              Vincular por Código
+            </button>
+            <button onclick="openBroadcastModal()" class="px-4 py-2 text-sm font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-white transition flex items-center gap-2">
+              <svg class="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+              Mensagem Geral
+            </button>
+            <button onclick="loadDevices()" class="px-4 py-2 text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/25 transition flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              Atualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabela de Dispositivos -->
+        <div class="glass rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="bg-surface-800/80 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-800">
+                  <th class="py-4 px-5">Status</th>
+                  <th class="py-4 px-5">Código de Ativação</th>
+                  <th class="py-4 px-5">Dispositivo / Nome</th>
+                  <th class="py-4 px-5">MAC / ID</th>
+                  <th class="py-4 px-5">IP / App</th>
+                  <th class="py-4 px-5">Playlist</th>
+                  <th class="py-4 px-5">Assistindo Agora</th>
+                  <th class="py-4 px-5">Validade</th>
+                  <th class="py-4 px-5">Último Acesso</th>
+                  <th class="py-4 px-5 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="devices-tbody" class="divide-y divide-gray-800/60 text-gray-200">
+                <tr>
+                  <td colspan="10" class="text-center py-12 text-gray-500">Carregando dispositivos...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 2: AUTOMAÇÕES, WHATSAPP & IPTV EM MASSA -->
+      <section id="section-automations" class="hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          <!-- CARD 1: SERVIDOR IPTV & MIGRAÇÃO EM MASSA -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+            <div class="flex items-center gap-2 text-white">
+              <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">🌐</div>
+              <div>
+                <h2 class="text-base font-bold">Servidor IPTV Padrão</h2>
+                <p class="text-xs text-gray-400">Migração em massa de URL</p>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Defina o endereço do servidor IPTV padrão. Caso mude de servidor ou DNS, altere todos os clientes de uma só vez!
+            </p>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Host / URL do Servidor IPTV</label>
+                <input type="text" id="iptv-default-url" placeholder="http://meuservidor.com:8080" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+              </div>
+
+              <div class="flex gap-2">
+                <button onclick="saveDefaultIptvUrl()" class="flex-1 py-2 px-3 rounded-xl bg-surface-700 hover:bg-surface-600 text-white font-semibold transition text-xs">
+                  Salvar Padrão
+                </button>
+                <button onclick="migrateAllIptvUrl()" class="flex-1 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition text-xs shadow-lg shadow-purple-500/20" title="Muda o host de TODOS os clientes Xtream ativos">
+                  ⚡ Mudar de Todos
+                </button>
+              </div>
+            </div>
+
+            <div class="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl text-[11px] text-purple-300 space-y-1">
+              <p class="font-bold">Como funciona a migração em massa?</p>
+              <p>Ao clicar em "Mudar de Todos", o portal atualiza o servidor de todas as TVs e celulares vinculados. No próximo sinal (heartbeat), os aparelhos recarregam automaticamente a lista sem precisar refazer o login!</p>
+            </div>
+          </div>
+
+          <!-- CARD 2: API OFICIAL DO WHATSAPP -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+            <div class="flex items-center gap-2 text-white">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">💬</div>
+              <div>
+                <h2 class="text-base font-bold">API Oficial do WhatsApp</h2>
+                <p class="text-xs text-gray-400">Meta Cloud API / Gateway</p>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Integração padrão oficial da Meta (WhatsApp Cloud API) para disparo de mensagens de cobrança e avisos.
+            </p>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">URL / Endpoint da API</label>
+                <input type="url" id="wa-api-url" placeholder="https://graph.facebook.com/v20.0/{PHONE_ID}/messages" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Token de Acesso (Bearer Token)</label>
+                <input type="password" id="wa-api-token" placeholder="EAABw..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
+              </div>
+
+              <button onclick="saveWhatsAppApiSettings()" class="w-full py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition text-xs shadow-md">
+                Salvar Credenciais WhatsApp
+              </button>
+
+              <div class="pt-3 border-t border-gray-800 space-y-2">
+                <p class="font-semibold text-gray-300 text-[11px]">Testar Envio de Mensagem</p>
+                <div class="flex gap-2">
+                  <input type="tel" id="wa-test-phone" placeholder="5511999999999" class="flex-1 bg-surface-700 border border-gray-700 rounded-xl px-3 py-1.5 text-white text-xs font-mono">
+                  <button onclick="testWhatsAppMessage()" id="btn-test-wa" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs whitespace-nowrap">
+                    Testar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD 3: REGRAS DE RENOVAÇÃO & AVISOS -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+            <div class="flex items-center gap-2 text-white">
+              <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">⏰</div>
+              <div>
+                <h2 class="text-base font-bold">Automação de Vencimento</h2>
+                <p class="text-xs text-gray-400">Lembretes na TV e no WhatsApp</p>
+              </div>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div class="flex items-center justify-between p-2.5 bg-surface-800 rounded-xl border border-gray-800">
+                <span class="font-semibold text-white">Ativar Automações de Vencimento</span>
+                <input type="checkbox" id="auto-expiry-enabled" class="rounded bg-surface-700 border-gray-700 text-brand-600 w-4 h-4">
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Avisar com quantos dias de antecedência?</label>
+                <div class="flex items-center gap-2">
+                  <input type="number" id="auto-expiry-days" min="1" max="30" value="3" class="w-24 bg-surface-700 border border-gray-700 rounded-xl px-3 py-1.5 text-white font-bold focus:outline-none focus:border-brand-500">
+                  <span class="text-gray-400">dia(s) antes do vencimento</span>
+                </div>
+              </div>
+
+              <div class="space-y-1.5 p-2.5 bg-surface-800 rounded-xl border border-gray-800">
+                <p class="font-semibold text-gray-300 mb-1">Canais de Notificação:</p>
+                <label class="flex items-center gap-2 cursor-pointer text-gray-200">
+                  <input type="checkbox" id="auto-expiry-notify-tv" class="rounded bg-surface-700 border-gray-700 text-brand-600">
+                  <span>📺 <strong>Lembrar cliente no app da TV</strong> (mensagem em tela)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-gray-200">
+                  <input type="checkbox" id="auto-expiry-notify-wa" class="rounded bg-surface-700 border-gray-700 text-emerald-600">
+                  <span>💬 <strong>Enviar mensagem via WhatsApp</strong> (ao número cadastrado)</span>
+                </label>
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">
+                  Modelo da Mensagem
+                  <span class="text-[10px] text-gray-400 font-normal">({{nome}}, {{dias}}, {{data}}, {{aparelho}})</span>
+                </label>
+                <textarea id="auto-expiry-message" rows="3" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-brand-500 leading-relaxed"></textarea>
+              </div>
+
+              <div class="flex gap-2 pt-1">
+                <button onclick="saveAutomationRules()" class="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition text-xs shadow-md">
+                  Salvar Regras
+                </button>
+                <button onclick="runAutomationsNow()" id="btn-run-automations" class="py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition text-xs shadow-md" title="Executa a verificação e envia avisos para todos os que estão para vencer agora">
+                  ⚡ Executar Agora
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD 4: GERADOR DE TESTES AUTOMÁTICOS (PAINEL SLIM) -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4 lg:col-span-3">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-800 pb-3">
+              <div class="flex items-center gap-2 text-white">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">⚡</div>
+                <div>
+                  <h2 class="text-base font-bold">Solicitação de Testes & Integração Painel Slim</h2>
+                  <p class="text-xs text-gray-400">Página pública com geração de acessos e envio de link de download do APK</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400">Página do Cliente:</span>
+                <a id="link-public-teste" href="/teste" target="_blank" class="text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 underline">/teste</a>
+                <button onclick="copyTesteLink()" class="px-2.5 py-1 text-xs rounded-lg bg-surface-700 hover:bg-surface-600 text-gray-200">Copiar Link</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">URL API Teste (Sem Adultos)</label>
+                <input type="url" id="test-api-without-adults" placeholder="https://painelslim.site/api/chatbot/..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                <p class="text-[11px] text-gray-400 mt-1">Chatbot para listas familiares padrão.</p>
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">URL API Teste (Com Adultos)</label>
+                <input type="url" id="test-api-with-adults" placeholder="https://painelslim.site/api/chatbot/..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                <p class="text-[11px] text-gray-400 mt-1">Cole aqui o segundo link do Painel Slim com canais +18.</p>
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Domínio Público do Portal (HTTPS)</label>
+                <input type="url" id="portal-public-domain" placeholder="https://seu-dominio.com" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                <p class="text-[11px] text-gray-400 mt-1">Domínio oficial usado para gerar links públicos e WhatsApp (sem localhost).</p>
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Código do Downloader (AFTVnews)</label>
+                <input type="text" id="downloader-code" placeholder="Ex: 123456" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                <p class="text-[11px] text-gray-400 mt-1">Gerado em <a href="https://go.aftvnews.com" target="_blank" class="text-cyan-400 hover:underline">go.aftvnews.com</a> para instalar na TV sem digitar o link.</p>
+              </div>
+
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">URL de Download do APK Enviada ao Cliente</label>
+                <input type="url" id="test-app-url" placeholder="Deixe em branco para usar {Dominio}/app.apk" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                <p class="text-[11px] text-gray-400 mt-1">Se preenchido, o WhatsApp e o QR Code direcionam para este link customizado.</p>
+              </div>
+
+              <div class="flex items-center gap-2 pt-5">
+                <input type="checkbox" id="test-auto-whatsapp" class="rounded bg-surface-700 border-gray-700 text-cyan-600 focus:ring-0">
+                <label for="test-auto-whatsapp" class="text-xs text-gray-200 font-medium">Enviar WhatsApp automaticamente com o APK e os dados de login assim que o teste for gerado</label>
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block font-semibold text-gray-300 mb-1">
+                  Mensagem WhatsApp para o Cliente 
+                  <span class="text-gray-500 font-normal">(Variáveis: {{nome}}, {{usuario}}, {{senha}}, {{vencimento}}, {{app_url}}, {{codigo_downloader}}, {{dns}})</span>
+                </label>
+                <textarea id="test-whatsapp-message" rows="3" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"></textarea>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button onclick="saveTestSettings()" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20">
+                Salvar Configurações de Teste
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SEÇÃO NOVA: TESTES SOLICITADOS -->
+      <section id="section-tests" class="hidden space-y-6">
+        <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-800 pb-4">
+            <div>
+              <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-bold">⚡</span>
+                Solicitações de Testes Realizadas
+              </h2>
+              <p class="text-xs text-gray-400">Clientes que solicitaram teste pela página pública com dados de contato</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="loadTests()" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-200 flex items-center gap-1.5 transition">
+                <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                Atualizar
+              </button>
+              <a href="/teste" target="_blank" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white transition flex items-center gap-1.5 shadow-md shadow-cyan-500/20">
+                Abrir Página de Teste ↗
+              </a>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-gray-800 text-gray-400 font-semibold bg-surface-900/40">
+                  <th class="py-3 px-4">Data / Hora</th>
+                  <th class="py-3 px-4">WhatsApp / Cliente</th>
+                  <th class="py-3 px-4">Pacote</th>
+                  <th class="py-3 px-4">Usuário</th>
+                  <th class="py-3 px-4">Senha</th>
+                  <th class="py-3 px-4">Vencimento</th>
+                  <th class="py-3 px-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tests-tbody" class="divide-y divide-gray-800/60">
+                <tr><td colspan="7" class="text-center py-8 text-gray-500">Carregando testes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 3: ATUALIZAÇÕES OTA -->
+      <section id="section-ota" class="hidden space-y-6">
+        <!-- Card Link Permanente de Download -->
+        <div class="glass rounded-2xl p-5 border border-emerald-500/30 bg-emerald-500/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              <span>Link Fixo Permanente para Primeira Instalação</span>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[10px] uppercase tracking-wider font-extrabold text-emerald-300">URL Única</span>
+            </div>
+            <p class="text-xs text-gray-300">
+              Envie este link fixo para os clientes baixarem o app na 1ª instalação. Ele sempre entrega o APK mais recente publicado (não precisa ficar gerando links novos).
+            </p>
+          </div>
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <input type="text" id="permanent-download-link" readonly class="w-full md:w-72 bg-surface-900/80 border border-emerald-500/40 rounded-xl px-3 py-2 text-emerald-300 font-mono text-xs select-all">
+            <button type="button" onclick="copyPermanentLink()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md whitespace-nowrap flex items-center gap-1.5">
+              📋 Copiar
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Formulário de Nova Versão -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 lg:col-span-1 space-y-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+              Publicar Atualização OTA
+            </h2>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Faça o upload do APK gerado aqui. O portal hospeda o arquivo e o app das TVs fará o download e a atualização automaticamente!
+            </p>
+
+            <form id="ota-form" onsubmit="submitOta(event)" class="space-y-4 text-sm">
+              <div>
+                <label class="block text-xs font-medium text-gray-300 mb-1">
+                  Nome da Versão (ex: 1.4.4) 
+                  <span class="text-brand-400 font-normal">(Opcional no APK - detectado automático)</span>
+                </label>
+                <input type="text" id="ota-version-name" placeholder="Automático do APK (ou digite ex: 1.4.4)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-xs font-medium text-gray-300">
+                    Código da Versão (VersionCode numérico)
+                    <span class="text-brand-400 font-normal">(Opcional no APK - detectado automático)</span>
+                  </label>
+                  <span class="text-[10px] text-cyan-400 cursor-pointer" onclick="alert('Se você fizer o upload do arquivo .apk, o portal lê o VersionCode e o VersionName diretamente de dentro do APK automaticamente! Não precisa digitar.')">Como funciona? 💡</span>
+                </div>
+                <input type="number" id="ota-version-code" placeholder="Automático do APK (ou digite ex: 9)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+              </div>
+
+              <div class="p-3 bg-surface-800 rounded-xl border border-gray-700/80 space-y-2">
+                <label class="block text-xs font-semibold text-white">Opção 1: Upload do Arquivo APK (Recomendado)</label>
+                <input type="file" id="ota-apk-file" accept=".apk" class="w-full text-xs text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer">
+                <p class="text-[11px] text-gray-400">O APK fica hospedado no portal para os clientes baixarem.</p>
+
+                <div class="pt-2 border-t border-gray-700/60">
+                  <label class="block text-xs font-semibold text-gray-400 mb-1">Opção 2: Ou Link de Download Externo (GitHub)</label>
+                  <input type="url" id="ota-download-url" placeholder="https://github.com/.../app-release.apk" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-xs">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-300 mb-1">Notas da Versão (Changelog)</label>
+                <textarea id="ota-changelog" rows="3" placeholder="- Nova tela inicial&#10;- Correção na reprodução" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-xs"></textarea>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="ota-mandatory" class="rounded bg-surface-700 border-gray-700 text-brand-600 focus:ring-0">
+                <label for="ota-mandatory" class="text-xs text-gray-300">Atualização Obrigatória (bloqueia o app até atualizar)</label>
+              </div>
+
+              <button type="submit" id="ota-submit-btn" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition shadow-lg shadow-brand-500/25">
+                Publicar Versão
+              </button>
+            </form>
+          </div>
+
+          <!-- Histórico de Versões OTA -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 lg:col-span-2 space-y-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Histórico de Atualizações Publicadas
+            </h2>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="text-gray-400 text-xs uppercase border-b border-gray-800">
+                    <th class="py-3 px-3">Versão</th>
+                    <th class="py-3 px-3">Código</th>
+                    <th class="py-3 px-3">Obrigatória</th>
+                    <th class="py-3 px-3">Data</th>
+                    <th class="py-3 px-3">Link</th>
+                    <th class="py-3 px-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="ota-history-tbody" class="divide-y divide-gray-800 text-gray-300">
+                  <tr><td colspan="6" class="py-8 text-center text-gray-500">Nenhuma versão publicada ainda.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: EDITAR CLIENTE (NOME & WHATSAPP) -->
+  <div id="edit-device-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass rounded-2xl border border-gray-700 max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-white">Editar Dados do Cliente</h3>
+          <p id="edit-device-subtitle" class="text-xs text-gray-400">Dispositivo: -</p>
+        </div>
+        <button onclick="closeModal('edit-device-modal')" class="text-gray-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Nome / Identificação do Cliente</label>
+          <input type="text" id="edit-device-name" placeholder="ex: João Silva - Sala" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Telefone / WhatsApp (com DDD)</label>
+          <input type="tel" id="edit-device-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          <p class="text-[11px] text-gray-400 mt-1">Usado nas automações para envio de avisos de vencimento e renovação.</p>
+        </div>
+
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Observações / Login / Anotações do Cliente</label>
+          <textarea id="edit-device-notes" rows="3" placeholder="ex: Login do Painel: user123 / Plano Anual / TV Quarto" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-brand-500"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeModal('edit-device-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
+        <button onclick="saveDeviceEdit()" class="px-5 py-2 text-xs font-bold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/30">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ATRIBUIR PLAYLIST -->
+  <div id="playlist-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass rounded-2xl border border-gray-700 max-w-lg w-full p-6 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-white">Configurar Playlist Remota</h3>
+          <p id="modal-device-subtitle" class="text-xs text-gray-400">Dispositivo: -</p>
+        </div>
+        <button onclick="closeModal('playlist-modal')" class="text-gray-400 hover:text-white">&times;</button>
+      </div>
+
+      <!-- Abas de Tipo de Playlist -->
+      <div class="flex bg-surface-800 p-1 rounded-xl border border-gray-800 text-xs font-semibold">
+        <button type="button" onclick="setPlaylistType('xtream')" id="btn-type-xtream" class="flex-1 py-1.5 rounded-lg bg-brand-600 text-white">Xtream Codes</button>
+        <button type="button" onclick="setPlaylistType('m3u')" id="btn-type-m3u" class="flex-1 py-1.5 rounded-lg text-gray-400 hover:text-white">URL M3U</button>
+        <button type="button" onclick="setPlaylistType('none')" id="btn-type-none" class="flex-1 py-1.5 rounded-lg text-gray-400 hover:text-white">Nenhuma (Limpar)</button>
+      </div>
+
+      <!-- Campos Xtream -->
+      <div id="fields-xtream" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Servidor (Host / URL) <span class="text-gray-400 font-normal text-[11px]">(Padrão das configurações)</span></label>
+          <input type="text" id="xtream-host" placeholder="Deixe em branco para usar a URL padrão" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+        </div>
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Usuário</label>
+          <input type="text" id="xtream-user" placeholder="usuario123" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+        </div>
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Senha</label>
+          <input type="text" id="xtream-pass" placeholder="senha123" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+        </div>
+        <p class="text-[11px] text-gray-400">💡 Ao salvar, o portal consultará automaticamente a data de expiração da conta.</p>
+      </div>
+
+      <!-- Campos M3U -->
+      <div id="fields-m3u" class="space-y-3 text-xs hidden">
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">URL da Lista M3U / M3U8</label>
+          <input type="url" id="m3u-url" placeholder="http://servidor.xyz/get.php?username=..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+        </div>
+      </div>
+
+      <!-- Dados do Cliente Vinculado (Nome, WhatsApp e Anotações) -->
+      <div class="border-t border-gray-800 pt-3 space-y-3 text-xs">
+        <h4 class="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+          <span>👤</span> Dados do Cliente Vinculado
+        </h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block font-medium text-gray-400 mb-1">Nome do Cliente</label>
+            <input type="text" id="playlist-client-name" placeholder="ex: Carlos Silva" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block font-medium text-gray-400 mb-1">WhatsApp (com DDD)</label>
+            <input type="tel" id="playlist-client-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+        <div>
+          <label class="block font-medium text-gray-400 mb-1">Observações / Anotações do Cliente</label>
+          <input type="text" id="playlist-client-notes" placeholder="ex: Login do Painel: user123 / Plano Mensal" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeModal('playlist-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
+        <button onclick="savePlaylist()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/30">Salvar & Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ENVIAR MENSAGEM PUSH -->
+  <div id="message-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass rounded-2xl border border-gray-700 max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-white">Enviar Mensagem na Tela</h3>
+          <p id="modal-message-subtitle" class="text-xs text-gray-400">Destinatário: -</p>
+        </div>
+        <button onclick="closeModal('message-modal')" class="text-gray-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Tipo de Notificação</label>
+          <select id="msg-type" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none">
+            <option value="info">Informativo (Azul)</option>
+            <option value="warning">Aviso / Lembrete (Amarelo)</option>
+            <option value="alert">Urgente / Alerta (Vermelho)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Conteúdo da Mensagem</label>
+          <textarea id="msg-text" rows="4" placeholder="Ex: Sua mensalidade vence amanhã..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeModal('message-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
+        <button onclick="sendMessage()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold">Enviar para a TV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: VINCULAR POR CÓDIGO -->
+  <div id="link-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass rounded-2xl border border-cyan-500/30 max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-bold">🔗</span>
+            Vincular Aparelho por Código
+          </h3>
+          <p class="text-xs text-gray-400">Digite o código de ativação exibido na tela do aparelho</p>
+        </div>
+        <button onclick="closeModal('link-modal')" class="text-gray-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-white mb-1">Código de Ativação do Aparelho (ex: 7A1-9FB ou MAC)</label>
+          <input type="text" id="link-code-input" placeholder="7A1-9FB" maxlength="20"
+            class="w-full bg-surface-700 border-2 border-cyan-500/50 rounded-xl px-4 py-2.5 text-lg font-mono font-bold tracking-widest text-cyan-300 uppercase text-center focus:outline-none focus:border-cyan-400">
+        </div>
+
+        <div class="p-3.5 bg-surface-800 rounded-xl border border-gray-700/80 space-y-3">
+          <p class="text-xs font-bold text-gray-200">Credenciais Xtream Codes da Lista</p>
+          <div>
+            <label class="block text-gray-400 mb-1">Servidor (Host / URL) <span class="text-gray-400 font-normal text-[11px]">(Padrão das configurações)</span></label>
+            <input type="text" id="link-xtream-host" placeholder="Deixe em branco para usar a URL padrão" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-gray-400 mb-1">Usuário</label>
+              <input type="text" id="link-xtream-user" placeholder="usuario123" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1">Senha</label>
+              <input type="text" id="link-xtream-pass" placeholder="senha123" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-gray-400 mb-1">Nome do Cliente (Opcional)</label>
+              <input type="text" id="link-client-name" placeholder="ex: Carlos Silva" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1">WhatsApp (com DDD)</label>
+              <input type="tel" id="link-client-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">Observações / Login / Anotações</label>
+            <input type="text" id="link-client-notes" placeholder="ex: Login do Painel / Plano / Dispositivo" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeModal('link-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
+        <button onclick="submitLinkByCode()" id="btn-submit-link" class="px-5 py-2 text-xs font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/30">Vincular & Enviar para o Aparelho</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: QR CODE & DOWNLOAD DO APK -->
+  <div id="qr-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass rounded-3xl border border-emerald-500/30 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl relative">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-base">📱</div>
+          <div>
+            <h3 class="text-base font-bold text-white">QR Code para Instalação</h3>
+            <p class="text-xs text-gray-400">Escaneie para baixar o APK na TV ou Celular</p>
+          </div>
+        </div>
+        <button onclick="closeModal('qr-modal')" class="text-gray-400 hover:text-white text-lg">&times;</button>
+      </div>
+
+      <div class="text-center space-y-4">
+        <!-- Renderização do QR Code -->
+        <div class="p-4 bg-white rounded-2xl w-56 h-56 mx-auto flex items-center justify-center shadow-2xl" id="portal-qrcode-container"></div>
+
+        <!-- Opção: App Downloader para TV -->
+        <div id="modal-downloader-box" class="hidden p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/40 text-center space-y-1">
+          <div class="flex items-center justify-center gap-1.5 text-cyan-300 font-bold text-xs">
+            <span>📺</span> Opção para TV via App Downloader
+          </div>
+          <p class="text-[11px] text-gray-400">Abra o <strong>Downloader</strong> na TV e digite o código:</p>
+          <div class="flex items-center justify-center gap-2 pt-1">
+            <span id="modal-downloader-code" class="px-4 py-1 rounded-xl bg-surface-900 border border-cyan-500/50 font-mono text-2xl font-black text-cyan-400 tracking-widest select-all"></span>
+            <button onclick="copyModalDownloaderCode()" class="px-3 py-1.5 rounded-xl bg-cyan-600/40 hover:bg-cyan-600 text-cyan-300 hover:text-white text-xs font-semibold transition">
+              Copiar
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1 text-left">Link Fixo Permanente de Download</label>
+          <div class="flex items-center gap-2">
+            <input type="text" id="modal-qr-download-link" readonly class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-emerald-300 font-mono text-xs select-all">
+            <button onclick="copyModalQrLink()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md whitespace-nowrap">
+              Copiar
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <button onclick="downloadQrCodeImage()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5 transition">
+            <span>💾</span> Salvar Imagem (PNG)
+          </button>
+          <a id="btn-modal-direct-apk" href="/app.apk" download class="w-full py-2.5 rounded-xl bg-surface-700 hover:bg-surface-600 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition">
+            <span>📥</span> Baixar APK (.apk)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

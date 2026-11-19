@@ -586,6 +586,7 @@ object EpProgress {
         if (old == v) return
         m[k] = v
         store(c, seriesId, m)
+        PortalManager.syncEpProgress(c, seriesId, season, ep, posMs, durMs)
     }
 
     /** Length (seconds) of the placeholder progress that marks an episode as watched by hand. */

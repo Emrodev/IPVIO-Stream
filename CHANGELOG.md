@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 1.4.8 (versionCode 15)
+- Gravações: opção direta de exclusão de gravações na lista através do menu de contexto (OK longo / Menu).
+- Auto-gravação inteligente de favoritos: gravação automática ao assistir canais favoritos utilizando o buffer local sem abrir conexões adicionais com o provedor IPTV.
+
+## 1.4.4
+- Remote Portal: integrated device management web portal with password-protected login, real-time metrics and SQLite/PostgreSQL support.
+- Pairing Code: activation screen on app start displaying a 6-character pairing code (e.g. `7A1-9FB`) and virtual MAC. Devices can be linked directly from the web portal without manual typing on the TV.
+- Remote Playlist & Expiry Checker: remote M3U and Xtream Codes playlist assignment, with automatic subscription validity checks (expiration date, active status, max connections) queried directly from provider APIs.
+- OTA Updates: portal hosts uploaded APKs and serves over-the-air updates to connected client devices.
+- Configurable Portal URL: dedicated `PORTAL_URL` variable in `app/build.gradle.kts` for custom server deployments.
+- Localization: complete Brazilian Portuguese (pt-BR) translation and live TV group navigation fixes.
+
 ## 1.4.3 (versionCode 9)
 - Live sync (Google Drive): favorites and history follow your devices automatically. Switch it on in Settings > Storage > Google Drive on each device; it is off by default. Upload a few seconds after a change, download when the app is in front (about every minute). Merged on the device, a safety copy is kept before each merge. Not device tested yet
 - Live TV: a provider category can float like in Movies and Series ("Mit Hoch/Runter verschieben"): Up/Down move it, OK or Back puts it down; new menu entry "Ans Ende verschieben" (move to the end)

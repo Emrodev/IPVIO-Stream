@@ -21,3 +21,6 @@ keystore.properties
 
 # Full-size screenshot originals (the repository uses the smaller .jpg copies)
 docs/screenshots/*.png
+
+# Pasta temporaria de transferencia para o servidor
+transferencia/

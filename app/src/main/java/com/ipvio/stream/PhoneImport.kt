@@ -163,6 +163,23 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
 <h1>${t("Absturzbericht", "Crash report")}</h1>$body</body></html>"""
     }
 
+    fun errorMessage(li: Int, err: String): String {
+        val title = when (li) {
+            0 -> "Fehler beim Laden der Playlist"
+            10 -> "Erro ao carregar a playlist"
+            else -> "Error loading playlist"
+        }
+        val back = when (li) {
+            0 -> "Zurück"
+            10 -> "Voltar"
+            else -> "Back"
+        }
+        val esc = err.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>$CSS</style></head><body style="padding:24px"><h2 style="color:#f87171">$title</h2><p>$esc</p>
+<p><a href="/" style="display:inline-block;padding:12px 20px;background:#374151;color:#fff;text-decoration:none;border-radius:10px;font-weight:700">$back</a></p></body></html>"""
+    }
+
     fun message(li: Int, kind: String): String {
         val txt = when (kind) {
             "ok" -> tr(li, "Gesendet. Schau jetzt auf den Fernseher.", "Sent. Now look at the TV.")
@@ -186,7 +203,7 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
  * for transfer to another device) and read the last crash report ([crash]). What is not set
  * does not appear on the page.
  */
-class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
+class PhoneImport(private val onReceive: (PhoneInput) -> Any? = { null }) {
     @Volatile private var server: ServerSocket? = null
     private val fails = java.util.concurrent.atomic.AtomicInteger(0)
     @Volatile private var lockedAt = 0L
@@ -325,7 +342,12 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
                     200 -> {
                         val input = PhoneImportLogic.toInput(f)
                         if (input == null) html(400, PhoneImportLogic.message(li, "bad"))
-                        else { onReceive(input); html(200, PhoneImportLogic.message(li, "ok")) }
+                        else {
+                            val res = onReceive(input)
+                            val err = (res as? String)?.takeIf { it.isNotBlank() }
+                            if (err != null) html(400, PhoneImportLogic.errorMessage(li, err))
+                            else html(200, PhoneImportLogic.message(li, "ok"))
+                        }
                     }
                     403 -> html(403, PhoneImportLogic.message(li, "code"))
                     else -> html(c, PhoneImportLogic.message(li, "lock"))
@@ -387,7 +409,12 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
                     val url = if (ok) save(h.query["name"].orEmpty(), tmp) else null
                     tmp.delete()
                     if (url == null) html(400, PhoneImportLogic.message(li, "file"))
-                    else { onReceive(PhoneInput(url, "", "", "")); html(200, PhoneImportLogic.message(li, "ok")) }
+                    else {
+                        val res = onReceive(PhoneInput(url, "", "", ""))
+                        val err = (res as? String)?.takeIf { it.isNotBlank() }
+                        if (err != null) html(400, PhoneImportLogic.errorMessage(li, err))
+                        else html(200, PhoneImportLogic.message(li, "ok"))
+                    }
                 }
             }
             "GET /transfer" -> if (backup != null) html(200, PhoneImportLogic.transferPage(li)) else html(404, PhoneImportLogic.message(li, "bad"))

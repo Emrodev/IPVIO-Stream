@@ -8,6 +8,8 @@ A free, open-source IPTV player for **Android TV, Google TV and Amazon Fire TV**
 
 > **IPVIO Stream does not provide any content.** It contains no channels, playlists, films or series. It is only a player for playlists that **you** add yourself (Xtream Codes login or M3U address). Only use sources that you are legally allowed to use.
 
+> 🇧🇷 Para a versão desta documentação em Português do Brasil com o guia completo de recursos e configurações, veja: **[README.pt-BR.md](README.pt-BR.md)**.
+
 ## Install
 
 **Download:** [IPVIO-Stream.apk (latest release)](https://github.com/Emrodev/IPVIO-Stream/releases/latest/download/IPVIO-Stream.apk)
@@ -43,7 +45,14 @@ Allow "Install unknown apps" for Downloader (or your file manager) when asked, t
 - Categories, favourites and your own channel lists
 - TV guide, catch-up/archive ("from the beginning"), reminders with notification
 - Rewind live TV with an on-device buffer, record the current show (internal storage or USB)
+- Direct recording deletion and safe scheduled auto-recording for favorite channels
 - Sports section: sports on now and coming up, all sports channels
+
+**Offline Downloads (VOD)**
+- Download movies and individual series episodes for offline viewing
+- Dedicated "Arquivos Baixados" (Downloaded Files) category tab and home row
+- Integrated subscription validity check: playback of downloaded files is gated by IPTV account validity from the portal
+- In-app file management: delete downloaded media directly from details or context menus
 
 **Player** (Media3 / ExoPlayer)
 - Audio and subtitle selection (remembered per title), preferred languages, subtitle style
@@ -54,17 +63,18 @@ Allow "Install unknown apps" for Downloader (or your file manager) when asked, t
 - HLS, MPEG-DASH and MPEG-TS
 - Aspect ratio/zoom, frame-rate matching, technical info, clock overlay, sleep timer
 
-**Personal**
+**Personal & Management**
 - Profiles ("Who's watching?"), parental controls with PIN
 - History, my list, favourites, backup and restore of settings
 - Transfer to another device over Wi-Fi, optional Google Drive backup
-- In-app updates from GitHub Releases
+- Remote Device Management Web Portal & OTA: manage playlists remotely, pair devices instantly with a 6-character activation code, inspect subscription expiration, and push messages/updates directly to screens
+- In-app updates from GitHub Releases and the remote portal
 
 **Look and feel**
 - IPVIO green on navy plus 12 colour themes, 5 backgrounds, custom colours
 - Fonts Outfit, Inter or system; adjustable text and display size; animations off/subtle/normal
 - Sidebar left, right or top, icons only or with text; phones: landscape, tap and double-tap controls
-- 10 languages: German, English, Turkish, Bosnian, Croatian, Serbian, Spanish, French, Italian, Dutch
+- 11 languages: Portuguese (Brazil), German, English, Turkish, Bosnian, Croatian, Serbian, Spanish, French, Italian, Dutch
 
 ## Screenshots
 

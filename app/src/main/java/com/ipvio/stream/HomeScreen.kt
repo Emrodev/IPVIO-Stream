@@ -368,7 +368,11 @@ fun HomeScreen(
         HeaderTab("Kategorien", AIcon.Categories, "tb:cats$tab") { openCats() },
         HeaderTab("Top bewertet", AIcon.Star, "tb:top$tab") { onBrowse(BrowseReq("Top bewertet · $vodNoun", vodTop, SORT_RATING)) },
         HeaderTab("Neu hinzugefügt", AIcon.Sparkle, "tb:new$tab") { onBrowse(BrowseReq("Neu hinzugefügt · $vodNoun", vodBase, SORT_NEW)) },
-        HeaderTab("Alle $vodNoun", AIcon.Grid, "tb:all$tab") { onBrowse(BrowseReq("Alle $vodNoun", vodBase, SORT_NEW)) }
+        HeaderTab("Alle $vodNoun", AIcon.Grid, "tb:all$tab") { onBrowse(BrowseReq("Alle $vodNoun", vodBase, SORT_NEW)) },
+        HeaderTab("Arquivos Baixados", AIcon.Download, "tb:down$tab") {
+            val downItems = VodDownloader.list(ctx).map { VodDownloader.toPlayItem(it) }
+            onBrowse(BrowseReq("Arquivos Baixados", downItems, SORT_NEW))
+        }
     ) + importedTabs.map { (src, l, id) -> HeaderTab(src, AIcon.Download, id) { onBrowse(BrowseReq("$src · $vodNoun", l, SORT_NEW)) } }
     var inHeader by remember { mutableStateOf(false) }
     val header: @Composable (Modifier) -> Unit = { m ->
@@ -405,6 +409,9 @@ fun HomeScreen(
         pick(1, topM); pick(2, topS)
         pick(MenuLogic.FAVS, favVod.ifEmpty { topM.drop(3) })
         pick(MenuLogic.MYLIST, watchList.filter { it.kind != Kind.LIVE }.ifEmpty { topS.drop(3) })
+    }
+    val downloadedVod = remember(VodDownloader.active.size) {
+        VodDownloader.list(ctx).map { VodDownloader.toPlayItem(it) }
     }
     val liveLogos = nowChannels.mapNotNull { it.logo }.take(3)
     val tiles = listOf(
@@ -715,6 +722,10 @@ fun HomeScreen(
                             if (wl.isNotEmpty()) item(key = "wl$tab") { ItemsRow("Meine Liste", wl, cardW, onOpen) { onBrowse(BrowseReq("Meine Liste · $noun", wl, SORT_PLAYLIST)) } }
                             val recent = histK
                             if (recent.isNotEmpty()) item(key = "hr$tab") { ItemsRow("Zuletzt geschaut", recent, cardW, onOpen) { onBrowse(BrowseReq("Zuletzt geschaut · $noun", recent, SORT_PLAYLIST)) } }
+                            val downloadedList = downloadedVod.filter { if (isM) it.kind == Kind.MOVIE else it.kind == Kind.SERIES }
+                            if (downloadedList.isNotEmpty()) item(key = "down$tab") {
+                                ItemsRow("Arquivos Baixados", downloadedList, cardW, onOpen) { onBrowse(BrowseReq("Arquivos Baixados · $noun", downloadedList, SORT_NEW)) }
+                            }
                             if (base.isEmpty()) {
                                 item { EmptyHint("Keine $noun in dieser Playlist") }
                                 item { EmptyHint(CONTENT_MODE_HINT.format(if (isM) "Filme" else "Serien", "Nur Live TV")) }

@@ -1,0 +1,593 @@
+/* Korp TV Design System — Web & Smart TV */
+:root {
+  --bg-primary: #030712;
+  --bg-sidebar: #090e1a;
+  --bg-surface: #0f172a;
+  --bg-surface-elevated: #1e293b;
+  --border-color: #1f2937;
+  --accent-cyan: #06b6d4;
+  --accent-cyan-hover: #22d3ee;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --focus-glow: 0 0 0 3px #06b6d4, 0 12px 30px rgba(6, 182, 212, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Indicador de foco padrão para controle remoto D-Pad */
+.focusable {
+  outline: none;
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.focusable:focus,
+.focusable.focused {
+  transform: scale(1.04);
+  box-shadow: var(--focus-glow);
+  border-color: var(--accent-cyan-hover) !important;
+  z-index: 20;
+}
+
+/* Telas principais */
+.screen {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Tela de Emparelhamento / Vinculação */
+#screen-pairing {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #0e2a47 0%, #030712 75%);
+  padding: 24px;
+}
+
+.pairing-card {
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 580px;
+  width: 100%;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85);
+  text-align: center;
+}
+
+.pairing-code-badge {
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: var(--accent-cyan-hover);
+  background: #020617;
+  border: 2px dashed var(--accent-cyan);
+  border-radius: 18px;
+  padding: 16px 28px;
+  display: inline-block;
+  margin: 18px 0;
+  font-family: monospace;
+}
+
+/* Layout Geral: Sidebar + Conteúdo */
+.sidebar {
+  width: 84px;
+  height: 100vh;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  gap: 12px;
+  z-index: 50;
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.sidebar:hover,
+.sidebar.expanded,
+.sidebar:focus-within {
+  width: 220px;
+  align-items: stretch;
+  padding: 20px 14px;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 10px 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-btn {
+  height: 52px;
+  border-radius: 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sidebar-btn .sidebar-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+}
+
+.sidebar-btn .sidebar-label {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar:hover .sidebar-label,
+.sidebar.expanded .sidebar-label,
+.sidebar:focus-within .sidebar-label {
+  opacity: 1;
+}
+
+.sidebar-btn.active {
+  background: #083344;
+  color: #ffffff;
+  border-color: rgba(6, 182, 212, 0.5);
+}
+
+.sidebar-btn:focus,
+.sidebar-btn.focused {
+  background: #0e7490 !important;
+  color: #ffffff !important;
+  border-color: var(--accent-cyan-hover) !important;
+}
+
+/* Área de Conteúdo */
+.content-area {
+  flex: 1;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.tab-pane {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Aba Início */
+#tab-home {
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 32px 40px;
+  gap: 28px;
+}
+
+.hero-card {
+  min-height: 280px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #030712 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 32px;
+  background-size: cover;
+  background-position: center;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(3, 7, 18, 0.95) 0%, rgba(3, 7, 18, 0.4) 60%, rgba(3, 7, 18, 0.1) 100%);
+}
+
+.carousel-row {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-cyan) transparent;
+}
+
+/* Estrutura de Colunas: Categorias + Grade de Conteúdo */
+.category-pane {
+  width: 290px;
+  height: 100%;
+  background: #0b1120;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.category-header {
+  padding: 22px 20px 16px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--accent-cyan-hover);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.category-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.category-item {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbd5e1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.category-item.active {
+  background: #0e7490;
+  color: #ffffff;
+  border-color: var(--accent-cyan);
+}
+
+.items-pane {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.items-header {
+  padding: 20px 32px;
+  font-size: 20px;
+  font-weight: 800;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(3, 7, 18, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.items-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+  display: grid;
+  gap: 16px;
+  align-content: flex-start;
+}
+
+/* Grade de canais de TV (formato horizontal) */
+.channels-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.channel-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.channel-logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: #1e293b;
+  object-fit: contain;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.channel-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.channel-info h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-info p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Grade de Filmes e Séries (Pôsteres Verticais proporção 2:3 estilo cinema) */
+.posters-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.poster-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.poster-cover-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: #111827;
+  overflow: hidden;
+}
+
+.poster-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.poster-card:focus .poster-cover,
+.poster-card.focused .poster-cover {
+  transform: scale(1.05);
+}
+
+.poster-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  color: #facc15;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
+.poster-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.poster-info h4 {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ffffff;
+}
+
+.poster-info p {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Player em Tela Cheia & OSD */
+#player-container {
+  position: fixed;
+  inset: 0;
+  background: #000000;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+#main-video {
+  width: 100%;
+  height: 100%;
+  background: #000000;
+}
+
+.osd-element {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.osd-element.osd-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(10px);
+}
+
+.player-top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 32px 40px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 120;
+}
+
+.player-osd {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 36px 40px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.6) 60%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 120;
+}
+
+.osd-btn {
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.osd-btn:focus,
+.osd-btn.focused {
+  background: var(--accent-cyan) !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 3px #ffffff, 0 10px 25px rgba(6, 182, 212, 0.6);
+  transform: scale(1.08);
+}
+
+/* Gaveta Rápida de Canais ao Vivo sobre o vídeo */
+#quick-channel-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100%;
+  background: rgba(3, 7, 18, 0.92);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid var(--border-color);
+  z-index: 130;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -15px 0 35px rgba(0, 0, 0, 0.8);
+}
+
+.quick-channel-item {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.quick-channel-item.active {
+  background: #0e7490;
+  border-color: var(--accent-cyan);
+}
+
+/* Modal de Detalhes de Séries (Temporadas e Episódios) */
+#modal-series-details {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(16px);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.series-modal-content {
+  background: #0f172a;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 24px;
+  width: 90vw;
+  max-width: 1100px;
+  height: 85vh;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+}
+
+.series-modal-sidebar {
+  width: 320px;
+  padding: 24px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #090e1a;
+}
+
+.series-modal-episodes {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.episode-card {
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: #1e293b;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

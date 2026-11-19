@@ -1371,6 +1371,45 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
     Hint("„Bei jedem Start“ lädt die Playlist bei jedem Öffnen der App. Die geplanten Varianten laufen auch im Hintergrund, solange das Gerät eingeschaltet und online ist, und holen verpasste Termine beim nächsten Start nach. „Nur von Hand“ nutzt immer den gespeicherten Stand; Neu laden geht jederzeit mit dem Knopf oben. Die Uhrzeit richtet sich nach deiner Zeitzone unter „Sprache & Region“.")
     Hint("Läuft gerade ein Film oder Sender, wartet die Aktualisierung, bis du fertig bist – so ruckelt nichts.")
     Hint("Zugangsdaten werden nur auf diesem Gerät gespeichert und hier nicht angezeigt. Es ist immer eine Playlist aktiv. Mit „Zur Hauptliste machen“ wechselst du die Liste.")
+    RemotePortalSection(ctx)
+}
+
+@Composable
+private fun RemotePortalSection(ctx: Context) {
+    SectionTitle(Lang.tr("Portal de Gerenciamento Remoto"))
+    val mac = remember { DeviceIdentity.getVirtualMac(ctx) }
+    val devId = remember { DeviceIdentity.getDeviceId(ctx) }
+    var portalUrl by remember { mutableStateOf(PortalManager.getPortalUrl(ctx)) }
+    var statusText by remember { mutableStateOf(if (portalUrl.isBlank()) "" else (PortalManager.lastSyncStatus.ifBlank { "Configurado" })) }
+    var syncing by remember { mutableStateOf(false) }
+
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(DS.RadiusM)).background(Color(0x12FFFFFF)).padding(14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("MAC: $mac", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, raw = true)
+            Text("Device ID: $devId", color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, raw = true)
+            if (statusText.isNotBlank()) {
+                Text("Status: " + Lang.tr(statusText), color = if (statusText.contains("Erro", ignoreCase = true)) Color(0xFFFF8A80) else Accent2, fontSize = 13.sp, raw = true)
+            }
+        }
+        PillButton(if (syncing) Lang.tr("Conectando...") else Lang.tr("Sincronizar"), light = true) {
+            if (syncing) return@PillButton
+            syncing = true
+            PortalManager.syncNow(ctx) { ok, msg ->
+                syncing = false
+                statusText = if (ok) "Conectado" else "Erro de conexão"
+                settingsToast(ctx, msg)
+            }
+        }
+    }
+
+    Field(portalUrl, {
+        portalUrl = it
+        PortalManager.setPortalUrl(ctx, it)
+    }, "Endereço do Portal (ex: http://192.168.1.100:3000)")
+    Hint("Conecte ao portal web para gerenciar playlists remotamente, receber avisos na tela e atualizações automáticas.")
 }
 
 @Composable

@@ -91,7 +91,41 @@ internal fun TransferSection(ctx: Context) {
         }
     }
     UndoRestoreRow(ctx)
+    PortalBackupSection(ctx)
     if (DriveSync.available()) DriveSection(ctx)
+}
+
+@Composable
+internal fun PortalBackupSection(ctx: Context) {
+    var status by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+
+    SectionTitle(Lang.tr("Backup no Portal Remoto"))
+    Hint(Lang.tr("Salva e restaura favoritos, histórico e configurações diretamente no seu Portal IPVIO, sem precisar de conta Google."))
+
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        PillButton(Lang.tr("Salvar Backup no Portal")) {
+            if (busy) return@PillButton
+            busy = true
+            status = Lang.tr("Enviando backup para o portal...")
+            PortalManager.backupToPortal(ctx) { ok, msg ->
+                busy = false
+                status = msg
+            }
+        }
+        PillButton(Lang.tr("Restaurar do Portal")) {
+            if (busy) return@PillButton
+            busy = true
+            status = Lang.tr("Buscando backup no portal...")
+            PortalManager.restoreFromPortal(ctx) { ok, msg ->
+                busy = false
+                status = msg
+            }
+        }
+    }
+    if (status.isNotEmpty()) {
+        Text(status, color = if (status.contains("sucesso", true)) Color(0xFF50FA7B) else Muted, fontSize = 15.sp)
+    }
 }
 
 /** QR code (black on white, with a border – so phone cameras also read it on a dark screen). */

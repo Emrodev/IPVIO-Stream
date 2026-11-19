@@ -135,7 +135,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // Order: favorites, own channel lists, "New channel list", all channels, categories
     // Recordings (round 20): own category as soon as there are any
     // Reading the recordings folder (also USB storage) is file I/O: done in the background, the last result shows meanwhile
-    val recs by produceState(LiveRecCache.items, Recorder.active.size, sel == "REC") {
+    var recDelTick by remember { mutableIntStateOf(0) }
+    val recs by produceState(LiveRecCache.items, Recorder.active.size, sel == "REC", recDelTick) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Recorder.list(ctx).map { Recorder.itemOf(it) } }
         LiveRecCache.items = value
     }
@@ -502,7 +503,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             onFocus = { focusTarget = ch; inChannels = true; plScope.launch { holdJump(chanState, i) } },
                             variants = variantsOf[ch.id].orEmpty(),
                             favShown = if (sel == FAV_CAT) list else null,
-                            onVariant = { v -> ZapContext.list = list; ZapContext.key = sel; LiveMemory.setSel(ctx, sel); onOpen(v) }
+                            onVariant = { v -> ZapContext.list = list; ZapContext.key = sel; LiveMemory.setSel(ctx, sel); onOpen(v) },
+                            onDelete = if (sel == "REC") { { if (Recorder.deleteByItem(ctx, ch)) recDelTick++ } } else null
                         ) {
                             if (addList != null) {
                                 val has = ch.id in addList.ids
@@ -610,11 +612,11 @@ private val ROW_DIMS = arrayOf(
 )
 
 @Composable
-private fun ChannelLine(item: Item, modifier: Modifier, inList: ChList?, onNewList: () -> Unit, onFocus: () -> Unit = {}, variants: List<Item> = emptyList(), onVariant: (Item) -> Unit = {}, favShown: List<Item>? = null, onClick: () -> Unit) {
+private fun ChannelLine(item: Item, modifier: Modifier, inList: ChList?, onNewList: () -> Unit, onFocus: () -> Unit = {}, variants: List<Item> = emptyList(), onVariant: (Item) -> Unit = {}, favShown: List<Item>? = null, onDelete: (() -> Unit)? = null, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     Box {
-    if (menu) ChannelMenu(item, inList, onNewList, variants, onVariant, favShown) { menu = false }
+    if (menu) ChannelMenu(item, inList, onNewList, variants, onVariant, favShown, onDelete) { menu = false }
     val shape = RoundedCornerShape(DS.RadiusM)
     // Wait briefly before loading the guide data: rows that only fly past while scrolling are cancelled and cost nothing
     // While Up/Down is held no guide data is loaded: the row would grow by two lines and the list would re-measure while it scrolls
@@ -700,9 +702,14 @@ private fun ChannelLogo(logo: String?, title: String, size: Dp) {
  * move within the list, new list. [onNewList] = null hides "New channel list" (player).
  */
 @Composable
-fun ChannelMenu(item: Item, inList: ChList?, onNewList: (() -> Unit)?, variants: List<Item> = emptyList(), onVariant: (Item) -> Unit = {}, favShown: List<Item>? = null, onClose: () -> Unit) {
+fun ChannelMenu(item: Item, inList: ChList?, onNewList: (() -> Unit)?, variants: List<Item> = emptyList(), onVariant: (Item) -> Unit = {}, favShown: List<Item>? = null, onDelete: (() -> Unit)? = null, onClose: () -> Unit) {
     val ctx = LocalContext.current
     val acts = ArrayList<Triple<String, AIcon?, () -> Unit>>()
+    if (onDelete != null || item.id.startsWith("rec:")) {
+        acts.add(Triple(Lang.tr("Löschen"), AIcon.Close) {
+            if (onDelete != null) onDelete() else Recorder.deleteByItem(ctx, item)
+        })
+    }
     // Bundled quality variants: pick one to play (best first)
     if (variants.size > 1) for (v in variants) acts.add(Triple(Lang.tr("Qualität") + ": " + (v.quality ?: v.title), AIcon.Play) { onVariant(v) })
     acts.add(Triple(if (Library.isFav(item.id)) "Aus Favoriten entfernen" else "Zu Favoriten", AIcon.Star) { Library.toggleFav(ctx, item.id) })

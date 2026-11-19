@@ -24,6 +24,7 @@ object Lang {
         loaded = true
         I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6)
+        I18nCore.loadColumn(I18nCore.CODES.indexOf("pt"), DictPt1, DictPt2, DictPt3, DictPt4, DictPt5, DictPt6)
     }
 
     /** Index in I18nCore.CODES. Reads the state so texts are redrawn on switching. */
@@ -40,18 +41,22 @@ object Lang {
         "bs" -> Locale.Builder().setLanguage("bs").setRegion("BA").build()
         "hr" -> Locale.Builder().setLanguage("hr").setRegion("HR").build()
         "sr" -> Locale.Builder().setLanguage("sr").setScript("Latn").setRegion("RS").build()
+        "pt" -> Locale.Builder().setLanguage("pt").setRegion("BR").build()
         else -> Locale.forLanguageTag(code())
     }
 
     /** Language code for TMDB requests, e.g. "de-DE". */
     fun tmdb(): String = when (code()) {
         "en" -> "en-US"; "tr" -> "tr-TR"; "bs" -> "bs-BA"; "hr" -> "hr-HR"; "sr" -> "sr-RS"
-        "es" -> "es-ES"; "fr" -> "fr-FR"; "it" -> "it-IT"; "nl" -> "nl-NL"; else -> "de-DE"
+        "es" -> "es-ES"; "fr" -> "fr-FR"; "it" -> "it-IT"; "nl" -> "nl-NL"; "pt" -> "pt-BR"; else -> "de-DE"
     }
 
     fun tr(s: String): String {
         val i = index
-        return if (i == 0) s else I18nCore.translate(s, i)
+        val res = if (i == 0) s else I18nCore.translate(s, i)
+        return if (BuildConfig.APP_NAME != "IPVIO Stream") {
+            res.replace("IPVIO Stream", BuildConfig.APP_NAME)
+        } else res
     }
 }
 
@@ -91,8 +96,11 @@ fun Text(
             textAlign = textAlign ?: TextAlign.Unspecified, lineHeight = lineHeight
         )
     )
+    val displayed = if (raw) {
+        if (BuildConfig.APP_NAME != "IPVIO Stream") text.replace("IPVIO Stream", BuildConfig.APP_NAME) else text
+    } else Lang.tr(text)
     BasicText(
-        text = if (raw) text else Lang.tr(text), modifier = modifier, style = merged,
+        text = displayed, modifier = modifier, style = merged,
         onTextLayout = onTextLayout, overflow = overflow, softWrap = softWrap, maxLines = maxLines, minLines = minLines
     )
 }

@@ -47,7 +47,10 @@ fun UpdateCardHost() {
 
     LaunchedEffect(run) {
         state = UpdateCardLogic.START
-        AppUpdate.promptDismissed = true
+        // Só suprime o prompt automático se o portal não tiver entregue uma atualização OTA
+        if (AppUpdate.available == null) {
+            AppUpdate.promptDismissed = true
+        }
         val r = AppUpdate.check(ctx)
         val err = r.exceptionOrNull()
         if (err != null && UpdateCardLogic.ignorable(err)) return@LaunchedEffect

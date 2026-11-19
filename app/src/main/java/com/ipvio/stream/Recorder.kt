@@ -24,7 +24,8 @@ import java.io.RandomAccessFile
 object Recorder {
     class Rec(
         val name: String, val channelId: String, val channel: String, val title: String, val file: File,
-        val startMs: Long, @Volatile var endAtMs: Long, val tap: LiveTap
+        val startMs: Long, @Volatile var endAtMs: Long, val tap: LiveTap,
+        val auto: Boolean = false
     ) {
         @Volatile var bytes = 0L
         @Volatile var running = true
@@ -63,7 +64,7 @@ object Recorder {
      * Start a recording of channel [ch] from the buffer [tap] (the buffer is held for it).
      * [prog] = running show (start/end), null = from now until stopped.
      */
-    fun start(c: Context, ch: Item, prog: EpgEntry?, tap: LiveTap): Rec? {
+    fun start(c: Context, ch: Item, prog: EpgEntry?, tap: LiveTap, auto: Boolean = false): Rec? {
         active.firstOrNull { it.channelId == ch.id && it.running }?.let { return it }
         val now = System.currentTimeMillis()
         val dir = dir(c)
@@ -77,7 +78,7 @@ object Recorder {
         val title = prog?.title?.takeIf { it.isNotBlank() } ?: ch.title
         val name = TapLogic.fileName(ch.title, if (prog != null) title else "", startMs)
         val f = File(dir, name)
-        val r = Rec(name, ch.id, ch.title, title, f, startMs, end, tap.acquire())
+        val r = Rec(name, ch.id, ch.title, title, f, startMs, end, tap.acquire(), auto = auto)
         writeMeta(f, r, running = true)
         val t = Thread({ copy(r, fromByte) }, "Rec-" + ch.id)
         t.isDaemon = true
@@ -95,6 +96,11 @@ object Recorder {
     }
 
     fun stopFor(c: Context, channelId: String) { active.filter { it.channelId == channelId && it.running }.forEach { stop(c, it) } }
+
+    /** Stop any auto-recordings that are not on the currently watched channel so no second connection is used. */
+    fun stopAutoExcept(c: Context, channelId: String?) {
+        active.filter { it.auto && it.running && (channelId == null || it.channelId != channelId) }.forEach { stop(c, it) }
+    }
 
     private fun copy(r: Rec, fromByte: Long) {
         val at = longArrayOf(fromByte)
@@ -161,6 +167,12 @@ object Recorder {
         active.firstOrNull { it.file == f.file }?.let { stop(c, it) }
         runCatching { f.file.delete() }
         runCatching { metaFile(f.file).delete() }
+    }
+
+    fun deleteByItem(c: Context, item: Item): Boolean {
+        val f = list(c).firstOrNull { itemOf(it).id == item.id || it.file.toURI().toString() == item.url } ?: return false
+        delete(c, f)
+        return true
     }
 
     /** A recording as an entry to play (like a movie: seekable, progress is remembered). */

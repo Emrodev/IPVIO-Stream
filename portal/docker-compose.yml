@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: korp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-korp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-korp_secure_pass_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-korp_tv}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-korp_user} -d ${POSTGRES_DB:-korp_tv}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - korp-network
+
+  portal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/kabaweb/korp-portal:latest
+    container_name: korp-portal
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - DB_TYPE=postgres
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-korp_user}:${POSTGRES_PASSWORD:-korp_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-korp_tv}
+      - SQLITE_PATH=/app/data/portal.db
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASS=${ADMIN_PASS:-admin123}
+      - ADMIN_KEY=${ADMIN_KEY:-admin123}
+      - SESSION_SECRET=${SESSION_SECRET:-korp-tv-session-secret-token-2026}
+      - PORTAL_PUBLIC_DOMAIN=${PORTAL_PUBLIC_DOMAIN:-http://localhost:3000}
+    volumes:
+      - ./data:/app/data
+      - ./public/apks:/app/public/apks
+    networks:
+      - korp-network
+
+volumes:
+  pgdata:
+
+networks:
+  korp-network:
+    driver: bridge

@@ -521,6 +521,25 @@ private fun DetailScreenFull(
                                 // Round 14: movies and series as favorites (appear under "Favorites")
                                 val fav = Library.isFav(item.id)
                                 HeroButton(if (fav) "Favorit" else "Zu Favoriten", if (fav) AIcon.HeartFilled else AIcon.Heart, false, Modifier, bh) { Library.toggleFav(ctx, item.id) }
+                                if (item.kind == Kind.MOVIE) {
+                                    val isDown = VodDownloader.isDownloaded(ctx, item.id)
+                                    val isTask = VodDownloader.isDownloading(item.id)
+                                    val downLabel = if (isDown) "Baixado (Excluir)" else if (isTask) "Baixando …" else "Baixar Filme"
+                                    val downIcon = if (isDown) AIcon.Close else if (isTask) AIcon.Refresh else AIcon.Download
+                                    HeroButton(downLabel, downIcon, false, Modifier, bh) {
+                                        if (isDown) {
+                                            VodDownloader.deleteById(ctx, item.id)
+                                            Toast.makeText(ctx, "Download excluído", Toast.LENGTH_SHORT).show()
+                                        } else if (isTask) {
+                                            VodDownloader.getTask(item.id)?.let { VodDownloader.stop(ctx, it) }
+                                            Toast.makeText(ctx, "Download cancelado", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            val t = VodDownloader.start(ctx, item, customUrl = playUrl)
+                                            if (t != null) Toast.makeText(ctx, "Iniciando download …", Toast.LENGTH_SHORT).show()
+                                            else Toast.makeText(ctx, "Não foi possível iniciar o download", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                                 HeroButton("Trailer", AIcon.Play, false, Modifier, bh) { openTrailer(ctx, meta?.trailerKey, item.title) }
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
                             }
@@ -711,6 +730,22 @@ private fun DetailScreenFull(
                                         EpProgress.mark(ctx, item.id, listOf(k), !seen)
                                         if (!seen && resumeSE?.let { ResumeLogic.key(it.first, it.second) } == k) WatchStore.remove(ctx, item.id)
                                         progVer++
+                                    },
+                                    onDownload = {
+                                        val epId = "${item.id}_S${ep.season}E${ep.num}"
+                                        val isDown = VodDownloader.isDownloaded(ctx, epId)
+                                        val isTask = VodDownloader.isDownloading(epId)
+                                        if (isDown) {
+                                            VodDownloader.deleteById(ctx, epId)
+                                            Toast.makeText(ctx, "Download do episódio excluído", Toast.LENGTH_SHORT).show()
+                                        } else if (isTask) {
+                                            VodDownloader.getTask(epId)?.let { VodDownloader.stop(ctx, it) }
+                                            Toast.makeText(ctx, "Download cancelado", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            val t = VodDownloader.start(ctx, item, ep, customUrl = v.url)
+                                            if (t != null) Toast.makeText(ctx, "Baixando S${ep.season}E${ep.num} …", Toast.LENGTH_SHORT).show()
+                                            else Toast.makeText(ctx, "Não foi possível baixar", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 ) { onPlay(v.url, item.title + " S" + ep.season + "E" + ep.num, 0L) }
                             }
@@ -734,8 +769,16 @@ private fun DetailScreenFull(
 }
 
 @Composable
-private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.EpPos?, modifier: Modifier, onFocus: () -> Unit, onToggleSeen: () -> Unit, onClick: () -> Unit) {
+private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.EpPos?, modifier: Modifier, onFocus: () -> Unit, onToggleSeen: () -> Unit, onDownload: () -> Unit, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
+    if (menu) {
+        OptionPopup(listOf("Como visto / não visto", "Baixar / Excluir episódio"), -1, { menu = false }) { idx ->
+            menu = false
+            if (idx == 0) onToggleSeen()
+            else onDownload()
+        }
+    }
     val shape = RoundedCornerShape(dpx(16))
     // Round 17b: the selected episode floats forward (glass, shadow, slightly larger) instead of a white frame; the others stay calm
     val sc by androidx.compose.animation.core.animateFloatAsState(if (f) focusScale(1.02f) else 1f, label = "ep")
@@ -746,7 +789,7 @@ private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.E
             .clip(shape).background(if (f) Color(0x1FFFFFFF) else Color(0x08FFFFFF))
             .border(1.dp, if (f) Color(0x33FFFFFF) else Color.Transparent, shape)
             .onFocusChanged { f = it.isFocused; if (it.isFocused) onFocus() }
-            .favKeys(onToggleSeen)
+            .menuKeys(onMenu = { menu = true }, onLong = { menu = true })
             .clickable(onClick = onClick)
             .padding(dpx(14)),
         horizontalArrangement = Arrangement.spacedBy(dpx(22)), verticalAlignment = Alignment.CenterVertically
@@ -779,7 +822,7 @@ private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.E
             }
             em?.air?.let { Text(raw = true, text = it, color = Muted, fontSize = spx(16)) }
             em?.overview?.let { Text(raw = true, text = it, color = if (f) Tok.TextMid else Tok.TextLow, fontSize = spx(18), lineHeight = spx(25), maxLines = 3, overflow = TextOverflow.Ellipsis) }
-            if (f) Text(if (prog?.done == true) "OK lange drücken = als ungesehen markieren" else "OK lange drücken = als gesehen markieren", color = Muted, fontSize = spx(14))
+            if (f) Text("Segure OK / Menu para marcar como visto ou Baixar", color = Muted, fontSize = spx(14))
         }
     }
 }

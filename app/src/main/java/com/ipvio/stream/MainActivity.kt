@@ -1,6 +1,7 @@
 package com.ipvio.stream
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -49,6 +50,7 @@ class MainActivity : ComponentActivity() {
         Config.initSubs(this)
         LiveSettings.init(this)
         Recorder.attach(this)
+        VodDownloader.attach(this)
         MobilePrefs.apply(this)
         // Fresh start (not just a rotated/recreated screen): "Resume last watched at start" may apply again.
         // The process often lives on after quitting; the marker flag therefore stayed set from the first start and nothing was opened any more.
@@ -66,6 +68,7 @@ class MainActivity : ComponentActivity() {
                 .build()
         )
         ScreenAwake.attach(this)
+        PortalManager.start(this)
         intent?.getStringExtra(Reminders.EXTRA_CH)?.let { AppNav.openChannel = it }
         setContent { App(pick) }
     }
@@ -206,6 +209,15 @@ private fun AppContent() {
     LaunchedEffect(browse) { browse?.let { StalkerMore.attach(ctx, it) } ?: StalkerMore.detach() }
     var cats by remember { mutableStateOf<CatReq?>(null) }
     var playing by remember { mutableStateOf<PlayReq?>(null) }
+    LaunchedEffect(playing) {
+        val p = playing
+        if (p != null) {
+            val type = if (p.live) "live" else if (p.season > 0 || p.episode > 0) "series" else "movie"
+            PortalManager.setNowPlaying(ctx, p.title, type)
+        } else {
+            PortalManager.setNowPlaying(ctx, null, null)
+        }
+    }
     var tab by remember { mutableStateOf(SettingsLogic.resolveStartTab(General.startTab, AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList())) }
     // W-002: the start page is the movie or series area: open its categories as well
     LaunchedEffect(Unit) { if (General.vodCats && (tab == 1 || tab == 2)) AppNav.pendingVodCats = tab }
@@ -263,6 +275,13 @@ private fun AppContent() {
 
     fun start(item: Item, title: String, url: String, startMs: Long = 0L) {
         if (DemoMode.active) return   // sample entries have no stream address
+        if (item.id.startsWith("down:") || url.startsWith("file://") && url.contains("vod_downloads")) {
+            val (ok, reason) = VodDownloader.checkValidity(ctx)
+            if (!ok) {
+                Toast.makeText(ctx, "⚠️ $reason", Toast.LENGTH_LONG).show()
+                return
+            }
+        }
         History.add(ctx, item.id)
         val sm = SE_RE.find(title)
         val season = sm?.groupValues?.get(1)?.toIntOrNull() ?: 0

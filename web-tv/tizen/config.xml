@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://localhost:3001/KorpTV" version="1.0.0" viewmodes="fullscreen">
+    <tizen:application id="Xk8s9p2w1q.KorpTV" exec="index.html" screen-orientation="landscape" required_version="3.0"/>
+    <name>Korp TV</name>
+    <description>Korp TV Smart TV IPTV Player</description>
+    <icon src="logo-icon.svg"/>
+    <content src="index.html"/>
+    <access origin="*"/>
+    <tizen:allow-navigation>*</tizen:allow-navigation>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+    <tizen:profile name="tv"/>
+    <tizen:setting screen-orientation="landscape" context-menu="enable" background-support="disable" encryption="disable" install-location="auto"/>
+</widget>

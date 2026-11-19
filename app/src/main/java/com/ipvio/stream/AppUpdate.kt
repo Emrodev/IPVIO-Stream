@@ -74,22 +74,68 @@ object AppUpdate {
 
     fun currentName(c: Context): String = runCatching { c.packageManager.getPackageInfo(c.packageName, 0).versionName }.getOrNull() ?: ""
 
+    fun setFromPortal(info: UpdateInfo?) {
+        available = info
+    }
+
+    private fun fetchPortalOta(c: Context, baseUrl: String): UpdateInfo? {
+        val curCode = currentCode(c)
+        val cleanUrl = baseUrl.trim().removeSuffix("/")
+        val req = Request.Builder()
+            .url("$cleanUrl/api/device/check-update?versionCode=$curCode")
+            .header("User-Agent", BuildConfig.APP_NAME)
+            .build()
+        return Net.base.newCall(req).execute().use { r ->
+            if (!r.isSuccessful) return null
+            val j = JSONObject(r.body?.string().orEmpty())
+            val ota = j.optJSONObject("ota") ?: return null
+            val hasUpdate = ota.optBoolean("hasUpdate", false)
+            val vCode = ota.optLong("versionCode", 0L)
+            if (!hasUpdate && vCode <= curCode) return null
+            var apkUrl = ota.optString("url", "")
+            if (apkUrl.isBlank()) return null
+            if (apkUrl.startsWith("/")) apkUrl = "$cleanUrl$apkUrl"
+            else if (apkUrl.contains("localhost")) {
+                val baseUri = android.net.Uri.parse(cleanUrl)
+                val baseHost = baseUri.host ?: "192.168.1.100"
+                val baseScheme = baseUri.scheme ?: "http"
+                val basePort = if (baseUri.port > 0) ":${baseUri.port}" else ""
+                apkUrl = apkUrl.replace(Regex("https?://localhost(:\\d+)?"), "$baseScheme://$baseHost$basePort")
+            }
+            UpdateInfo(
+                code = vCode,
+                name = ota.optString("versionName", ""),
+                apkUrl = apkUrl,
+                notes = ota.optString("changelog", ""),
+                mandatory = ota.optBoolean("mandatory", false)
+            )
+        }
+    }
+
     /** Returns null if the installed version is current. */
     suspend fun check(c: Context): Result<UpdateInfo?> = withContext(Dispatchers.IO) {
         runCatching {
-            val u = url(c)
-            if (u.isBlank()) error("Keine Update-Adresse eingetragen")
-            // Built-in source: update.json first, the GitHub API if that fails for any reason (no asset yet, bad file, no network).
-            // Custom address: only that address, as before.
-            val res = if (u == DEFAULT_URL) {
-                try {
-                    fetch(c, PRIMARY_URL, strict = true)
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    fetch(c, DEFAULT_URL, strict = false)
-                }
-            } else fetch(c, u, strict = false)
+            val portalUrl = PortalManager.getPortalUrl(c)
+            var res: UpdateInfo? = null
+            if (portalUrl.isNotBlank()) {
+                res = runCatching { fetchPortalOta(c, portalUrl) }.getOrNull()
+            }
+
+            if (res == null) {
+                val u = url(c)
+                if (u.isBlank()) error("Keine Update-Adresse eingetragen")
+                // Built-in source: update.json first, the GitHub API if that fails for any reason (no asset yet, bad file, no network).
+                // Custom address: only that address, as before.
+                res = if (u == DEFAULT_URL) {
+                    try {
+                        fetch(c, PRIMARY_URL, strict = true)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        fetch(c, DEFAULT_URL, strict = false)
+                    }
+                } else fetch(c, u, strict = false)
+            }
             prefs(c).edit().putLong("last", System.currentTimeMillis()).apply()
             available = res
             remember(c, res)
@@ -99,7 +145,7 @@ object AppUpdate {
 
     /** One request to [u]; returns null if the installed version is current. [strict] = the file must carry a SHA-256. */
     private fun fetch(c: Context, u: String, strict: Boolean): UpdateInfo? {
-        val req = Request.Builder().url(u).header("User-Agent", "IPVIO Stream")
+        val req = Request.Builder().url(u).header("User-Agent", BuildConfig.APP_NAME)
             .header("Accept", if (u == DEFAULT_URL) "application/vnd.github+json" else "application/json, application/vnd.github+json").build()
         return Net.base.newCall(req).execute().use { r ->
             if (r.code == 404) error("Noch keine Veröffentlichung gefunden")
@@ -202,7 +248,7 @@ object AppUpdate {
             val dir = File(c.cacheDir, "updates").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
             val out = File(dir, "ipvio-update.apk")
             val client = Net.withTimeouts(15, 60)
-            client.newCall(Request.Builder().url(info.apkUrl).header("User-Agent", "IPVIO Stream").build()).execute().use { r ->
+            client.newCall(Request.Builder().url(info.apkUrl).header("User-Agent", BuildConfig.APP_NAME).build()).execute().use { r ->
                 if (!r.isSuccessful) error("Fehler ${r.code}")
                 val body = r.body ?: error("Leere Antwort")
                 val total = body.contentLength()

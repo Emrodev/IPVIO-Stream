@@ -1,0 +1,9 @@
+portal/node_modules
+portal/.env
+node_modules
+.git
+.gradle
+.idea
+build
+app/build
+portal/data/*.db

@@ -47,6 +47,11 @@ internal fun LiveBufferSection(ctx: Context) {
     SelectRow("Nachlauf nach Sendungsende", "${LiveSettings.recPad} min", pads.map { "$it min" }, pads.indexOf(LiveSettings.recPad).coerceAtLeast(0)) {
         LiveSettings.setRecPad(ctx, pads[it])
     }
+    ToggleRow(
+        "Favoriten beim Anschauen automatisch aufnehmen",
+        "Nimmt Sendungen von Favoriten-Sendern automatisch auf, während du sie anschaust. Nutzt denselben lokalen Datenpuffer ohne zusätzliche Serververbindung. Beim Umschalten wird die automatische Aufnahme beendet, um den Anbieter nicht zu überlasten.",
+        LiveSettings.autoRecFavs
+    ) { LiveSettings.setAutoRecFavs(ctx, it) }
     Hint("Aufnehmen: im Player bei einem Sender auf den roten Knopf. Die laufende Sendung wird bis zu ihrem Ende laut TV-Guide aufgenommen, beginnt sie schon im Puffer, auch von ihrem Anfang an. Schaust du währenddessen einen anderen Sender, braucht das eine zweite Verbindung zu deinem Anbieter. Aufnahmen liegen im App-Ordner und werden beim Deinstallieren der App gelöscht.")
     RecordingsList(ctx)
 }
