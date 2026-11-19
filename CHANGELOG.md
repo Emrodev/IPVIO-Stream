@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Donate: the Ko-fi link now points to https://ko-fi.com/ipviodev (app page and README)
+- Docs: README rewritten. Free and open-source notice and a developer note at the top, quick start with the Downloader code, key features, a "Cool features" section (live sync, API keys, subtitle search, Boomer mode, dual and multi view, list import, favourites order, demo mode), remote-control tips, Reddit community link. Screenshots still the old ones (T-026)
+- Docs: new `docs/SUBTITLES.md` with step-by-step keys for SubDL and OpenSubtitles (T-026)
+- Docs: `docs/FAQ.md` extended (free, installing, playlists, subtitles, live sync, troubleshooting); Stalker series now described as loaded when opened (T-026)
+- Docs: `docs/GOOGLE_DRIVE.md` corrected: since 1.4.3 the release APK shows the Google Drive section (T-026)
+- Docs: new `docs/PHONE.md` (phone search, quick playlist setup by QR code, phone control, categories, sport, imports, troubleshooting); README and FAQ link it (T-027)
+- Live sync (Google Drive) is confirmed working on the devices by the maintainer
 - Live TV: channels with a live address stay in Live TV even when their category is called "Movies", "Kino", "VOD" and so on (e.g. "EU | DE | Movies and Series"); before they were sorted into Movies and hidden with "Live TV only" (T-026)
 - Playlist loading: a download without a known size whose end looks cut off is no longer stored as the playlist; Xtream lists from get.php are also checked against the provider's live categories and loaded through the API when most are missing (T-026)
 - Settings > Playlists: a failed refresh is shown instead of staying silent, and the new button "Playlist komplett neu laden" deletes everything stored for the active playlist and downloads it again (T-026)
