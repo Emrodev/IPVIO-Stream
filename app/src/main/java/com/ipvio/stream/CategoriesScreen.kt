@@ -208,11 +208,14 @@ private const val MOVE_BOTTOM = Int.MAX_VALUE
 
 object CatMemory {
     val sel = HashMap<String, Int>()
+    /** #65: name of the selected category per list. Restored by name, because an index can point to another row after a rebuild. */
+    val selName = HashMap<String, String>()
     val item = HashMap<String, Int>()
     val restore = HashMap<String, Boolean>()
 
     fun reset() {
         sel.clear()
+        selName.clear()
         item.clear()
         restore.clear()
     }
@@ -225,7 +228,9 @@ private fun ListMode(
     onMove: ((String, Int) -> Unit)?, onFocusItem: (Item) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var sel by remember { mutableIntStateOf((CatMemory.sel[title] ?: 0).coerceIn(0, maxOf(entries.lastIndex, 0))) }
+    // #65: restore the category by its name first; the index is only the fallback (rows can move or change)
+    val byName = CatMemory.selName[title]?.let { n -> entries.indexOfFirst { it.first == n } }?.takeIf { it >= 0 }
+    var sel by remember { mutableIntStateOf(byName ?: (CatMemory.sel[title] ?: 0).coerceIn(0, maxOf(entries.lastIndex, 0))) }
     var inPreview by remember { mutableStateOf(false) }
     var pendingPreview by remember { mutableStateOf(false) }
     var focusedItem by remember { mutableStateOf<Item?>(null) }
@@ -253,7 +258,10 @@ private fun ListMode(
         kotlinx.coroutines.delay(600)
         StalkerMore.prefetch(ctx, c.first, c.second.mapTo(HashSet()) { it.kind })
     }
-    SideEffect { CatMemory.sel[title] = sel }
+    SideEffect {
+        CatMemory.sel[title] = sel
+        cur?.first?.let { CatMemory.selName[title] = it }
+    }
     // Unique row keys (a provider category could be called like a top entry)
     val rowKeys = remember(entries) { val seen = HashSet<String>(); entries.mapIndexed { i, e -> if (seen.add(e.first)) e.first else e.first + "#" + i } }
     // After moving a category the selection follows it to its new place
