@@ -53,6 +53,20 @@ Use the language filter while loading, so fewer entries are kept. Large playlist
 **How often is my playlist refreshed?**
 Under *Settings > Playlists* you choose the interval or a fixed time. The refresh runs in the background and waits while you are watching.
 
+## Phone
+
+**Do I need an app on my phone?**
+No. Scan the QR code on the TV; the phone opens a web page in its browser.
+
+**The phone page does not open.**
+Phone and TV must be on the same Wi-Fi. Turn off a VPN or a guest network on the phone. See [PHONE.md](PHONE.md) for more.
+
+**Is the phone connection safe?**
+It is protected by the 4-digit code shown on the TV and locks for one minute after 5 wrong codes. The connection itself is plain HTTP inside your home network, so do not use it over public Wi-Fi.
+
+**Can I add a playlist from the phone?**
+Yes: send an M3U link, an Xtream login or a playlist file from the phone to the TV. See [PHONE.md](PHONE.md).
+
 ## Metadata, posters and ratings
 
 **Why are there no posters or ratings?**

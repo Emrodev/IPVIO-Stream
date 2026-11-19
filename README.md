@@ -24,7 +24,7 @@ Or download the APK directly: [IPVIO-Stream.apk (latest release)](https://github
 
 **Requirements:** Android 7.0 (API 24) or newer. No account or registration needed.
 
-No keyboard for the remote? Under *Playlists > Enter from phone* the app shows an address. Open it on your phone in the same Wi-Fi and type the login there.
+Adding a playlist with the TV remote is slow? Scan the QR code under *Playlists > Enter on phone* with your phone and send the link, the Xtream login or a playlist file to the TV. Details: [docs/PHONE.md](docs/PHONE.md).
 
 ---
 
@@ -39,6 +39,7 @@ No keyboard for the remote? Under *Playlists > Enter from phone* the app shows a
 - **Player.** Audio and subtitle choice (remembered per title), AC3/E-AC3/DTS sound (also over Bluetooth), skip intro and credits, next episode automatically, quality choice with fallback to another source on errors. HLS, MPEG-DASH and MPEG-TS.
 - **Profiles and parental controls.** "Who's watching?" with a separate history and favourites per person. Parental controls with a PIN.
 - **Live sync over your own Google Drive.** Favourites and history follow you between devices, with no button to press. Details below.
+- **Your phone as the remote.** Scan a QR code, then search titles, add playlists, control the player and manage categories from the phone. Details below.
 - **Backup, transfer and updates.** Back up and restore settings, move them to another device over Wi-Fi, and in-app updates from GitHub Releases.
 - **Look and feel.** IPVIO green on navy, colour themes, backgrounds, custom colours, three font choices, adjustable text and display size. Sidebar left, right or top. 10 languages.
 
@@ -63,6 +64,18 @@ You can add free keys yourself: TMDB and OMDb for posters, descriptions, cast an
 ### Boomer mode
 
 A very simple interface for people who should not need the whole app: big channel tiles, no menu and no search. Set it up under **Settings > Boomer Mode**. In the player, only left and right change the channel.
+
+### Your phone as the remote
+
+Scan a QR code on the TV with your phone (same Wi-Fi, 4-digit code from the TV). No app needed on the phone.
+
+- **Quick setup:** send an M3U link, an Xtream login or a playlist file from the phone to the TV. Typing a long login is not needed.
+- **Phone search:** search movies, series, live channels and sports games, and start them on the TV. Continue watching shows your progress.
+- **Player control:** pause, stop, skip 10 or 30 seconds, volume, while something plays on the TV.
+- **Categories:** show, hide, move and favourite categories from the phone. Changes apply on the TV at once.
+- **Import and keys:** import Letterboxd, MyAnimeList or Trakt lists, paste your API keys from the clipboard, and download or restore a backup.
+
+Full description: [docs/PHONE.md](docs/PHONE.md).
 
 ### Picture-in-picture and multi view
 
@@ -189,6 +202,7 @@ The app ships **without any API keys**. You can add your own free keys under **S
 | Document | For |
 |---|---|
 | [FAQ](docs/FAQ.md) | Common questions and problems |
+| [PHONE](docs/PHONE.md) | Phone search, quick playlist setup by QR code, phone control |
 | [SUBTITLES](docs/SUBTITLES.md) | SubDL and OpenSubtitles keys, step by step |
 | [SETTINGS](docs/SETTINGS.md) | Overview of every settings page |
 | [GOOGLE_DRIVE](docs/GOOGLE_DRIVE.md) | Live sync and backup over Google Drive |
