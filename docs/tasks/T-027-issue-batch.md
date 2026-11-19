@@ -15,9 +15,14 @@ Branch: `claude/jolly-ride-mr9tgm`.
 | #95 | Keep the screen awake while browsing | Implemented as an option (default off) | `a8c752b` | none (flag logic reused) |
 | #102 | Live channels in a movie group | Implemented: live address stays live | `9086e1b` | `LiveUrlLogicTest` 4/4 |
 | #112 | Playlist vanishes | Partly: unreadable list is no longer overwritten | `bc9e0a9` | none |
+| #82 | PIN could be changed without the current PIN | Implemented: "PIN ändern" asks for the current PIN first (removing it already did) | see git log | none (UI) |
 | #28 | Resume after leaving a film | No code change: progress is saved and the detail page offers resume | — | — |
 | #73 | "Content too large" with one language | Analysed, no change (see below) | — | — |
 | #108, #104 | "Connection lost" during playback | Analysed, no change (see below) | — | — |
+
+## #83 (24/7 and adult categories hidden)
+
+Not changed. 24/7 channels fall into the "unknown" language bucket and adult groups into the "xxx" bucket (`LangTagLogic.of`, `ParentalLogic.isAdult`). Which switch the reporter means ("filter off") and where the bucket is dropped is unclear from the code. Needed: the switch's name in the screen and the group name of a hidden channel.
 
 ## Open points and risks
 
