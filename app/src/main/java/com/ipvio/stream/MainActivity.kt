@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
         // Load settings early so colors and size are right in the very first frame.
         Profiles.init(this)
         Profiles.prewarm(this)
+        TlsFallback.init(this)   // #69: hosts the user agreed to (ipvio_tls)
         val pick = Profiles.needsPicker(this)
         if (!pick) AppSettings.init(this)
         General.init(this)
@@ -166,6 +167,8 @@ fun App(pick: Boolean = false) {
         }
         // New version available: dialog with one button (above every screen)
         UpdatePromptHost()
+        // Provider certificate does not match its address: ask once per host before an unencrypted connection (#69)
+        TlsConsentDialog()
         // First start without a playlist: one non-blocking card that checks for updates (T-014)
         if (picked) UpdateCardHost()
     }
