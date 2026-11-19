@@ -1,6 +1,6 @@
 # T-030: import of a Trakt export ZIP (issue #110) — plan only
 
-**Status:** plan. No code yet. Needs the maintainer's approval before implementation (CLAUDE.md section 6: new data handling, storage).
+**Status:** postponed (19 Nov 2026). Wish: the maintainer prefers the live API sync (T-031) and skips the one-time import. Plan kept for reference. No code. Needs the maintainer's approval before implementation (CLAUDE.md section 6: new data handling, storage).
 
 The export file itself is personal data and is not in the repository. This plan only lists its structure and counts.
 

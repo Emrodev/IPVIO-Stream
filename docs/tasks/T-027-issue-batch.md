@@ -62,6 +62,10 @@ All 41 pure JVM test classes that compile without Android (281 tests) pass, afte
 
 The maintainer left the choice to the assistant. CI workflows need approval (CLAUDE.md section 6), so nothing was changed. Proposal for a later, separately approved change: a tag-triggered workflow that builds the signed release APK, `actions/attest-build-provenance` on it, and the SHA-256 of the signing certificate in the README.
 
+## Wishes
+
+- #110 Trakt: the maintainer prefers the live API sync (T-031) over the one-time ZIP import (T-030, postponed).
+
 ## Not done
 
 - Automatic restore of an unreadable playlist list.
