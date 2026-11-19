@@ -70,6 +70,7 @@ Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Up
 fun loadWishboxTexts() {
     I18nCore.load(DictW)
     I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNlW)
+    I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPlW)
 }
 
 // Dutch column for the rows above
@@ -95,4 +96,58 @@ Zurück schließt das Menü¦Terug sluit het menu
 Aus „Zuletzt gesehen“ entfernt¦Verwijderd uit „Onlangs bekeken“
 Erwachsenen-Inhalte nie auf den Startseiten¦Inhoud voor volwassenen nooit op de startpagina’s
 Zeigt Titel und Sender für Erwachsene nie in den Reihen der Startseiten (Start, Filme, Serien), auch nicht unter „Zuletzt geschaut“ oder „Weiter schauen“. In Live TV, in den Kategorien und in der Suche bleiben sie erreichbar.¦Toont titels en zenders voor volwassenen nooit in de rijen van de startpagina’s (Start, Films, Series), ook niet onder „Onlangs bekeken“ of „Verder kijken“. In live-tv, in de categorieën en bij zoeken blijven ze bereikbaar.
+"""
+
+// Polish column for the rows above
+val DictPlW = """
+Filme und Serien direkt zu den Kategorien¦Filmy i seriale od razu do kategorii
+„Filme“ und „Serien“ im Menü öffnen sofort die Kategorien statt der Startseite des Bereichs. Zurück führt zur Startseite des Bereichs.¦„Filmy” i „Seriale” w menu od razu otwierają kategorie zamiast strony startowej obszaru. Wstecz prowadzi do strony startowej obszaru.
+Was ist neu¦Co nowego
+Version¦Wersja
+Filme und Serien: auf Wunsch direkt zu den Kategorien (Einstellungen > Allgemein)¦Filmy i seriale: opcjonalnie od razu do kategorii (Ustawienia > Ogólne)
+Player: Untertitel- und Ton-Verzögerung im Menü einstellbar¦Odtwarzacz: opóźnienie napisów i dźwięku można ustawić w menu
+Player: das Menü schließt sich nur noch mit Zurück¦Odtwarzacz: menu zamyka się teraz tylko przyciskiem Wstecz
+Live TV: OK gedrückt halten entfernt einen Sender aus „Zuletzt gesehen“¦TV na żywo: przytrzymanie OK usuwa kanał z „Ostatnio oglądane”
+Jugendschutz: Inhalte für Erwachsene auf Wunsch nie auf den Startseiten¦Kontrola rodzicielska: treści dla dorosłych opcjonalnie nigdy na stronach głównych
+Untertitel-Verzögerung¦Opóźnienie napisów
+Ton-Verzögerung¦Opóźnienie dźwięku
+Später¦Później
+Früher¦Wcześniej
+Aktuell¦Bieżące
+Zurücksetzen¦Resetuj
+Gilt nur für diesen Titel. Später = der Text erscheint später.¦Dotyczy tylko tego tytułu. Później = tekst pojawia się później.
+Später = der Ton kommt später als das Bild. Gilt für alle Titel auf diesem Gerät.¦Później = dźwięk pojawia się później niż obraz. Dotyczy wszystkich tytułów na tym urządzeniu.
+Zurück schließt das Menü¦Wstecz zamyka menu
+Aus „Zuletzt gesehen“ entfernt¦Usunięto z „Ostatnio oglądane”
+Erwachsenen-Inhalte nie auf den Startseiten¦Nigdy nie pokazuj treści dla dorosłych na stronach głównych
+Zeigt Titel und Sender für Erwachsene nie in den Reihen der Startseiten (Start, Filme, Serien), auch nicht unter „Zuletzt geschaut“ oder „Weiter schauen“. In Live TV, in den Kategorien und in der Suche bleiben sie erreichbar.¦Nigdy nie pokazuje tytułów i kanałów dla dorosłych w wierszach stron głównych (Start, Filmy, Seriale), nawet w „Ostatnio oglądane” czy „Oglądaj dalej”. Pozostają dostępne w TV na żywo, w kategoriach i w wyszukiwaniu.
+Google Drive: Favoriten, Verlauf, Einstellungen und Playlists zwischen Geräten sichern und wiederherstellen (Einstellungen > Speicher)¦Dysk Google: kopia i przywracanie ulubionych, historii, ustawień i playlist między urządzeniami (Ustawienia > Pamięć)
+Live TV: Größe der Senderzeilen wählbar (Klein, Normal, Groß)¦TV na żywo: wybierz rozmiar wierszy kanałów (mały, normalny, duży)
+Filter: Kategorien suchen, Änderungen mit „Übernehmen“ auf einmal speichern¦Filtr: szukaj kategorii, zapisuj wszystkie zmiany naraz przyciskiem „Zastosuj”
+API-Schlüssel bequem am Handy eingeben (QR-Code oben auf der Seite)¦Wygodne wpisywanie kluczy API na telefonie (kod QR u góry strony)
+Die App startet schneller und ist kleiner¦Aplikacja startuje szybciej i jest mniejsza
+Nach jedem Update: dieses Fenster mit allen Neuigkeiten¦Po każdej aktualizacji: to okno ze wszystkimi nowościami
+Kategorien abhaken ruckelt nicht mehr und bringt die App nicht mehr zum Absturz¦Zaznaczanie kategorii już nie zacina ani nie wywraca aplikacji
+24/7- und Adult-Kanäle erscheinen wieder, wenn der Filter aus ist¦Kanały 24/7 i dla dorosłych znów się pojawiają, gdy filtr jest wyłączony
+Live TV: Genre-Kategorien lassen sich wieder per OK gedrückt halten ausblenden¦TV na żywo: kategorie gatunków znów można ukryć, przytrzymując OK
+Jugendschutz: die PIN lässt sich nur noch mit der PIN entfernen¦Kontrola rodzicielska: PIN można usunąć tylko PIN-em
+Suche am Handy: nur noch „Schließen“, Zurück schließt mit einem Druck¦Wyszukiwanie na telefonie: zostało tylko „Zamknij”, Wstecz zamyka je jednym naciśnięciem
+Startseite: der Playlist-Knopf zeigt „Playlist“ statt eines Download-Symbols, „Zusätzlich anzeigen“ entfernt¦Start: przycisk playlisty pokazuje „Playlista” zamiast ikony pobierania, usunięto „Pokazuj dodatkowo”
+Startseite: Reihenfolge und ausgeblendete Kategorien gelten auch für die Reihen¦Start: kolejność kategorii i ukryte kategorie dotyczą też wierszy
+Untertitel-Suche (SubDL) findet bei Serien wieder Treffer¦Wyszukiwanie napisów (SubDL) znów znajduje wyniki dla seriali
+Bildformate heißen so, wie sie wirken („Zuschneiden“)¦Tryby proporcji nazywają się od tego, co robią („Przytnij”)
+Viele fehlende Übersetzungen ergänzt¦Dodano wiele brakujących tłumaczeń
+Hoch/Runter blättert¦Góra/Dół przewija
+Handy: neue Einstellungen über das Zahnrad oben – Playlists, Kategorien sortieren und ausblenden, Jugendschutz, Sprache¦Telefon: nowe ustawienia pod kołem zębatym u góry – playlisty, sortowanie i ukrywanie kategorii, kontrola rodzicielska, język
+Handy: neuer Reiter „Sport“ mit den Spielen von heute, deinen Lieblingsteams und „Meine Liste“; Spiele direkt am Fernseher starten¦Telefon: nowa zakładka „Sport” z dzisiejszymi meczami, ulubionymi drużynami i „Moja lista”; uruchamiaj mecze od razu na telewizorze
+Filme und Serien: Kategorien mit Hoch/Runter verschieben, das Menü bleibt offen, neu „Ans Ende verschieben“¦Filmy i seriale: przesuwaj kategorie Góra/Dół, menu pozostaje otwarte, nowe „Przesuń na koniec”
+Playlist wechseln geht schneller: die gespeicherte Liste wird gelesen statt neu heruntergeladen¦Przełączanie playlist jest szybsze: zapisana lista jest odczytywana zamiast ponownie pobierana
+Bildformat: Hinweis, wenn das Bild schon das Format des Fernsehers hat¦Proporcje obrazu: podpowiedź, gdy obraz ma już kształt ekranu telewizora
+Playlist wechseln zeigt nicht mehr „Noch keine Sender“¦Przełączanie playlist już nie pokazuje „Jeszcze brak kanałów”
+Live TV: Links springt zur gewählten Kategorie, Rechts öffnet die Senderliste¦TV na żywo: Lewo przechodzi do wybranej kategorii, Prawo otwiera listę kanałów
+Player: „Zuschneiden“ und „Strecken“ wirken wieder¦Odtwarzacz: „Przytnij” i „Rozciągnij” znów działają
+Einstellungen: Meldungen unter den Knöpfen sind sofort zu sehen¦Ustawienia: komunikaty pod przyciskami są widoczne od razu
+WLAN-Übertragung: der Fokus bleibt nach Start und Stopp auf dem Knopf¦Przenoszenie przez Wi-Fi: fokus pozostaje na przycisku po starcie i zatrzymaniu
+„Was ist neu“ erscheint auch nach einer Test-Version¦„Co nowego” pojawia się też po wersji testowej
+Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Update nicht mehr¦Aktualizacja w aplikacji: „Nie udało się sprawdzić podpisu” już nie zatrzymuje aktualizacji
 """
