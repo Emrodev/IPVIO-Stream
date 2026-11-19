@@ -21,7 +21,7 @@ Branch: `claude/jolly-ride-mr9tgm`.
 | #107 | TV-guide wrap-around | Reported as done by the maintainer (19 Nov) | — | — |
 | #68 | Signed release APK with provenance in CI | Decision: no workflow change without a separate approval. Proposal below | — | — |
 | #105 | Notice for new episodes | Implemented (approved 19 Nov): system notification, bell kept. Replaces "Continue watching" idea | `a1f951a` | none (Android) |
-| #96 | Provider subcategories ("FR - SPORTS", "FR - AMAZON") | Pattern analysis implemented (`GroupPatternLogic`, 5 tests). Folder view in the category screen NOT yet wired (needs a UI step) | this commit | GroupPatternLogicTest 5/5 |
+| #96 | Provider subcategories ("FR - SPORTS", "FR - AMAZON") | Implemented: pattern analysis (`GroupPatternLogic`) and folder rows "FR  ›" in the provider categories; a folder opens the original categories, Back leaves it. NOT compiled, not on a device | this commit | GroupPatternLogicTest 5/5 |
 | #103 | Second EPG source | Plan only (approved 19 Nov): `docs/tasks/T-028-epg-second-source.md` | — | — |
 | #88, #21, #99 | Arabic, full UI with RTL | Plan only, staged (approved 19 Nov, full UI): `docs/tasks/T-029-arabic-full-ui.md` | — | — |
 | #28 | Resume after leaving a film | No code change: progress is saved and the detail page offers resume | — | — |
