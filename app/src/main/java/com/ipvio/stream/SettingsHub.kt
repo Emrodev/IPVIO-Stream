@@ -431,6 +431,9 @@ private fun ParentalPage(ctx: Context, onExit: () -> Unit) {
         3 -> PinPad("PIN bestätigen", "Gib die PIN noch einmal ein.", err,
             { if (it == first) { Parental.setPin(ctx, it); Parental.unlocked = true; err = null; step = 0 } else { err = "Die PINs stimmen nicht überein"; step = 2 } },
             { step = 0 })
+        5 -> PinPad("Aktuelle PIN eingeben", "Zum Ändern die bisherige PIN eingeben.", err,
+            { if (Parental.verify(ctx, it)) { err = null; step = 2 } else err = Parental.pinError() },
+            { err = null; step = 0 })
         // Removing the PIN asks for the current PIN again, so it is protected like changing it
         4 -> PinPad("PIN eingeben", "Die Jugendschutz-Einstellungen sind mit einer PIN geschützt.", err,
             {
@@ -455,7 +458,8 @@ private fun ParentalPage(ctx: Context, onExit: () -> Unit) {
             SectionTitle("PIN")
             Text(if (Parental.pinSet) "PIN ist gesetzt" else "Keine PIN gesetzt", color = if (Parental.pinSet) Accent2 else Muted, fontSize = 16.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PillButton(if (Parental.pinSet) "PIN ändern" else "PIN festlegen", light = !Parental.pinSet) { err = null; step = 2 }
+                // #82: changing an existing PIN asks for the current PIN first (step 5), like removing it
+                PillButton(if (Parental.pinSet) "PIN ändern" else "PIN festlegen", light = !Parental.pinSet) { err = null; step = if (Parental.pinSet) 5 else 2 }
                 if (Parental.pinSet) PillButton("PIN entfernen") { err = null; step = 4 }
             }
             Hint("Mit einer PIN lässt sich der Schutz nur nach Eingabe der PIN ändern. Die Erkennung arbeitet mit Stichwörtern in Kategorie- und Titelnamen und ist kein vollständiger Filter. Beim Zurücksetzen aller Einstellungen bleibt die PIN erhalten.")
