@@ -1275,6 +1275,10 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(pl.name + if (isActive) "  ·  " + Lang.tr("Hauptliste") else if (shown) "  ·  " + Lang.tr("zusätzlich angezeigt") else "", color = if (isActive || shown) Accent2 else Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, raw = true)
                 Text(PlaylistStore.hostOf(pl.url), color = Muted, fontSize = 13.sp, maxLines = 1)
+                // #111: channels, movies and series of this playlist as last loaded (nothing until it is loaded once)
+                PlaylistStore.typeCounts(ctx, pl.url)?.let { t ->
+                    Text(PlaylistCountLogic.summary(t, Lang.tr("Live TV"), Lang.tr("Filme"), Lang.tr("Serien")), color = Muted, fontSize = 13.sp, maxLines = 1)
+                }
                 val nb = if (editingB == i) 0 else PlaylistStore.backups(ctx, pl.url).size
                 if (nb > 0) Text("Backup-Server: $nb", color = Muted, fontSize = 13.sp, maxLines = 1)
                 val down = PlaylistStore.downServers(ctx, pl.url)

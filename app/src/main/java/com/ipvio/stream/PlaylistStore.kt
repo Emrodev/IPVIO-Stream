@@ -496,6 +496,19 @@ object PlaylistStore {
     fun nativeUa(c: Context, url: String): Boolean = prefs(c).getBoolean(PlaylistUaLogic.prefKey(key(url)), false)
     fun setNativeUa(c: Context, url: String, on: Boolean) { prefs(c).edit().putBoolean(PlaylistUaLogic.prefKey(key(url)), on).apply() }
     private fun uaFor(c: Context, url: String): String = PlaylistUaLogic.pick(nativeUa(c, url), BuildConfig.VERSION_NAME)
+
+    /** #111: number of live channels, movies and series of a loaded playlist (stored at load time). */
+    fun saveTypeCounts(c: Context, url: String, items: List<Item>) {
+        val t = PlaylistCountLogic.TypeCounts(
+            live = items.count { it.kind == Kind.LIVE },
+            movies = items.count { it.kind == Kind.MOVIE },
+            series = items.count { it.kind == Kind.SERIES },
+        )
+        prefs(c).edit().putString("cnt_" + key(url), PlaylistCountLogic.encode(t)).apply()
+    }
+
+    fun typeCounts(c: Context, url: String): PlaylistCountLogic.TypeCounts? =
+        PlaylistCountLogic.decode(prefs(c).getString("cnt_" + key(url), null))
     private fun gzFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".m3u.gz")
     private fun rawFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".m3u")
     /** Stalker portal: categories of which only the newest titles were fetched while loading (see [StalkerMore]). */
@@ -1237,6 +1250,7 @@ object PlaylistStore {
                 val order = fetchOrder(u)
                 phase = "Playlist wird gespeichert …"
                 writeCache(c, u, parsed.items, urls, order, parsed.counts, parsed.bytes, b.hidden)
+                saveTypeCounts(c, u, parsed.items)
                 Catchup.saveParsed(c, u, parsed.catchup)
                 commitGz(c, u, gzTmp)
                 val list = parsed.items
@@ -1333,6 +1347,7 @@ object PlaylistStore {
                     val b = build(c, u, src, false, cs, false, gzTmp)
                     if (b.parsed.counts.isEmpty()) return@withContext false
                     writeCache(c, u, b.parsed.items, epgFor(u, b.parsed.epgUrls), fetchOrder(u), b.parsed.counts, b.parsed.bytes, b.hidden)
+                    saveTypeCounts(c, u, b.parsed.items)
                     Catchup.saveParsed(c, u, b.parsed.catchup)
                     commitGz(c, u, gzTmp)
                     true
