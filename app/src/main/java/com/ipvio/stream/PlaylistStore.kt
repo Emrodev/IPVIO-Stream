@@ -663,7 +663,11 @@ object PlaylistStore {
     }
 
     /** API access for the episodes of a series that are only loaded when it is opened ([LazySeries]). */
-    internal fun xtreamApi(): XtreamApi = XtreamApi(client, UA)
+    /** #90: the user-agent of the active playlist (the series belong to it), VLC if unknown. */
+    internal fun xtreamApi(c: Context? = null): XtreamApi {
+        val u = lists.getOrNull(active)?.url
+        return XtreamApi(client, if (c != null && u != null) uaFor(c, u) else UA)
+    }
 
     /** Build the list via the provider's API (see [XtreamApi]) and store it like a finished download. */
     private fun downloadApi(c: Context, u: String, acct: XtreamLogic.Acct): Pair<File, Charset> {

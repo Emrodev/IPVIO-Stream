@@ -22,7 +22,7 @@ Branch: `claude/jolly-ride-mr9tgm`.
 ## Open points and risks
 
 - **#112:** the cause is a hypothesis from the code (key lost, the encrypted list cannot be read). A device log would confirm it. Recovery is not automatic: the kept copy (`lists_enc_unreadable`) is only saved, not restored.
-- **#90:** series episodes (`LazySeries` → `PlaylistStore.xtreamApi()`) still send the VLC user-agent. A playlist that needs the IPVIO identifier may still fail when opening a series.
+- **#90:** series episodes now use the user-agent of the active playlist (`LazySeries` → `PlaylistStore.xtreamApi(ctx)`). The series belong to the active playlist; a series from another playlist of the same kind may use the other playlist's setting.
 - **#102:** this changes the IPTV classifier (protected area, CLAUDE.md section 5). A live channel with an episode pattern in its name (S01E01) is now a live channel, not a series.
 - **#111:** counts show only after the next load of a playlist with this version. They reflect what was loaded (language and mode filters).
 - **#15:** D-pad control of the embedded YouTube player on Fire TV is unverified. YouTube may refuse embedding for some videos (error page).
@@ -30,6 +30,10 @@ Branch: `claude/jolly-ride-mr9tgm`.
 - **#69 and #108/#104:** the consent dialog appears after a certificate error. For a movie or episode the player retries a few times; if the user agrees during those retries, playback continues. Otherwise the error remains. Check whether a provider's episode host has a certificate mismatch (see logs).
 - **#73:** the message "Die gewählten Inhalte sind zu groß für den Speicher dieses Geräts" comes from the memory budget of the app (`LoadLogic.budget`, based on the maximum heap), not from free storage. The check cannot be judged without the device's memory limit and the playlist type. Needed: the device model, the playlist type (Xtream, Stalker, M3U) and the number of languages selected.
 - **#108 and #104:** no logs yet. Possible causes to check: the change in `TlsFallback` (#69, a certificate mismatch on a stream host), the R8 build of 1.4.3 (T-024, not confirmed), the retry rules (`IptvLoadErrorPolicy`, `PlayerScreen.onPlayerError`). Logcat from the moment of the error is needed.
+
+## Regression check
+
+All 41 pure JVM test classes that compile without Android (281 tests) pass, after the batch. Tests that need Android, OkHttp or org.json were not run.
 
 ## Test steps for the maintainer
 
@@ -44,5 +48,4 @@ Branch: `claude/jolly-ride-mr9tgm`.
 ## Not done
 
 - Automatic restore of an unreadable playlist list.
-- Series episodes with the IPVIO user-agent (#90, see above).
 - Logs for #108, #104, #112 and the device memory data for #73.
