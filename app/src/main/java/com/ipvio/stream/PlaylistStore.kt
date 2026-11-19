@@ -862,7 +862,11 @@ object PlaylistStore {
                 phase = "Playlist wird geprüft …"
                 val scan = readFile(src, gz, cs, null) { r -> M3uParser.scanStream(r, guard()) }
                 if (wantAsk || LoadLogic.estimate(scan.bytes, hidden) > budget) {
-                    if (!ask) throw PlaylistError(MSG_TOO_BIG)
+                    if (!ask) {
+                        // #73 diagnostics: memory limit and language filter at the moment the list is refused (numbers only)
+                        Diag.report("Speicher-Budget ${budget / 1_000_000} MB, Heap ${Runtime.getRuntime().maxMemory() / 1_000_000} MB, ${hidden.size} Sprachen ausgeblendet")
+                        throw PlaylistError(MSG_TOO_BIG)
+                    }
                     val now = scan.counts.keys - hidden
                     val pre = if (LangFilter.hidden.isNotEmpty() && now.isNotEmpty()) now else LoadLogic.systemPreselect(scan.counts, systemLang())
                     val shown = askLanguages(scan.counts, scan.bytes, budget, pre) ?: throw PlaylistError(MSG_CANCEL)
