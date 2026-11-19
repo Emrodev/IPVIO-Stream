@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- TV guide: Up on the first channel jumps to the last channel, Down on the last channel jumps to the first (issue #107). Held keys keep scrolling normally
 - Movies and series filter: the language filter has its own icon (speech bubble) instead of the country globe (issue #26)
 
 ## 1.4.3 (versionCode 9)
