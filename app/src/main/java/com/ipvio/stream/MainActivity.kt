@@ -169,6 +169,8 @@ fun App(pick: Boolean = false) {
         UpdatePromptHost()
         // Provider certificate does not match its address: ask once per host before an unencrypted connection (#69)
         TlsConsentDialog()
+        // #95: keep the screen awake while the app is open, if the user switched it on (default off)
+        KeepScreenOn("browse", General.keepAwakeBrowse)
         // First start without a playlist: one non-blocking card that checks for updates (T-014)
         if (picked) UpdateCardHost()
     }

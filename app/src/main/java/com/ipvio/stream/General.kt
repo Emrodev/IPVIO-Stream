@@ -24,6 +24,8 @@ object General {
     /** Resume the last watched movie / series at start at the remembered position. */
     var resumeVod by mutableStateOf(false)
     var confirmExit by mutableStateOf(true)
+    /** #95: keep the screen awake while the app is open, not only during playback (default off = as before). */
+    var keepAwakeBrowse by mutableStateOf(false)
     /** W-002: "Movies" / "Series" in the sidebar open the categories screen right away instead of their home page. */
     var vodCats by mutableStateOf(false)
     /** Live TV: show the quality variants of one channel (8K/4K/FHD/HD/SD) as a single row. */
@@ -124,6 +126,7 @@ object General {
         resumeLive = p.getBoolean("resume_live", false)
         resumeVod = p.getBoolean("resume_vod", false)
         confirmExit = p.getBoolean("confirm_exit", true)
+        keepAwakeBrowse = p.getBoolean("keep_awake_browse", false)
         vodCats = p.getBoolean("vod_cats", false)
         bundleLive = p.getBoolean("bundle_live", true)
         channelRowSize = p.getInt("channel_row_size", 1).coerceIn(0, 2)
@@ -174,6 +177,7 @@ object General {
     fun setChannelRowSize(c: Context, v: Int) { channelRowSize = v.coerceIn(0, 2); prefs(c).edit().putInt("channel_row_size", channelRowSize).apply() }
     fun setVodCats(c: Context, v: Boolean) { vodCats = v; prefs(c).edit().putBoolean("vod_cats", v).apply() }
     fun setConfirmExit(c: Context, v: Boolean) { confirmExit = v; prefs(c).edit().putBoolean("confirm_exit", v).apply() }
+    fun setKeepAwakeBrowse(c: Context, v: Boolean) { keepAwakeBrowse = v; prefs(c).edit().putBoolean("keep_awake_browse", v).apply() }
     fun setPlan(c: Context, mode: Int = refreshMode, interval: Int = refreshInterval, hour: Int = refreshHour, minute: Int = refreshMinute, dow: Int = refreshDow) {
         refreshMode = mode.coerceIn(0, 4); refreshInterval = interval.coerceIn(1, 168)
         refreshHour = hour.coerceIn(0, 23); refreshMinute = minute.coerceIn(0, 59); refreshDow = dow.coerceIn(1, 7)
