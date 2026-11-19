@@ -1,4 +1,38 @@
-Last update: 2026-11-12 (release 1.4 prepared). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-19 (README and docs merged to dev, release prep open). Read `CLAUDE.md` first, then this file.
+
+## Current task
+
+Release 1.4.4 is planned for after the device tests on the next day. Nothing is released yet. `versionName` is still 1.4.3 (`versionCode` 9) in `app/build.gradle.kts`.
+
+Open PRs:
+- **PR #121** `dev` -> `main` (release merge, merge commit). Open, not merged. Merging it into `main` triggers `release.yml`. Do it only after the 1.4.4 prep below.
+
+Done this round (merged into `dev` through PR #120, merge commit 20502bd; CI was not run before the merge):
+- README rewritten (T-026): free notice and developer note at the top, quick start, key features, cool features, remote tips, Reddit link.
+- `docs/SUBTITLES.md` (new): SubDL and OpenSubtitles keys. SubDL steps are **not** checked against subdl.com (fetch failed in the session).
+- `docs/PHONE.md` (new, T-027): phone search, QR playlist setup, phone control. Documentation only, no device test.
+- `docs/FAQ.md` extended, `docs/GOOGLE_DRIVE.md` corrected (release APK shows the Drive section since 1.4.3).
+- Ko-fi link changed to `https://ko-fi.com/ipviodev` in README, `Donate.kt` (`KOFI_URL`), `.github/FUNDING.yml`.
+
+Next (planned by the maintainer): device tests on the next day, then release 1.4.4.
+
+Release prep for 1.4.4 (not started):
+1. Test the "Unreleased" changes in `CHANGELOG.md` on the device (Live TV categories, playlist loading checks, Up/Down wrap, language filter icon, IPVIO-PL diagnostics, Arabic and Polish translations) and the Ko-fi link on the donate page.
+2. Raise `versionName` to 1.4.4 and `versionCode` to 10 in `app/build.gradle.kts`.
+3. Move the "Unreleased" entries to a `## 1.4.4` section in `CHANGELOG.md`.
+4. Merge PR #121 (`dev` -> `main`, merge commit), then check that `release.yml` ran and publishes `v1.4.4` with `IPVIO-Stream.apk` and `update.json`. An existing tag stops the run.
+
+Open problems:
+- The SubDL steps in `docs/SUBTITLES.md` are not checked against subdl.com.
+- OpenSubtitles: the sources disagree on the free download limit. The doc says only "limited".
+- The Reddit link `https://www.reddit.com/r/ipvio` was not opened from the session.
+- The screenshots in `docs/screenshots/` are still the old ones.
+- Phone features are not tested on a device.
+- Live sync (Google Drive) is confirmed working on devices by the maintainer (note in CHANGELOG). `docs/tasks/T-026-readme-rewrite.md` still lists it as not device tested.
+
+Test steps for the maintainer (next day): see the "Test steps" in `docs/tasks/T-026-readme-rewrite.md` and `docs/tasks/T-027-phone-docs.md`, plus the Donate page Ko-fi link after a new build.
+
+## Previous state (12 Nov 2026)
 
 ## Current task (13 Nov 2026)
 
