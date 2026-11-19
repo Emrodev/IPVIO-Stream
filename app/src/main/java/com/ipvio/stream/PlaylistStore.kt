@@ -263,7 +263,10 @@ object PlaylistStore {
         val p = prefs(c)
         // Prefers the encrypted version; the old plain-text version is adopted and replaced on first start.
         val enc = p.getString("lists_enc", null)
-        val json = (if (enc != null) Secrets.decrypt(enc) else null) ?: p.getString("lists", "[]")
+        val dec = if (enc != null) Secrets.decrypt(enc) else null
+        // #112: the saved list exists but cannot be decrypted (e.g. the key was lost). It is kept, see persist()
+        if (enc != null && dec == null) Diag.report("Gespeicherte Playlist-Liste konnte nicht entschlüsselt werden")
+        val json = dec ?: p.getString("lists", "[]")
         try {
             val a = JSONArray(json)
             for (i in 0 until a.length()) {
@@ -296,6 +299,9 @@ object PlaylistStore {
         for (l in lists) a.put(JSONObject().put("name", l.name).put("url", l.url))
         val e = prefs(c).edit().putInt("active", active).putString("multi", MultiLogic.encodeKeys(multi)).remove("url")
         val token = Secrets.encrypt(a.toString())
+        // #112: never replace an unreadable saved list without keeping it (the link and login may still be recoverable)
+        val prev = prefs(c).getString("lists_enc", null)
+        if (prev != null && Secrets.decrypt(prev) == null && !prefs(c).contains("lists_enc_unreadable")) e.putString("lists_enc_unreadable", prev)
         if (token != null) e.putString("lists_enc", token).remove("lists")
         else e.putString("lists", a.toString()).remove("lists_enc")
         e.apply()
