@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Live TV: channels with a live address stay in Live TV even when their category is called "Movies", "Kino", "VOD" and so on (e.g. "EU | DE | Movies and Series"); before they were sorted into Movies and hidden with "Live TV only" (T-026)
+- Playlist loading: a download without a known size whose end looks cut off is no longer stored as the playlist; Xtream lists from get.php are also checked against the provider's live categories and loaded through the API when most are missing (T-026)
+- Settings > Playlists: a failed refresh is shown instead of staying silent, and the new button "Playlist komplett neu laden" deletes everything stored for the active playlist and downloads it again (T-026)
+- Diagnostics: logcat tag `IPVIO-PL` with counts per step of playlist loading (no addresses or passwords) (T-026)
 - Live TV channel list: Up on the first channel jumps to the last channel, Down on the last channel jumps to the first (issue #107). Held keys keep scrolling normally
 - TV guide: Up on the first channel jumps to the last channel, Down on the last channel jumps to the first (issue #107). Held keys keep scrolling normally
 - Movies and series filter: the language filter has its own icon (speech bubble) instead of the country globe (issue #26)
