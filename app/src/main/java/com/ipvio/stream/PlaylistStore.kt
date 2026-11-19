@@ -491,6 +491,11 @@ object PlaylistStore {
 
     private fun key(url: String) = url.trim().hashCode()
     private fun cacheFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".bin")
+
+    /** #90: this playlist address sends the app's own user-agent (the user opted in when adding it). */
+    fun nativeUa(c: Context, url: String): Boolean = prefs(c).getBoolean(PlaylistUaLogic.prefKey(key(url)), false)
+    fun setNativeUa(c: Context, url: String, on: Boolean) { prefs(c).edit().putBoolean(PlaylistUaLogic.prefKey(key(url)), on).apply() }
+    private fun uaFor(c: Context, url: String): String = PlaylistUaLogic.pick(nativeUa(c, url), BuildConfig.VERSION_NAME)
     private fun gzFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".m3u.gz")
     private fun rawFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".m3u")
     /** Stalker portal: categories of which only the newest titles were fetched while loading (see [StalkerMore]). */
@@ -652,7 +657,7 @@ object PlaylistStore {
         }
         raw.delete(); part.delete()
         bytesRead = 0L; totalBytes = -1L; downloadDone = false
-        val api = XtreamApi(client, UA)
+        val api = XtreamApi(client, uaFor(c, u))
         api.onPhase = { phase = it }
         api.check = { if (cancelled()) throw CancellationException("abgebrochen") }
         // Shown bytes = written list + movies/series still in temporary files (fetched in parallel). Never goes backwards:
@@ -716,7 +721,7 @@ object PlaylistStore {
         if (offset > 0) { offset = maxOf(0L, offset - 65_536); RandomAccessFile(part, "rw").use { it.setLength(offset) } }
         val extra = if (pi != null) LoadLogic.resumeHeaders(offset, pi.etag, pi.lastModified) else emptyMap()
         if (extra.isEmpty()) offset = 0L
-        val rb = Request.Builder().url(u).header("User-Agent", UA)
+        val rb = Request.Builder().url(u).header("User-Agent", uaFor(c, u))
         extra.forEach { (k, v) -> rb.header(k, v) }
         phase = if (offset > 0) "Download wird fortgesetzt …" else "Verbindung zum Server wird aufgebaut …"
         bytesRead = offset; totalBytes = -1L; downloadDone = false

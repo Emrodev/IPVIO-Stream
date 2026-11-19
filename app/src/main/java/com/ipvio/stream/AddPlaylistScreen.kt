@@ -221,7 +221,10 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
                 Text(BACKUP_HINT, color = Muted, fontSize = 15.sp)
             }
             PlaylistStore.error?.let { Text(it, color = DS.Danger, fontSize = 14.sp, lineHeight = 18.sp) }
+            // #90: some providers reject the VLC user-agent (403); this playlist can send the app's own identifier instead
+            var nativeUa by remember { mutableStateOf(false) }
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (!stalker) FocusButton(Lang.tr(if (nativeUa) "Kennung: IPVIO" else "Kennung: VLC"), compact = true) { nativeUa = !nativeUa }
                 FocusButton(if (PlaylistStore.loading) "Lade…" else "Hinzufügen", primary = true, compact = true) {
                     if (PlaylistStore.loading) return@FocusButton
                     val finalUrl = if (stalker) StalkerLogic.source(portal, mac, sn, devId, devId2)?.encode() else if (xtream) PlaylistStore.xtreamUrl(host, user, pass) else url
@@ -229,6 +232,7 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
                     else if (xtream && !stalker && !backupsValid(backups)) PlaylistStore.error = BACKUP_INVALID
                     else {
                         if (xtream && !stalker) PlaylistStore.setBackups(ctx, finalUrl, backups.toList())
+                        PlaylistStore.setNativeUa(ctx, finalUrl, !stalker && nativeUa)
                         scope.launch { if (PlaylistStore.load(ctx, finalUrl, true)) onDone() }
                     }
                 }
