@@ -145,6 +145,10 @@ fun Guide(
     val catReq = remember { FocusRequester() }
     val idx = shown.indexOfFirst { it.id == curId }.coerceAtLeast(0)
     val ls = key(catIdx) { rememberLazyListState(maxOf(idx - 1, 0)) }
+    // Row with the focus (-1 = none yet) and the first/last row requesters for the Up/Down wrap-around (#107)
+    var focusedIdx by remember { mutableIntStateOf(-1) }
+    val wrapStartReq = remember { FocusRequester() }
+    val wrapEndReq = remember { FocusRequester() }
 
     // Preload program data: first the channels around the current one, 8 at a time
     LaunchedEffect(shown) {
@@ -320,10 +324,27 @@ fun Guide(
                         }
                     }
                     if (shown.isEmpty()) Text("Keine Sender", color = Muted, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
+                    // Up on the first channel jumps to the last one, Down on the last to the first (#107). Only on a
+                    // fresh key press: a held key keeps scrolling normally and does not spin around the list.
+                    fun wrapTo(target: Int) {
+                        jumpScope.launch {
+                            ls.scrollToItem(target)
+                            val req = if (target == idx) focus else if (target == shown.lastIndex) wrapEndReq else wrapStartReq
+                            // The target row is composed after the scroll; retry briefly until its focus requester is attached
+                            repeat(20) {
+                                if (runCatching { req.requestFocus() }.isSuccess) return@launch
+                                delay(30)
+                            }
+                        }
+                    }
                     LazyColumn(
                         state = ls,
                         // Held Up/Down: at most ~9 steps per second (as in the Live TV list), and rows wait with loading
                         modifier = Modifier.weight(1f).onPreviewKeyEvent { e ->
+                            if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount == 0) {
+                                val target = GuideWrapLogic.wrapTarget(focusedIdx, shown.size, e.key == Key.DirectionDown)
+                                if (target != null) { wrapTo(target); return@onPreviewKeyEvent true }
+                            }
                             if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
                                 val now = android.os.SystemClock.uptimeMillis()
                                 LiveHold.lastRepeat = now
@@ -332,12 +353,19 @@ fun Guide(
                         }
                     ) {
                         itemsIndexed(shown) { i, ch ->
-                            val cellReq = if (i == idx) focus else remember { FocusRequester() }
+                            // Focus target of the current channel; the first and last row get their own requesters for the wrap
+                            val ownReq = remember { FocusRequester() }
+                            val cellReq = when {
+                                i == idx -> focus
+                                i == shown.lastIndex -> wrapEndReq
+                                i == 0 -> wrapStartReq
+                                else -> ownReq
+                            }
                             GuideRow(
                                 ch, ch.id == curId, { winStart }, viewMin, dpm, nowSec, rowH.dp, GuidePrefs.hidePast, cellReq,
                                 onInfo = { e -> infoE = e; infoItem = ch },
                                 onShift = { e -> shiftFor(e) },
-                                onRowFocus = { e -> rowFocus.value = e to ch; jumpScope.launch { holdJump(ls, i) } },
+                                onRowFocus = { e -> focusedIdx = i; rowFocus.value = e to ch; jumpScope.launch { holdJump(ls, i) } },
                                 onBlock = { inB, r -> inBlock = inB; inCats = false; rowReq = r; if (inB) rowFocus.value = null },
                                 // Left from the channel column: to the categories (before: close)
                                 onClose = { if (!runCatching { catReq.requestFocus() }.isSuccess) onClose() },

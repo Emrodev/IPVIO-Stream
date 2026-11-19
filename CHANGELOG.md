@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- TV guide: Up on the first channel jumps to the last channel, Down on the last channel jumps to the first (issue #107). Held keys keep scrolling normally
 
 ## 1.4.3 (versionCode 9)
 - Live sync (Google Drive): favorites and history follow your devices automatically. Switch it on in Settings > Storage > Google Drive on each device; it is off by default. Upload a few seconds after a change, download when the app is in front (about every minute). Merged on the device, a safety copy is kept before each merge. Not device tested yet
