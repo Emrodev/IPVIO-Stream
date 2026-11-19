@@ -178,6 +178,20 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // Back from the player: the last watched channel gets the focus (not the sidebar)
     val chanState = remember { LazyListState() }
     val restoreReq = remember { FocusRequester() }
+    // Up/Down wrap-around at the ends of the channel list (#107): last row requester and the focused row index
+    val lastChan = remember { FocusRequester() }
+    var chanFocusIdx by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+    fun wrapChan(target: Int) {
+        plScope.launch {
+            chanState.scrollToItem(target)
+            val req = if (target == 0) firstChan else lastChan
+            // The target row is composed after the scroll; retry briefly until its focus requester is attached
+            repeat(20) {
+                if (runCatching { req.requestFocus() }.isSuccess) return@launch
+                kotlinx.coroutines.delay(30)
+            }
+        }
+    }
     val restoreId = remember { LastFocus.pending }
     LaunchedEffect(Unit) {
         val id = restoreId ?: return@LaunchedEffect
@@ -483,6 +497,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     // Held Down/Up key: at most ~9 steps per second, so a weak box is not flooded with scroll animations and rebinds
                     modifier = Modifier.onPreviewKeyEvent { e ->
                         if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && e.nativeKeyEvent.repeatCount == 0 && backToCategory()) true
+                        else if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount == 0 &&
+                            GuideWrapLogic.wrapTarget(chanFocusIdx, list.size, e.key == Key.DirectionDown)?.let { wrapChan(it) } != null) true
                         else if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
                             val now = android.os.SystemClock.uptimeMillis()
                             LiveHold.lastRepeat = now
@@ -496,10 +512,11 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         ChannelLine(
                             ch, (if (i == 0) Modifier.focusRequester(firstChan) else Modifier)
                                 .then(if (ch.id == restoreId) Modifier.focusRequester(restoreReq) else Modifier)
+                                .then(if (i == list.lastIndex) Modifier.focusRequester(lastChan) else Modifier)
                                 // Favorites: the focus follows a channel that was just moved
                                 .then(if (sel == FAV_CAT) Modifier.followFav(ch.id) else Modifier), curList,
                             onNewList = { newList(ch.id) },
-                            onFocus = { focusTarget = ch; inChannels = true; plScope.launch { holdJump(chanState, i) } },
+                            onFocus = { focusTarget = ch; inChannels = true; chanFocusIdx = i; plScope.launch { holdJump(chanState, i) } },
                             variants = variantsOf[ch.id].orEmpty(),
                             favShown = if (sel == FAV_CAT) list else null,
                             onVariant = { v -> ZapContext.list = list; ZapContext.key = sel; LiveMemory.setSel(ctx, sel); onOpen(v) }
