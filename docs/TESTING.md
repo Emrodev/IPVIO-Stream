@@ -11,7 +11,40 @@ Run in Android Studio, terminal in the project folder (Windows):
 | `gradlew.bat testDebugUnitTest` | all unit tests |
 | `gradlew.bat lintDebug` | Android Lint; report `app/build/reports/lint-results-debug.html` |
 
-CI (`.github/workflows/build.yml`) runs unit tests and a debug build on every push. Status of the runs: PENDING (check the Actions tab on GitHub; the audit expected it to be red since 1.1 because of the `PhoneImportTest` expectation, which T-001 fixed, and the `org.json` stub, which T-001b fixed).
+CI: `build.yml` runs unit tests and a debug build on push to `main` and `dev` and on pull requests. `release.yml` runs the tests again before it publishes a release from `main`. `pr-checks.yml` warns when app code changes without test changes (CLAUDE.md section 17). Status of the runs: PENDING (check the Actions tab on GitHub; the audit expected it to be red since 1.1 because of the `PhoneImportTest` expectation, which T-001 fixed, and the `org.json` stub, which T-001b fixed).
+
+## Test list
+
+Status on branch `dev`, 15 Nov 2026. "Open" means not built yet. The checks marked automatic run in CI.
+
+Automatic checks:
+
+| # | Check | Status |
+|---|---|---|
+| T1 | All unit tests pass (`testDebugUnitTest`). 358 `@Test` in 46 files | exists; runs in `build.yml` and `release.yml` |
+| T2 | Lint without new errors against a baseline (2026-11-11: 9 errors, 203 warnings) | lint report runs in `release.yml`, not blocking; baseline file open |
+| T3 | Signed release build and signature check (`apksigner verify`) | in `release.yml` |
+| T4 | `versionName` gives the release tag; an existing tag stops the release | tag check in place; check that `versionCode` increases: open |
+| T5 | Dictionary consistency (`DictConsistencyTest`) | exists; extend when languages are added (pt-BR and zh are in open PRs) |
+| T6 | Snapshot of SharedPreferences store names and keys against a committed list (protects user data, CLAUDE.md section 5) | open |
+| T7 | Every store name written by a `prefs()` helper is listed in `Backup.NAMES` (ADR 0003) | open |
+| T8 | Playlist parsers for M3U, Xtream and Stalker, including cut-off downloads | partly (`ProviderLogicTest`, `StalkerLinkTest`); cut-off case open |
+| T9 | Phone remote: 4-digit access code and failed-attempt counter | partly (`RemoteLogicTest`); counter test open |
+| T10 | Backup JSON round trip (export, then import) | open |
+| T11 | Favorite order, playlist mode switch and settings reset logic | exists (`FavOrderLogicTest`, `AddFlowLogicTest`, `SettingsResetLogicTest`) |
+
+Manual checks on a device or Fire TV, for each release:
+
+| # | Check | Status |
+|---|---|---|
+| M1 | Playback of HLS, DASH and provider streams | per release |
+| M2 | Software audio on headphones and Bluetooth | per release |
+| M3 | Phone import and phone search over Wi-Fi | per release |
+| M4 | Remote focus and navigation | per release |
+| M5 | Update over the previous release: same signature, data kept | per release |
+| M6 | Playlist mode switch, favorite order, demo mode, settings reset (open in `docs/tasks/WORK_STATE.md`) | open |
+
+Not planned now: instrumented tests on an emulator in CI.
 
 ## Known state
 

@@ -24,8 +24,12 @@ object General {
     /** Resume the last watched movie / series at start at the remembered position. */
     var resumeVod by mutableStateOf(false)
     var confirmExit by mutableStateOf(true)
+    /** W-002: "Movies" / "Series" in the sidebar open the categories screen right away instead of their home page. */
+    var vodCats by mutableStateOf(false)
     /** Live TV: show the quality variants of one channel (8K/4K/FHD/HD/SD) as a single row. */
     var bundleLive by mutableStateOf(true)
+    /** Live TV channel row size: 0 = small, 1 = normal (default), 2 = large. */
+    var channelRowSize by mutableIntStateOf(1)
     /** Playlist refresh: 0 = at every start, 1 = every X hours, 2 = daily, 3 = weekly, 4 = by hand only */
     var refreshMode by mutableIntStateOf(DEFAULT_REFRESH_MODE)
     var refreshInterval by mutableIntStateOf(12)
@@ -45,10 +49,12 @@ object General {
     /** Default aspect ratio in the player (index in [ASPECT_NAMES]). */
     var defaultAspect by mutableIntStateOf(0)
     /**
-     * Aspect ratios (round 14). 0–2 differ only if the picture has a different aspect ratio than the TV
-     * (with 16:9 channels there was therefore no visible difference). 3–5 always change the picture visibly.
+     * Aspect ratios (round 14). Order must match the `when` in PlayerScreen: 0 = fit, 1 = zoom (crop to fill the
+     * screen), 2 = stretch (RESIZE_MODE_FILL, distorts). 0–2 differ only if the picture has a different aspect ratio
+     * than the TV (16:9 on a 16:9 screen looks identical); 3–5 always change the picture visibly.
+     * The labels are translated through the dictionaries (DictB, DictO); saved settings store the index only.
      */
-    val ASPECT_NAMES = listOf("Einpassen", "Bildschirm füllen", "Strecken", "Zoom 115 %", "Zoom 133 %", "4:3")
+    val ASPECT_NAMES = listOf("Einpassen", "Zuschneiden", "Strecken", "Zoom 115 %", "Zoom 133 %", "4:3")
     /** Card size in the rows ("View" button at the top): 0 = small, 1 = normal, 2 = large. */
     var cardSize by mutableIntStateOf(2)
     /** Titles per row in rows, grid and categories ("View" button): 0 = automatic by card size. */
@@ -118,7 +124,9 @@ object General {
         resumeLive = p.getBoolean("resume_live", false)
         resumeVod = p.getBoolean("resume_vod", false)
         confirmExit = p.getBoolean("confirm_exit", true)
+        vodCats = p.getBoolean("vod_cats", false)
         bundleLive = p.getBoolean("bundle_live", true)
+        channelRowSize = p.getInt("channel_row_size", 1).coerceIn(0, 2)
         // Users who never chose a mode get "daily": the first start still loads the list once (lastRefresh = 0),
         // later starts use the cache. Before 1.4 the default was "at every start", which re-downloaded the whole line each time.
         // One-time switch for existing installs: "at every start" (0, the old default) becomes "daily" (maintainer decision,
@@ -163,6 +171,8 @@ object General {
     fun setResumeLive(c: Context, v: Boolean) { resumeLive = v; prefs(c).edit().putBoolean("resume_live", v).apply() }
     fun setResumeVod(c: Context, v: Boolean) { resumeVod = v; prefs(c).edit().putBoolean("resume_vod", v).apply() }
     fun setBundleLive(c: Context, v: Boolean) { bundleLive = v; prefs(c).edit().putBoolean("bundle_live", v).apply() }
+    fun setChannelRowSize(c: Context, v: Int) { channelRowSize = v.coerceIn(0, 2); prefs(c).edit().putInt("channel_row_size", channelRowSize).apply() }
+    fun setVodCats(c: Context, v: Boolean) { vodCats = v; prefs(c).edit().putBoolean("vod_cats", v).apply() }
     fun setConfirmExit(c: Context, v: Boolean) { confirmExit = v; prefs(c).edit().putBoolean("confirm_exit", v).apply() }
     fun setPlan(c: Context, mode: Int = refreshMode, interval: Int = refreshInterval, hour: Int = refreshHour, minute: Int = refreshMinute, dow: Int = refreshDow) {
         refreshMode = mode.coerceIn(0, 4); refreshInterval = interval.coerceIn(1, 168)

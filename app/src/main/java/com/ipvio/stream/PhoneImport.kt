@@ -57,7 +57,7 @@ object PhoneImportLogic {
     fun message(de: Boolean, kind: String): String = message(if (de) 0 else 1, kind)
 
     /** What the page additionally offers (round 20). */
-    class Features(val upload: Boolean = false, val transfer: Boolean = false, val crash: Boolean = false, val epg: Boolean = false, val list: Boolean = false)
+    class Features(val upload: Boolean = false, val transfer: Boolean = false, val crash: Boolean = false, val epg: Boolean = false, val list: Boolean = false, val keys: Boolean = false)
 
     private const val CSS = """body{font-family:system-ui,sans-serif;background:#0B0F19;color:#fff;margin:0;padding:20px;max-width:560px}
 h1{font-size:22px}h2{font-size:16px;color:#9aa;margin-top:28px}a{color:#86EFAC}pre{white-space:pre-wrap;background:#171a26;padding:12px;border-radius:10px;font-size:13px}
@@ -106,9 +106,30 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
 <input id="lc" inputmode="numeric" maxlength="4" placeholder="${t("Code vom Fernseher", "Code from the TV")}">
 <input id="lf" type="file">
 <button onclick="lu()">${t("Liste hochladen", "Upload list")}</button><p id="ls"></p>""" + sendFileJs("lu", "/listimport", "lc", "lf", "ls") else "") +
+            (if (feats.keys) """<h2><a href="/keys">${t("API-Schlüssel eingeben (TMDB, OMDb, Untertitel)", "Enter API keys (TMDB, OMDb, subtitles)")}</a></h2>""" else "") +
             (if (feats.transfer) """<h2><a href="/transfer">${t("Einstellungen auf ein anderes Gerät übertragen", "Transfer settings to another device")}</a></h2>""" else "") +
             (if (feats.crash) """<h2><a href="/crash">${t("Letzten Absturzbericht anzeigen", "Show the last crash report")}</a></h2>""" else "") +
             "</body></html>"
+    }
+
+    /** API keys typed on the phone: trimmed with [SubSearchLogic.cleanKey]; blank fields are left out (they keep the stored key). */
+    fun toKeys(f: Map<String, String>): Map<String, String> =
+        listOf("tmdb", "omdb", "os", "sd").associateWith { SubSearchLogic.cleanKey(f[it].orEmpty()) }.filterValues { it.isNotEmpty() }
+
+    /** API keys: one form with the four keys, protected by the code like every other page. */
+    fun keysPage(li: Int): String {
+        fun t(a: String, b: String) = tr(li, a, b)
+        return """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IPVIO Stream</title><style>$CSS</style></head><body>
+<h1>${t("API-Schlüssel", "API keys")}</h1>
+<p>${t("Füge die Schlüssel hier ein, z. B. aus der Zwischenablage. Leere Felder lassen den gespeicherten Schlüssel unverändert.", "Paste the keys here, e.g. from the clipboard. Empty fields keep the stored key.")}</p>
+<form method="post" action="/keys">
+<input name="code" inputmode="numeric" maxlength="4" placeholder="${t("Code vom Fernseher", "Code from the TV")}" required>
+<h2>TMDB</h2><input name="tmdb" placeholder="${t("TMDB API-Schlüssel (v3)", "TMDB API key (v3)")}" autocapitalize="off" autocomplete="off" spellcheck="false">
+<h2>OMDb</h2><input name="omdb" placeholder="${t("OMDb API-Schlüssel", "OMDb API key")}" autocapitalize="off" autocomplete="off" spellcheck="false">
+<h2>OpenSubtitles</h2><input name="os" placeholder="${t("OpenSubtitles API-Schlüssel", "OpenSubtitles API key")}" autocapitalize="off" autocomplete="off" spellcheck="false">
+<h2>SubDL</h2><input name="sd" placeholder="${t("SubDL API-Schlüssel", "SubDL API key")}" autocapitalize="off" autocomplete="off" spellcheck="false">
+<button type="submit">${t("An den Fernseher senden", "Send to TV")}</button></form>
+<p>${t("Die Schlüssel gehören nur dir. Gib sie nicht weiter.", "The keys are yours alone. Do not share them.")}</p></body></html>"""
     }
 
     /** Transfer: download a backup (optionally with playlists) or restore a backup. */
@@ -183,6 +204,8 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
     var restore: ((String) -> Boolean)? = null
     /** Receives a TV guide (XMLTV) address typed on the phone; set = the field appears on the page. */
     var onEpg: ((String) -> Unit)? = null
+    /** Receives API keys typed on the phone (keys "tmdb", "omdb", "os", "sd"; only non-blank ones); set = the /keys page is active. Runs on the server thread, so the callback must post to the main thread itself. */
+    var onKeys: ((Map<String, String>) -> Unit)? = null
     /** Last crash report as text, null = none. */
     var crash: (() -> String?)? = null
     /** Phone search: answer a request under /api/<name> (JSON) or null = unknown. Set = the /r page is active. */
@@ -293,7 +316,7 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
         val ins = s.getInputStream()
         val h = readHead(ins) ?: return
         val li = PhoneImportLogic.langIndex(h.lang)
-        val feats = PhoneImportLogic.Features(saveUpload != null, backup != null, crash != null, onEpg != null, onList != null)
+        val feats = PhoneImportLogic.Features(saveUpload != null, backup != null, crash != null, onEpg != null, onList != null, onKeys != null)
         val r: Reply = when (h.method + " " + h.path) {
             "GET /" -> html(200, PhoneImportLogic.page(li, feats))
             "POST /send" -> {
@@ -317,6 +340,21 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
                         val u = f["epg"].orEmpty().trim()
                         if (cb == null || !(u.startsWith("http://") || u.startsWith("https://"))) html(400, PhoneImportLogic.message(li, "bad"))
                         else { cb(u); html(200, PhoneImportLogic.message(li, "ok")) }
+                    }
+                    403 -> html(403, PhoneImportLogic.message(li, "code"))
+                    else -> html(c, PhoneImportLogic.message(li, "lock"))
+                }
+            }
+            // API keys typed on the phone (same code check as the other pages)
+            "GET /keys" -> if (onKeys != null) html(200, PhoneImportLogic.keysPage(li)) else html(404, PhoneImportLogic.message(li, "bad"))
+            "POST /keys" -> {
+                val f = PhoneImportLogic.parseForm(readSmall(ins, h.len) ?: "")
+                val cb = onKeys
+                when (val c = codeOk(f["code"])) {
+                    200 -> {
+                        val keys = PhoneImportLogic.toKeys(f)
+                        if (cb == null || keys.isEmpty()) html(400, PhoneImportLogic.message(li, "bad"))
+                        else { cb(keys); html(200, PhoneImportLogic.message(li, "ok")) }
                     }
                     403 -> html(403, PhoneImportLogic.message(li, "code"))
                     else -> html(c, PhoneImportLogic.message(li, "lock"))

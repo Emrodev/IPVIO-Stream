@@ -25,6 +25,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -158,11 +160,20 @@ fun SearchScreen(
         if (!toInput) runCatching { sideFocus.requestFocus() }
     }
 
+    // Window positions of the search row and of its input field: the results column starts at the field's top edge
+    var rowY by remember { mutableStateOf(0f) }
+    var fieldY by remember { mutableStateOf(0f) }
     Box(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxSize().sidebarPad()) {
+        // Cinema view: the scene image of the highlighted title fills the screen, the info sits big on top of it
+        val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: hist.firstOrNull())
+        // Darkened (dim 0.5) so white text stays readable on bright scene images
+        BillboardBackdrop(preview, Modifier.fillMaxSize(), dim = 0.5f)
+        Column(Modifier.fillMaxSize().sidebarPad()) {
+            SearchHeroInfo(preview, Modifier.fillMaxWidth().height(196.dp).padding(start = DS.PageX, end = DS.PageX, top = 22.dp))
+        Row(Modifier.weight(1f).fillMaxWidth().onGloballyPositioned { rowY = it.positionInWindow().y }) {
             // Left: input, quick filters, suggestions and last searches above the keyboard, the keyboard at the bottom
             Column(
-                Modifier.width(430.dp).fillMaxHeight().padding(start = DS.PageX, top = 16.dp, bottom = 12.dp),
+                Modifier.width(430.dp).fillMaxHeight().padding(start = DS.PageX, top = 8.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Spacer(Modifier.weight(1f))
@@ -190,7 +201,7 @@ fun SearchScreen(
                     // The device's own keyboard (e.g. Gboard) in a normal text field: OK or a tap opens it
                     Field(
                         SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
-                        Modifier.fillMaxWidth(),
+                        Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
                         inner = Modifier.focusRequester(ContentFocus.req).onFocusChanged { fieldFocused = it.isFocused || it.hasFocus },
                         onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
                     )
@@ -199,7 +210,7 @@ fun SearchScreen(
                 // Deliberately not wired to fieldFocused: that flag belongs to the BackHandler and tracks the app keyboard only.
                 Field(
                     SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
                     onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
                 )
                 // Own on-screen keyboard (instead of the TV's keyboard): hits appear while typing
@@ -220,10 +231,10 @@ fun SearchScreen(
                 )
                 }
             }
-            // Right: info panel of the highlighted title on top, the hits below
-            Column(Modifier.weight(1f).fillMaxHeight()) {
-                val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: hist.firstOrNull())
-                SearchInfoPanel(preview, Modifier.fillMaxWidth().height(190.dp).padding(start = 24.dp, end = DS.PageX, top = 16.dp))
+            // Right: the hits
+            // Starts at the height of the input field (the results sit level with the search bar, the Sports Hub button too)
+            val resultsTop = with(androidx.compose.ui.platform.LocalDensity.current) { (fieldY - rowY).coerceAtLeast(0f).toDp() }
+            Column(Modifier.weight(1f).fillMaxHeight().padding(top = resultsTop)) {
                 CompositionLocalProvider(LocalSearchFocus provides { focusItem = it }) {
                     LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = state, contentPadding = PaddingValues(bottom = 48.dp)) {
                 if (fl == 4) item(key = "hubbtn") {
@@ -278,6 +289,7 @@ fun SearchScreen(
                     }
                 }
             }
+        }
         }
         Sidebar(
             tab,
@@ -477,61 +489,39 @@ private fun KbKey(label: String, modifier: Modifier, onFocusChange: (Boolean) ->
 
 private val LocalSearchFocus = compositionLocalOf<(Item) -> Unit> { {} }
 
-/** Info panel above the hits (like the cinema view): picture, title, format, year, rating, genres and description of the highlighted title. */
+/** Cinema-style info of the highlighted title on top of the scene image: kind, big title, year | genre | length | rating, description. */
 @Composable
-private fun SearchInfoPanel(item: Item?, modifier: Modifier) {
-    val ctx = LocalContext.current
-    val shape = RoundedCornerShape(DS.RadiusM)
-    Box(modifier.clip(shape).background(Surf).border(DS.Border, Surf2, shape)) {
+private fun SearchHeroInfo(item: Item?, modifier: Modifier) {
+    Box(modifier) {
         if (item == null) {
             Text("Suche nach einem Titel: hier erscheinen Beschreibung, Bewertung und Format des markierten Treffers.", color = Muted, fontSize = 16.sp,
-                modifier = Modifier.align(Alignment.Center).padding(24.dp))
+                modifier = Modifier.align(Alignment.CenterStart).widthIn(max = 560.dp))
             return@Box
         }
-        // Wait a moment so quickly moving across the hits does not load anything
-        val meta by produceState<Meta?>(null, item.id) {
-            value = null
-            if (item.kind == Kind.LIVE) return@produceState
-            delay(200)
-            value = MetaRepo.basic(ctx, item) ?: MetaRepo.cached(item)
-        }
+        val m = rememberFullMeta(item, rememberMeta(item))
+        // Live channels: what is on right now
         val epg by produceState(emptyList<EpgEntry>(), item.id) {
             value = emptyList()
             if (item.kind != Kind.LIVE) return@produceState
             delay(200)
             value = kotlinx.coroutines.withContext(Dispatchers.Default) { Epg.now(item) }
         }
-        val m = meta
         val nowE = Epg.current(epg)
-        Row(Modifier.fillMaxSize().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            val img = m?.poster ?: item.logo
-            Box(Modifier.fillMaxHeight().aspectRatio(if (item.kind == Kind.LIVE) 1f else 2f / 3f).clip(RoundedCornerShape(DS.RadiusS)).background(DS.Overlay2)) {
-                if (img != null) coil.compose.AsyncImage(img, null, Modifier.fillMaxSize(), contentScale = if (item.kind == Kind.LIVE) androidx.compose.ui.layout.ContentScale.Fit else androidx.compose.ui.layout.ContentScale.Crop)
+        Column(Modifier.widthIn(max = 900.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Kicker(Lang.tr(kindLabel(item.kind)) + (qualityOf(item)?.let { q -> "  ·  " + q.uppercase() } ?: ""))
+            Text(
+                raw = true, text = item.title, color = Tok.TextHi,
+                fontSize = spx(if (item.title.length <= 24) 60 else if (item.title.length <= 36) 48 else 40), lineHeight = spx(62),
+                fontWeight = FontWeight.ExtraBold, letterSpacing = (-1).sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            if (item.kind != Kind.LIVE) HeroMetaLine(item, m, dots = false)
+            val body = when {
+                item.kind == Kind.LIVE && nowE != null -> hhmm(nowE.start) + " – " + hhmm(nowE.end) + "  ·  " + nowE.title
+                item.kind == Kind.LIVE -> item.group
+                else -> m?.overview.orEmpty()
             }
-            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(raw = true, text = item.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                val parts = ArrayList<String>()
-                parts.add(when (item.kind) { Kind.MOVIE -> "Film"; Kind.SERIES -> "Serie"; else -> "Live" })
-                (item.year?.toString() ?: m?.year)?.let { parts.add(it) }
-                m?.runtime?.takeIf { it > 0 }?.let { parts.add("$it Min") }
-                (item.quality)?.let { parts.add(it) }
-                m?.genres?.take(3)?.let { parts.addAll(it) }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    m?.score()?.let { sc ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            AppIcon(AIcon.Star, DS.Gold, size = 16.dp)
-                            Text(raw = true, text = String.format(java.util.Locale.US, "%.1f", sc), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    Text(raw = true, text = parts.joinToString("  ·  "), color = Muted, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                }
-                val body = when {
-                    item.kind == Kind.LIVE && nowE != null -> hhmm(nowE.start) + " – " + hhmm(nowE.end) + "  " + nowE.title
-                    item.kind == Kind.LIVE -> item.group
-                    else -> m?.overview.orEmpty()
-                }
-                if (body.isNotBlank()) Text(raw = true, text = body, color = Color(0xFFD5D8E2), fontSize = 15.sp, maxLines = 4, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            }
+            if (body.isNotBlank()) Text(raw = true, text = TitleText.short(body, 200), color = Tok.TextMid, fontSize = 17.sp, lineHeight = 24.sp,
+                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
 }

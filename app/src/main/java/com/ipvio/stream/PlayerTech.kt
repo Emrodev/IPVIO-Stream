@@ -50,6 +50,6 @@ fun BoxScope.PTechOverlay(player: ExoPlayer) {
         Modifier.align(Alignment.TopStart).padding(16.dp).clip(RoundedCornerShape(10.dp))
             .background(Color(0xB3000000)).padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
-        lines.forEach { androidx.compose.foundation.text.BasicText(it, style = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp, fontFamily = FontFamily.Monospace)) }
+        lines.forEach { androidx.compose.foundation.text.BasicText(Lang.tr(it), style = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp, fontFamily = FontFamily.Monospace)) }
     }
 }

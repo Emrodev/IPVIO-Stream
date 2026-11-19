@@ -15,3 +15,5 @@
 # documented switch against that. Optimization of the libraries (inlining, removing unused code) stays on.
 -dontobfuscate
 -dontrepackage
+
+-keep class * extends androidx.room.RoomDatabase { <init>(); }

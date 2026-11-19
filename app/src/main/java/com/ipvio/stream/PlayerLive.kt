@@ -438,12 +438,15 @@ fun RecentChannelsRow(liveAll: List<Item>, curId: String, onLabel: (String) -> U
 
 @Composable
 private fun RecentChannelChip(item: Item, onLabel: (String) -> Unit, onClick: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(DS.RadiusS)
     Row(
         Modifier.height(44.dp).widthIn(max = 220.dp).clip(shape)
             .background(if (f) Color.White else Color(0x24FFFFFF))
             .onFocusChanged { f = it.isFocused; if (it.isFocused) onLabel(item.title) }
+            // W-009: long OK removes the channel from "Recently watched"
+            .favKeys { removeRecent(ctx, item) }
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)

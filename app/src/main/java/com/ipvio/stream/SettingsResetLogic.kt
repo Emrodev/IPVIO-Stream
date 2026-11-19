@@ -52,7 +52,7 @@ object SettingsResetLogic {
         // "font" is the key of the old font list; init() reads it as long as "font2" is missing
         DESIGN to setOf("font2", "font", "text_scale", "show_clock", "fit_x", "fit_y"),
         PLAYER to setOf("aspect"),
-        LIVE to setOf("bundle_live")
+        LIVE to setOf("bundle_live", "channel_row_size")
     )
 
     /** Keys of `ipvio_settings` that the reset of [page] removes. */

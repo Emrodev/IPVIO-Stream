@@ -14,6 +14,14 @@ object Parental {
         private set
     var pinSet by mutableStateOf(false)
         private set
+    /**
+     * Adult content never appears in the rows of the home pages (start, movies, series), even when it is not hidden in the
+     * whole app. Live TV, categories, search and "All movies" keep it: whoever watches it knows where to find it. Default: on.
+     */
+    var homeHide by mutableStateOf(true)
+        private set
+    /** Home rows filter adult titles themselves (with [hideAdult] on they are gone from the whole list already). */
+    val adultOffHome: Boolean get() = homeHide && !hideAdult
     /** Changes with every switch so filtered lists are recomputed. */
     var version by mutableIntStateOf(0)
         private set
@@ -25,6 +33,7 @@ object Parental {
     fun init(c: Context) {
         val p = prefs(c)
         hideAdult = p.getBoolean("parental_hide", false)
+        homeHide = p.getBoolean("parental_home_hide", true)
         pinSet = !p.getString("parental_hash", null).isNullOrEmpty()
         unlocked = false
         version++
@@ -33,6 +42,12 @@ object Parental {
     fun setHide(c: Context, v: Boolean) {
         hideAdult = v
         prefs(c).edit().putBoolean("parental_hide", v).apply()
+        version++
+    }
+
+    fun setHomeHide(c: Context, v: Boolean) {
+        homeHide = v
+        prefs(c).edit().putBoolean("parental_home_hide", v).apply()
         version++
     }
 

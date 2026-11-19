@@ -69,7 +69,7 @@ fun BoxScope.TracksPanel(
         }
     }
 
-    PPanelFrame(680.dp, "Audio & Untertitel", "Links schließt das Menü  ·  Rechts wechselt zu den Untertiteln", onEdgeDown = onClose) {
+    PPanelFrame(680.dp, "Audio & Untertitel", "Links schließt das Menü  ·  Rechts wechselt zu den Untertiteln") {
         Row(Modifier.weight(1f, fill = false), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(
                 Modifier.weight(1f).onPreviewKeyEvent { e ->
@@ -233,5 +233,22 @@ fun BoxScope.EpisodesPanel(
                 }
             }
         }
+    }
+}
+
+/**
+ * Rows of the sync menus (W-005 subtitle delay, W-007 audio delay): fine and coarse steps in both directions and a reset.
+ * The menu stays open, the current value is shown at the top.
+ */
+@Composable
+fun SyncRows(valueMs: Int, fine: Int, coarse: Int, focus: FocusRequester, later: String, earlier: String, hint: String, onSet: (Int) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(PT.RowGap)) {
+        Text(raw = true, text = Lang.tr("Aktuell") + ": " + PlayerSync.label(valueMs), color = Accent2, fontSize = 17.sp, modifier = Modifier.padding(start = 16.dp, bottom = 4.dp))
+        PPanelRow(Lang.tr(later) + " (+" + PlayerSync.label(fine).drop(1) + ")", false, Modifier.focusRequester(focus), raw = true) { onSet(valueMs + fine) }
+        PPanelRow(Lang.tr(earlier) + " (−" + PlayerSync.label(fine).drop(1) + ")", false, raw = true) { onSet(valueMs - fine) }
+        PPanelRow(Lang.tr(later) + " (+" + PlayerSync.label(coarse).drop(1) + ")", false, raw = true) { onSet(valueMs + coarse) }
+        PPanelRow(Lang.tr(earlier) + " (−" + PlayerSync.label(coarse).drop(1) + ")", false, raw = true) { onSet(valueMs - coarse) }
+        PPanelRow("Zurücksetzen", valueMs == 0) { onSet(0) }
+        Text(hint, color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
     }
 }

@@ -38,6 +38,9 @@ Aus: die eingebaute Tastatur der App. An: die Tastatur deines Geräts (z. B. Gbo
 Nach oben verschieben¦Move up¦Yukarı taşı¦Pomjeri gore¦¦¦Subir¦Monter¦Sposta su¦Omhoog verplaatsen
 Nach unten verschieben¦Move down¦Aşağı taşı¦Pomjeri dolje¦¦¦Bajar¦Descendre¦Sposta giù¦Omlaag verplaatsen
 An den Anfang verschieben¦Move to top¦En başa taşı¦Pomjeri na početak¦¦¦Mover al principio¦Placer en premier¦Sposta all'inizio¦Naar het begin verplaatsen
+Ans Ende verschieben¦Move to bottom¦En sona taşı¦Pomjeri na kraj¦¦¦Mover al final¦Placer en dernier¦Sposta alla fine¦Naar het einde verplaatsen
+Mit Hoch/Runter verschieben¦Move with Up/Down¦Yukarı/Aşağı ile taşı¦Pomjeri tipkama gore/dolje¦¦¦Mover con arriba/abajo¦Déplacer avec haut/bas¦Sposta con su/giù¦Verplaatsen met omhoog/omlaag
+Das Bild hat schon das Format des Fernsehers¦The picture already has the shape of the TV¦Görüntü zaten televizyonun formatında¦Slika već ima format televizora¦¦¦La imagen ya tiene el formato del televisor¦L'image a déjà le format du téléviseur¦L'immagine ha già il formato del televisore¦Het beeld heeft al het formaat van de tv
 Kategorien sortieren …¦Sort categories …¦Kategorileri sırala …¦Sortiraj kategorije …¦¦¦Ordenar categorías …¦Trier les catégories …¦Ordina categorie …¦Categorieën sorteren …
 Anbieter-Reihenfolge¦Provider order¦Sağlayıcı sırası¦Redoslijed provajdera¦¦¦Orden del proveedor¦Ordre du fournisseur¦Ordine del fornitore¦Volgorde van aanbieder
 Eigene Reihenfolge¦Own order¦Kendi sıram¦Vlastiti redoslijed¦¦¦Orden propio¦Ordre personnel¦Ordine personale¦Eigen volgorde

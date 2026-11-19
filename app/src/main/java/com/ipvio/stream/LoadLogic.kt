@@ -57,15 +57,19 @@ object LoadLogic {
 
     /**
      * Preselection of the language question: the device's language if the playlist has titles in it, otherwise English.
-     * If neither exists, nothing is preselected. Result = shown languages.
+     * Untagged titles (e.g. 24/7 channels) and the adult bucket are always preselected when present, otherwise they would be
+     * hidden silently on first load. Adult content is still handled by parental control, not by this selection.
+     * If neither a language nor one of these exists, nothing is preselected. Result = shown languages.
      */
     fun systemPreselect(counts: Map<String, Int>, systemLang: String): Set<String> {
         val code = langCodeOf(systemLang)
-        return when {
+        val lang = when {
             (counts[code] ?: 0) > 0 -> setOf(code)
             (counts["en"] ?: 0) > 0 -> setOf("en")
             else -> emptySet()
         }
+        val always = setOf(LangTagLogic.UNKNOWN, LangTagLogic.ADULT).filter { (counts[it] ?: 0) > 0 }
+        return lang + always
     }
 
     // ------------------------------------------------------------------ Resuming (HTTP range)

@@ -64,8 +64,9 @@ class SubSearchLogicTest {
           {"release_name":"Bad","language":"EN","url":"/../etc/passwd","episode":2}
         ]}"""
         val hits = SubSearchLogic.sdHits(body, episode)
-        assertEquals(listOf("/subtitle/1-2.zip"), hits.map { it.ref })
-        assertFalse(hits.single().ref.contains("secret"))
+        // Single episode 2 and the season pack are kept (the pack is searched for the episode later); episode 3 is not
+        assertEquals(listOf("/subtitle/1-2.zip", "/subtitle/1-9.zip"), hits.map { it.ref })
+        hits.forEach { assertFalse(it.ref.contains("secret")) }
         assertEquals(emptyList<SubSearchLogic.Hit>(), SubSearchLogic.sdHits("""{"status":false}""", episode))
         assertNull(SubSearchLogic.sdPath("https://evil.tld/subtitle/1.zip"))
     }

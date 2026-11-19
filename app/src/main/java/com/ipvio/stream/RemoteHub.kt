@@ -43,7 +43,14 @@ object RemoteHub {
     fun start(ctx: Context): PhoneImport? {
         appCtx = ctx.applicationContext
         server?.let { if (active) return it }
-        val s = PhoneImport { }
+        // Playlist sent from the phone settings (issue 18): added like "Add playlist" on the TV
+        val s = PhoneImport { inp ->
+            main.post {
+                val c = appCtx ?: return@post
+                val u = if (inp.isXtream) PlaylistStore.xtreamUrl(inp.host, inp.user, inp.pass) else inp.url
+                if (u != null) PlaylistStore.addAsync(c, u)
+            }
+        }
         s.onList = { name, bytes -> main.post { appCtx?.let { ListImportApply.run(it, name, bytes) } } }
         s.api = { name, q ->
             // The phone opened the page or used it: close the QR card on the TV (it would otherwise stay in front of the player).
@@ -163,6 +170,12 @@ object RemoteHub {
                 "{\"ok\":true}"
             }
             "ctl" -> control(q["c"].orEmpty(), q["v"].orEmpty())
+            // Settings and Sports Hub on the phone (issues 17, 18, 20, 21)
+            "pls", "plmain", "plren", "pldel", "vcats", "vhide", "vfav", "vmove", "adult", "adultset", "langs", "setlang",
+            "sport", "sleagues", "steams", "stfav", "spin", "swatch" -> {
+                val c = appCtx ?: return null
+                RemoteMore.handle(name, q, c, { f -> main.post { f() } }, { f -> onMain(false, f) })
+            }
             "state" -> onMain(RemoteLogic.state(false, "", false, 0, 0, false)) {
                 val p = player
                 if (p == null) RemoteLogic.state(false, "", false, 0, 0, false)

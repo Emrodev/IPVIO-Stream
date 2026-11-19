@@ -33,6 +33,15 @@ object RemoteLogic {
     fun live(item: String, fav: Boolean, nowTitle: String?, start: Long, end: Long): String =
         item.dropLast(1) + ",\"f\":" + fav + (if (nowTitle != null) ",\"np\":" + q(nowTitle) + ",\"ns\":" + start + ",\"ne\":" + end else "") + "}"
 
+    /**
+     * A game for the Sports Hub on the phone: key, competition, title (single-player sports), home and away team with score,
+     * state (0 not started, 1 live, 2 finished), detail, start (epoch seconds), watchable on a channel, favorite, picked by hand.
+     */
+    fun game(key: String, league: String, title: String, home: String, away: String, hs: String, aws: String,
+             state: Int, detail: String, start: Long, watch: Boolean, fav: Boolean, pinned: Boolean): String =
+        "{\"k\":" + q(key) + ",\"lg\":" + q(league) + ",\"ti\":" + q(title) + ",\"h\":" + q(home) + ",\"a\":" + q(away) +
+            ",\"hs\":" + q(hs) + ",\"as\":" + q(aws) + ",\"st\":$state,\"d\":" + q(detail) + ",\"t\":$start,\"w\":$watch,\"f\":$fav,\"p\":$pinned}"
+
     fun arr(items: List<String>): String = items.joinToString(",", "[", "]")
 
     /** An episode: season, number, title. */
@@ -97,9 +106,23 @@ main{padding:6px 14px}
 #btns button.go{background:#2ee59d;color:#06121f}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:130px;background:#000c;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 #toast.on{opacity:1}
+.top{display:flex;gap:8px}.top #q{flex:1}
+#gear{border:0;border-radius:14px;background:#16203a;color:#fff;font-size:22px;width:52px}
+.card{background:#121b31;border-radius:12px;padding:12px 14px;margin:8px 0}
+.card b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.card small{color:#8ea0c4}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.sb{border:0;border-radius:10px;padding:9px 11px;background:#1b2750;color:#fff;font-size:14px;font-weight:600}
+.sb.on{background:#2ee59d;color:#06121f}
+.sec{color:#9fb0d0;font-size:13px;font-weight:700;text-transform:uppercase;margin:18px 2px 4px}
+.sub{display:flex;gap:6px;overflow-x:auto;margin:6px 0}
+.sub button{flex:none;padding:9px 12px;border-radius:12px;border:0;background:#16203a;color:#9fb0d0;font-size:14px;font-weight:600}
+.sub button.on{background:#2ee59d;color:#06121f}
+.fld{width:100%;padding:12px;margin:5px 0;border-radius:12px;border:1px solid #2a3550;background:#16203a;color:#fff;font-size:16px}
 </style></head><body>
-<header><input id="q" type="search" placeholder="${h(t("Filme, Serien, Sender suchen …", "Search movies, series, channels …"))}" autocomplete="off" autocapitalize="off" enterkeyhint="search">
-<div id="tabs"><button data-k="m" class="on">${h(t("Filme", "Movies"))}</button><button data-k="s">${h(t("Serien", "Series"))}</button><button data-k="l">Live TV</button></div></header>
+<header><div class="top"><input id="q" type="search" placeholder="${h(t("Filme, Serien, Sender suchen …", "Search movies, series, channels …"))}" autocomplete="off" autocapitalize="off" enterkeyhint="search">
+<button id="gear" aria-label="${h(t("Einstellungen", "Settings"))}">&#9881;</button></div>
+<div id="tabs"><button data-k="m" class="on">${h(t("Filme", "Movies"))}</button><button data-k="s">${h(t("Serien", "Series"))}</button><button data-k="l">Live TV</button><button data-k="sp">Sport</button></div></header>
 <main id="list"></main>
 <div id="ctl"><div id="now"></div><div id="btns">
 <button data-c="skip" data-v="-30">-30 s</button><button data-c="skip" data-v="-10">-10 s</button><button class="go" data-c="pause">${h(t("Pause / Weiter", "Pause / Play"))}</button>
@@ -110,7 +133,23 @@ main{padding:6px 14px}
 var L={code:'${js(t("Code vom Fernseher:", "Code from the TV:"))}',none:'${js(t("Nichts gefunden.", "Nothing found."))}',hint:'${js(t("Tippe einen Titel ein.", "Type a title."))}',
 cats:'${js(t("Kategorien", "Categories"))}',favs:'${js(t("Meine Favoriten", "My favorites"))}',manage:'${js(t("Kategorien ein-/ausblenden", "Show / hide categories"))}',manageHint:'${js(t("Tippen blendet eine Kategorie am Fernseher ein oder aus.", "Tap to show or hide a category on the TV."))}',hidden:'${js(t("ausgeblendet", "hidden"))}',shown:'${js(t("sichtbar", "visible"))}',mylists:'${js(t("Meine Senderlisten", "My channel lists"))}',imp:'${js(t("Liste importieren (Letterboxd, MyAnimeList, Trakt)", "Import list (Letterboxd, MyAnimeList, Trakt)"))}',impDone:'${js(t("Liste wurde an den Fernseher gesendet", "List sent to the TV"))}',back:'${js(t("Zurück", "Back"))}',season:'${js(t("Staffel", "Season"))}',ep:'${js(t("Folge", "Episode"))}',
 ok:'${js(t("Läuft auf dem Fernseher.", "Playing on the TV."))}',err:'${js(t("Fehler. Ist der Fernseher noch an?", "Error. Is the TV still on?"))}',
-load:'${js(t("Lädt …", "Loading …"))}',cont:'${js(t("Weiterschauen", "Continue watching"))}',idle:'${js(t("Es läuft nichts.", "Nothing is playing."))}',wait:'${js(t("Die Playlist wird noch geladen.", "The playlist is still loading."))}'};
+load:'${js(t("Lädt …", "Loading …"))}',
+set:'${js(t("Einstellungen", "Settings"))}',pls:'${js(t("Playlists", "Playlists"))}',main:'${js(t("Hauptliste", "Main list"))}',mkMain:'${js(t("Zur Hauptliste machen", "Make main list"))}',
+ren:'${js(t("Umbenennen", "Rename"))}',del:'${js(t("Löschen", "Delete"))}',delQ:'${js(t("Diese Playlist wirklich löschen?", "Really delete this playlist?"))}',newName:'${js(t("Neuer Name:", "New name:"))}',
+add:'${js(t("Playlist hinzufügen", "Add playlist"))}',m3u:'${js(t("M3U-Link", "M3U link"))}',xt:'${js(t("oder Xtream-Login", "or Xtream login"))}',srv:'${js(t("Server (z. B. http://server.tld:8080)", "Server (e.g. http://server.tld:8080)"))}',
+usr:'${js(t("Benutzername", "Username"))}',pw:'${js(t("Passwort", "Password"))}',send:'${js(t("An den Fernseher senden", "Send to TV"))}',sent:'${js(t("Gesendet. Der Fernseher lädt die Playlist.", "Sent. The TV is loading the playlist."))}',
+cLive:'${js(t("Live-TV-Kategorien", "Live TV categories"))}',cMov:'${js(t("Film-Kategorien", "Movie categories"))}',cSer:'${js(t("Serien-Kategorien", "Series categories"))}',genres:'${js(t("Genres", "Genres"))}',
+catHint:'${js(t("Die Pfeile verschieben eine Kategorie, „Ausblenden“ blendet sie aus, der Stern macht sie zum Favoriten (nur Live TV). Gilt sofort am Fernseher.", "The arrows move a category, “Hide” hides it, the star makes it a favorite (Live TV only). Applies on the TV right away."))}',
+up:'${js(t("Hoch", "Up"))}',down:'${js(t("Runter", "Down"))}',top:'${js(t("Anfang", "Top"))}',bottom:'${js(t("Ende", "Bottom"))}',hide:'${js(t("Ausblenden", "Hide"))}',showC:'${js(t("Einblenden", "Show"))}',
+adult:'${js(t("Jugendschutz", "Parental control"))}',adultOn:'${js(t("Inhalte für Erwachsene sind ausgeblendet.", "Adult content is hidden."))}',adultOff:'${js(t("Inhalte für Erwachsene werden angezeigt.", "Adult content is shown."))}',
+adultHide:'${js(t("Ausblenden", "Hide"))}',adultShow:'${js(t("Anzeigen (PIN nötig)", "Show (PIN needed)"))}',adultShow0:'${js(t("Anzeigen", "Show"))}',pinQ:'${js(t("PIN vom Fernseher:", "PIN from the TV:"))}',pinBad:'${js(t("Falsche PIN.", "Wrong PIN."))}',
+lang:'${js(t("Sprache der App", "App language"))}',auto:'${js(t("Automatisch (Gerät)", "Automatic (device)"))}',done:'${js(t("Gespeichert.", "Saved."))}',
+today:'${js(t("Heute", "Today"))}',sfav:'${js(t("Favoriten", "Favorites"))}',mine:'${js(t("Meine Liste", "My list"))}',teams:'${js(t("Lieblingsteams", "Favorite teams"))}',
+watch:'${js(t("Ansehen", "Watch"))}',pin:'${js(t("Merken", "Keep"))}',pinned:'${js(t("Gemerkt", "Kept"))}',live:'LIVE',
+noGames:'${js(t("Keine Spiele gefunden.", "No games found."))}',noFav:'${js(t("Noch keine Lieblingsteams. Wähle sie unter „Lieblingsteams“.", "No favorite teams yet. Choose them under “Favorite teams”."))}',
+noMine:'${js(t("Noch keine Spiele gemerkt. Tippe bei einem Spiel auf „Merken“; es erscheint dann auch am Fernseher im Mini-Ergebnis.", "No games kept yet. Tap “Keep” on a game; it then also shows in the mini score on the TV."))}',
+sOff:'${js(t("Live-Ergebnisse sind am Fernseher ausgeschaltet (Sports Hub).", "Live scores are switched off on the TV (Sports Hub)."))}',noCh:'${js(t("Kein passender Sender gefunden.", "No matching channel found."))}',
+league:'${js(t("Liga wählen", "Choose a league"))}',cont:'${js(t("Weiterschauen", "Continue watching"))}',idle:'${js(t("Es läuft nichts.", "Nothing is playing."))}',wait:'${js(t("Die Playlist wird noch geladen.", "The playlist is still loading."))}'};
 var code='';try{code=new URLSearchParams(location.search).get('code')||sessionStorage.getItem('ipvio_code')||''}catch(e){}
 var kind='m',data={m:[],s:[],l:[]},cat=null,tm=null,seq=0;
 var qEl=document.getElementById('q'),list=document.getElementById('list'),toastEl=document.getElementById('toast');
@@ -144,20 +183,90 @@ function chList(call,o,backFn,backLabel,title){msg(L.load);api(call,o).then(func
  a.forEach(function(it){list.appendChild(liveRow(it))})}).catch(function(e){if(e!==0)msg(L.err)})}
 function cats(){msg(L.load);api('cats').then(function(a){list.innerHTML='';
  var fb=row(L.favs,null,null,function(){chList('favs',{},cats,L.cats,L.favs)});list.appendChild(fb);
- list.appendChild(row(L.manage,null,null,manage));
- list.appendChild(row(L.imp,null,null,importList));
  list.appendChild(el('div','msg',L.mylists));
  api('lists').then(function(ls){ls.forEach(function(l){list.insertBefore(row(l.g,l.n+'',null,function(){chList('list',{i:l.i},cats,L.cats,l.g)}),mark)})}).catch(function(){});
  var mark=el('div','msg',L.cats);list.appendChild(mark);if(!a.length){return}
  a.forEach(function(c){list.appendChild(row(c.g,c.n+'',null,function(){chans(c.g)}))})}).catch(function(e){if(e!==0)msg(L.err)})}
 function importList(){var f=document.createElement('input');f.type='file';f.onchange=function(){var x=f.files[0];if(!x)return;msg(L.load);
- fetch('/listimport?name='+encodeURIComponent(x.name)+'&code='+encodeURIComponent(code),{method:'POST',body:x}).then(function(r){if(!r.ok)throw 1;toast(L.impDone);cats()}).catch(function(){toast(L.err)})};f.click()}
+ fetch('/listimport?name='+encodeURIComponent(x.name)+'&code='+encodeURIComponent(code),{method:'POST',body:x}).then(function(r){if(!r.ok)throw 1;toast(L.impDone);settings()}).catch(function(){toast(L.err);settings()})};f.click()}
 function chans(g){chList('channels',{g:g},cats,L.cats,null)}
 function manage(){msg(L.load);api('groups').then(function(a){list.innerHTML='';var bk=el('button','back','< '+L.back);bk.onclick=cats;list.appendChild(bk);
  list.appendChild(el('div','msg',L.manageHint));
  a.forEach(function(c){var b=row(c.g,c.n+'',c.h?L.hidden:L.shown,null);
   b.onclick=function(){c.h=!c.h;api('hide',{g:c.g,h:c.h?1:0}).then(function(){var bd=b.querySelector('.bd');bd.textContent=c.h?L.hidden:L.shown;b.style.opacity=c.h?0.5:1}).catch(function(e){c.h=!c.h;if(e!==0)toast(L.err)})};
   if(c.h)b.style.opacity=0.5;list.appendChild(b)})}).catch(function(e){if(e!==0)msg(L.err)})}
+function sb(label,fn,on){var b=el('button','sb'+(on?' on':''),label);b.onclick=function(ev){ev.stopPropagation();fn(b)};return b}
+function card(title,sub,badge){var c=el('div','card');var b=el('b',null,title);if(badge){var x=el('span','bd',badge);x.style.marginLeft='8px';b.appendChild(x)}c.appendChild(b);if(sub)c.appendChild(el('small',null,sub));return c}
+function head(title,backFn){list.innerHTML='';var bk=el('button','back','< '+L.back);bk.onclick=backFn;list.appendChild(bk);if(title)list.appendChild(el('div','sec',title))}
+function fail(e){if(e!==0)toast(L.err)}
+function settings(){head(L.set,show);
+ [[L.pls,plView],[L.cLive,function(){catView('live')}],[L.cMov,function(){catView('movie')}],[L.cSer,function(){catView('series')}],
+  [L.imp,importList],[L.teams,function(){teamsView(false)}],[L.adult,adultView],[L.lang,langView]].forEach(function(x){list.appendChild(row(x[0],null,null,x[1]))})}
+function plView(){msg(L.load);api('pls').then(function(a){head(L.pls,settings);
+ a.forEach(function(p){var c=card(p.n,p.h,p.a?L.main:null),acts=el('div','acts');
+  if(!p.a)acts.appendChild(sb(L.mkMain,function(){api('plmain',{i:p.i}).then(function(){toast(L.done);setTimeout(plView,800)}).catch(fail)}));
+  acts.appendChild(sb(L.ren,function(){var n=prompt(L.newName,p.n);if(n&&n.trim())api('plren',{i:p.i,n:n.trim()}).then(function(){setTimeout(plView,300)}).catch(fail)}));
+  acts.appendChild(sb(L.del,function(){if(confirm(L.delQ+'\n'+p.n))api('pldel',{i:p.i}).then(function(){toast(L.done);setTimeout(plView,800)}).catch(fail)}));
+  c.appendChild(acts);list.appendChild(c)});
+ list.appendChild(el('div','sec',L.add));
+ var f=el('div','card');f.appendChild(el('small',null,L.m3u));var u=el('input','fld');u.placeholder='http://…/playlist.m3u';f.appendChild(u);
+ f.appendChild(el('small',null,L.xt));var hs=el('input','fld');hs.placeholder=L.srv;var us=el('input','fld');us.placeholder=L.usr;us.autocapitalize='off';var pw=el('input','fld');pw.placeholder=L.pw;pw.autocapitalize='off';
+ f.appendChild(hs);f.appendChild(us);f.appendChild(pw);
+ f.appendChild(sb(L.send,function(){var b='code='+encodeURIComponent(code);
+  if(u.value.trim())b+='&url='+encodeURIComponent(u.value.trim());else b+='&host='+encodeURIComponent(hs.value.trim())+'&user='+encodeURIComponent(us.value.trim())+'&pass='+encodeURIComponent(pw.value.trim());
+  fetch('/send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:b}).then(function(r){if(!r.ok)throw 1;toast(L.sent);u.value='';pw.value=''}).catch(function(){toast(L.err)})},true));
+ list.appendChild(f)}).catch(function(e){if(e!==0)msg(L.err)})}
+function catView(a,keep){var y=keep?window.scrollY:0;if(!keep)msg(L.load);api('vcats',{a:a}).then(function(d){head(a=='live'?L.cLive:a=='movie'?L.cMov:L.cSer,settings);
+ list.appendChild(el('div','msg',L.catHint));
+ var gens=d.c.filter(function(x){return x.gen}),cs=d.c.filter(function(x){return !x.gen});
+ if(gens.length){list.appendChild(el('div','sec',L.genres));gens.forEach(function(x){var c=card(x.l,null,x.h?L.hidden:null),acts=el('div','acts');
+  acts.appendChild(sb(x.h?L.showC:L.hide,function(){api('vhide',{a:a,g:x.g,h:x.h?0:1}).then(function(){catView(a,1)}).catch(fail)}));c.appendChild(acts);if(x.h)c.style.opacity=0.55;list.appendChild(c)});
+  list.appendChild(el('div','sec',L.cats))}
+ cs.forEach(function(x){var c=card(x.g,x.n+'',x.h?L.hidden:null),acts=el('div','acts');
+  function mv(dir){api('vmove',{a:a,g:x.g,d:dir}).then(function(){catView(a,1)}).catch(fail)}
+  acts.appendChild(sb('↑ '+L.up,function(){mv('up')}));acts.appendChild(sb('↓ '+L.down,function(){mv('down')}));
+  acts.appendChild(sb('⇡ '+L.top,function(){mv('top')}));acts.appendChild(sb('⇣ '+L.bottom,function(){mv('bottom')}));
+  if(a=='live')acts.appendChild(sb(x.f?'★':'☆',function(){api('vfav',{g:x.g}).then(function(){setTimeout(function(){catView(a,1)},200)}).catch(fail)},x.f));
+  acts.appendChild(sb(x.h?L.showC:L.hide,function(){api('vhide',{a:a,g:x.g,h:x.h?0:1}).then(function(){setTimeout(function(){catView(a,1)},200)}).catch(fail)}));
+  c.appendChild(acts);if(x.h)c.style.opacity=0.55;list.appendChild(c)});
+ if(keep)window.scrollTo(0,y)}).catch(function(e){if(e!==0)msg(L.err)})}
+function adultView(){msg(L.load);api('adult').then(function(d){head(L.adult,settings);var c=card(d.hide?L.adultOn:L.adultOff,null,null),acts=el('div','acts');
+ if(d.hide)acts.appendChild(sb(d.pin?L.adultShow:L.adultShow0,function(){var p=d.pin?prompt(L.pinQ):'';if(d.pin&&!p)return;
+  api('adultset',{v:0,pin:p||''}).then(function(r){if(r.ok===false){toast(L.pinBad);return}toast(L.done);setTimeout(adultView,300)}).catch(fail)}));
+ else acts.appendChild(sb(L.adultHide,function(){api('adultset',{v:1}).then(function(){toast(L.done);setTimeout(adultView,300)}).catch(fail)},true));
+ c.appendChild(acts);list.appendChild(c)}).catch(function(e){if(e!==0)msg(L.err)})}
+function langView(){msg(L.load);api('langs').then(function(d){head(L.lang,settings);
+ [{c:'',n:L.auto}].concat(d.l).forEach(function(x){list.appendChild(row(x.n,null,x.c==d.c?'✓':null,function(){api('setlang',{c:x.c}).then(function(){toast(L.done);setTimeout(langView,300)}).catch(fail)}))})}).catch(function(e){if(e!==0)msg(L.err)})}
+var sub='today',sdata={},stime={};
+function day(s){var d=new Date(s*1000),n=new Date();if(d.toDateString()==n.toDateString())return hm(s);return d.getDate()+'.'+(d.getMonth()+1)+'. '+hm(s)}
+function subBar(){var b=el('div','sub');[['today',L.today],['fav',L.sfav],['mine',L.mine],['teams',L.teams]].forEach(function(x){var t=el('button',x[0]==sub?'on':null,x[1]);
+ t.onclick=function(){sub=x[0];sportView()};b.appendChild(t)});return b}
+function gameCard(g){var title=g.ti?g.ti:(g.h+(g.st>0?'  '+g.hs+' : '+g.as+'  ':'  vs  ')+g.a);
+ var c=card(title,g.lg+' · '+(g.st==1?L.live+' '+g.d:g.st==2?g.d:day(g.t)),g.st==1?L.live:null),acts=el('div','acts');
+ if(g.w&&g.st<2)acts.appendChild(sb('▶ '+L.watch,function(){api('swatch',{k:g.k}).then(function(r){toast(r.ok?L.ok+' '+r.ch:L.noCh)}).catch(fail)},true));
+ acts.appendChild(sb(g.p?'✓ '+L.pinned:L.pin,function(b){api('spin',{k:g.k}).then(function(r){g.p=r.p;b.textContent=r.p?'✓ '+L.pinned:L.pin;stime.mine=0}).catch(fail)},g.p));
+ c.appendChild(acts);return c}
+function sportView(){if(sub=='teams'){teamsView(true);return}
+ var draw=function(d){list.innerHTML='';list.appendChild(subBar());
+  if(d.off){list.appendChild(el('div','msg',L.sOff));return}
+  var q=qEl.value.trim().toLowerCase(),a=d.g.filter(function(g){return !q||(g.h+' '+g.a+' '+g.ti+' '+g.lg).toLowerCase().indexOf(q)>=0});
+  if(!a.length){list.appendChild(el('div','msg',sub=='fav'&&d.nofav?L.noFav:sub=='mine'?L.noMine:L.noGames));return}
+  a.forEach(function(g){list.appendChild(gameCard(g))})};
+ if(sdata[sub]&&Date.now()-(stime[sub]||0)<30000){draw(sdata[sub]);return}
+ list.innerHTML='';list.appendChild(subBar());list.appendChild(el('div','msg',L.load));var me=sub;
+ api('sport',{v:sub}).then(function(d){sdata[me]=d;stime[me]=Date.now();if(sub==me&&kind=='sp')draw(d)}).catch(function(e){if(e!==0)msg(L.err)})}
+var tLeague='';
+function teamsView(inSport){msg(L.load);api('sleagues').then(function(ls){list.innerHTML='';
+ if(inSport)list.appendChild(subBar());else{head(L.teams,settings)}
+ if(!ls.length){list.appendChild(el('div','msg',L.noGames));return}
+ if(!tLeague||!ls.some(function(l){return l.p==tLeague}))tLeague=ls[0].p;
+ var sel=el('select','fld');ls.forEach(function(l){var o=el('option',null,l.n);o.value=l.p;if(l.p==tLeague)o.selected=true;sel.appendChild(o)});list.appendChild(sel);
+ var box=el('div');list.appendChild(box);
+ function fill(){box.innerHTML='';box.appendChild(el('div','msg',L.load));api('steams',{p:tLeague}).then(function(ts){box.innerHTML='';if(!ts.length){box.appendChild(el('div','msg',L.noGames));return}
+  ts.forEach(function(t){var r=row(t.n,null,null,null),st=el('span','star',t.f?'★':'☆');r.insertBefore(st,r.firstChild);
+   r.onclick=function(){api('stfav',{p:tLeague,id:t.id}).then(function(x){t.f=x.f;st.textContent=x.f?'★':'☆';stime.fav=0}).catch(fail)};box.appendChild(r)})}).catch(function(e){if(e!==0)box.innerHTML=''})}
+ sel.onchange=function(){tLeague=sel.value;fill()};fill()}).catch(function(e){if(e!==0)msg(L.err)})}
+document.getElementById('gear').onclick=settings;
 var rdata=null,rt=0;
 function resumeView(){var go=function(){list.innerHTML='';var a=(rdata||[]).filter(function(x){return x.k==kind});
  if(!a.length){msg(L.hint);return}
@@ -167,9 +276,10 @@ function resumeView(){var go=function(){list.innerHTML='';var a=(rdata||[]).filt
  if(rdata&&Date.now()-rt<30000){go();return}
  api('resume').then(function(d){rdata=d;rt=Date.now();if(!qEl.value.trim())go()}).catch(function(e){if(e!==0)msg(L.hint)})}
 function show(){var q=qEl.value.trim();
+ if(kind=='sp'){sportView();return}
  if(!q){if(kind=='l')cats();else resumeView();return}
  items(data[kind])}
-function search(){var q=qEl.value.trim(),me=++seq;if(!q){show();return}
+function search(){var q=qEl.value.trim(),me=++seq;if(!q||kind=='sp'){show();return}
  api('search',{q:q}).then(function(d){if(me!=seq)return;if(d.loading){msg(L.wait);return}data=d;
   var bs=document.querySelectorAll('#tabs button');bs[0].textContent=d.nm?'${js(t("Filme", "Movies"))} '+d.nm:'${js(t("Filme", "Movies"))}';
   bs[1].textContent=d.ns?'${js(t("Serien", "Series"))} '+d.ns:'${js(t("Serien", "Series"))}';bs[2].textContent=d.nl?'Live TV '+d.nl:'Live TV';show()}).catch(function(e){if(e!==0)msg(L.err)})}

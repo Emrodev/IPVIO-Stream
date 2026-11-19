@@ -2,6 +2,7 @@ package com.ipvio.stream
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit
 object SubSearch {
     private val client = Net.base.newBuilder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).build()
     private const val MAX_FILES = 200
+    private const val TAG = "IPVIO-Sub"
 
     /** A downloaded subtitle file attached to a title. */
     data class Sub(val file: File, val lang: String, val label: String) {
@@ -52,13 +54,28 @@ object SubSearch {
             val sd = async {
                 if (Config.SD_KEY.isEmpty()) null else runCatching {
                     val (code, body) = get(Request.Builder().url(SubSearchLogic.sdSearchUrl(q, Config.SD_KEY)).build())
-                    if (code == 200) SubSearchLogic.sdHits(body, q) to null else emptyList<SubSearchLogic.Hit>() to "$code"
+                    if (code == 200) {
+                        val p = SubSearchLogic.sdParse(body, q)
+                        // Diagnostics only: HTTP code and counts, never the address (it holds the key)
+                        Log.i(TAG, "SubDL http=200 raw=${p.raw} kept=${p.hits.size} episode=${q.isEpisode} tmdb=${q.tmdbId > 0} error=${p.error}")
+                        p.hits to p.error
+                    } else {
+                        Log.i(TAG, "SubDL http=$code")
+                        emptyList<SubSearchLogic.Hit>() to SubSearchLogic.sdHttpError(code, body)
+                    }
                 }.getOrElse { emptyList<SubSearchLogic.Hit>() to errName(it) }
             }
             val parts = listOfNotNull(os.await()?.let { SubSearchLogic.OS to it }, sd.await()?.let { SubSearchLogic.SD to it })
-            val hits = SubSearchLogic.rank(parts.flatMap { it.second.first }, q, AppSettings.ccPref)
-            val errs = parts.filter { it.second.second != null }.joinToString(", ") { it.first + " " + it.second.second }
-            Result(hits, if (hits.isEmpty() && errs.isNotEmpty()) "Suche fehlgeschlagen: $errs" else null)
+            val all = parts.flatMap { it.second.first }
+            val hits = SubSearchLogic.rank(all, q, AppSettings.ccPref)
+            Log.i(TAG, "search found=${all.size} wanted=${hits.size} langs=${q.langs}")
+            val errs = parts.filter { it.second.second != null }.joinToString(" · ") { it.first + ": " + it.second.second }
+            Result(hits, when {
+                hits.isNotEmpty() -> null
+                all.isNotEmpty() -> "Keine Untertitel in den gewünschten Sprachen"
+                errs.isNotEmpty() -> "Suche fehlgeschlagen · $errs"
+                else -> null
+            })
         }
     }
 

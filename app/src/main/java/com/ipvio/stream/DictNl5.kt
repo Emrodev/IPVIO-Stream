@@ -627,4 +627,12 @@ TD¦DS
 OTN¦VNV
 Serie¦Reeks
 J.¦jr
+# API keys by phone and subtitle search (release 1.4.2)
+Am Handy eingeben¦Op telefoon invoeren
+Schlüssel vom Handy erhalten und gespeichert. Jetzt „Speichern und prüfen“ drücken.¦Sleutel van je telefoon ontvangen en opgeslagen. Druk nu op “Opslaan en controleren”.
+Eingabe am Handy beenden¦Invoer via telefoon stoppen
+Untertitel online suchen¦Ondertitels online zoeken
+Kostenlos unter subdl.com > Konto > API. Im Player unter „Audio & Untertitel“ > „Untertitel online suchen“ werden beide Dienste gefragt.¦Gratis op subdl.com > Account > API. In de speler onder “Audio & ondertitels” > “Ondertitels online zoeken” worden beide diensten bevraagd.
+Keine Untertitel in den gewünschten Sprachen¦Geen ondertitels in de gewenste talen
+Kein Schlüssel für die Untertitel-Suche. Einstellungen > API-Schlüssel¦Geen sleutel voor het zoeken naar ondertitels. Instellingen > API-sleutels
 """

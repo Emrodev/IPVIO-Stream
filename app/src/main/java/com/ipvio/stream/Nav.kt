@@ -75,6 +75,11 @@ object AppNav {
     var homeSignal by androidx.compose.runtime.mutableIntStateOf(0)
     /** The View settings ask the movie area to open its categories screen (counts up). */
     var openCatsSignal by androidx.compose.runtime.mutableIntStateOf(0)
+    /**
+     * W-002: set when the movie or series area was chosen in the menu and Settings > General > "Movies and series straight
+     * to the categories" is on. The area opens its categories screen as soon as its data is ready (consumed once).
+     */
+    var pendingVodCats by androidx.compose.runtime.mutableIntStateOf(-1)
     /** Same for the "All movies" grid (consumed by the movie area). */
     var openBrowseSignal by androidx.compose.runtime.mutableIntStateOf(0)
     /** View settings preview: scroll the home screen to the first of these block keys ("a|b"); "" = nothing, "top" = to the top. */
