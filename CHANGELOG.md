@@ -2,6 +2,12 @@
 
 ## Unreleased
 - Security (#69): if a provider's HTTPS certificate does not match its address, the app no longer switches to an unencrypted connection on its own. It asks once per server ("Unverschlüsselte Verbindung?"); only after you agree is that server reached over http, and the choice is remembered on the device. Not device tested yet
+- Playlist import (#90): new button "Kennung: VLC / IPVIO" in the add screen. Some providers reject the VLC user-agent (HTTP 403); with IPVIO the playlist sends the app's own identifier. Default stays VLC. Not device tested yet
+- Playlists (#111): each playlist shows its channel, movie and series counts in Settings > Playlists (after it was loaded once). Not device tested yet
+- Detail page (#15): the Trailer button plays the TMDB trailer inside the app (WebView), instead of opening YouTube. Without a trailer it still searches YouTube. Not device tested yet
+- Settings (#95): new option "Bildschirm beim Stöbern wach halten" (default off): the screen stays awake while the app is open. Not device tested yet
+- Live TV (#102): live channels whose group name says "Movies" stay in Live TV (movie groups no longer catch live addresses). Not device tested yet
+- Playlists (#112): a saved playlist list that cannot be decrypted is no longer overwritten by the next save; it is kept under a separate key and the app reports it. Not device tested yet
 
 ## 1.4.3 (versionCode 9)
 - Live sync (Google Drive): favorites and history follow your devices automatically. Switch it on in Settings > Storage > Google Drive on each device; it is off by default. Upload a few seconds after a change, download when the app is in front (about every minute). Merged on the device, a safety copy is kept before each merge. Not device tested yet

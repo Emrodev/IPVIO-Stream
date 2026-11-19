@@ -1,6 +1,10 @@
-Last update: 2026-11-12 (release 1.4 prepared). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-19 (GitHub issue batch, see `docs/tasks/T-027-issue-batch.md`). Read `CLAUDE.md` first, then this file.
 
-## Current task
+## Current task (19 Nov 2026)
+
+Issue batch on `claude/jolly-ride-mr9tgm`: #69 (consent before an http fallback, T-026), #90, #111, #15, #95, #102, #112 implemented; #28 no change needed (to be confirmed on a device); #73, #108, #104 analysed, logs needed. **Nothing built with Gradle, nothing tested on a device.** Pure logic tests run on the JVM (all green). Not merged into `dev`. Next: maintainer device tests (steps in T-026 and T-027), then a review of the protected-area changes (#102 classifier, #112 storage) before a PR into `dev`.
+
+## Previous task
 
 Release 1.4 (`versionCode` 5): `main` plus the speed series (T-019 to T-023), R8 over the whole app (T-024) and the update card fix (T-025). Reported by the maintainer on 12 Nov 2026: built and tested on the device, works. The individual checks and any measurements were not recorded. The statuses "not built, not tested" further down for these tasks are older than this report. The maintainer builds the signed APK, creates `update.json` and publishes the GitHub release `v1.4` (steps in `docs/RELEASE.md`). The assistant did not build or publish anything. Rollback for R8 if users report a crash at start: `enable = false` in `app/build.gradle.kts` and a new release.
 
