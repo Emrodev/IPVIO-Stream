@@ -94,6 +94,8 @@ object XtreamLogic {
         val sb = StringBuilder(160).append("#EXTINF:-1")
         attr(f["stream_icon"]).takeIf { it.startsWith("http") }?.let { sb.append(" tvg-logo=\"").append(it).append('"') }
         sb.append(" group-title=\"").append(attr(group(f, cats))).append('"')
+        // #22: the provider's "added" date (Unix seconds) for "Neu hinzugefügt"; only digits are written
+        f["added"]?.trim()?.takeIf { it.isNotEmpty() && it.all { ch -> ch.isDigit() } }?.let { sb.append(" added=\"").append(it).append('"') }
         return sb.append(',').append(n).append('\n').append(movieUrl(a, id, f["container_extension"])).toString()
     }
 
