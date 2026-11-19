@@ -62,6 +62,12 @@ All 41 pure JVM test classes that compile without Android (281 tests) pass, afte
 
 The maintainer left the choice to the assistant. CI workflows need approval (CLAUDE.md section 6), so nothing was changed. Proposal for a later, separately approved change: a tag-triggered workflow that builds the signed release APK, `actions/attest-build-provenance` on it, and the SHA-256 of the signing certificate in the README.
 
+## Decisions (19 Nov 2026, maintainer answers)
+
+- **Arabic and Polish:** PR #116 (`feat/i18n-ar-pl` into `dev`) with the translations from #93 and #106. #93 and #106 stay open. Xtream part of #106 is not included.
+- **#10 MKV seeking:** approved as "umsetzen", but NOT implemented in this session. The fix changes the media source for every MKV, and it cannot be tested here. Plan: a wrapper around the Matroska extractor, active only for files without cues, tested on a device first. Still open.
+- **#24 stream info:** not now (no ffprobe dependency).
+
 ## Wishes
 
 - #110 Trakt: the maintainer prefers the live API sync (T-031) over the one-time ZIP import (T-030, postponed).
