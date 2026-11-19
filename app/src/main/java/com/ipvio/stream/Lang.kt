@@ -26,6 +26,8 @@ object Lang {
         I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6)
         // Arabic: PR #93 (DictAr1–5, by MADJOUR / MAMIMami19) plus DictAr6 (texts newer than the PR)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("ar"), DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6)
+        // Polish: PR #106 (DictPl1–6) plus DictPl7 (texts newer than the PR)
+        I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7)
     }
 
     /** Index in I18nCore.CODES. Reads the state so texts are redrawn on switching. */
@@ -48,7 +50,7 @@ object Lang {
     /** Language code for TMDB requests, e.g. "de-DE". */
     fun tmdb(): String = when (code()) {
         "en" -> "en-US"; "tr" -> "tr-TR"; "bs" -> "bs-BA"; "hr" -> "hr-HR"; "sr" -> "sr-RS"
-        "es" -> "es-ES"; "fr" -> "fr-FR"; "it" -> "it-IT"; "nl" -> "nl-NL"; "ar" -> "ar-SA"; else -> "de-DE"
+        "es" -> "es-ES"; "fr" -> "fr-FR"; "it" -> "it-IT"; "nl" -> "nl-NL"; "ar" -> "ar-SA"; "pl" -> "pl-PL"; else -> "de-DE"
     }
 
     fun tr(s: String): String {
