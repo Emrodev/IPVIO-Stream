@@ -247,7 +247,7 @@ licenses/                             font licences
 
 Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.
 
-- Ko-fi: https://ko-fi.com/ipviodude
+- Ko-fi: https://ko-fi.com/ipviodev
 - PayPal: https://www.paypal.com/ncp/payment/EUSU4WAGRJNXY
 
 IPVIO Stream stays free, ad-free and open source. Donations are voluntary and do not unlock any features.

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Donate: the Ko-fi link now points to https://ko-fi.com/ipviodev (app page and README)
 - Docs: README rewritten. Free and open-source notice and a developer note at the top, quick start with the Downloader code, key features, a "Cool features" section (live sync, API keys, subtitle search, Boomer mode, dual and multi view, list import, favourites order, demo mode), remote-control tips, Reddit community link. Screenshots still the old ones (T-026)
 - Docs: new `docs/SUBTITLES.md` with step-by-step keys for SubDL and OpenSubtitles (T-026)
 - Docs: `docs/FAQ.md` extended (free, installing, playlists, subtitles, live sync, troubleshooting); Stalker series now described as loaded when opened (T-026)
