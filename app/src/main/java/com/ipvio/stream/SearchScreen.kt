@@ -191,6 +191,9 @@ fun SearchScreen(
                     sugg.forEachIndexed { i, w ->
                         MiniChip(w.replaceFirstChar { it.uppercase() }, false, if (i == 0) Modifier.focusRequester(firstSugg) else Modifier, raw = true) {
                             SearchState.query = WordSuggest.apply(SearchState.query, w)
+                            // #101: the chip list changes after a pick and the focused chip disappears, so focus would fall
+                            // to the sidebar. Keep it in the search screen: back to the input (same target as Back).
+                            runCatching { ContentFocus.req.requestFocus() }
                         }
                     }
                 }
