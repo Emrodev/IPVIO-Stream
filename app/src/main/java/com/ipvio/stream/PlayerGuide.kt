@@ -365,7 +365,8 @@ fun Guide(
                                 ch, ch.id == curId, { winStart }, viewMin, dpm, nowSec, rowH.dp, GuidePrefs.hidePast, cellReq,
                                 onInfo = { e -> infoE = e; infoItem = ch },
                                 onShift = { e -> shiftFor(e) },
-                                onRowFocus = { e -> focusedIdx = i; rowFocus.value = e to ch; jumpScope.launch { holdJump(ls, i) } },
+                                onRowFocus = { e -> rowFocus.value = e to ch; jumpScope.launch { holdJump(ls, i) } },
+                                onRowHasFocus = { focusedIdx = i },
                                 onBlock = { inB, r -> inBlock = inB; inCats = false; rowReq = r; if (inB) rowFocus.value = null },
                                 // Left from the channel column: to the categories (before: close)
                                 onClose = { if (!runCatching { catReq.requestFocus() }.isSuccess) onClose() },
@@ -524,7 +525,9 @@ private fun guideOkAction(e: EpgEntry?, ch: Item?, nowSec: Long): String {
 private fun GuideRow(
     ch: Item, current: Boolean, winStart: () -> Long, viewMin: Int, dpm: Float, nowSec: Long, rowH: Dp, hidePast: Boolean,
     cellReq: FocusRequester, onInfo: (EpgEntry?) -> Unit, onShift: (EpgEntry) -> Unit, onRowFocus: (EpgEntry?) -> Unit,
-    onBlock: (Boolean, FocusRequester) -> Unit, onClose: () -> Unit, onArchive: (EpgEntry) -> Unit, onPick: () -> Unit
+    onBlock: (Boolean, FocusRequester) -> Unit, onClose: () -> Unit, onArchive: (EpgEntry) -> Unit, onPick: () -> Unit,
+    /** Focus is on this row (channel cell or one of its shows); used for the Up/Down wrap-around (#107) */
+    onRowHasFocus: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
@@ -550,7 +553,8 @@ private fun GuideRow(
     val hour by remember { androidx.compose.runtime.derivedStateOf { Math.floorDiv(winStart(), 3600L) } }
     val from = hour * 3600L - 120 * 60L
     val to = hour * 3600L + 3600L + (viewMin + 120) * 60L
-    Row(Modifier.height(rowH).padding(vertical = 3.dp)) {
+    // hasFocus is true for the row's channel cell and for every show block in it
+    Row(Modifier.height(rowH).padding(vertical = 3.dp).onFocusChanged { if (it.hasFocus) onRowHasFocus() }) {
         var f by remember { mutableStateOf(false) }
         val shape = RoundedCornerShape(DS.RadiusS)
         Row(
