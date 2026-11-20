@@ -222,6 +222,14 @@ object LoadLogic {
         val hit = names.count { it in found }
         return hit * 2 < names.size
     }
+
+    /**
+     * Xtream: a part (live, movies or series) that failed while it was loaded next to the others is fetched again alone
+     * when the cause was a network error or an incomplete answer (some providers refuse parallel requests).
+     * Everything else (login error, abort) is final.
+     */
+    fun retriesSequentially(cause: Throwable?): Boolean =
+        cause is java.io.IOException || (cause is PlaylistError && cause.incomplete)
 }
 
 /**

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Playlist setup (Xtream): live channels, movies and series load at the same time again, as before 1.4.4 (the sublist change had made them load one after the other, which slowed the first setup). If a provider refuses parallel requests (errors such as 884/885) or a part fails, only that part is fetched again, one by one, after the others have finished. Not measured, not device tested yet
 
 ## 1.4.4 (versionCode 10)
 - Trailer (T-032): the Trailer button now opens YouTube at once (the app or the browser), without the in-app player: on test devices the in-app trailer showed no picture and the cause was not found. YouTube starts in the app's own task, so Back should return to the detail page (the trailer id is now checked before it goes into the address). The in-app player code (`TrailerDialog.kt`) stays in the repository, unused. Not device tested yet
