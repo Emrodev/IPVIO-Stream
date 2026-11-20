@@ -36,6 +36,7 @@ class TrailerLogicTest {
         assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_ERR 153") == "Trailer: player error 153")
         assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_STATE -1") == "Trailer: player state -1")
         assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_TIMEOUT") == "Trailer: no playback after 15 s")
+        assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_LOAD") == "Trailer: iframe loaded")
         assertNull(TrailerLogic.diagLine(null))
         assertNull(TrailerLogic.diagLine("IPVIO_TRAILER_ERR abc"))
         assertNull(TrailerLogic.diagLine("IPVIO_TRAILER_ERR 12345"))

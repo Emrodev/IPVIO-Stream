@@ -29,7 +29,7 @@ object TrailerLogic {
     private const val DIAG_SCRIPT =
         "var f=document.getElementById('yt'),ok=false;" +
             "function s(o){try{f.contentWindow.postMessage(JSON.stringify(o),'*')}catch(e){}}" +
-            "f.addEventListener('load',function(){s({event:'listening',id:1,channel:'widget'});" +
+            "f.addEventListener('load',function(){console.log('IPVIO_TRAILER_LOAD');s({event:'listening',id:1,channel:'widget'});" +
             "s({event:'command',func:'addEventListener',args:['onError'],id:1,channel:'widget'});" +
             "s({event:'command',func:'addEventListener',args:['onStateChange'],id:1,channel:'widget'})});" +
             "window.addEventListener('message',function(e){if(String(e.origin).indexOf('youtube')<0)return;var d;" +
@@ -43,6 +43,7 @@ object TrailerLogic {
     /** Diagnose line for a WebView console message of the embed page, or null for any other message. */
     fun diagLine(console: String?): String? {
         if (console == null) return null
+        if (console == "IPVIO_TRAILER_LOAD") return "Trailer: iframe loaded"
         if (console == "IPVIO_TRAILER_TIMEOUT") return "Trailer: no playback after 15 s"
         val m = DIAG_LINE.matchEntire(console) ?: return null
         val code = m.groupValues[2]

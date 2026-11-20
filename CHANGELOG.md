@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Trailer (T-032): Settings > Diagnose now also lists load errors of the YouTube frame, SSL errors and "iframe loaded", to see why the player never starts (20 Nov: only "no playback after 15 s" was reported). Diagnostics only, playback unchanged. Not device tested yet
 - Trailer (T-032): the trailer page now also reports the YouTube player's own error code, state and a 15 s no-playback timeout to Settings > Diagnose ("Trailer: player error …"). Diagnostics only, playback unchanged. Not device tested yet
 - Trailer (T-032): WebView errors are written to Settings > Diagnose (error codes only), to find the cause of black trailers. Not device tested yet
 - Playlist import (19 Nov feedback): when the playlist is too big for the device's memory, the add screen now shows a "Sprachen wählen" button next to "Hinzufügen". It opens the language selection directly, so no second press of "Hinzufügen" is needed. Not device tested yet

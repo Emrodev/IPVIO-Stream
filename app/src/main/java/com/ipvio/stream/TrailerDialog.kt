@@ -1,6 +1,8 @@
 package com.ipvio.stream
 
 import android.webkit.ConsoleMessage
+import android.net.http.SslError
+import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -64,7 +66,13 @@ fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit 
                                 request?.isForMainFrame != false
                             // Diagnostics for the black-picture trailers (T-032): codes only, no addresses
                             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
-                                if (request?.isForMainFrame != false) Diag.report("Trailer: WebView-Fehler ${error?.errorCode}")
+                                // Also errors of the YouTube iframe (T-032, 20 Nov): they were hidden before
+                                Diag.report("Trailer: WebView-Fehler ${error?.errorCode} (Hauptseite=${request?.isForMainFrame != false})")
+                            }
+                            // Same behaviour as the default (connection is refused); only reports the reason
+                            override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                                Diag.report("Trailer: SSL-Fehler ${error?.primaryError}")
+                                handler?.cancel()
                             }
                             override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
                                 Diag.report("Trailer: HTTP ${errorResponse?.statusCode} (Hauptseite=${request?.isForMainFrame == true})")
