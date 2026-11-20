@@ -175,13 +175,14 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             }
     }
     val h = remember { Handler(Looper.getMainLooper()) }
-    // State for keeping the screen awake: applies only while really playing or buffering
-    // (not when paused, ended, on error or in the background). Otherwise the screensaver starts after about 5 minutes.
+    // State for keeping the screen awake: applies while playing, buffering or paused by the user
+    // (not after the sleep timer, at the end, on error or in the background).
     var pWhenReady by remember { mutableStateOf(true) }
+    var sleepExpired by remember { mutableStateOf(false) }
     var pState by remember { mutableIntStateOf(Player.STATE_IDLE) }
     var pError by remember { mutableStateOf(false) }
     var foreground by remember { mutableStateOf(true) }
-    KeepScreenOn("player", AwakeLogic.playerNeedsScreen(pWhenReady, pState, pError, foreground))
+    KeepScreenOn("player", AwakeLogic.playerNeedsScreen(pWhenReady, pState, pError, foreground, sleepExpired))
     var cur by remember { mutableStateOf(req) }
     // W-005: the subtitle delay applies to one title only
     LaunchedEffect(cur.itemId, cur.season, cur.episode) { PlayerSync.resetSub() }
@@ -767,7 +768,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                 if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) lastSeekT = System.currentTimeMillis()
             }
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
-            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { pWhenReady = playWhenReady }
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { pWhenReady = playWhenReady; if (playWhenReady) sleepExpired = false }
             override fun onTracksChanged(tracks: Tracks) {
                 tracksVer++
                 ensureAudio()
@@ -995,6 +996,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         if (sleepAt > 0L) {
             delay((sleepAt - System.currentTimeMillis()).coerceAtLeast(0L))
             if (sleepAt > 0L) {
+                sleepExpired = true   // the screen is released again (a plain pause keeps it on)
                 player.pause()
                 sleepAt = 0L; sleepIdx = 0
                 flash = Flash(PIcon.Pause, "Sleep-Timer")
