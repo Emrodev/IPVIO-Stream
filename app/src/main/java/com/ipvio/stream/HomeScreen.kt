@@ -112,14 +112,17 @@ private class HomeData(
 )
 
 private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>, noAdult: Boolean = false): HomeData {
-    val live = ArrayList<Item>(); val movies0 = ArrayList<Item>(); val series = ArrayList<Item>()
-    for (i in all) when (i.kind) { Kind.LIVE -> live.add(i); Kind.MOVIE -> movies0.add(i); Kind.SERIES -> series.add(i) }
+    val live = ArrayList<Item>(); val movies0 = ArrayList<Item>(); val series0 = ArrayList<Item>()
+    for (i in all) when (i.kind) { Kind.LIVE -> live.add(i); Kind.MOVIE -> movies0.add(i); Kind.SERIES -> series0.add(i) }
     // Show the same movie in several versions (HD, 4K, …) only once; the version is chosen on the detail page (source)
-    val movies = PlaylistLogic.firstPerKey(movies0) { it.mk + "|" + it.lang }
-    val genresOk = MetaRepo.enabled() && Classifier.supported(movies.size + series.size)
+    val moviesAll = PlaylistLogic.firstPerKey(movies0) { it.mk + "|" + it.lang }
+    val genresOk = MetaRepo.enabled() && Classifier.supported(moviesAll.size + series0.size)
     val ipvio = ipvioWanted && genresOk
-    val movieP = providerGroups(movies)
-    val seriesP = providerGroups(series)
+    // Provider categories keep everything; private categories (T-028) are left out of "All", genres, rows and Top lists
+    val movieP = providerGroups(moviesAll)
+    val seriesP = providerGroups(series0)
+    val movies = PrivateCats.filter(moviesAll)
+    val series = PrivateCats.filter(series0)
     // Home rows never show adult titles if wanted; categories, "All movies" and Live TV keep them (whoever looks finds them there)
     val rm = if (noAdult) movies.filterNot { ParentalLogic.isAdult(it.group, it.title) } else movies
     val rs = if (noAdult) series.filterNot { ParentalLogic.isAdult(it.group, it.title) } else series
@@ -228,11 +231,13 @@ fun HomeScreen(
     LaunchedEffect(all.isNotEmpty()) { if (all.isNotEmpty()) { trend = Trending.titles(); HomeVer.trend = trend } }
     val wantIpvio = AppSettings.ipvioFilter
     val noAdult = Parental.adultOffHome
-    val cached = HomeCache.get(all, order, wantIpvio, ver, trend, noAdult)
+    // Private categories (T-028) change the rows too: their version is part of the cache key
+    val verP = ver * 1000 + PrivateCats.version
+    val cached = HomeCache.get(all, order, wantIpvio, verP, trend, noAdult)
     // When inputs change, the previous state stays visible until the new result (produceState keeps the value)
-    val dataState = produceState(cached, all, order, wantIpvio, ver, trend, noAdult) {
-        value = HomeCache.get(all, order, wantIpvio, ver, trend, noAdult)
-            ?: withContext(Dispatchers.Default) { keepLiveLists(buildHome(all, wantIpvio, trend, noAdult), HomeCache.last()) }.also { HomeCache.put(all, order, wantIpvio, ver, trend, noAdult, it) }
+    val dataState = produceState(cached, all, order, wantIpvio, verP, trend, noAdult) {
+        value = HomeCache.get(all, order, wantIpvio, verP, trend, noAdult)
+            ?: withContext(Dispatchers.Default) { keepLiveLists(buildHome(all, wantIpvio, trend, noAdult), HomeCache.last()) }.also { HomeCache.put(all, order, wantIpvio, verP, trend, noAdult, it) }
     }
     // While recomputing: show the previous state, the loading skeleton only the very first time
     val prev = HomeCache.last()
@@ -645,6 +650,7 @@ fun HomeScreen(
                                     Text("Bearbeiten: Über jeder Reihe kannst du sie verschieben oder ausblenden.", color = Muted, fontSize = 15.sp)
                                 }
                             }
+                            if (HomeEdit.active) item(key = "ebhero") { HomeEditBar(ctx, "hero") }
                             if (ready.isNotEmpty() && HomeLayout.shown("hero")) item(key = "hero") { Hero(ready.toList(), heroH, true, onOpen, onPlayNow, header, { heroScroll(states[0]) }) { scope.launch { states[0].animateScrollToItem(0) } } }
                             else item(key = "top") { header(Modifier) }
                             val wl = wlVod
@@ -1054,4 +1060,4 @@ private fun BillboardLayer(fade: () -> Float, item: State<Item?>, infoMod: Modif
 
 /** Home rows without adult titles when Parental control > "never on the home pages" is on ([on]). */
 private fun homeSafe(list: List<Item>, on: Boolean): List<Item> =
-    if (!on) list else list.filterNot { ParentalLogic.isAdult(it.group, it.title) }
+    PrivateCats.filter(if (!on) list else list.filterNot { ParentalLogic.isAdult(it.group, it.title) })

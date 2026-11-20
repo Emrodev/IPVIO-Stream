@@ -18,6 +18,21 @@
 - Settings (#95): new option "Bildschirm beim Stöbern wach halten" (default off): the screen stays awake while the app is open. Not device tested yet
 - Live TV (#102): live channels whose group name says "Movies" stay in Live TV (movie groups no longer catch live addresses). Not device tested yet
 - Playlists (#112): a saved playlist list that cannot be decrypted is no longer overwritten by the next save; it is kept under a separate key and the app reports it. Not device tested yet
+- Donate: the Ko-fi link now points to https://ko-fi.com/ipviodev (app page and README)
+- Docs: README rewritten. Free and open-source notice and a developer note at the top, quick start with the Downloader code, key features, a "Cool features" section (live sync, API keys, subtitle search, Boomer mode, dual and multi view, list import, favourites order, demo mode), remote-control tips, Reddit community link. Screenshots still the old ones (T-026)
+- Docs: new `docs/SUBTITLES.md` with step-by-step keys for SubDL and OpenSubtitles (T-026)
+- Docs: `docs/FAQ.md` extended (free, installing, playlists, subtitles, live sync, troubleshooting); Stalker series now described as loaded when opened (T-026)
+- Docs: `docs/GOOGLE_DRIVE.md` corrected: since 1.4.3 the release APK shows the Google Drive section (T-026)
+- Docs: new `docs/PHONE.md` (phone search, quick playlist setup by QR code, phone control, categories, sport, imports, troubleshooting); README and FAQ link it (T-027)
+- Live sync (Google Drive) is confirmed working on the devices by the maintainer
+- Live TV: channels with a live address stay in Live TV even when their category is called "Movies", "Kino", "VOD" and so on (e.g. "EU | DE | Movies and Series"); before they were sorted into Movies and hidden with "Live TV only" (T-026)
+- Playlist loading: a download without a known size whose end looks cut off is no longer stored as the playlist; Xtream lists from get.php are also checked against the provider's live categories and loaded through the API when most are missing (T-026)
+- Settings > Playlists: a failed refresh is shown instead of staying silent, and the new button "Playlist komplett neu laden" deletes everything stored for the active playlist and downloads it again (T-026)
+- Diagnostics: logcat tag `IPVIO-PL` with counts per step of playlist loading (no addresses or passwords) (T-026)
+- Live TV channel list: Up on the first channel jumps to the last channel, Down on the last channel jumps to the first (issue #107). Held keys keep scrolling normally
+- TV guide: Up on the first channel jumps to the last channel, Down on the last channel jumps to the first (issue #107). Held keys keep scrolling normally
+- Movies and series filter: the language filter has its own icon (speech bubble) instead of the country globe (issue #26)
+- Private categories (T-028): press the menu key (or hold OK) on a category in Live TV, Movies or Series and choose "Privat machen". Titles from a private category show only inside that category: they are not added to Recently watched, Continue watching or the resume position, and they do not appear in "All channels" / "All movies", genre lists, search (TV and phone), the home rows, Multi view or Boomer mode. Marking a category removes its titles from history and Continue watching. Settings > Parental controls lists the private categories ("Nicht mehr privat") and has an option to treat parental-flagged categories as private (off by default). Part of the backup. Not device tested yet
 
 ## 1.4.3 (versionCode 9)
 - Live sync (Google Drive): favorites and history follow your devices automatically. Switch it on in Settings > Storage > Google Drive on each device; it is off by default. Upload a few seconds after a change, download when the app is in front (about every minute). Merged on the device, a safety copy is kept before each merge. Not device tested yet

@@ -3,7 +3,8 @@ package com.ipvio.stream
 import java.net.URLEncoder
 
 /** Own error message when loading the playlist (text is meant for the user and never contains the address). */
-class PlaylistError(msg: String) : Exception(msg)
+/** Wrong/failed load. [incomplete] = the provider answered, but a whole part of the list (e.g. all films) is missing. */
+class PlaylistError(msg: String, val incomplete: Boolean = false) : Exception(msg)
 
 /** Validation of playlist inputs and understandable error texts (without Android, testable). */
 object PlaylistLogic {

@@ -24,9 +24,7 @@ object Lang {
         loaded = true
         I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO, DictP)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6)
-        // Arabic: PR #93 (DictAr1–5, by MADJOUR / MAMIMami19) plus DictAr6 (texts newer than the PR)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("ar"), DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6)
-        // Polish: PR #106 (DictPl1–6) plus DictPl7 (texts newer than the PR)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7)
     }
 

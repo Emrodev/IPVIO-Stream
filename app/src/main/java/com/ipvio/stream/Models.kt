@@ -1,6 +1,12 @@
 package com.ipvio.stream
 
-enum class Kind { LIVE, MOVIE, SERIES }
+enum class Kind {
+    LIVE { override val displayName = "Live TV" },
+    MOVIE { override val displayName = "Movies" },
+    SERIES { override val displayName = "Series" };
+
+    abstract val displayName: String
+}
 
 data class Variant(val url: String, val label: String, val quality: String?, val lang: String?)
 
@@ -341,6 +347,12 @@ object M3uParser {
         }
     }
 
+    /**
+     * Address of a live channel: contains "/live/" (Xtream "…/live/user/pass/123.ts", Stalker "stalker://…/live/…")
+     * and is not a video file (a plain web server folder named "live" with .mp4 files stays a movie).
+     */
+    internal fun isLiveUrl(url: String): Boolean = url.contains("/live/") && !isVideoFile(url)
+
     /** The episode pattern needs an "S" directly followed by a digit; names without it skip the regular expression. */
     internal fun mayBeEpisode(name: String): Boolean {
         var i = name.indexOf('S')
@@ -358,12 +370,12 @@ object M3uParser {
         if (isSeparator(e.name)) return null
         val m = if (mayBeEpisode(e.name)) SE.find(e.name) else null
         val isSeriesUrl = e.url.contains("/series/")
-        // #102: a live address stays live, even in a group named "USA | Movies" (live channels such as HBO Comedy)
-        val liveUrl = LiveUrlLogic.isLiveUrl(e.url)
-        val isMovie = !liveUrl && (e.url.contains("/movie/") || isVideoFile(e.url) || langOf.vod(e.group))
-        // Stalker channels are always live, even in groups like "ENGLISH | PREMIUM MOVIES" (movie channels)
-        val stalkerLive = e.url.startsWith("stalker://") && e.url.contains("/live/")
-        val kind = if (stalkerLive || liveUrl) Kind.LIVE else if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
+        val isMovie = e.url.contains("/movie/") || isVideoFile(e.url) || langOf.vod(e.group)
+        // Channels with a live address are always live, even in groups like "ENGLISH | PREMIUM MOVIES" or
+        // "EU | DE | Movies and Series" (24/7 movie channels). Before, the category name made them movies, so they
+        // were missing from Live TV (and hidden completely with "Live TV only"). Applies to Stalker and Xtream addresses.
+        val liveUrl = isLiveUrl(e.url)
+        val kind = if (liveUrl) Kind.LIVE else if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
         val lang = langOf.of(e.group, e.name, kind == Kind.LIVE)
         val countKey = if (kind == Kind.SERIES) (m?.groupValues?.get(1) ?: e.name).trim().lowercase() else null
         st.add(lang, e.info.length + e.url.length + 2, countKey)

@@ -11,7 +11,12 @@ import java.security.SecureRandom
 import kotlin.concurrent.thread
 
 /** A playlist sent from the phone: either an M3U link or Xtream login data. */
-class PhoneInput(val url: String, val host: String, val user: String, val pass: String) {
+class PhoneInput(
+    val url: String,
+    val host: String,
+    val user: String,
+    val pass: String,
+) {
     val isXtream get() = url.isBlank()
 }
 
@@ -28,11 +33,15 @@ object PhoneImportLogic {
     /** Validates input; null = invalid. */
     fun toInput(f: Map<String, String>): PhoneInput? {
         val url = f["url"].orEmpty().trim()
-        if (url.isNotEmpty()) return if (url.startsWith("http://") || url.startsWith("https://")) PhoneInput(url, "", "", "") else null
+        if (url.isNotEmpty()) return if (url.startsWith("http://") || url.startsWith("https://")) PhoneInput(
+            url, "", "", ""
+        ) else null
         val host = f["host"].orEmpty().trim()
         val user = f["user"].orEmpty().trim()
         val pass = f["pass"].orEmpty().trim()
-        return if (host.isNotEmpty() && user.isNotEmpty() && pass.isNotEmpty()) PhoneInput("", host, user, pass) else null
+        return if (host.isNotEmpty() && user.isNotEmpty() && pass.isNotEmpty()) PhoneInput(
+            "", host, user, pass
+        ) else null
     }
 
     fun newCode(rnd: java.util.Random): String = (1000 + rnd.nextInt(9000)).toString()
@@ -69,7 +78,7 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
     private fun sendFileJs(fn: String, path: String, codeId: String, fileId: String, statusId: String): String =
         """<script>function $fn(){var f=document.getElementById('$fileId').files[0];var c=document.getElementById('$codeId').value;if(!f){return}
 document.getElementById('$statusId').textContent='…';fetch('$path?code='+encodeURIComponent(c)+'&name='+encodeURIComponent(f.name),{method:'POST',body:f})
-.then(function(r){return r.text()}).then(function(t){document.open();document.write(t);document.close()}).catch(function(){document.getElementById('$statusId').textContent='Error'})}</script>"""
+.then(function(r){return r.text()}).then(function(t){document.open();document.write(t);document.close()}).catch(function(){document.getElementById('$statusId').textContent='Error'})</script>"""
 
     fun page(li: Int): String = page(li, Features())
 
@@ -467,4 +476,3 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
         }.getOrNull()
     }
 }
-

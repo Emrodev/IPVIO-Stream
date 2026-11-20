@@ -14,7 +14,7 @@ object Donate {
     const val URL = "https://www.paypal.com/ncp/payment/EUSU4WAGRJNXY"
     /** Short form for display (without https://). */
     val SHORT: String get() = URL.removePrefix("https://www.")
-    const val KOFI_URL = "https://ko-fi.com/ipviodude"
+    const val KOFI_URL = "https://ko-fi.com/ipviodev"
     /** Short form of the Ko-Fi link for display (without https://). */
     val KOFI_SHORT: String get() = KOFI_URL.removePrefix("https://")
 }

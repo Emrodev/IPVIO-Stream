@@ -62,11 +62,12 @@ fun FilterIcon(icon: FIcon, color: Color, size: Dp = 20.dp) {
                 drawOval(color, o(8f, 3f), Size(8f * u, 18f * u), style = st)
             }
             FIcon.Language -> {
-                // Speech bubble with a text line (the country icon is a globe, so the two differ)
-                drawRoundRect(color, o(3.5f, 4f), Size(17f * u, 12f * u), CornerRadius(3f * u), style = st)
-                drawLine(color, o(7f, 16f), o(6.5f, 20.5f), 2f * u, StrokeCap.Round)
-                drawLine(color, o(6.5f, 20.5f), o(12f, 16f), 2f * u, StrokeCap.Round)
-                drawLine(color, o(7.5f, 10f), o(16.5f, 10f), 2f * u, StrokeCap.Round)
+                // Speech bubble with two text lines (the country filter uses the globe, so the two stay apart)
+                drawRoundRect(color, o(3.5f, 4.5f), Size(17f * u, 12f * u), CornerRadius(3f * u), style = st)
+                drawLine(color, o(8f, 16.5f), o(6f, 20.5f), 2f * u, StrokeCap.Round)
+                drawLine(color, o(6f, 20.5f), o(12f, 16.5f), 2f * u, StrokeCap.Round)
+                drawLine(color, o(7f, 9f), o(17f, 9f), 2f * u, StrokeCap.Round)
+                drawLine(color, o(7f, 12.5f), o(14f, 12.5f), 2f * u, StrokeCap.Round)
             }
             FIcon.View -> {
                 drawRoundRect(color, o(3.5f, 4f), Size(17f * u, 9.5f * u), CornerRadius(2.5f * u), style = st)

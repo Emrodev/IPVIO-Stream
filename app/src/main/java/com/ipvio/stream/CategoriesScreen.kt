@@ -194,7 +194,7 @@ fun CategoriesScreen(
                     }
                 } else null
                 val title = if (openFolder != null) req.title + "  ·  " + openFolder.prefix else req.title
-                if (CatPrefs.listView) ListMode(title, entries, catSort, firstFocus, pillFocus, pickOrOpen, onOpen, onMove) { bgItem = it }
+                if (CatPrefs.listView) ListMode(title, entries, catSort, firstFocus, pillFocus, pickOrOpen, onOpen, onMove, mode == 1) { bgItem = it }
                 else TileMode(entries, catSort, firstFocus, pickOrOpen)
             }
         }
@@ -225,7 +225,7 @@ object CatMemory {
 private fun ListMode(
     title: String, entries: List<Pair<String, List<Item>>>, sort: Int, firstFocus: FocusRequester, pillFocus: FocusRequester,
     onPick: (String, List<Item>, Int) -> Unit, onOpen: (Item) -> Unit,
-    onMove: ((String, Int) -> Unit)?, onFocusItem: (Item) -> Unit
+    onMove: ((String, Int) -> Unit)?, provider: Boolean, onFocusItem: (Item) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     // #65: restore the category by its name first; the index is only the fallback (rows can move or change)
@@ -314,6 +314,7 @@ private fun ListMode(
                 var moveMenu by remember { mutableStateOf(false) }
                 val all = if (isTopEntry(e.first)) e.second else StalkerMore.withAdded(e.first, e.second)
                 val isFloating = floating == e.first
+                val privKind = if (provider && !isTopEntry(e.first)) e.second.firstOrNull()?.kind else null
                 Box {
                     CatListRow(
                         e.first, StalkerMore.total(ctx, e.first, setOfNotNull(e.second.firstOrNull()?.kind)) ?: all.size, i == sel,
@@ -331,21 +332,26 @@ private fun ListMode(
                             } else Modifier
                         ),
                         onFocus = { sel = i }, onRight = { focusPreview() },
-                        onMenu = if (onMove != null && !isTopEntry(e.first)) ({ moveMenu = true }) else null,
+                        onMenu = if ((onMove != null || privKind != null) && !isTopEntry(e.first)) ({ moveMenu = true }) else null,
                         floating = isFloating
                     ) { if (!isFloating) onPick(e.first, all, sortFor(e.first, sort)) }
-                    // Issue 19: the menu stays open while moving step by step; the row (and with it the menu) follows the category
-                    if (moveMenu && onMove != null) OptionPopup(
-                        listOf("Mit Hoch/Runter verschieben", "Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben", "Ans Ende verschieben"),
+                    // Issue 19: the menu stays open while moving step by step; the row (and with it the menu) follows the category.
+                    // Provider categories also get "Privat machen" (T-028); genre lists have no private option.
+                    val moves = if (onMove != null) listOf("Mit Hoch/Runter verschieben", "Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben", "Ans Ende verschieben") else emptyList()
+                    if (moveMenu) OptionPopup(
+                        moves + listOfNotNull(privKind?.let { if (PrivateCats.isPrivate(it, e.first)) "Nicht mehr privat" else "Privat machen" }),
                         -1, { moveMenu = false }
                     ) { k ->
-                        movedName = e.first
-                        when (k) {
-                            0 -> { moveMenu = false; floating = e.first }
-                            1 -> onMove(e.first, -1)
-                            2 -> onMove(e.first, 1)
-                            3 -> { moveMenu = false; onMove(e.first, MOVE_TOP) }
-                            else -> { moveMenu = false; onMove(e.first, MOVE_BOTTOM) }
+                        if (k >= moves.size || onMove == null) { moveMenu = false; privKind?.let { privateToggle(ctx, it, e.first) } }
+                        else {
+                            movedName = e.first
+                            when (k) {
+                                0 -> { moveMenu = false; floating = e.first }
+                                1 -> onMove(e.first, -1)
+                                2 -> onMove(e.first, 1)
+                                3 -> { moveMenu = false; onMove(e.first, MOVE_TOP) }
+                                else -> { moveMenu = false; onMove(e.first, MOVE_BOTTOM) }
+                            }
                         }
                     }
                 }

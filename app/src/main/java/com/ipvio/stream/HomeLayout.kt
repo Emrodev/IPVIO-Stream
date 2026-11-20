@@ -57,15 +57,14 @@ open class BlockLayout(private val prefName: String, val blocks: List<LayoutBloc
         val p = prefs(c)
         order = normalize((p.getString("order", "") ?: "").split(",").filter { it.isNotBlank() })
         hidden = if (p.contains("hidden")) (p.getString("hidden", "") ?: "").split(",").filter { it.isNotBlank() }.toSet() else defaultHidden
-        // The fixed block (the big slideshow) can never be hidden, even if an older setting says so
-        if (fixedId != null) hidden = hidden - fixedId
+        // The fixed block (the big slideshow) always stays first, but it can be hidden like any other block
     }
 
     private fun save(c: Context) {
         prefs(c).edit().putString("order", order.joinToString(",")).putString("hidden", hidden.joinToString(",")).apply()
     }
 
-    fun setShown(c: Context, id: String, on: Boolean) { if (id == fixedId) return; hidden = if (on) hidden - id else hidden + id; save(c) }
+    fun setShown(c: Context, id: String, on: Boolean) { hidden = if (on) hidden - id else hidden + id; save(c) }
 
     fun move(c: Context, id: String, delta: Int) {
         val i = order.indexOf(id)
@@ -141,9 +140,9 @@ internal fun BlockLayoutPage(ctx: Context, layout: BlockLayout, intro: String) {
                     Text(b.title, color = if (on) Color.White else Muted, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Text(b.sub, color = Muted, fontSize = 13.sp)
                 }
+                SmallPill(if (on) "Gezeigt" else "Versteckt", icon = if (on) AIcon.Eye else AIcon.EyeOff) { layout.setShown(ctx, id, !on) }
                 if (b.fixed) Text("Immer oben", color = Muted, fontSize = 13.sp)
-                else SmallPill(if (on) "Gezeigt" else "Versteckt", icon = if (on) AIcon.Eye else AIcon.EyeOff) { layout.setShown(ctx, id, !on) }
-                if (!b.fixed) {
+                else {
                     SmallPill("Hoch", icon = AIcon.Up) { layout.move(ctx, id, -1) }
                     SmallPill("Runter", icon = AIcon.Down) { layout.move(ctx, id, 1) }
                 }
@@ -209,11 +208,11 @@ internal fun HomeEditBar(ctx: Context, id: String, modifier: Modifier = Modifier
     ) {
         Text(b.title, color = if (on) Color.White else Muted, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         if (!on) Text("Versteckt", color = Color(0xFFFFB86B), fontSize = 14.sp)
+        SmallPill(if (on) "Ausblenden" else "Einblenden", icon = if (on) AIcon.EyeOff else AIcon.Eye) { HomeLayout.setShown(ctx, id, !on) }
         if (b.fixed) Text("Immer oben", color = Muted, fontSize = 13.sp)
         else {
             SmallPill("Hoch", icon = AIcon.Up) { HomeLayout.move(ctx, id, -1) }
             SmallPill("Runter", icon = AIcon.Down) { HomeLayout.move(ctx, id, 1) }
-            SmallPill(if (on) "Ausblenden" else "Einblenden", icon = if (on) AIcon.EyeOff else AIcon.Eye) { HomeLayout.setShown(ctx, id, !on) }
         }
     }
 }
