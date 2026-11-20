@@ -35,7 +35,6 @@ class TrailerLogicTest {
     fun diagLine_acceptsOnlyKnownConsoleLines() {
         assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_ERR 153") == "Trailer: player error 153")
         assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_STATE -1") == "Trailer: player state -1")
-        assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_TIMEOUT") == "Trailer: no playback after 15 s")
         assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_LOAD") == "Trailer: iframe loaded")
         assertNull(TrailerLogic.diagLine(null))
         assertNull(TrailerLogic.diagLine("IPVIO_TRAILER_ERR abc"))
@@ -48,5 +47,32 @@ class TrailerLogicTest {
         val html = TrailerLogic.embedHtml("dQw4w9WgXcQ")!!
         assertTrue(html.contains("enablejsapi=1"))
         assertTrue(html.contains("IPVIO_TRAILER_ERR"))
+    }
+
+    @Test
+    fun attempts_useDifferentOrigins_andRejectBadInput() {
+        val a0 = TrailerLogic.attempt(0, "dQw4w9WgXcQ")!!
+        val a1 = TrailerLogic.attempt(1, "dQw4w9WgXcQ")!!
+        val a2 = TrailerLogic.attempt(2, "dQw4w9WgXcQ")!!
+        assertTrue(a0.baseUrl == "https://www.youtube-nocookie.com")
+        assertTrue(a1.baseUrl == "https://com.ipvio.stream" && a1.html.contains("origin=https://com.ipvio.stream"))
+        assertTrue(a1.html.contains("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?"))
+        assertTrue(a2.html.contains("https://www.youtube.com/embed/dQw4w9WgXcQ?"))
+        assertNull(TrailerLogic.attempt(TrailerLogic.ATTEMPTS, "dQw4w9WgXcQ"))
+        assertNull(TrailerLogic.attempt(-1, "dQw4w9WgXcQ"))
+        assertNull(TrailerLogic.attempt(0, "bad id!"))
+    }
+
+    @Test
+    fun consoleLines_playingAndBlockedErrors() {
+        assertTrue(TrailerLogic.isPlaying("IPVIO_TRAILER_STATE 1"))
+        assertFalse(TrailerLogic.isPlaying("IPVIO_TRAILER_STATE 3"))
+        assertFalse(TrailerLogic.isPlaying(null))
+        assertTrue(TrailerLogic.playerError("IPVIO_TRAILER_ERR 153") == 153)
+        assertNull(TrailerLogic.playerError("IPVIO_TRAILER_STATE 1"))
+        assertTrue(TrailerLogic.isVideoBlocked(101))
+        assertTrue(TrailerLogic.isVideoBlocked(150))
+        assertFalse(TrailerLogic.isVideoBlocked(153))
+        assertFalse(TrailerLogic.isVideoBlocked(null))
     }
 }

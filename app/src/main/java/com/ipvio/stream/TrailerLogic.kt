@@ -10,24 +10,56 @@ object TrailerLogic {
     /** A YouTube video id as TMDB gives it (letters, digits, - and _). */
     fun validKey(key: String?): Boolean = key != null && ID.matches(key)
 
-    /** Page for the WebView, or null if the id is not valid. Uses the privacy-enhanced embed host. */
-    fun embedHtml(key: String?): String? {
+    private const val NOCOOKIE = "https://www.youtube-nocookie.com"
+    private const val YOUTUBE = "https://www.youtube.com"
+    private const val APP_ORIGIN = "https://com.ipvio.stream"
+
+    /** One way to load the trailer page: the base address the WebView reports as the page origin, and the page. */
+    class Attempt(val baseUrl: String, val html: String)
+
+    /** Number of ways [attempt] knows. */
+    const val ATTEMPTS = 3
+
+    /**
+     * Way [n] (0..2) to show the trailer, or null for an invalid id or number (T-032, 20 Nov: the cause of the black
+     * picture is unknown, so the dialog tries these in turn and writes which one played to Diagnose).
+     * 0: as before (origin and embed host youtube-nocookie.com); 1: origin of the app, embed host nocookie;
+     * 2: origin of the app, embed host youtube.com.
+     */
+    fun attempt(n: Int, key: String?): Attempt? = when (n) {
+        0 -> embedHtml(key, NOCOOKIE, NOCOOKIE)?.let { Attempt(NOCOOKIE, it) }
+        1 -> embedHtml(key, NOCOOKIE, APP_ORIGIN)?.let { Attempt(APP_ORIGIN, it) }
+        2 -> embedHtml(key, YOUTUBE, APP_ORIGIN)?.let { Attempt(APP_ORIGIN, it) }
+        else -> null
+    }
+
+    /** Page for the WebView, or null if the id is not valid. Default: the privacy-enhanced embed host (way 0). */
+    fun embedHtml(key: String?, host: String = NOCOOKIE, origin: String = host): String? {
         if (!validKey(key)) return null
         return "<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
             "<style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style></head>" +
-            "<body><iframe id=\"yt\" src=\"https://www.youtube-nocookie.com/embed/$key?autoplay=1&playsinline=1&rel=0" +
-            "&enablejsapi=1&origin=https://www.youtube-nocookie.com\" " +
+            "<body><iframe id=\"yt\" src=\"$host/embed/$key?autoplay=1&playsinline=1&rel=0" +
+            "&enablejsapi=1&origin=$origin\" " +
             "allow=\"autoplay; encrypted-media; picture-in-picture\" allowfullscreen></iframe>" +
             "<script>$DIAG_SCRIPT</script></body></html>"
     }
 
+    /** The player reports "playing" (state 1). */
+    fun isPlaying(console: String?): Boolean = console == "IPVIO_TRAILER_STATE 1"
+
+    /** YouTube player error code of a console line, or null. */
+    fun playerError(console: String?): Int? =
+        console?.let { DIAG_LINE.matchEntire(it) }?.takeIf { it.groupValues[1] == "ERR" }?.groupValues?.get(2)?.toIntOrNull()
+
+    /** Codes that mean this video cannot be embedded at all (101, 150: owner forbids; 100: removed): other ways will not help. */
+    fun isVideoBlocked(code: Int?): Boolean = code == 100 || code == 101 || code == 150
+
     /**
      * Diagnostics only (T-032): asks the YouTube player to report its state and errors and writes them to the WebView
-     * console as `IPVIO_TRAILER_ERR <code>` / `IPVIO_TRAILER_STATE <code>`; after 15 s without playback it writes
-     * `IPVIO_TRAILER_TIMEOUT`. The app reads these lines in `diagLine`. No bridge object is exposed to the page.
+     * console as `IPVIO_TRAILER_ERR <code>` / `IPVIO_TRAILER_STATE <code>`; when the iframe is loaded it writes `IPVIO_TRAILER_LOAD`. The app reads these lines in `diagLine`. No bridge object is exposed to the page.
      */
     private const val DIAG_SCRIPT =
-        "var f=document.getElementById('yt'),ok=false;" +
+        "var f=document.getElementById('yt');" +
             "function s(o){try{f.contentWindow.postMessage(JSON.stringify(o),'*')}catch(e){}}" +
             "f.addEventListener('load',function(){console.log('IPVIO_TRAILER_LOAD');s({event:'listening',id:1,channel:'widget'});" +
             "s({event:'command',func:'addEventListener',args:['onError'],id:1,channel:'widget'});" +
@@ -35,8 +67,7 @@ object TrailerLogic {
             "window.addEventListener('message',function(e){if(String(e.origin).indexOf('youtube')<0)return;var d;" +
             "try{d=JSON.parse(e.data)}catch(x){return}" +
             "if(d.event==='onError')console.log('IPVIO_TRAILER_ERR '+parseInt(d.info,10));" +
-            "else if(d.event==='onStateChange'){if(d.info===1)ok=true;console.log('IPVIO_TRAILER_STATE '+parseInt(d.info,10))}});" +
-            "setTimeout(function(){if(!ok)console.log('IPVIO_TRAILER_TIMEOUT')},15000);"
+            "else if(d.event==='onStateChange')console.log('IPVIO_TRAILER_STATE '+parseInt(d.info,10))});"
 
     private val DIAG_LINE = Regex("^IPVIO_TRAILER_(ERR|STATE) (-?\\d{1,4})$")
 
@@ -44,7 +75,6 @@ object TrailerLogic {
     fun diagLine(console: String?): String? {
         if (console == null) return null
         if (console == "IPVIO_TRAILER_LOAD") return "Trailer: iframe loaded"
-        if (console == "IPVIO_TRAILER_TIMEOUT") return "Trailer: no playback after 15 s"
         val m = DIAG_LINE.matchEntire(console) ?: return null
         val code = m.groupValues[2]
         return if (m.groupValues[1] == "ERR") "Trailer: player error $code" else "Trailer: player state $code"

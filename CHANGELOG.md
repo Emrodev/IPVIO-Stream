@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Trailer (T-032): if the in-app trailer shows no playback within 10 s, the dialog tries two more ways to load the YouTube player (other page origin, other embed host) and writes the result of each to Settings > Diagnose ("Trailer: way N …"). If none plays, or YouTube says the video cannot be embedded, the trailer opens outside the app instead of staying black. Cause of the black picture is still unverified. Not device tested yet
 - Trailer (T-032): Settings > Diagnose now also lists load errors of the YouTube frame, SSL errors and "iframe loaded", to see why the player never starts (20 Nov: only "no playback after 15 s" was reported). Diagnostics only, playback unchanged. Not device tested yet
 - Trailer (T-032): the trailer page now also reports the YouTube player's own error code, state and a 15 s no-playback timeout to Settings > Diagnose ("Trailer: player error …"). Diagnostics only, playback unchanged. Not device tested yet
 - Trailer (T-032): WebView errors are written to Settings > Diagnose (error codes only), to find the cause of black trailers. Not device tested yet
