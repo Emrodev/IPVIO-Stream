@@ -3,7 +3,19 @@ package com.ipvio.stream
 import android.webkit.ConsoleMessage
 import android.media.MediaCodecList
 import android.net.http.SslError
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
+import android.view.View
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key as keyOf
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -12,7 +24,6 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
@@ -64,31 +75,43 @@ private const val ATTEMPT_MS = 10_000L
 fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit = {}) {
     if (!TrailerLogic.validKey(key)) return
     var attempt by remember(key) { mutableStateOf(0) }
+    // T-032 (temporary): the picture stays black while the sound plays. Left/Right switches how the window is built:
+    // 0 as before, 1 opaque dialog window, 2 hardware layer + transparent WebView background, 3 no dialog window
+    var mode by remember(key) { mutableStateOf(0) }
     val playing = remember(key, attempt) { mutableStateOf(false) }
     val external = {
         onOpenExternal()
         onClose()
     }
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-    ) {
+    LaunchedEffect(Unit) { reportDeviceForTrailer() }
+    // No sign of playback in time: next way, or outside the app after the last one
+    LaunchedEffect(key, attempt) {
+        delay(ATTEMPT_MS)
+        if (!playing.value) {
+            Diag.report("Trailer: way ${attempt + 1} no playback after 10 s")
+            if (attempt + 1 < TrailerLogic.ATTEMPTS) attempt++ else { Diag.report("Trailer: no way played, opening outside"); external() }
+        }
+    }
+    val body: @Composable () -> Unit = {
         // On Android TV the remote only reaches Compose views that have focus: the WebView must not take it,
         // and the "Im YouTube öffnen" button gets focus when the dialog opens (19 Nov feedback: button not clickable)
         val buttonFocus = remember { FocusRequester() }
-        LaunchedEffect(key) { delay(200); runCatching { buttonFocus.requestFocus() } }
-        LaunchedEffect(Unit) { reportDeviceForTrailer() }
-        // No sign of playback in time: next way, or outside the app after the last one
-        LaunchedEffect(key, attempt) {
-            delay(ATTEMPT_MS)
-            if (!playing.value) {
-                Diag.report("Trailer: way ${attempt + 1} no playback after 10 s")
-                if (attempt + 1 < TrailerLogic.ATTEMPTS) attempt++ else { Diag.report("Trailer: no way played, opening outside"); external() }
-            }
+        LaunchedEffect(key, mode) { delay(200); runCatching { buttonFocus.requestFocus() } }
+        if (mode == 1) {
+            val view = LocalView.current
+            SideEffect { (view.parent as? DialogWindowProvider)?.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.BLACK)) }
         }
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(
+            Modifier.fillMaxSize().background(Color.Black).onPreviewKeyEvent { e ->
+                if (e.type == KeyEventType.KeyDown && (e.keyOf == Key.DirectionLeft || e.keyOf == Key.DirectionRight)) {
+                    mode = TrailerLogic.nextMode(mode, if (e.keyOf == Key.DirectionRight) 1 else -1)
+                    Diag.report("Trailer: render mode ${mode + 1}")
+                    true
+                } else false
+            }
+        ) {
             // key(attempt): every way gets a new WebView; the old one is destroyed
-            androidx.compose.runtime.key(attempt) {
+            androidx.compose.runtime.key(attempt, mode) {
                 val n = attempt
                 val holder = remember { arrayOfNulls<WebView>(1) }
                 DisposableEffect(Unit) {
@@ -104,7 +127,10 @@ fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit 
                         WebView(ctx).apply {
                             isFocusable = false
                             isFocusableInTouchMode = false
-                            setBackgroundColor(android.graphics.Color.BLACK)
+                            if (mode == 2) {
+                                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                            } else setBackgroundColor(android.graphics.Color.BLACK)
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
                             settings.mediaPlaybackRequiresUserGesture = false
@@ -141,8 +167,20 @@ fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit 
                     },
                 )
             }
+            Text("Render mode ${mode + 1}/${TrailerLogic.RENDER_MODES} (Left/Right to switch)", raw = true, color = Color.White,
+                modifier = Modifier.align(Alignment.BottomStart).padding(24.dp))
             // Fallback (19 Nov feedback: black picture, no sound on some titles): the same trailer in YouTube
             PillButton(Lang.tr("Im YouTube öffnen"), modifier = Modifier.align(Alignment.TopEnd).padding(24.dp).focusRequester(buttonFocus), light = true) { onOpenExternal() }
         }
+    }
+    // key(mode): a new window per mode
+    androidx.compose.runtime.key(mode) {
+        if (mode == 3) {
+            BackHandler(onBack = onClose)
+            Box(Modifier.fillMaxSize()) { body() }
+        } else Dialog(
+            onDismissRequest = onClose,
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) { body() }
     }
 }

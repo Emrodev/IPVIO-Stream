@@ -44,6 +44,12 @@ object TrailerLogic {
             "<script>$DIAG_SCRIPT</script></body></html>"
     }
 
+    /** Number of render modes of the trailer window the tester can switch between (T-032, temporary). */
+    const val RENDER_MODES = 4
+
+    /** Render mode after [delta] steps, wrapping around. */
+    fun nextMode(current: Int, delta: Int): Int = ((current + delta) % RENDER_MODES + RENDER_MODES) % RENDER_MODES
+
     /** The player reports "playing" (state 1). */
     fun isPlaying(console: String?): Boolean = console == "IPVIO_TRAILER_STATE 1"
 

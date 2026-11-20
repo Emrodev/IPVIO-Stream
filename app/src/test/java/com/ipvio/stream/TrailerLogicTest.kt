@@ -86,4 +86,11 @@ class TrailerLogicTest {
         assertTrue(line == "Trailer: decoders H.264=hw VP9=sw AV1=no HEVC=sw")
         assertTrue(TrailerLogic.decoderLine(emptyList()) == "Trailer: decoders H.264=no VP9=no AV1=no HEVC=no")
     }
+
+    @Test
+    fun nextMode_wrapsAround() {
+        assertTrue(TrailerLogic.nextMode(0, 1) == 1)
+        assertTrue(TrailerLogic.nextMode(TrailerLogic.RENDER_MODES - 1, 1) == 0)
+        assertTrue(TrailerLogic.nextMode(0, -1) == TrailerLogic.RENDER_MODES - 1)
+    }
 }
