@@ -86,4 +86,12 @@ class TrailerLogicTest {
         assertTrue(line == "Trailer: decoders H.264=hw VP9=sw AV1=no HEVC=sw")
         assertTrue(TrailerLogic.decoderLine(emptyList()) == "Trailer: decoders H.264=no VP9=no AV1=no HEVC=no")
     }
+
+    @Test
+    fun diagLine_info_isParsedAndRejectsOddInput() {
+        assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_INFO t=3.4 v=100 m=0 q=hd720") == "Trailer: info t=3.4s vol=100 muted=0 quality=hd720")
+        assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_INFO t=0 v=0 m=1 q=na") == "Trailer: info t=0s vol=0 muted=1 quality=na")
+        assertNull(TrailerLogic.diagLine("IPVIO_TRAILER_INFO t=x v=1 m=0 q=na"))
+        assertNull(TrailerLogic.diagLine("IPVIO_TRAILER_INFO t=1 v=1 m=0 q=a b"))
+    }
 }

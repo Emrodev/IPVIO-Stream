@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Trailer (T-032): Settings > Diagnose shows the player's own values (playing time, volume, muted, quality) at the first "playing" and 4 s and 9 s later, to see why a trailer with player state "playing" shows no picture or sound. At the first "playing" the player is also told to unmute and set the volume to 100. Not device tested yet
 - Diagnostics: Settings > Diagnose now has a "Log" row with the last 25 messages and their time (before, each message replaced the previous one, so only the last was visible). It is part of the copied report. Not device tested yet
 - Trailer (T-032): Settings > Diagnose now shows the WebView version and which video decoders the device has (H.264, VP9, AV1, HEVC; hardware or software), because on one test device the trailer plays sound but the picture stays black. Diagnostics only, playback unchanged. Not device tested yet
 - Trailer (T-032): if the in-app trailer shows no playback within 10 s, the dialog tries two more ways to load the YouTube player (other page origin, other embed host) and writes the result of each to Settings > Diagnose ("Trailer: way N …"). If none plays, or YouTube says the video cannot be embedded, the trailer opens outside the app instead of staying black. Cause of the black picture is still unverified. Not device tested yet

@@ -59,22 +59,34 @@ object TrailerLogic {
      * console as `IPVIO_TRAILER_ERR <code>` / `IPVIO_TRAILER_STATE <code>`; when the iframe is loaded it writes `IPVIO_TRAILER_LOAD`. The app reads these lines in `diagLine`. No bridge object is exposed to the page.
      */
     private const val DIAG_SCRIPT =
-        "var f=document.getElementById('yt');" +
+        "var f=document.getElementById('yt'),last={},started=false;" +
             "function s(o){try{f.contentWindow.postMessage(JSON.stringify(o),'*')}catch(e){}}" +
+            "function rep(){var t=Math.round((Number(last.currentTime)||0)*10)/10,v=Math.round(Number(last.volume)||0)," +
+            "q=String(last.playbackQuality||'na').replace(/[^a-z0-9]/g,'').slice(0,10)||'na';" +
+            "console.log('IPVIO_TRAILER_INFO t='+t+' v='+v+' m='+(last.muted?1:0)+' q='+q)}" +
             "f.addEventListener('load',function(){console.log('IPVIO_TRAILER_LOAD');s({event:'listening',id:1,channel:'widget'});" +
             "s({event:'command',func:'addEventListener',args:['onError'],id:1,channel:'widget'});" +
             "s({event:'command',func:'addEventListener',args:['onStateChange'],id:1,channel:'widget'})});" +
             "window.addEventListener('message',function(e){if(String(e.origin).indexOf('youtube')<0)return;var d;" +
             "try{d=JSON.parse(e.data)}catch(x){return}" +
-            "if(d.event==='onError')console.log('IPVIO_TRAILER_ERR '+parseInt(d.info,10));" +
-            "else if(d.event==='onStateChange')console.log('IPVIO_TRAILER_STATE '+parseInt(d.info,10))});"
+            "if(d.event==='infoDelivery'&&d.info){var k;for(k in d.info)last[k]=d.info[k]}" +
+            "else if(d.event==='onError')console.log('IPVIO_TRAILER_ERR '+parseInt(d.info,10));" +
+            "else if(d.event==='onStateChange'){console.log('IPVIO_TRAILER_STATE '+parseInt(d.info,10));" +
+            "if(d.info===1&&!started){started=true;rep();" +
+            "s({event:'command',func:'unMute',args:'',id:1,channel:'widget'});" +
+            "s({event:'command',func:'setVolume',args:[100],id:1,channel:'widget'});" +
+            "setTimeout(rep,4000);setTimeout(rep,9000)}}});"
 
     private val DIAG_LINE = Regex("^IPVIO_TRAILER_(ERR|STATE) (-?\\d{1,4})$")
+    private val INFO_LINE = Regex("^IPVIO_TRAILER_INFO t=(\\d{1,5}(?:\\.\\d)?) v=(\\d{1,3}) m=([01]) q=([a-z0-9]{1,10})$")
 
     /** Diagnose line for a WebView console message of the embed page, or null for any other message. */
     fun diagLine(console: String?): String? {
         if (console == null) return null
         if (console == "IPVIO_TRAILER_LOAD") return "Trailer: iframe loaded"
+        INFO_LINE.matchEntire(console)?.let {
+            return "Trailer: info t=${it.groupValues[1]}s vol=${it.groupValues[2]} muted=${it.groupValues[3]} quality=${it.groupValues[4]}"
+        }
         val m = DIAG_LINE.matchEntire(console) ?: return null
         val code = m.groupValues[2]
         return if (m.groupValues[1] == "ERR") "Trailer: player error $code" else "Trailer: player state $code"
