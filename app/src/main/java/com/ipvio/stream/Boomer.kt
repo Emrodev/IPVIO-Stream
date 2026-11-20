@@ -241,7 +241,8 @@ fun BoomerHome(
     onPlay: (Item, List<Item>) -> Unit, onVod: (Item) -> Unit, onResume: (Entry, Item) -> Unit
 ) {
     val ctx = LocalContext.current
-    val data by produceState<BoomerData?>(null, all) { value = withContext(Dispatchers.Default) { BoomerData(all) } }
+    // Private categories (T-028) never show on the Boomer home screen
+    val data by produceState<BoomerData?>(null, all, PrivateCats.version) { value = withContext(Dispatchers.Default) { BoomerData(PrivateCats.filter(all)) } }
     val favs = Library.favs.toList()
     val hist = History.ids.toList()
     val custom = Boomer.custom.toList()

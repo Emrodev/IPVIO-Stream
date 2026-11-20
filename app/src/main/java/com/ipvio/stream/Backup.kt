@@ -33,7 +33,9 @@ object Backup {
         // T-006: dual view, last live category, new episodes, imported lists, resume log (profile-scoped like the others)
         "ipvio_dual", "ipvio_live", "ipvio_newep", "ipvio_importedlists", "ipvio_resumelog",
         // 1.4: own order of categories (Live TV, movies, series)
-        "ipvio_catorder"
+        "ipvio_catorder",
+        // T-028: private categories
+        "ipvio_privatecats"
     )
 
     /** Own API keys (TMDB, OMDb); not profile-scoped. Only travel inside the encrypted part of a sync. */

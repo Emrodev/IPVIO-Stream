@@ -186,7 +186,7 @@ private val SE_RE = Regex("""S(\d+)E(\d+)""")
 private fun AppContent() {
     val ctx = LocalContext.current
     remember {
-        AppSettings.init(ctx); WatchStore.init(ctx); History.init(ctx); Library.init(ctx); QualityStore.init(ctx)
+        AppSettings.init(ctx); WatchStore.init(ctx); History.init(ctx); Library.init(ctx); QualityStore.init(ctx); PrivateCats.init(ctx)
         PlaybackPrefs.init(ctx); PlayerSync.init(ctx); loadWishboxTexts(); DeadLinks.init(ctx); ChannelLists.init(ctx); Reminders.init(ctx); Reminders.schedule(ctx)
         // W-010b: live sync of favorites and history (silent; only when Google Drive is connected)
         LiveSync.start(ctx); 0
@@ -259,7 +259,9 @@ private fun AppContent() {
     // Do not fall into the screensaver while downloading and parsing the playlist
     KeepScreenOn("playlist", PlaylistStore.loading)
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)
-    LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); if (!DemoMode.active) Classifier.restart(ctx, all) }   // after the first screen is up, and debounced while the list is still changing
+    LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); if (!DemoMode.active) Classifier.restart(ctx, all) }
+    // Private categories (T-028): ids of their titles, so history and resume can skip them
+    LaunchedEffect(all) { PrivateCats.reload(all) }   // after the first screen is up, and debounced while the list is still changing
 
     fun start(item: Item, title: String, url: String, startMs: Long = 0L) {
         if (DemoMode.active) return   // sample entries have no stream address

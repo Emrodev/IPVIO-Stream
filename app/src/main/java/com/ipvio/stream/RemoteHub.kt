@@ -93,7 +93,7 @@ object RemoteHub {
         return when (name) {
             "search" -> {
                 if (all.isEmpty()) return "{\"loading\":true}"
-                val (m, s, l) = SearchCache.build(all).find(q["q"].orEmpty().take(80))
+                val (m, s, l) = SearchCache.build(PrivateCats.visible(all)).find(q["q"].orEmpty().take(80))
                 "{\"nm\":${m.size},\"ns\":${s.size},\"nl\":${l.size}," +
                     "\"m\":" + RemoteLogic.arr(m.take(LIMIT).map(::itemJson)) +
                     ",\"s\":" + RemoteLogic.arr(s.take(LIMIT).map(::itemJson)) +

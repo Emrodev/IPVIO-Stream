@@ -8,6 +8,16 @@ Workflow agreed on 13 Nov 2026: one branch and PR per change; merge into `main` 
 
 ## Previous task
 
+T-028 (private categories, 2026-11-19): implemented on branch `feat/T-028-private-categories`. It compiles, `PrivateLogicTest` passes 6/6, and the full JVM suite has the same 4 failures as before the change (pre-existing, listed in `docs/tasks/T-028-private-categories.md`). **Not device tested.**
+
+Device test: mark a Live, movie and series category private, play from each, then check that nothing shows in:
+- Recently watched, Continue watching, the player's recent strip;
+- Home, search (TV and phone), All channels / All movies, Multi view, Boomer;
+- the start-up resume after a restart.
+
+Also on the same branch: the default sort setting for all lists and the hide option for the home slideshow (uncommitted work from before). Open from the review that day: `browse_sort` is missing from the View page reset keys (`SettingsResetLogic.kt`).
+
+
 Release 1.4 (`versionCode` 5): `main` plus the speed series (T-019 to T-023), R8 over the whole app (T-024) and the update card fix (T-025). Reported by the maintainer on 12 Nov 2026: built and tested on the device, works. The individual checks and any measurements were not recorded. The statuses "not built, not tested" further down for these tasks are older than this report. The maintainer builds the signed APK, creates `update.json` and publishes the GitHub release `v1.4` (steps in `docs/RELEASE.md`). The assistant did not build or publish anything. Rollback for R8 if users report a crash at start: `enable = false` in `app/build.gradle.kts` and a new release.
 
 T-015 (harden the in-app update: `update.json` as primary source, SHA-256, package/version/signer check, clear error texts): merged through PR #59 (`2fbd874`), CI green (unit tests and debug APK), **NOT device tested** (the maintainer tests at the end). Task file: `docs/tasks/T-015-harden-update.md`. Changed files: `Round17Logic.kt` (`UpdateLogic`), `AppUpdate.kt`, `UpdateVerify.kt` (new), `UpdatePrompt.kt`, `DictK.kt` (10 rows), `UpdateLogicTest.kt` (new), `docs/RELEASE.md`, `docs/SECURITY.md`, `CHANGELOG.md`. Checks that ran: `UpdateLogicTest` 15/15 (with a stand-in for `org.json`, the real jar was not available) and `DictConsistencyTest` 3/3 on the JVM. **Not run:** device test, the signature check on API below 28. Before the next release: create `update.json` as described in `docs/RELEASE.md`.
