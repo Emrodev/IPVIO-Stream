@@ -225,20 +225,26 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
             var nativeUa by remember { mutableStateOf(false) }
             // #75: box model for portals that accept only certain models (pressed again for the next one)
             var stbModel by remember { mutableStateOf(StalkerModelLogic.DEFAULT) }
+            // Same start for "Hinzufügen" and "Sprachen wählen"; the second one asks for the languages first (#73, 19 Nov feedback)
+            fun startLoad(chooseLanguages: Boolean) {
+                if (PlaylistStore.loading) return
+                val finalUrl = if (stalker) StalkerLogic.source(portal, mac, sn, devId, devId2, stbModel)?.encode() else if (xtream) PlaylistStore.xtreamUrl(host, user, pass) else url
+                if (finalUrl == null) PlaylistStore.error = if (stalker) "Angaben unvollständig: Portal-Adresse und MAC-Adresse (z. B. 00:1A:79:12:34:56) nötig." else "Angaben unvollständig: Server, Benutzername und Passwort nötig."
+                else if (xtream && !stalker && !backupsValid(backups)) PlaylistStore.error = BACKUP_INVALID
+                else {
+                    if (xtream && !stalker) PlaylistStore.setBackups(ctx, finalUrl, backups.toList())
+                    PlaylistStore.setNativeUa(ctx, finalUrl, !stalker && nativeUa)
+                    if (chooseLanguages) PlaylistStore.requestLanguageChoice()
+                    scope.launch { if (PlaylistStore.load(ctx, finalUrl, true)) onDone() }
+                }
+            }
+            // Playlist too big for the memory: offer the language selection right here, instead of a second "Hinzufügen"
+            val tooBig = PlaylistStore.error == PlaylistStore.MSG_TOO_BIG || PlaylistStore.error == PlaylistLogic.TOO_BIG_HINT
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (!stalker) FocusButton(Lang.tr(if (nativeUa) "Kennung: IPVIO" else "Kennung: VLC"), compact = true) { nativeUa = !nativeUa }
                 if (stalker) FocusButton("STB $stbModel", compact = true) { stbModel = StalkerModelLogic.next(stbModel) }
-                FocusButton(if (PlaylistStore.loading) "Lade…" else "Hinzufügen", primary = true, compact = true) {
-                    if (PlaylistStore.loading) return@FocusButton
-                    val finalUrl = if (stalker) StalkerLogic.source(portal, mac, sn, devId, devId2, stbModel)?.encode() else if (xtream) PlaylistStore.xtreamUrl(host, user, pass) else url
-                    if (finalUrl == null) PlaylistStore.error = if (stalker) "Angaben unvollständig: Portal-Adresse und MAC-Adresse (z. B. 00:1A:79:12:34:56) nötig." else "Angaben unvollständig: Server, Benutzername und Passwort nötig."
-                    else if (xtream && !stalker && !backupsValid(backups)) PlaylistStore.error = BACKUP_INVALID
-                    else {
-                        if (xtream && !stalker) PlaylistStore.setBackups(ctx, finalUrl, backups.toList())
-                        PlaylistStore.setNativeUa(ctx, finalUrl, !stalker && nativeUa)
-                        scope.launch { if (PlaylistStore.load(ctx, finalUrl, true)) onDone() }
-                    }
-                }
+                FocusButton(if (PlaylistStore.loading) "Lade…" else "Hinzufügen", primary = true, compact = true) { startLoad(false) }
+                if (tooBig && !PlaylistStore.loading) FocusButton("Sprachen wählen", primary = true, compact = true) { startLoad(true) }
                 if (canCancel) FocusButton("Abbrechen", compact = true) { PlaylistStore.clearPending(ctx); onDone() }
                 // Nothing to add yet (first start): demo mode with sample entries and neutral placeholders, so the UI can be explored.
                 // Settings then offer "Playlist hinzufügen" to leave it.

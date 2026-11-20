@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Playlist import (19 Nov feedback): when the playlist is too big for the device's memory, the add screen now shows a "Sprachen wählen" button next to "Hinzufügen". It opens the language selection directly, so no second press of "Hinzufügen" is needed. Not device tested yet
+- Trailer (#15, 19 Nov feedback): the "Im YouTube öffnen" button gets focus when the trailer opens and the WebView no longer takes the remote's focus, so the button can be reached and pressed on Android TV. Black picture on some titles is not fixed yet (cause unverified). Not device tested yet
 - Security (#69): if a provider's HTTPS certificate does not match its address, the app no longer switches to an unencrypted connection on its own. It asks once per server ("Unverschlüsselte Verbindung?"); only after you agree is that server reached over http, and the choice is remembered on the device. Not device tested yet
 - Playlist import (#90): new button "Kennung: VLC / IPVIO" in the add screen. Some providers reject the VLC user-agent (HTTP 403); with IPVIO the playlist sends the app's own identifier. Default stays VLC. Not device tested yet
 - Playlists (#111): each playlist shows its channel, movie and series counts in Settings > Playlists (after it was loaded once). Not device tested yet

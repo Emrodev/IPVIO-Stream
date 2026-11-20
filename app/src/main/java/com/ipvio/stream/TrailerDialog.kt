@@ -11,12 +11,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.delay
 
 /**
  * Trailer inside the app (#15). Full screen; Back or the dialog close ends it and destroys the WebView, so no sound
@@ -36,11 +40,17 @@ fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit 
                 holder[0] = null
             }
         }
+        // On Android TV the remote only reaches Compose views that have focus: the WebView must not take it,
+        // and the "Im YouTube öffnen" button gets focus when the dialog opens (19 Nov feedback: button not clickable)
+        val buttonFocus = remember { FocusRequester() }
+        LaunchedEffect(html) { delay(200); runCatching { buttonFocus.requestFocus() } }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
                     WebView(ctx).apply {
+                        isFocusable = false
+                        isFocusableInTouchMode = false
                         setBackgroundColor(android.graphics.Color.BLACK)
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
@@ -55,7 +65,7 @@ fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit 
                 },
             )
             // Fallback (19 Nov feedback: black picture, no sound on some titles): the same trailer in YouTube
-            PillButton(Lang.tr("Im YouTube öffnen"), modifier = Modifier.align(Alignment.TopEnd).padding(24.dp), light = true) { onOpenExternal() }
+            PillButton(Lang.tr("Im YouTube öffnen"), modifier = Modifier.align(Alignment.TopEnd).padding(24.dp).focusRequester(buttonFocus), light = true) { onOpenExternal() }
         }
     }
 }

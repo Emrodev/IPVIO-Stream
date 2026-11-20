@@ -54,7 +54,10 @@ object PlaylistLogic {
     }
 
     /** Error text for the user. Never passes on the message of third-party libraries (it can contain address and password). */
-    const val NO_SPACE = "Zu wenig freier Speicherplatz auf dem Gerät. Bitte Platz schaffen (z. B. unbenutzte Apps löschen) und erneut versuchen."
+    /** Memory too small for the list: the add screen then offers "Sprachen wählen" (fewer languages = less memory). */
+    const val TOO_BIG_HINT = "Die Playlist ist zu groß für den Speicher dieses Geräts."
+
+    const val NO_SPACE ="Zu wenig freier Speicherplatz auf dem Gerät. Bitte Platz schaffen (z. B. unbenutzte Apps löschen) und erneut versuchen."
 
     /** Storage full (Android reports this as an IOException with "ENOSPC" or "No space left"). */
     fun noSpace(e: Throwable): Boolean {
@@ -79,7 +82,7 @@ object PlaylistLogic {
         is javax.net.ssl.SSLPeerUnverifiedException -> "Das Zertifikat des Anbieters passt nicht zur Server-Adresse. Beim Anbieter nach einer aktuellen Adresse fragen."
         is javax.net.ssl.SSLException -> "Sichere Verbindung fehlgeschlagen (Zertifikat)."
         is IllegalArgumentException -> "Ungültige Adresse."
-        is OutOfMemoryError -> "Die Playlist ist zu groß für den Speicher dieses Geräts."
+        is OutOfMemoryError -> TOO_BIG_HINT
         is java.io.IOException -> if (noSpace(e)) NO_SPACE else "Verbindung unterbrochen. Bitte erneut versuchen."
         else -> "Laden fehlgeschlagen (" + e.javaClass.simpleName + ")."
     }
