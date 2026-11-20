@@ -1,5 +1,7 @@
 package com.ipvio.stream
 
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -66,6 +68,13 @@ fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit 
                             }
                             override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
                                 Diag.report("Trailer: HTTP ${errorResponse?.statusCode} (Hauptseite=${request?.isForMainFrame == true})")
+                            }
+                        }
+                        // Player errors/states of the embed page (T-032); only lines of TrailerLogic.diagLine pass
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onConsoleMessage(m: ConsoleMessage?): Boolean {
+                                TrailerLogic.diagLine(m?.message())?.let { Diag.report(it) }
+                                return true
                             }
                         }
                         loadDataWithBaseURL("https://www.youtube-nocookie.com", html, "text/html", "utf-8", null)

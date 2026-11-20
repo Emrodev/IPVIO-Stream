@@ -30,4 +30,22 @@ class TrailerLogicTest {
         assertTrue(html.contains("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?"))
         assertTrue(html.contains("allowfullscreen"))
     }
+
+    @Test
+    fun diagLine_acceptsOnlyKnownConsoleLines() {
+        assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_ERR 153") == "Trailer: player error 153")
+        assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_STATE -1") == "Trailer: player state -1")
+        assertTrue(TrailerLogic.diagLine("IPVIO_TRAILER_TIMEOUT") == "Trailer: no playback after 15 s")
+        assertNull(TrailerLogic.diagLine(null))
+        assertNull(TrailerLogic.diagLine("IPVIO_TRAILER_ERR abc"))
+        assertNull(TrailerLogic.diagLine("IPVIO_TRAILER_ERR 12345"))
+        assertNull(TrailerLogic.diagLine("Uncaught TypeError: x"))
+    }
+
+    @Test
+    fun embedHtml_enablesPlayerReports() {
+        val html = TrailerLogic.embedHtml("dQw4w9WgXcQ")!!
+        assertTrue(html.contains("enablejsapi=1"))
+        assertTrue(html.contains("IPVIO_TRAILER_ERR"))
+    }
 }
