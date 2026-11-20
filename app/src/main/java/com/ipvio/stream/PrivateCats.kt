@@ -23,9 +23,14 @@ object PrivateCats {
     @Volatile var keys: Set<String> = emptySet()
         private set
     @Volatile private var ids: Set<String> = emptySet()
-    @Volatile private var lastAll: List<Item>? = null
-    @Volatile private var lastVer = -1
-    @Volatile private var lastVisible: List<Item> = emptyList()
+    /** Bumped together with [version], but readable from any thread (phone search runs on the server thread). */
+    @Volatile private var gen = 0
+    /** Cache of [visible] for the full playlist: one object, written in one step, so threads never mix fields. */
+    private class Snap(val all: List<Item>, val gen: Int, val out: List<Item>)
+    @Volatile private var snap: Snap? = null
+    /** Id refresh and clean-up run off the main thread, one after the other (a later toggle never loses to an earlier one). */
+    private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
     private var inited = false
 
     private fun prefs(c: Context) = Profiles.sp(c, PREFS)
@@ -40,21 +45,26 @@ object PrivateCats {
 
     val active: Boolean get() = keys.isNotEmpty() || parental
 
-    fun isPrivate(item: Item): Boolean = active && PrivateLogic.isPrivate(item, keys, parental)
     fun isPrivate(kind: Kind, group: String): Boolean = PrivateLogic.key(kind, group) in keys
     /** For writers that only know the id (history, resume); filled by [refresh] after each playlist load. */
     fun isPrivateId(id: String): Boolean = id in ids
 
-    /** [all] without private items. The result is cached, so callers that key caches by list identity keep working. */
+    /** Any list without private items (not cached). */
+    fun filter(list: List<Item>): List<Item> = if (!active) list else PrivateLogic.visible(list, keys, parental)
+
+    /**
+     * The full playlist without private items. Cached, so the same object comes back until the playlist or the private
+     * list changes: search keys its index by list identity ([SearchCache]). Only for the full playlist, use [filter] elsewhere.
+     */
     fun visible(all: List<Item>): List<Item> {
         if (!active) return all
-        val v = version
-        if (all === lastAll && v == lastVer) return lastVisible
-        return PrivateLogic.visible(all, keys, parental).also { lastAll = all; lastVer = v; lastVisible = it }
+        val g = gen
+        snap?.let { if (it.all === all && it.gen == g) return it.out }
+        return PrivateLogic.visible(all, keys, parental).also { snap = Snap(all, g, it) }
     }
 
-    /** Recomputes the private ids for the loaded playlist (background thread). */
-    fun refresh(all: List<Item>) { ids = PrivateLogic.ids(all, keys, parental) }
+    /** Recomputes the private ids after a playlist load, in the background. */
+    fun reload(all: List<Item>) { worker.execute { ids = PrivateLogic.ids(all, keys, parental) } }
 
     /** Marks a category private (or not). Marking also removes its titles from history and continue watching. */
     fun set(c: Context, kind: Kind, group: String, on: Boolean) {
@@ -72,12 +82,21 @@ object PrivateCats {
         changed(c, on)
     }
 
+    /** Screens rebuild at once; the ids (a pass over the whole playlist) and the clean-up follow from the background. */
     private fun changed(c: Context, purge: Boolean) {
-        refresh(PlaylistStore.channels)
+        gen++
         version++
-        if (purge && ids.isNotEmpty()) {
-            History.removeAll(c, ids)
-            WatchStore.removeAll(c, ids)
+        val all = PlaylistStore.channels
+        val app = c.applicationContext
+        worker.execute {
+            val now = PrivateLogic.ids(all, keys, parental)
+            ids = now
+            // History and continue watching are Compose state lists: change them on the main thread
+            if (purge && now.isNotEmpty()) main.post {
+                History.removeAll(app, now)
+                WatchStore.removeAll(app, now)
+                ResumeLog.removeFor(app, now)
+            }
         }
     }
 }

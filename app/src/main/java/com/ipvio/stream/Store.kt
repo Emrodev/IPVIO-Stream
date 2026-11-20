@@ -486,6 +486,15 @@ object ResumeLog {
         return if (i < 0) Lang.tr(line) else line.substring(0, i) + "  " + Lang.tr(line.substring(i + 2))
     }
 
+    /** Drops lines about these titles (a category was made private). Lines name a title by "#" + the last 4 id characters. */
+    fun removeFor(c: Context, ids: Set<String>) {
+        init(c)
+        val tails = ids.mapTo(HashSet()) { it.takeLast(4) }
+        if (lines.removeAll { l -> TAIL_RE.findAll(l).any { it.groupValues[1] in tails } })
+            prefs(c).edit().putString("l", lines.joinToString("\n")).apply()
+    }
+    private val TAIL_RE = Regex("#([^\\s:]{1,4})")
+
     fun add(c: Context, msg: String) {
         init(c)
         val t = java.text.SimpleDateFormat("dd.MM. HH:mm:ss", java.util.Locale.US).format(java.util.Date())

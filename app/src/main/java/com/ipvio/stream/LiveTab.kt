@@ -104,7 +104,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     val plScope = rememberCoroutineScope()
     val srcK = if (LiveSource.k in srcNames.indices && srcNames.size > 1) LiveSource.k else -1
     // Private categories (T-028) stay in their own category only: not in "All channels", genres, search, Multi view
-    val live = remember(liveAll, srcK, PrivateCats.version) { PrivateCats.visible(if (srcK < 0) liveAll else liveAll.filter { it.src == srcK }) }
+    val live = remember(liveAll, srcK, PrivateCats.version) { PrivateCats.filter(if (srcK < 0) liveAll else liveAll.filter { it.src == srcK }) }
     val groups = remember(groupsAll, srcK) {
         if (srcK < 0) groupsAll else LinkedHashMap<String, List<Item>>().also { m ->
             for ((g, l) in groupsAll) { val f = l.filter { it.src == srcK }; if (f.isNotEmpty()) m[g] = f }

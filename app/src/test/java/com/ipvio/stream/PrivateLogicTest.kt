@@ -31,10 +31,13 @@ class PrivateLogicTest {
         assertEquals(emptySet<String>(), PrivateLogic.ids(all, emptySet(), false))
     }
 
-    @Test fun parentalOptionUsesParentalCheck() {
-        val flagged = all.filter { ParentalLogic.isAdult(it.group, it.title) }
-        // None of the sample groups is flagged, so the option alone hides nothing here
-        assertEquals(all - flagged.toSet(), PrivateLogic.visible(all, emptySet(), true))
+    @Test fun parentalOptionHidesFlaggedCategories() {
+        // "FSK 18" is an age rating the parental check flags
+        val rated = item("4", Kind.MOVIE, "DE| FSK 18")
+        val list = all + rated
+        assertEquals(all, PrivateLogic.visible(list, emptySet(), true))
+        assertEquals(list, PrivateLogic.visible(list, emptySet(), false))
+        assertEquals(setOf("4"), PrivateLogic.ids(list, emptySet(), true))
     }
 
     @Test fun groupNamesWithSeparatorsRoundTrip() {

@@ -261,7 +261,7 @@ private fun AppContent() {
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)
     LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); if (!DemoMode.active) Classifier.restart(ctx, all) }
     // Private categories (T-028): ids of their titles, so history and resume can skip them
-    LaunchedEffect(all) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PrivateCats.refresh(all) } }   // after the first screen is up, and debounced while the list is still changing
+    LaunchedEffect(all) { PrivateCats.reload(all) }   // after the first screen is up, and debounced while the list is still changing
 
     fun start(item: Item, title: String, url: String, startMs: Long = 0L) {
         if (DemoMode.active) return   // sample entries have no stream address

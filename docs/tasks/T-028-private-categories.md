@@ -116,3 +116,10 @@ Files:
 Checks:
 - `./gradlew :app:compileDebugKotlin` passes.
 - `./gradlew :app:testDebugUnitTest`: 394 tests, 4 failures. All 4 also fail on the previous commit without this change, so they existed before: `PhoneImportTest.listImportWithoutCodeIsRejectedEvenWhenPhoneSearchIsActive`, `PhoneTransferTest.uploadBackupRestoreCrash`, `SubSearchLogicTest.subdlHitsDropKeyAndOtherEpisodes`, `LoadLogicTest.vorauswahlNachGeraetesprache`.
+
+## Review fixes (2026-11-19)
+
+- **Search cache:** `PrivateCats.visible` (cached) is now used only for the full playlist (TV and phone search). The cache is a single object written in one step. All other lists use the uncached `PrivateCats.filter`. Before, one shared cache slot could return another caller's list across threads, and it made search rebuild its index again and again.
+- **Background work:** the id refresh and the clean-up run on a single background thread. History and continue-watching changes are posted back to the main thread. Turning on the parental option no longer runs the check over the whole playlist on the UI thread.
+- **Resume log:** marking a category also removes resume-log lines about its titles (`ResumeLog.removeFor`).
+- **Test:** `PrivateLogicTest` now has a flagged sample ("FSK 18"), so the parental option test can fail.

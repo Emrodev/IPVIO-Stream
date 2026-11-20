@@ -121,8 +121,8 @@ private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>,
     // Provider categories keep everything; private categories (T-028) are left out of "All", genres, rows and Top lists
     val movieP = providerGroups(moviesAll)
     val seriesP = providerGroups(series0)
-    val movies = PrivateCats.visible(moviesAll)
-    val series = PrivateCats.visible(series0)
+    val movies = PrivateCats.filter(moviesAll)
+    val series = PrivateCats.filter(series0)
     // Home rows never show adult titles if wanted; categories, "All movies" and Live TV keep them (whoever looks finds them there)
     val rm = if (noAdult) movies.filterNot { ParentalLogic.isAdult(it.group, it.title) } else movies
     val rs = if (noAdult) series.filterNot { ParentalLogic.isAdult(it.group, it.title) } else series
@@ -1049,4 +1049,4 @@ private fun BillboardLayer(fade: () -> Float, item: State<Item?>, infoMod: Modif
 
 /** Home rows without adult titles when Parental control > "never on the home pages" is on ([on]). */
 private fun homeSafe(list: List<Item>, on: Boolean): List<Item> =
-    PrivateCats.visible(if (!on) list else list.filterNot { ParentalLogic.isAdult(it.group, it.title) })
+    PrivateCats.filter(if (!on) list else list.filterNot { ParentalLogic.isAdult(it.group, it.title) })
