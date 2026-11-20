@@ -16,4 +16,6 @@ An: Der Fernseher geht nicht in den Bildschirmschoner oder Ruhezustand, solange 
 Aktuelle PIN eingeben¦Wpisz obecny PIN
 Zum Ändern die bisherige PIN eingeben.¦Aby zmienić, wpisz dotychczasowy PIN.
 Neue Folgen¦Nowe odcinki
+Technische Infos auf der Detailseite¦Informacje techniczne na stronie szczegółów
+Liest beim Öffnen eines Titels den Anfang der Datei und zeigt Auflösung, HDR, Tonspuren und Untertitel. Das belegt kurz eine Verbindung zum Anbieter – bei Zugängen mit nur einer Verbindung ausschalten, wenn gleichzeitig etwas anderes läuft.¦Przy otwieraniu tytułu odczytuje początek pliku i pokazuje rozdzielczość, HDR, ścieżki dźwiękowe i napisy. Na chwilę zajmuje to jedno połączenie z dostawcą – wyłącz przy kontach z jednym połączeniem, jeśli jednocześnie odtwarzane jest coś innego.
 """

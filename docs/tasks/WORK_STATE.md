@@ -6,6 +6,13 @@ Issue batch on `claude/jolly-ride-mr9tgm`: #69 (consent before an http fallback,
 
 ## Previous task
 ## Current task (13 Nov 2026)
+Last update: 2026-11-19 (T-033 stream info on the detail page). Read `CLAUDE.md` first, then this file.
+
+## Current task (19 Nov 2026)
+
+T-033 (technical stream info on the detail page, issue #24): implemented on branch `feat/media-probe` from `upstream/dev` (`3a34845`) with the new dependency `media3-inspector:1.11.1` (approved by the maintainer). Task file `docs/tasks/T-033-media-probe.md`. JVM tests ran locally (JDK 21, `gradlew.bat testDebugUnitTest`): new tests pass; 2 existing socket tests (`PhoneImportTest`, `PhoneTransferTest`) fail locally on `dev` too. `assembleDebug` built. Not device tested. Next: PR into `dev`, device test with the steps in the task file.
+
+## Earlier task (13 Nov 2026)
 
 T-026 (Live TV only some categories, cut-off playlist kept as cache): implemented on branch `fix/playlist-cache` from `62846c7` (1.4.1). Task file `docs/tasks/T-026-playlist-cache-incomplete.md`. Status: **done, open for device test** (PR #71, CI green; the maintainer could not test on 13 Nov 2026). JVM tests ran (see task file). Do not merge before the device test. Next: maintainer builds, tests with "Playlist komplett neu laden" (steps in the task file), sends `adb logcat -d -s IPVIO-PL` if categories are still missing; then merge #71 into `main` and create the 1.4.2 branch from `main`.
 

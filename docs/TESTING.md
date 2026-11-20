@@ -69,6 +69,7 @@ Unit tests cannot cover these. Each needs a test step for the maintainer after a
 | Software audio (headphones, Bluetooth) | FFmpeg decoder is loaded by reflection; Media3 1.11.1 with decoder 1.9.0+1 is untested | `SoftAudio.kt:24`, `app/build.gradle.kts:96-102` |
 | R8 release build (T-024) | earlier R8 builds did not start; start, software audio and scrolling need a device | [ADR 0005](adr/0005-r8-whole-app.md), `docs/tasks/T-024-r8-whole-app.md` |
 | Playback of HLS, DASH and provider streams | needs real providers | `PlayerScreen.kt` |
+| Stream check on the detail page (T-033) | real providers, one-connection accounts, MKV/MP4 with index at the end | `MediaProbe.kt`, `docs/tasks/T-033-media-probe.md` |
 | Live rewind, recording, second stream, multi view | player and storage behaviour | `LiveTimeshift.kt`, `Recorder.kt`, `DualView.kt`, `MultiView.kt` |
 | Remote-control focus and navigation | TV focus handling | `Nav.kt` |
 | Alarms and reminders after reboot | `BootReceiver`, `ReminderReceiver` | `AndroidManifest.xml:39-71` |
