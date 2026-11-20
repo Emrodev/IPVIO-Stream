@@ -10,7 +10,7 @@ class DictConsistencyTest {
 
     @Test fun placeholders_eindeutig_und_in_allen_sprachen() {
         val problems = ArrayList<String>()
-        for (block in listOf(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6)) {
+        for (block in listOf(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictP, DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6, DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6, DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7, DictW, DictPlW)) {
             for (line in block.lineSequence()) {
                 if (line.isBlank() || line.startsWith("#") || !line.contains('¦')) continue
                 val cols = line.split('¦')
@@ -34,6 +34,28 @@ class DictConsistencyTest {
         assertEquals("Playlist toevoegen", I18nCore.translate("Playlist hinzufügen", nl))
         assertEquals("8 afleveringen", I18nCore.translate("8 Folgen", nl))
         assertEquals("Nederlands", I18nCore.NATIVE[nl])
+    }
+
+    @Test fun polnisch_deckt_alle_zeilen_ab() {
+        I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO, DictW)
+        val pl = I18nCore.CODES.indexOf("pl")
+        assertEquals(11, pl)   // after Arabic (index 10)
+        I18nCore.loadColumn(pl, DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7, DictPl8, DictPlW)
+        assertEquals("Dodaj playlistę", I18nCore.translate("Playlist hinzufügen", pl))
+        assertEquals("Odcinki: 8", I18nCore.translate("8 Folgen", pl))
+        assertEquals("Polski", I18nCore.NATIVE[pl])
+        // Every German key of the main and wishbox dictionaries has a Polish row
+        val keys = HashSet<String>()
+        for (block in listOf(DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7, DictPl8, DictPlW))
+            for (line in block.lineSequence()) if (line.contains('¦')) keys.add(line.substringBefore('¦').trim())
+        val missing = ArrayList<String>()
+        for (block in listOf(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO, DictW))
+            for (line in block.lineSequence()) {
+                if (line.isBlank() || line.startsWith("#") || !line.contains('¦')) continue
+                val de = line.substringBefore('¦').trim()
+                if (de !in keys) missing.add(de)
+            }
+        assertTrue(missing.joinToString("\n"), missing.isEmpty())
     }
 
     @Test fun zahlen_werden_richtig_eingesetzt() {

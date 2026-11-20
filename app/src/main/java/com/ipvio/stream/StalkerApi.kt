@@ -44,7 +44,7 @@ object StalkerApi {
     private fun req(src: StalkerLogic.Source, url: String, token: String?): Request {
         val b = Request.Builder().url(url)
             .header("User-Agent", StalkerLogic.UA)
-            .header("X-User-Agent", StalkerLogic.X_UA)
+            .header("X-User-Agent", StalkerModelLogic.xUserAgent(src.model))
             .header("Accept", "*/*")
             .header("Referer", src.portal)
             .header("Cookie", StalkerLogic.cookie(src.mac))

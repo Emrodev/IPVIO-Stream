@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
         // Load settings early so colors and size are right in the very first frame.
         Profiles.init(this)
         Profiles.prewarm(this)
+        TlsFallback.init(this)   // #69: hosts the user agreed to (ipvio_tls)
         val pick = Profiles.needsPicker(this)
         if (!pick) AppSettings.init(this)
         General.init(this)
@@ -155,7 +156,10 @@ fun App(pick: Boolean = false) {
     CompositionLocalProvider(
         LocalDensity provides scaled,
         LocalBringIntoViewSpec provides SmoothSpec,
-        LocalOverscrollFactory provides null
+        LocalOverscrollFactory provides null,
+        // T-029: Arabic is laid out right to left (the other languages stay left to right)
+        androidx.compose.ui.platform.LocalLayoutDirection provides
+            (if (Lang.code() == "ar") androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr)
     ) {
         val c = LocalContext.current
         var picked by remember { mutableStateOf(!pick) }
@@ -166,6 +170,10 @@ fun App(pick: Boolean = false) {
         }
         // New version available: dialog with one button (above every screen)
         UpdatePromptHost()
+        // Provider certificate does not match its address: ask once per host before an unencrypted connection (#69)
+        TlsConsentDialog()
+        // #95: keep the screen awake while the app is open, if the user switched it on (default off)
+        KeepScreenOn("browse", General.keepAwakeBrowse)
         // First start without a playlist: one non-blocking card that checks for updates (T-014)
         if (picked) UpdateCardHost()
     }

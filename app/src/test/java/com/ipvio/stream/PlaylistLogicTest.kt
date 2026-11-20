@@ -39,6 +39,8 @@ class PlaylistLogicTest {
         )
         for (e in list) assertFalse(PlaylistLogic.friendlyError(e).contains("geheim"))
         assertEquals("Keine Sender in der Playlist gefunden.", PlaylistLogic.friendlyError(PlaylistError("Keine Sender in der Playlist gefunden.")))
+        // Out of memory must show the text the add screen recognises (it then offers "Sprachen wählen")
+        assertEquals(PlaylistLogic.TOO_BIG_HINT, PlaylistLogic.friendlyError(OutOfMemoryError()))
         assertTrue(PlaylistLogic.httpError(403).contains("403"))
     }
 

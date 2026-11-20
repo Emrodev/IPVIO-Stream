@@ -136,7 +136,9 @@ data class Item(
     /** Language according to the provider's tag (abbreviation from [LangTagLogic], "?" = no tag). */
     val lang: String = LangTagLogic.UNKNOWN,
     /** Source with several playlists shown at once: 0 = main playlist, 1 … = further ones (see [MultiLogic]). */
-    val src: Int = 0
+    val src: Int = 0,
+    /** #22: date the provider added the title (Unix seconds, 0 = unknown, e.g. older caches or M3U). */
+    val added: Long = 0L
 ) {
     // Key for the metadata cache: computed once per title instead of anew on every sort comparison.
     // Own field instead of "by lazy": saves two helper objects per title with 100,000+ titles.
@@ -472,7 +474,8 @@ object M3uParser {
                 Kind.MOVIE -> {
                     val year = YEAR.find(e.name)?.groupValues?.get(1)?.toIntOrNull()
                     out.add(Item(e.url.hashCode().toString(), Kind.MOVIE, TitleText.title(clean(e.name)), year, e.url,
-                        attr(e.info, "tvg-logo")?.ifBlank { null }, group, quality = q, lang = kd.lang))
+                        attr(e.info, "tvg-logo")?.ifBlank { null }, group, quality = q, lang = kd.lang,
+                        added = attr(e.info, "added")?.toLongOrNull() ?: 0L))
                 }
                 Kind.LIVE -> {
                     val id = e.url.hashCode().toString()

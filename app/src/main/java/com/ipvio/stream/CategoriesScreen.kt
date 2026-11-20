@@ -54,6 +54,9 @@ const val CAT_WATCH = "Meine Liste"
 
 fun isTopEntry(name: String) = name == CAT_RECENT || name == CAT_WATCH
 
+/** Row text of a folder built from shared category patterns (#96): "FR  ›". */
+fun folderLabel(prefix: String) = "$prefix  ›"
+
 private fun sortFor(name: String, sort: Int) = if (isTopEntry(name)) 8 else sort
 
 object CatPrefs {
@@ -95,8 +98,34 @@ fun CategoriesScreen(
     var inSidebar by remember { mutableStateOf(false) }
     BackHandler(enabled = !inPills) { runCatching { pillFocus.requestFocus() } }
     BackHandler(enabled = inPills) { onBack() }
+    // #96: an open folder ("FR ›") — back leaves the folder first
+    var folder by remember { mutableStateOf<String?>(null) }
+    BackHandler(enabled = folder != null) { folder = null }
 
-    val map = if (mode == 0) req.ipvio else req.provider
+    // #96: provider categories with a shared pattern ("FR - SPORTS", "FR - AMAZON") are shown as one folder row
+    val folders = remember(req.provider) { if (req.provider.isEmpty()) emptyList() else GroupPatternLogic.analyze(req.provider.keys.toList()).first }
+    val folderByLabel = remember(folders) { folders.associateBy { folderLabel(it.prefix) } }
+    val providerView: Map<String, List<Item>> = remember(req.provider, folders) {
+        if (folders.isEmpty()) req.provider else {
+            val firstOf = HashMap<String, GroupPatternLogic.Folder>()
+            val member = HashSet<String>()
+            for (f in folders) { firstOf[f.subs.first().second] = f; f.subs.forEach { member.add(it.second) } }
+            val m = LinkedHashMap<String, List<Item>>()
+            for ((k, v) in req.provider) {
+                val f = firstOf[k]
+                if (f != null) m[folderLabel(f.prefix)] = f.subs.flatMap { req.provider[it.second].orEmpty() }
+                else if (k !in member) m[k] = v
+            }
+            m
+        }
+    }
+    val openFolder = folder?.let { p -> folders.firstOrNull { it.prefix == p } }
+    val map = if (mode == 0) req.ipvio else if (openFolder != null) openFolder.subs.associate { it.second to req.provider[it.second].orEmpty() } else providerView
+    // A folder row opens the folder; every other row works as before
+    val pickOrOpen: (String, List<Item>, Int) -> Unit = { name, items, s ->
+        val f = folderByLabel[name]
+        if (mode == 1 && f != null) { folder = f.prefix } else { onPick(name, items, s) }
+    }
     val entries = remember(map, az, saved, CatOrder.version, req.recent, req.watch) {
         val l = map.entries.map { it.key to it.value }
         val base = if (saved && area != null) CatOrder.sorted(area, map.keys.toList()).mapNotNull { k -> map[k]?.let { k to it } }
@@ -127,6 +156,7 @@ fun CategoriesScreen(
                     val sel = if (mode == 0) 1 else 0
                     DropdownPill("Filter", modes[sel], modes, sel, modifier = Modifier.focusRequester(pillFocus), icon = FIcon.Genre) {
                         mode = if (it == 1) 0 else 1
+                        folder = null
                         AppSettings.set(ctx, mode == 0)
                     }
                     if (saved && area != null) {
@@ -163,8 +193,9 @@ fun CategoriesScreen(
                         else -> CatOrder.move(ctx, area, names, name, how)
                     }
                 } else null
-                if (CatPrefs.listView) ListMode(req.title, entries, catSort, firstFocus, pillFocus, onPick, onOpen, onMove, mode == 1) { bgItem = it }
-                else TileMode(entries, catSort, firstFocus, onPick)
+                val title = if (openFolder != null) req.title + "  ·  " + openFolder.prefix else req.title
+                if (CatPrefs.listView) ListMode(title, entries, catSort, firstFocus, pillFocus, pickOrOpen, onOpen, onMove, mode == 1) { bgItem = it }
+                else TileMode(entries, catSort, firstFocus, pickOrOpen)
             }
         }
         Sidebar(tab, onGoTab, Modifier.align(SidebarPrefs.align()), sideFocus) { inSidebar = it }
@@ -177,11 +208,14 @@ private const val MOVE_BOTTOM = Int.MAX_VALUE
 
 object CatMemory {
     val sel = HashMap<String, Int>()
+    /** #65: name of the selected category per list. Restored by name, because an index can point to another row after a rebuild. */
+    val selName = HashMap<String, String>()
     val item = HashMap<String, Int>()
     val restore = HashMap<String, Boolean>()
 
     fun reset() {
         sel.clear()
+        selName.clear()
         item.clear()
         restore.clear()
     }
@@ -194,7 +228,9 @@ private fun ListMode(
     onMove: ((String, Int) -> Unit)?, provider: Boolean, onFocusItem: (Item) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var sel by remember { mutableIntStateOf((CatMemory.sel[title] ?: 0).coerceIn(0, maxOf(entries.lastIndex, 0))) }
+    // #65: restore the category by its name first; the index is only the fallback (rows can move or change)
+    val byName = CatMemory.selName[title]?.let { n -> entries.indexOfFirst { it.first == n } }?.takeIf { it >= 0 }
+    var sel by remember { mutableIntStateOf(byName ?: (CatMemory.sel[title] ?: 0).coerceIn(0, maxOf(entries.lastIndex, 0))) }
     var inPreview by remember { mutableStateOf(false) }
     var pendingPreview by remember { mutableStateOf(false) }
     var focusedItem by remember { mutableStateOf<Item?>(null) }
@@ -222,7 +258,10 @@ private fun ListMode(
         kotlinx.coroutines.delay(600)
         StalkerMore.prefetch(ctx, c.first, c.second.mapTo(HashSet()) { it.kind })
     }
-    SideEffect { CatMemory.sel[title] = sel }
+    SideEffect {
+        CatMemory.sel[title] = sel
+        cur?.first?.let { CatMemory.selName[title] = it }
+    }
     // Unique row keys (a provider category could be called like a top entry)
     val rowKeys = remember(entries) { val seen = HashSet<String>(); entries.mapIndexed { i, e -> if (seen.add(e.first)) e.first else e.first + "#" + i } }
     // After moving a category the selection follows it to its new place

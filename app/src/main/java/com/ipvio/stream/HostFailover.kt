@@ -150,6 +150,9 @@ object HostFailover {
 
     /** For all OkHttp requests: on a connection error or 5xx, try the backup servers in order. */
     object Interceptor : okhttp3.Interceptor {
+        /** Answers that make the next server worth a try: login refused or address not found (#backup-server, 19 Nov). */
+        private val FAILOVER_CODES = setOf(401, 403, 404)
+
         override fun intercept(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
             val req = chain.request()
             // Drop addresses OkHttp cannot parse up front, so a 5xx on the last usable server is returned as is
@@ -157,14 +160,22 @@ object HostFailover {
             val urls = candidates(req.url.toString()).mapNotNull { u -> u.toHttpUrlOrNull()?.let { u to it } }
             if (urls.size < 2) return chain.proceed(req)
             var last: IOException? = null
+            // The answer of the last server that responded with a refusal; returned if no other server works
+            var refusal: okhttp3.Response? = null
             for ((i, pair) in urls.withIndex()) {
                 val (u, target) = pair
                 try {
                     val resp = chain.proceed(req.newBuilder().url(target).build())
-                    if (resp.code >= 500) {
+                    // A backup is also tried when the address refuses the login or is not found (401/403/404)
+                    if (resp.code >= 500 || resp.code in FAILOVER_CODES) {
                         markFailed(u)
-                        if (i < urls.lastIndex) { resp.close(); continue }
-                    } else markWorking(u)
+                        if (i < urls.lastIndex) { refusal?.close(); refusal = resp; continue }
+                        refusal?.close()
+                        return resp
+                    }
+                    markWorking(u)
+                    if (i > 0) Diag.report("Backup-Server genutzt, weil der erste nicht antwortet")
+                    refusal?.close()
                     return resp
                 } catch (e: IOException) {
                     if (chain.call().isCanceled()) throw e
@@ -172,6 +183,7 @@ object HostFailover {
                     last = e
                 }
             }
+            refusal?.let { return it }
             throw last ?: IOException("No server reachable")
         }
     }

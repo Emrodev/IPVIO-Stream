@@ -1,6 +1,19 @@
-Last update: 2026-11-12 (release 1.4 prepared). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-19 (GitHub issue batch, see `docs/tasks/T-027-issue-batch.md`). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-12 (T-027 in PR #66, rebased on dev). Read `CLAUDE.md` first, then this file.
 
+## Current task (19 Nov 2026)
+
+Issue batch on `claude/jolly-ride-mr9tgm`: #69 (consent before an http fallback, T-026), #90, #111, #15, #95, #102, #112 implemented; #28 no change needed (to be confirmed on a device); #73, #108, #104 analysed, logs needed. **Nothing built with Gradle, nothing tested on a device.** Pure logic tests run on the JVM (all green). Not merged into `dev`. Next: maintainer device tests (steps in T-026 and T-027), then a review of the protected-area changes (#102 classifier, #112 storage) before a PR into `dev`.
+
+## Previous task
 ## Current task (13 Nov 2026)
+Last update: 2026-11-19 (T-033 stream info on the detail page). Read `CLAUDE.md` first, then this file.
+
+## Current task (19 Nov 2026)
+
+T-033 (technical stream info on the detail page, issue #24): implemented on branch `feat/media-probe` from `upstream/dev` (`3a34845`) with the new dependency `media3-inspector:1.11.1` (approved by the maintainer). Task file `docs/tasks/T-033-media-probe.md`. JVM tests ran locally (JDK 21, `gradlew.bat testDebugUnitTest`): new tests pass; 2 existing socket tests (`PhoneImportTest`, `PhoneTransferTest`) fail locally on `dev` too. `assembleDebug` built. Not device tested. Next: PR into `dev`, device test with the steps in the task file.
+
+## Earlier task (13 Nov 2026)
 
 T-026 (Live TV only some categories, cut-off playlist kept as cache): implemented on branch `fix/playlist-cache` from `62846c7` (1.4.1). Task file `docs/tasks/T-026-playlist-cache-incomplete.md`. Status: **done, open for device test** (PR #71, CI green; the maintainer could not test on 13 Nov 2026). JVM tests ran (see task file). Do not merge before the device test. Next: maintainer builds, tests with "Playlist komplett neu laden" (steps in the task file), sends `adb logcat -d -s IPVIO-PL` if categories are still missing; then merge #71 into `main` and create the 1.4.2 branch from `main`.
 
@@ -17,6 +30,7 @@ Device test: mark a Live, movie and series category private, play from each, the
 
 Also on the same branch: the default sort setting for all lists and the hide option for the home slideshow (uncommitted work from before). Open from the review that day: `browse_sort` is missing from the View page reset keys (`SettingsResetLogic.kt`).
 
+T-027 (release notes for every release, branch `docs/T-027-release-notes`): rule in `CLAUDE.md` section 18, template and 1.4.3 notes in `docs/release-notes/`, `release.yml` uses the notes file for the release text and `update.json` `notes` (needs approval), see `docs/tasks/T-027-release-notes.md`. PR #66, waiting for review. Workflow not run.
 
 Release 1.4 (`versionCode` 5): `main` plus the speed series (T-019 to T-023), R8 over the whole app (T-024) and the update card fix (T-025). Reported by the maintainer on 12 Nov 2026: built and tested on the device, works. The individual checks and any measurements were not recorded. The statuses "not built, not tested" further down for these tasks are older than this report. The maintainer builds the signed APK, creates `update.json` and publishes the GitHub release `v1.4` (steps in `docs/RELEASE.md`). The assistant did not build or publish anything. Rollback for R8 if users report a crash at start: `enable = false` in `app/build.gradle.kts` and a new release.
 
@@ -77,6 +91,8 @@ Playlist mode switch fix (see Completed steps, 12 Nov 2026): implemented, **open
 >- T-004 (quality baseline values) needs ktlint, detekt and Lint runs on the maintainer's machine.
 
 ## Next step
+
+T-027: review PR #66 (workflow change needs approval); optionally put `docs/release-notes/v1.4.3.md` into the GitHub release `v1.4.3`.
 
 Device tests of T-015 (steps in its task file; needs a test release with `update.json`) and of T-014 (first-start update card). Mode switch fix, demo mode, favorites reorder, settings reset: confirmed working by the maintainer on 12 Nov 2026. Still open: device tests of #45 backup, #47 Stalker, #49, #50, #52. Then decide T-010 and T-012 against the on-demand loading, and PR #40 / PR #9.
 Device tests of the mode switch fix (uncommitted) and of everything merged on 12 Nov 2026 (#41, #43, #45, #47 Stalker, #49 category order and refresh default, #50 Xtream progress, #52 online subtitle search from #9). Then decide T-010 and T-012 against the on-demand loading, and PR #40 / PR #9.

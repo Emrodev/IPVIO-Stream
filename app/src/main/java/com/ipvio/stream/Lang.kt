@@ -25,7 +25,7 @@ object Lang {
         I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO, DictP)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("ar"), DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6)
-        I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7)
+        I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7, DictPl8)
     }
 
     /** Index in I18nCore.CODES. Reads the state so texts are redrawn on switching. */

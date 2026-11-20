@@ -326,7 +326,10 @@ object PlaylistStore {
         val p = prefs(c)
         // Prefers the encrypted version; the old plain-text version is adopted and replaced on first start.
         val enc = p.getString("lists_enc", null)
-        val json = (if (enc != null) Secrets.decrypt(enc) else null) ?: p.getString("lists", "[]")
+        val dec = if (enc != null) Secrets.decrypt(enc) else null
+        // #112: the saved list exists but cannot be decrypted (e.g. the key was lost). It is kept, see persist()
+        if (enc != null && dec == null) Diag.report("Gespeicherte Playlist-Liste konnte nicht entschlüsselt werden")
+        val json = dec ?: p.getString("lists", "[]")
         try {
             val a = JSONArray(json)
             for (i in 0 until a.length()) {
@@ -359,6 +362,9 @@ object PlaylistStore {
         for (l in lists) a.put(JSONObject().put("name", l.name).put("url", l.url))
         val e = prefs(c).edit().putInt("active", active).putString("multi", MultiLogic.encodeKeys(multi)).remove("url")
         val token = Secrets.encrypt(a.toString())
+        // #112: never replace an unreadable saved list without keeping it (the link and login may still be recoverable)
+        val prev = prefs(c).getString("lists_enc", null)
+        if (prev != null && Secrets.decrypt(prev) == null && !prefs(c).contains("lists_enc_unreadable")) e.putString("lists_enc_unreadable", prev)
         if (token != null) e.putString("lists_enc", token).remove("lists")
         else e.putString("lists", a.toString()).remove("lists_enc")
         e.apply()
@@ -600,6 +606,24 @@ object PlaylistStore {
 
     internal fun key(url: String) = url.trim().hashCode()
     private fun cacheFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".bin")
+
+    /** #90: this playlist address sends the app's own user-agent (the user opted in when adding it). */
+    fun nativeUa(c: Context, url: String): Boolean = prefs(c).getBoolean(PlaylistUaLogic.prefKey(key(url)), false)
+    fun setNativeUa(c: Context, url: String, on: Boolean) { prefs(c).edit().putBoolean(PlaylistUaLogic.prefKey(key(url)), on).apply() }
+    private fun uaFor(c: Context, url: String): String = PlaylistUaLogic.pick(nativeUa(c, url), BuildConfig.VERSION_NAME)
+
+    /** #111: number of live channels, movies and series of a loaded playlist (stored at load time). */
+    fun saveTypeCounts(c: Context, url: String, items: List<Item>) {
+        val t = PlaylistCountLogic.TypeCounts(
+            live = items.count { it.kind == Kind.LIVE },
+            movies = items.count { it.kind == Kind.MOVIE },
+            series = items.count { it.kind == Kind.SERIES },
+        )
+        prefs(c).edit().putString("cnt_" + key(url), PlaylistCountLogic.encode(t)).apply()
+    }
+
+    fun typeCounts(c: Context, url: String): PlaylistCountLogic.TypeCounts? =
+        PlaylistCountLogic.decode(prefs(c).getString("cnt_" + key(url), null))
     private fun gzFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".m3u.gz")
     private fun rawFile(c: Context, url: String) = File(c.filesDir, "pl_" + key(url) + ".m3u")
     /** Stalker portal: categories of which only the newest titles were fetched while loading (see [StalkerMore]). */
@@ -775,7 +799,11 @@ object PlaylistStore {
     }
 
     /** API access for the episodes of a series that are only loaded when it is opened ([LazySeries]). */
-    internal fun xtreamApi(): XtreamApi = XtreamApi(client, UA)
+    /** #90: the user-agent of the active playlist (the series belong to it), VLC if unknown. */
+    internal fun xtreamApi(c: Context? = null): XtreamApi {
+        val u = lists.getOrNull(active)?.url
+        return XtreamApi(client, if (c != null && u != null) uaFor(c, u) else UA)
+    }
 
     /** Build the list via the provider's API (see [XtreamApi]) and store it like a finished download. */
     private fun downloadApi(c: Context, u: String, acct: XtreamLogic.Acct): Pair<File, Charset> {
@@ -788,7 +816,7 @@ object PlaylistStore {
         }
         raw.delete(); part.delete()
         bytesRead = 0L; totalBytes = -1L; downloadDone = false
-        val api = XtreamApi(client, UA)
+        val api = XtreamApi(client, uaFor(c, u))
         api.onPhase = { phase = it }
         api.check = { if (cancelled()) throw CancellationException("abgebrochen") }
         // Shown bytes = written list + movies/series still in temporary files (fetched in parallel). Never goes backwards:
@@ -856,7 +884,7 @@ object PlaylistStore {
         val extra = if (pi != null) LoadLogic.resumeHeaders(offset, pi.etag, pi.lastModified) else emptyMap()
         if (extra.isEmpty()) offset = 0L
         val rb = Request.Builder().url(u)
-            .header("User-Agent", UA)
+            .header("User-Agent", uaFor(c, u))
             .header("Accept", "*/*")
             .header("Accept-Language", "en-US,en;q=0.9,de;q=0.8")
             .header("Connection", "keep-alive")
@@ -1015,7 +1043,11 @@ object PlaylistStore {
                 phase = "Playlist wird geprüft …"
                 val scan = readFile(src, gz, cs, null) { r -> M3uParser.scanStream(r, guard()) }
                 if (wantAsk || LoadLogic.estimate(scan.bytes, hidden) > budget) {
-                    if (!ask) throw PlaylistError(MSG_TOO_BIG)
+                    if (!ask) {
+                        // #73 diagnostics: memory limit and language filter at the moment the list is refused (numbers only)
+                        Diag.report("Speicher-Budget ${budget / 1_000_000} MB, Heap ${Runtime.getRuntime().maxMemory() / 1_000_000} MB, ${hidden.size} Sprachen ausgeblendet")
+                        throw PlaylistError(MSG_TOO_BIG)
+                    }
                     val now = scan.counts.keys - hidden
                     val pre = if (LangFilter.hidden.isNotEmpty() && now.isNotEmpty()) now else LoadLogic.systemPreselect(scan.counts, systemLang())
                     val shown = askLanguages(scan.counts, scan.bytes, budget, pre) ?: throw PlaylistError(MSG_CANCEL)
@@ -1448,6 +1480,7 @@ object PlaylistStore {
                 val order = fetchOrder(u)
                 phase = "Playlist wird gespeichert …"
                 writeCache(c, u, parsed.items, urls, order, parsed.counts, parsed.bytes, b.hidden)
+                saveTypeCounts(c, u, parsed.items)
                 Catchup.saveParsed(c, u, parsed.catchup)
                 commitGz(c, u, gzTmp)
                 val list = parsed.items
@@ -1548,6 +1581,7 @@ object PlaylistStore {
                     val b = build(c, u, src, false, cs, false, gzTmp)
                     if (b.parsed.counts.isEmpty()) return@withContext false
                     writeCache(c, u, b.parsed.items, epgFor(u, b.parsed.epgUrls), fetchOrder(u), b.parsed.counts, b.parsed.bytes, b.hidden)
+                    saveTypeCounts(c, u, b.parsed.items)
                     Catchup.saveParsed(c, u, b.parsed.catchup)
                     commitGz(c, u, gzTmp)
                     true

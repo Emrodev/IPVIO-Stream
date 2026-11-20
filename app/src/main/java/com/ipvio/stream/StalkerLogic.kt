@@ -20,12 +20,17 @@ object StalkerLogic {
      * [sn] = serial number, [id1] = device ID, [id2] = device ID 2 (as in TiviMate / STB Emu). Optional: some providers
      * identify the box by them in addition to the MAC. Empty = the app derives its own values from the MAC (as before).
      */
-    data class Source(val portal: String, val mac: String, val sn: String = "", val id1: String = "", val id2: String = "") {
+    data class Source(
+        val portal: String, val mac: String, val sn: String = "", val id1: String = "", val id2: String = "",
+        /** Box model the login presents itself as (#75); the default MAG250 is not written, so old keys stay the same. */
+        val model: String = StalkerModelLogic.DEFAULT
+    ) {
         /** Key of the source in the play addresses (hash of the stored details, without the details themselves). */
         val key: Int get() = encode().trim().hashCode()
         /** Without the optional values exactly as before (so existing logins keep their key and their cache). */
         fun encode(): String = "stalker:" + portal + "#mac=" + mac +
-            (if (sn.isNotEmpty()) "#sn=$sn" else "") + (if (id1.isNotEmpty()) "#id1=$id1" else "") + (if (id2.isNotEmpty()) "#id2=$id2" else "")
+            (if (sn.isNotEmpty()) "#sn=$sn" else "") + (if (id1.isNotEmpty()) "#id1=$id1" else "") + (if (id2.isNotEmpty()) "#id2=$id2" else "") +
+            (if (model != StalkerModelLogic.DEFAULT) "#stb=$model" else "")
     }
 
     /** Serial number / device ID as typed: only letters and digits (no separators, nothing that could break the stored text). */
@@ -42,13 +47,13 @@ object StalkerLogic {
     }
 
     /** Login from the inputs; null = portal address or MAC invalid. */
-    fun source(portalRaw: String, macRaw: String, snRaw: String = "", id1Raw: String = "", id2Raw: String = ""): Source? {
+    fun source(portalRaw: String, macRaw: String, snRaw: String = "", id1Raw: String = "", id2Raw: String = "", modelRaw: String = ""): Source? {
         var p = portalRaw.trim()
         if (p.isEmpty()) return null
         if (!p.startsWith("http://", true) && !p.startsWith("https://", true)) p = "http://$p"
         if (PlaylistLogic.normalizeUrl(p) == null) return null
         val m = normMac(macRaw) ?: return null
-        return Source(p, m, cleanId(snRaw), cleanId(id1Raw), cleanId(id2Raw))
+        return Source(p, m, cleanId(snRaw), cleanId(id1Raw), cleanId(id2Raw), StalkerModelLogic.clean(modelRaw))
     }
 
     fun isSource(url: String): Boolean = url.trim().startsWith("stalker:", true) && !url.trim().startsWith("stalker://", true)
@@ -61,13 +66,13 @@ object StalkerLogic {
         if (i <= 0) return null
         // After the MAC optionally "#sn=…", "#id1=…", "#id2=…"
         val rest = body.substring(i + 5).split('#')
-        var sn = ""; var d1 = ""; var d2 = ""
+        var sn = ""; var d1 = ""; var d2 = ""; var stb = ""
         for (p in rest.drop(1)) {
             val kv = p.split('=', limit = 2)
             if (kv.size != 2) continue
-            when (kv[0]) { "sn" -> sn = kv[1]; "id1" -> d1 = kv[1]; "id2" -> d2 = kv[1] }
+            when (kv[0]) { "sn" -> sn = kv[1]; "id1" -> d1 = kv[1]; "id2" -> d2 = kv[1]; "stb" -> stb = kv[1] }
         }
-        return source(body.substring(0, i), rest[0], sn, d1, d2)
+        return source(body.substring(0, i), rest[0], sn, d1, d2, stb)
     }
 
     private val C_TAIL = Regex("""/c(/[^/]*)?$""", RegexOption.IGNORE_CASE)
@@ -133,7 +138,7 @@ object StalkerLogic {
         val dev = src.id1.ifEmpty { hash("SHA-256", src.mac) }
         val dev2 = src.id2.ifEmpty { dev }
         // As a MAG250 sends it (TiviMate / STB Emu do the same); some portals only accept the token for playback after this
-        return "&hd=1&ver=${enc(VER)}&num_banks=2&sn=${enc(sn)}&stb_type=MAG250&client_type=STB&image_version=218&video_out=hdmi" +
+        return "&hd=1&ver=${enc(VER)}&num_banks=2&sn=${enc(sn)}&stb_type=${enc(src.model)}&client_type=STB&image_version=218&video_out=hdmi" +
             "&device_id=${enc(dev)}&device_id2=${enc(dev2)}&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0" +
             "&api_signature=262"
     }

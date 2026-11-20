@@ -45,13 +45,14 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import java.net.URLEncoder
 
 fun openTrailer(ctx: Context, key: String?, title: String) {
-    val uri = if (key != null) "https://www.youtube.com/watch?v=$key"
-    else "https://www.youtube.com/results?search_query=" + URLEncoder.encode("$title Trailer", "UTF-8")
+    val i = Intent(Intent.ACTION_VIEW, Uri.parse(TrailerLogic.externalUrl(key, title))).addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION)
+    // From an activity the trailer app starts in the app's own task, so Back returns to the detail page;
+    // a new task is only needed when the context is not an activity
+    if (ctx !is android.app.Activity) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try {
-        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION))
+        ctx.startActivity(i)
     } catch (e: Exception) {
         Toast.makeText(ctx, Lang.tr("Keine App zum Öffnen des Trailers gefunden"), Toast.LENGTH_LONG).show()
     }
@@ -451,6 +452,8 @@ private fun DetailScreenFull(
                         Text(raw = true, text = item.title, color = Tok.TextHi, fontSize = spx(84), lineHeight = spx(84), fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-1.5).sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         HeroMetaLine(item, meta, dots = false)
+                        // Tracks of the file read from its header (T-033, issue #24); series: first episode of the shown season
+                        if (showActions && item.kind != Kind.LIVE && !DemoMode.active) playUrl?.let { ProbeLine(it) }
                         // Movie started: small progress bar with remaining time
                         if (item.kind != Kind.SERIES && resume != null && resume.dur > 0 && !ResumeLogic.finished(resume.pos, resume.dur)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(10))) {
@@ -521,7 +524,10 @@ private fun DetailScreenFull(
                                 // Round 14: movies and series as favorites (appear under "Favorites")
                                 val fav = Library.isFav(item.id)
                                 HeroButton(if (fav) "Favorit" else "Zu Favoriten", if (fav) AIcon.HeartFilled else AIcon.Heart, false, Modifier, bh) { Library.toggleFav(ctx, item.id) }
-                                HeroButton("Trailer", AIcon.Play, false, Modifier, bh) { openTrailer(ctx, meta?.trailerKey, item.title) }
+                                HeroButton("Trailer", AIcon.Play, false, Modifier, bh) {
+                                    // T-032: opens YouTube at once (the in-app player showed no picture on test devices)
+                                    openTrailer(ctx, meta?.trailerKey, item.title)
+                                }
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)

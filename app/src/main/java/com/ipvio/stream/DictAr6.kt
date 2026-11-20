@@ -17,4 +17,6 @@ An: Der Fernseher geht nicht in den Bildschirmschoner oder Ruhezustand, solange 
 Aktuelle PIN eingeben¦أدخل الرمز الحالي
 Zum Ändern die bisherige PIN eingeben.¦لتغييره، أدخل رمز PIN الحالي.
 Neue Folgen¦حلقات جديدة
+Technische Infos auf der Detailseite¦معلومات تقنية في صفحة التفاصيل
+Liest beim Öffnen eines Titels den Anfang der Datei und zeigt Auflösung, HDR, Tonspuren und Untertitel. Das belegt kurz eine Verbindung zum Anbieter – bei Zugängen mit nur einer Verbindung ausschalten, wenn gleichzeitig etwas anderes läuft.¦يقرأ بداية الملف عند فتح عنوان ويعرض الدقة وHDR ومسارات الصوت والترجمات. يشغل ذلك اتصالًا بالمزوّد لفترة قصيرة – أوقفه في الحسابات ذات الاتصال الواحد إذا كان شيء آخر قيد التشغيل في الوقت نفسه.
 """

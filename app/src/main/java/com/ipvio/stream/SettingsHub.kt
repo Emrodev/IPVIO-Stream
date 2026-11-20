@@ -481,6 +481,9 @@ private fun ParentalPage(ctx: Context, onExit: () -> Unit) {
         3 -> PinPad("PIN bestätigen", "Gib die PIN noch einmal ein.", err,
             { if (it == first) { Parental.setPin(ctx, it); Parental.unlocked = true; err = null; step = 0 } else { err = "Die PINs stimmen nicht überein"; step = 2 } },
             { step = 0 })
+        5 -> PinPad("Aktuelle PIN eingeben", "Zum Ändern die bisherige PIN eingeben.", err,
+            { if (Parental.verify(ctx, it)) { err = null; step = 2 } else err = Parental.pinError() },
+            { err = null; step = 0 })
         // Removing the PIN asks for the current PIN again, so it is protected like changing it
         4 -> PinPad("PIN eingeben", "Die Jugendschutz-Einstellungen sind mit einer PIN geschützt.", err,
             {
@@ -506,7 +509,8 @@ private fun ParentalPage(ctx: Context, onExit: () -> Unit) {
             SectionTitle("PIN")
             Text(if (Parental.pinSet) "PIN ist gesetzt" else "Keine PIN gesetzt", color = if (Parental.pinSet) Accent2 else Muted, fontSize = 16.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PillButton(if (Parental.pinSet) "PIN ändern" else "PIN festlegen", light = !Parental.pinSet) { err = null; step = 2 }
+                // #82: changing an existing PIN asks for the current PIN first (step 5), like removing it
+                PillButton(if (Parental.pinSet) "PIN ändern" else "PIN festlegen", light = !Parental.pinSet) { err = null; step = if (Parental.pinSet) 5 else 2 }
                 if (Parental.pinSet) PillButton("PIN entfernen") { err = null; step = 4 }
             }
             Hint("Mit einer PIN lässt sich der Schutz nur nach Eingabe der PIN ändern. Die Erkennung arbeitet mit Stichwörtern in Kategorie- und Titelnamen und ist kein vollständiger Filter. Beim Zurücksetzen aller Einstellungen bleibt die PIN erhalten.")
@@ -550,6 +554,8 @@ private fun GeneralPage(ctx: Context) {
     SectionTitle("Bedienung")
     ToggleRow("Tastatur des Geräts in der Suche", "Aus: die eingebaute Tastatur der App. An: die Tastatur deines Geräts (z. B. Gboard) mit allen Sprachen, Sprachfunktion und Einfügen. Mit OK auf das Suchfeld wird sie geöffnet.", AppSettings.systemKeyboard) { AppSettings.setSystemKeyboard(ctx, it) }
     ToggleRow("Beenden bestätigen", "Auf der Startseite muss „Zurück“ zweimal gedrückt werden, damit die App nicht aus Versehen schließt.", General.confirmExit) { General.setConfirmExit(ctx, it) }
+    // #95: the device's screensaver or sleep timer is blocked while the app is open (window flag, see ScreenAwake)
+    ToggleRow("Bildschirm beim Stöbern wach halten", "An: Der Fernseher geht nicht in den Bildschirmschoner oder Ruhezustand, solange die App offen ist. Aus: nur während der Wiedergabe.", General.keepAwakeBrowse) { General.setKeepAwakeBrowse(ctx, it) }
     // Phone/tablet: landscape (the UI is built for the TV)
     if (MobilePrefs.isMobile(ctx)) {
         val act = generateSequence<Context>(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()
@@ -942,6 +948,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
         "Speicher" to (Mem.totalMb(ctx).toString() + " MB · " + listOf("wenig", "mittel", "viel")[Mem.tier(ctx)]),
         "Letzter Fehler" to err,
         "Fehler seit Start" to Diag.errorCount.toString(),
+        "Log" to Diag.history.joinToString("\n") { DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date(it.first)) + "  " + it.second },
         "Bildschirm wach" to (if (ScreenAwake.isOn) Lang.tr("an") + " (" + ScreenAwake.reasons + ")" else Lang.tr("aus")) +
             ScreenAwake.history.joinToString("") {
                 "\n" + DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date(it.first)) + "  " +
@@ -950,7 +957,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
         "Weiterschauen" to (ResumeLog.also { it.init(ctx) }.lines.take(12).joinToString("\n") { ResumeLog.display(it) }.ifBlank { "noch nichts gemerkt" }),
         "Letzter Absturz" to (CrashLog.last(ctx)?.let { it.first + "  (" + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.second)) + ")" } ?: "keiner")
     )
-    lines.forEach { (k, v) ->
+    lines.filter { it.first != "Log" || it.second.isNotEmpty() }.forEach { (k, v) ->
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
             Text(v, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp))
@@ -962,7 +969,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton("Playlist neu laden", light = true, icon = AIcon.Refresh) { reload() }
         PillButton("Bericht kopieren") {
-            val text = lines.joinToString("\n") { it.first + ": " + it.second }
+            val text = lines.filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { it.first + ": " + it.second }
             runCatching {
                 val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
                 cm?.setPrimaryClip(android.content.ClipData.newPlainText("IPVIO Diagnose", text))
@@ -1326,6 +1333,10 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(pl.name + if (isActive) "  ·  " + Lang.tr("Hauptliste") else if (shown) "  ·  " + Lang.tr("zusätzlich angezeigt") else "", color = if (isActive || shown) Accent2 else Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, raw = true)
                 Text(PlaylistStore.hostOf(pl.url), color = Muted, fontSize = 13.sp, maxLines = 1)
+                // #111: channels, movies and series of this playlist as last loaded (nothing until it is loaded once)
+                PlaylistStore.typeCounts(ctx, pl.url)?.let { t ->
+                    Text(PlaylistCountLogic.summary(t, Lang.tr("Live TV"), Lang.tr("Filme"), Lang.tr("Serien")), color = Muted, fontSize = 13.sp, maxLines = 1)
+                }
                 val nb = if (editingB == i) 0 else PlaylistStore.backups(ctx, pl.url).size
                 if (nb > 0) Text("Backup-Server: $nb", color = Muted, fontSize = 13.sp, maxLines = 1)
                 val down = PlaylistStore.downServers(ctx, pl.url)

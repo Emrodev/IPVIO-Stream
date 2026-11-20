@@ -62,6 +62,11 @@ fun SourceSettingsSection(ctx: Context) {
         "Ruckelt ein Titel mehrmals oder lässt er sich nicht abspielen, nimmt die App eine andere (kleinere) Quelle desselben Titels – an derselben Stelle.",
         PlaybackPrefs.autoFallback
     ) { PlaybackPrefs.setFallback(ctx, it) }
+    ToggleRow(
+        "Technische Infos auf der Detailseite",
+        "Liest beim Öffnen eines Titels den Anfang der Datei und zeigt Auflösung, HDR, Tonspuren und Untertitel. Das belegt kurz eine Verbindung zum Anbieter – bei Zugängen mit nur einer Verbindung ausschalten, wenn gleichzeitig etwas anderes läuft.",
+        PlaybackPrefs.probe
+    ) { PlaybackPrefs.setProbe(ctx, it) }
     Text("Dieses Gerät: " + DeviceCaps.summary(), color = Muted, fontSize = 15.sp)
     if (PlaybackPrefs.learnedCap in 1..3) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Gelernt: 4K ruckelte hier mehrmals – Automatik nimmt höchstens Full HD.", color = DS.Gold, fontSize = 15.sp)
