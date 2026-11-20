@@ -1,6 +1,8 @@
 package com.ipvio.stream
 
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
@@ -58,6 +60,13 @@ fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit 
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean =
                                 request?.isForMainFrame != false
+                            // Diagnostics for the black-picture trailers (T-032): codes only, no addresses
+                            override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+                                if (request?.isForMainFrame != false) Diag.report("Trailer: WebView-Fehler ${error?.errorCode}")
+                            }
+                            override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
+                                Diag.report("Trailer: HTTP ${errorResponse?.statusCode} (Hauptseite=${request?.isForMainFrame == true})")
+                            }
                         }
                         loadDataWithBaseURL("https://www.youtube-nocookie.com", html, "text/html", "utf-8", null)
                         holder[0] = this
