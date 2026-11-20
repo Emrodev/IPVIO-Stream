@@ -897,6 +897,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
         "Speicher" to (Mem.totalMb(ctx).toString() + " MB · " + listOf("wenig", "mittel", "viel")[Mem.tier(ctx)]),
         "Letzter Fehler" to err,
         "Fehler seit Start" to Diag.errorCount.toString(),
+        "Log" to Diag.history.joinToString("\n") { DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date(it.first)) + "  " + it.second },
         "Bildschirm wach" to (if (ScreenAwake.isOn) Lang.tr("an") + " (" + ScreenAwake.reasons + ")" else Lang.tr("aus")) +
             ScreenAwake.history.joinToString("") {
                 "\n" + DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date(it.first)) + "  " +
@@ -905,7 +906,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
         "Weiterschauen" to (ResumeLog.also { it.init(ctx) }.lines.take(12).joinToString("\n") { ResumeLog.display(it) }.ifBlank { "noch nichts gemerkt" }),
         "Letzter Absturz" to (CrashLog.last(ctx)?.let { it.first + "  (" + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.second)) + ")" } ?: "keiner")
     )
-    lines.forEach { (k, v) ->
+    lines.filter { it.first != "Log" || it.second.isNotEmpty() }.forEach { (k, v) ->
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
             Text(v, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp))
@@ -917,7 +918,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton("Playlist neu laden", light = true, icon = AIcon.Refresh) { reload() }
         PillButton("Bericht kopieren") {
-            val text = lines.joinToString("\n") { it.first + ": " + it.second }
+            val text = lines.filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { it.first + ": " + it.second }
             runCatching {
                 val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
                 cm?.setPrimaryClip(android.content.ClipData.newPlainText("IPVIO Diagnose", text))
