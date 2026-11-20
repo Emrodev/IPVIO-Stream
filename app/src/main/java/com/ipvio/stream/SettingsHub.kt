@@ -502,6 +502,7 @@ private fun ParentalPage(ctx: Context, onExit: () -> Unit) {
                 "Zeigt Titel und Sender für Erwachsene nie in den Reihen der Startseiten (Start, Filme, Serien), auch nicht unter „Zuletzt geschaut“ oder „Weiter schauen“. In Live TV, in den Kategorien und in der Suche bleiben sie erreichbar.",
                 Parental.homeHide
             ) { Parental.setHomeHide(ctx, it) }
+            PrivateCatsSection(ctx)
             SectionTitle("PIN")
             Text(if (Parental.pinSet) "PIN ist gesetzt" else "Keine PIN gesetzt", color = if (Parental.pinSet) Accent2 else Muted, fontSize = 16.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1947,3 +1948,31 @@ private fun UpdateSection(ctx: Context) {
     Field(url, { url = it; AppUpdate.setUrl(ctx, it) }, "Eigene Update-Adresse (leer = GitHub)")
 }
 
+
+/** Private categories (T-028): list with "Nicht mehr privat" and the switch for parental-flagged categories. */
+@Composable
+private fun PrivateCatsSection(ctx: Context) {
+    PrivateCats.init(ctx)
+    SectionTitle("Private Kategorien")
+    Hint("Titles from a private category only show inside that category: not in history, continue watching, \"All …\", genres, search or the home pages. Make a category private in Live TV, Movies or Series with the menu key (or a long OK) on the category.")
+    ToggleRow(
+        "Jugendschutz-Kategorien immer privat",
+        "Alles, was der Jugendschutz erkennt, wird wie eine private Kategorie behandelt.",
+        PrivateCats.parental
+    ) { PrivateCats.setParental(ctx, it) }
+    val v = PrivateCats.version
+    val keys = remember(v) { PrivateCats.keys.toList() }
+    if (keys.isEmpty()) Text("Keine privaten Kategorien.", color = Muted, fontSize = 15.sp)
+    else Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (k in keys) {
+            val i = k.indexOf('\t')
+            val kind = if (i > 0) runCatching { Kind.valueOf(k.substring(0, i)) }.getOrNull() else null
+            val group = if (i > 0) k.substring(i + 1) else k
+            val kindLabel = when (kind) { Kind.LIVE -> "Live TV"; Kind.MOVIE -> "Filme"; Kind.SERIES -> "Serien"; null -> "" }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(Lang.tr(kindLabel) + "  ·  " + group, color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 560.dp))
+                if (kind != null) SmallPill("Nicht mehr privat") { privateToggle(ctx, kind, group) }
+            }
+        }
+    }
+}

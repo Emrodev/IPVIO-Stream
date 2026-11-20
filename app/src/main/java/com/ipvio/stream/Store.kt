@@ -431,6 +431,7 @@ object History {
     }
 
     fun add(c: Context, id: String) {
+        if (PrivateCats.isPrivateId(id)) return   // private categories are never recorded (T-028)
         ids.remove(id)
         ids.add(0, id)
         while (ids.size > 80) ids.removeAt(ids.lastIndex)
@@ -447,6 +448,13 @@ object History {
     fun reload(c: Context) {
         val l = (prefs(c).getString("ids", "") ?: "").split("\n").filter { it.isNotBlank() }
         if (l != ids.toList()) { ids.clear(); ids.addAll(l) }
+    }
+
+    /** Removes several titles at once (a category was made private). */
+    fun removeAll(c: Context, remove: Set<String>) {
+        init(c)
+        if (!ids.removeAll { it in remove }) return
+        prefs(c).edit().putString("ids", ids.joinToString("\n")).apply()
     }
 }
 
@@ -522,6 +530,7 @@ object WatchStore {
      * Under 30 seconds nothing changes – a short peek does not delete an old resume point.
      */
     fun save(c: Context, e: Entry, next: Entry? = null) {
+        if (PrivateCats.isPrivateId(e.itemId)) return   // private categories: no resume point, no log line (T-028)
         val fin = ResumeLogic.finished(e.pos, e.dur)
         val old = entries.firstOrNull { it.itemId == e.itemId }
         val what = e.title.take(40) + " #" + e.itemId.takeLast(4) + " " + (e.pos / 1000) + "s/" + (e.dur / 1000) + "s"
@@ -541,6 +550,12 @@ object WatchStore {
     /** Remove from "Continue watching" (menu key on the card). */
     fun remove(c: Context, itemId: String) {
         if (entries.removeAll { it.itemId == itemId }) persist(c)
+    }
+
+    /** Removes several titles at once (a category was made private). */
+    fun removeAll(c: Context, ids: Set<String>) {
+        init(c)
+        if (entries.removeAll { it.itemId in ids }) persist(c)
     }
 
     private fun persist(c: Context) {
@@ -585,7 +600,7 @@ object EpProgress {
 
     @Synchronized
     fun put(c: Context, seriesId: String, season: Int, ep: Int, posMs: Long, durMs: Long) {
-        if (durMs <= 0) return
+        if (durMs <= 0 || PrivateCats.isPrivateId(seriesId)) return
         val m = load(c, seriesId)
         val v = ResumeLogic.EpPos((posMs / 1000).toInt(), (durMs / 1000).toInt())
         val k = ResumeLogic.key(season, ep)

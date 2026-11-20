@@ -65,7 +65,8 @@ fun SearchScreen(
 ) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val all = PlaylistStore.channels
+    // Private categories (T-028) are not searchable; they stay reachable through their own category
+    val all = PlaylistStore.channels.let { PrivateCats.visible(it) }
     // Build the index in the background; searches also run in the background and only after a short typing pause
     // With very large playlists memory can run out while the index is built: then free the image cache and try once more,
     // and if it still does not fit, the search stays empty instead of the app crashing.
