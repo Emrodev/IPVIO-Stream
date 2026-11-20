@@ -45,6 +45,8 @@ object AppSettings {
     var gridCols by mutableIntStateOf(4)
     var gridRows by mutableIntStateOf(3)
     var cardW by mutableIntStateOf(150)
+    /** Sort every list opens with: -1 = as before (per tab), otherwise an index from [SORTS]. */
+    var browseSort by mutableIntStateOf(-1)
     var subSize by mutableIntStateOf(1)
     var subColor by mutableIntStateOf(0)
     var subBg by mutableIntStateOf(1)
@@ -96,6 +98,7 @@ object AppSettings {
         gridCols = p.getInt("grid_cols", 6).coerceIn(3, 10)
         gridRows = p.getInt("grid_rows", 3).coerceIn(2, 8)
         cardW = p.getInt("card_w", 150).coerceIn(110, 220)
+        browseSort = p.getInt("browse_sort", -1).coerceIn(-1, SORTS.lastIndex)
         subSize = p.getInt("sub_size", 1).coerceIn(0, SubStyle.SIZES.lastIndex)
         subColor = p.getInt("sub_color", 0).coerceIn(0, SubStyle.COLORS.lastIndex)
         subBg = p.getInt("sub_bg", 1).coerceIn(0, SubStyle.BGS.lastIndex)
@@ -289,6 +292,12 @@ object AppSettings {
     fun setCardW(c: Context, w: Int) {
         cardW = w.coerceIn(110, 220)
         prefs(c).edit().putInt("card_w", cardW).apply()
+    }
+
+    /** 0..8 = fixed default sort for all lists, -1 = each list keeps its own (as before). */
+    fun setBrowseSort(c: Context, i: Int) {
+        browseSort = i.coerceIn(-1, SORTS.lastIndex)
+        prefs(c).edit().putInt("browse_sort", browseSort).apply()
     }
 
     fun setSub(c: Context, size: Int, color: Int, bg: Int, edge: Int) {

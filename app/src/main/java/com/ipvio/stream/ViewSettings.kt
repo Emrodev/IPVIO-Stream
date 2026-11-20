@@ -305,6 +305,11 @@ private fun GridTab(ctx: Context) {
         StepRow("Zeilen (Raster)", rows.toString(),
             { AppSettings.setGrid(ctx, cols, rows - 1) },
             { AppSettings.setGrid(ctx, cols, rows + 1) })
+        // Sort order: one fixed choice for every list, or keep the one each tab brings along (as before)
+        val sortLabels = listOf("Wie bisher (je Tab)") + SORTS
+        DropdownPill("Standardsortierung", sortLabels[AppSettings.browseSort + 1], sortLabels, AppSettings.browseSort + 1,
+            active = AppSettings.browseSort >= 0, icon = FIcon.Sort) { AppSettings.setBrowseSort(ctx, it - 1) }
+        Hint("Gilt für alle Listen (Filme, Serien, Kategorien, Suche). „Jahr: neueste zuerst“ zeigt neue Titel oben; Titel ohne Jahr stehen am Ende. „Wie bisher“ lässt jede Liste ihre eigene Sortierung behalten.")
         Hint("Das Raster kannst du zusätzlich direkt in der Rasteransicht mit dem Raster-Knopf ändern.")
     }
 }
