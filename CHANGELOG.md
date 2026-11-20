@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Trailer (T-032): the Trailer button now opens YouTube at once (the app or the browser), without the in-app player: on test devices the in-app trailer showed no picture and the cause was not found. YouTube starts in the app's own task, so Back should return to the detail page (the trailer id is now checked before it goes into the address). The in-app player code (`TrailerDialog.kt`) stays in the repository, unused. Not device tested yet
 - Trailer (T-032): Settings > Diagnose shows the player's own values (playing time, volume, muted, quality) at the first "playing" and 4 s and 9 s later, to see why a trailer with player state "playing" shows no picture or sound. At the first "playing" the player is also told to unmute and set the volume to 100. Not device tested yet
 - Diagnostics: Settings > Diagnose now has a "Log" row with the last 25 messages and their time (before, each message replaced the previous one, so only the last was visible). It is part of the copied report. Not device tested yet
 - Trailer (T-032): Settings > Diagnose now shows the WebView version and which video decoders the device has (H.264, VP9, AV1, HEVC; hardware or software), because on one test device the trailer plays sound but the picture stays black. Diagnostics only, playback unchanged. Not device tested yet

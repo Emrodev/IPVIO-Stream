@@ -94,4 +94,11 @@ class TrailerLogicTest {
         assertNull(TrailerLogic.diagLine("IPVIO_TRAILER_INFO t=x v=1 m=0 q=na"))
         assertNull(TrailerLogic.diagLine("IPVIO_TRAILER_INFO t=1 v=1 m=0 q=a b"))
     }
+
+    @Test
+    fun externalUrl_usesValidIdOtherwiseSearch() {
+        assertTrue(TrailerLogic.externalUrl("dQw4w9WgXcQ", "X") == "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        assertTrue(TrailerLogic.externalUrl(null, "Avatar 2") == "https://www.youtube.com/results?search_query=Avatar+2+Trailer")
+        assertTrue(TrailerLogic.externalUrl("bad id&x=1", "A").startsWith("https://www.youtube.com/results?search_query="))
+    }
 }

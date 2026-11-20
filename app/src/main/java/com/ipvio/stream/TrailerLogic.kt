@@ -17,6 +17,11 @@ object TrailerLogic {
     /** One way to load the trailer page: the base address the WebView reports as the page origin, and the page. */
     class Attempt(val baseUrl: String, val html: String)
 
+    /** Address the Trailer button opens: the video for a valid TMDB id, otherwise a YouTube search for the title. */
+    fun externalUrl(key: String?, title: String): String =
+        if (validKey(key)) "https://www.youtube.com/watch?v=$key"
+        else "https://www.youtube.com/results?search_query=" + java.net.URLEncoder.encode("$title Trailer", "UTF-8")
+
     /** Number of ways [attempt] knows. */
     const val ATTEMPTS = 3
 

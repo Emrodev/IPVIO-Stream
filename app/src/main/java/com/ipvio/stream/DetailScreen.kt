@@ -45,13 +45,14 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import java.net.URLEncoder
 
 fun openTrailer(ctx: Context, key: String?, title: String) {
-    val uri = if (key != null) "https://www.youtube.com/watch?v=$key"
-    else "https://www.youtube.com/results?search_query=" + URLEncoder.encode("$title Trailer", "UTF-8")
+    val i = Intent(Intent.ACTION_VIEW, Uri.parse(TrailerLogic.externalUrl(key, title))).addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION)
+    // From an activity the trailer app starts in the app's own task, so Back returns to the detail page;
+    // a new task is only needed when the context is not an activity
+    if (ctx !is android.app.Activity) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try {
-        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION))
+        ctx.startActivity(i)
     } catch (e: Exception) {
         Toast.makeText(ctx, Lang.tr("Keine App zum Öffnen des Trailers gefunden"), Toast.LENGTH_LONG).show()
     }
@@ -147,14 +148,6 @@ private fun DetailScreenFull(
     BackHandler(enabled = !embedded, onBack = onBack)
     var meta by remember(item.id) { mutableStateOf(MetaRepo.cached(item)) }
     var metaDone by remember(item.id) { mutableStateOf(!MetaRepo.usable(item) || item.kind == Kind.LIVE) }
-    // #15: trailer in the app (WebView) when TMDB gave a video id; otherwise the external search as before
-    var trailerKey by remember(item.id) { mutableStateOf<String?>(null) }
-    TrailerDialog(trailerKey, onClose = { trailerKey = null }, onOpenExternal = {
-        // Same trailer in the YouTube app or browser (the in-app player can stay black on some titles)
-        val k = trailerKey
-        trailerKey = null
-        openTrailer(ctx, k, item.title)
-    })
     LaunchedEffect(item.id) {
         MetaRepo.extended(ctx, item)?.let { meta = it }
         metaDone = true
@@ -530,8 +523,8 @@ private fun DetailScreenFull(
                                 val fav = Library.isFav(item.id)
                                 HeroButton(if (fav) "Favorit" else "Zu Favoriten", if (fav) AIcon.HeartFilled else AIcon.Heart, false, Modifier, bh) { Library.toggleFav(ctx, item.id) }
                                 HeroButton("Trailer", AIcon.Play, false, Modifier, bh) {
-                                    if (TrailerLogic.validKey(meta?.trailerKey)) trailerKey = meta?.trailerKey
-                                    else openTrailer(ctx, meta?.trailerKey, item.title)
+                                    // T-032: opens YouTube at once (the in-app player showed no picture on test devices)
+                                    openTrailer(ctx, meta?.trailerKey, item.title)
                                 }
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
                             }
