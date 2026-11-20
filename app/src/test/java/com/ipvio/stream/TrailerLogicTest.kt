@@ -75,4 +75,15 @@ class TrailerLogicTest {
         assertFalse(TrailerLogic.isVideoBlocked(153))
         assertFalse(TrailerLogic.isVideoBlocked(null))
     }
+
+    @Test
+    fun decoderLine_tellsHardwareSoftwareAndMissing() {
+        val line = TrailerLogic.decoderLine(listOf(
+            TrailerLogic.Decoder("OMX.amlogic.avc.decoder", listOf("video/avc")),
+            TrailerLogic.Decoder("OMX.google.vp9.decoder", listOf("video/x-vnd.on2.vp9")),
+            TrailerLogic.Decoder("c2.android.hevc.decoder", listOf("video/hevc")),
+        ))
+        assertTrue(line == "Trailer: decoders H.264=hw VP9=sw AV1=no HEVC=sw")
+        assertTrue(TrailerLogic.decoderLine(emptyList()) == "Trailer: decoders H.264=no VP9=no AV1=no HEVC=no")
+    }
 }

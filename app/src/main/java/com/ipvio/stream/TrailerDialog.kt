@@ -1,7 +1,9 @@
 package com.ipvio.stream
 
 import android.webkit.ConsoleMessage
+import android.media.MediaCodecList
 import android.net.http.SslError
+import android.os.Build
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -29,7 +31,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+
+/** Diagnose lines about the WebView version and the video decoders (T-032: sound plays, picture stays black). */
+private suspend fun reportDeviceForTrailer() = withContext(Dispatchers.Default) {
+    runCatching {
+        val ver = if (Build.VERSION.SDK_INT >= 26) android.webkit.WebView.getCurrentWebViewPackage()?.let { "${it.packageName} ${it.versionName}" } else null
+        Diag.report("Trailer: WebView ${ver ?: "unknown"}, Android ${Build.VERSION.SDK_INT}")
+    }
+    runCatching {
+        val dec = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.filter { !it.isEncoder }
+            .map { TrailerLogic.Decoder(it.name, it.supportedTypes.toList()) }
+        Diag.report(TrailerLogic.decoderLine(dec))
+    }
+}
 
 /** Seconds a way gets to report "playing" before the next way is tried (T-032). */
 private const val ATTEMPT_MS = 10_000L
@@ -60,6 +77,7 @@ fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit 
         // and the "Im YouTube öffnen" button gets focus when the dialog opens (19 Nov feedback: button not clickable)
         val buttonFocus = remember { FocusRequester() }
         LaunchedEffect(key) { delay(200); runCatching { buttonFocus.requestFocus() } }
+        LaunchedEffect(Unit) { reportDeviceForTrailer() }
         // No sign of playback in time: next way, or outside the app after the last one
         LaunchedEffect(key, attempt) {
             delay(ATTEMPT_MS)

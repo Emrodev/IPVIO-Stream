@@ -79,4 +79,28 @@ object TrailerLogic {
         val code = m.groupValues[2]
         return if (m.groupValues[1] == "ERR") "Trailer: player error $code" else "Trailer: player state $code"
     }
+
+    /** A video decoder of the device: its name and the media types it decodes. */
+    class Decoder(val name: String, val types: List<String>)
+
+    private val CODECS = listOf("H.264" to "video/avc", "VP9" to "video/x-vnd.on2.vp9", "AV1" to "video/av01", "HEVC" to "video/hevc")
+
+    /** Software decoders shipped with Android: they exist on every device but are slow on weak TV sticks. */
+    private fun isSoftware(name: String): Boolean =
+        name.startsWith("OMX.google.") || name.startsWith("c2.android.") || name.startsWith("c2.google.")
+
+    /**
+     * One Diagnose line about the video decoders (T-032: audio plays but the picture stays black, so the device may lack
+     * a decoder for the codec YouTube sends). Per codec: `hw` (a non-Android decoder exists), `sw` (only the Android
+     * software decoder) or `no`.
+     */
+    fun decoderLine(decoders: List<Decoder>): String =
+        "Trailer: decoders " + CODECS.joinToString(" ") { (label, mime) ->
+            val own = decoders.filter { d -> d.types.any { it.equals(mime, ignoreCase = true) } }
+            label + "=" + when {
+                own.any { !isSoftware(it.name) } -> "hw"
+                own.isNotEmpty() -> "sw"
+                else -> "no"
+            }
+        }
 }
