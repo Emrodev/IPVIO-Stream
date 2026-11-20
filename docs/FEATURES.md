@@ -28,7 +28,9 @@ Feature status at version 1.3 (commit `b65e838`, tag `V1.3`). Source: refactorin
 | Favorites for channels, movies and series with manual order | present (order: T-018) | `Store.kt` (`Library`), `FavOrderLogic.kt`, `FavReorder.kt`, `HomeScreen.kt` (Favorites tab), `LiveTab.kt` |
 | Favorites for channels, movies and series with manual order | present (order: T-014, device test pending) | `Store.kt` (`Library`), `FavOrderLogic.kt`, `FavReorder.kt`, `HomeScreen.kt` (Favorites tab), `LiveTab.kt` |
 >| Hide categories, ignore groups, language filter | present | `HiddenCats.kt:6`, `IgnoredGroups.kt:8`, `LangFilter.kt:20` |
+| Private categories (only visible inside the category, never recorded) | present (T-028, not device tested) | `PrivateLogic.kt`, `PrivateCats.kt`; menu in `LiveTab.kt`, `CategoriesScreen.kt`; list in Settings > Parental controls (`SettingsHub.kt`) |
 | Live quality bundles | present | `LiveBundle.kt:3` |
+| Technical stream info on the detail page (resolution, HDR, Dolby Vision, audio, subtitles) | present (T-033, device test pending) | `MediaProbe.kt`, `MediaProbeLogic.kt`, Media3 `MetadataRetriever`; see `docs/tasks/T-033-media-probe.md` |
 | Voice search, reminders, screen-edge calibration | present | `VoiceSearch.kt:8`, `Live.kt:71, 192`, `FitCalibration.kt:35` |
 | Updates via GitHub Releases | present | verified by Android signature, no hash check (`AppUpdate.kt:20-34`, `Round17Logic.kt:14-45`) |
 | 10 languages | present | `I18nCore.kt:9` |

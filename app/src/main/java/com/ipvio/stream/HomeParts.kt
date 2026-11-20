@@ -129,6 +129,7 @@ fun HeroMetaLine(item: Item, m: Meta?, dots: Boolean = false) {
     if (!dots) m?.genres?.firstOrNull()?.let { parts.add(it to true) }
     if (item.kind == Kind.SERIES) parts.add(seriesCountText(item) to false)
     else m?.runtime?.takeIf { it > 0 }?.let { parts.add((if (it >= 60) "${it / 60}h ${it % 60}min" else "$it min") to true) }
+    m?.age?.let { parts.add(it to true) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(14))) {
         parts.forEachIndexed { i, (p, raw) ->
             if (i > 0) {

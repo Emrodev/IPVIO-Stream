@@ -45,7 +45,7 @@ object ZapContext {
 /** Remembers the last chosen category / list in Live TV (also across a restart). */
 object LiveMemory {
     fun sel(c: android.content.Context): String? = Profiles.sp(c, "ipvio_live").getString("sel", null)
-    fun setSel(c: android.content.Context, k: String) { Profiles.sp(c, "ipvio_live").edit().putString("sel", k).apply() }
+    fun setSel(c: android.content.Context, k: String) { if (!PrivateCats.isPrivate(Kind.LIVE, k)) Profiles.sp(c, "ipvio_live").edit().putString("sel", k).apply() }
 }
 
 /** Entering a name (new channel list, rename). */
@@ -103,7 +103,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     LaunchedEffect(plBack) { if (plBack) { plBack = false; runCatching { plFocus.requestFocus() } } }
     val plScope = rememberCoroutineScope()
     val srcK = if (LiveSource.k in srcNames.indices && srcNames.size > 1) LiveSource.k else -1
-    val live = remember(liveAll, srcK) { if (srcK < 0) liveAll else liveAll.filter { it.src == srcK } }
+    // Private categories (T-028) stay in their own category only: not in "All channels", genres, search, Multi view
+    val live = remember(liveAll, srcK, PrivateCats.version) { PrivateCats.filter(if (srcK < 0) liveAll else liveAll.filter { it.src == srcK }) }
     val groups = remember(groupsAll, srcK) {
         if (srcK < 0) groupsAll else LinkedHashMap<String, List<Item>>().also { m ->
             for ((g, l) in groupsAll) { val f = l.filter { it.src == srcK }; if (f.isNotEmpty()) m[g] = f }
@@ -178,6 +179,20 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // Back from the player: the last watched channel gets the focus (not the sidebar)
     val chanState = remember { LazyListState() }
     val restoreReq = remember { FocusRequester() }
+    // Up/Down wrap-around at the ends of the channel list (#107): last row requester and the focused row index
+    val lastChan = remember { FocusRequester() }
+    var chanFocusIdx by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+    fun wrapChan(target: Int) {
+        plScope.launch {
+            chanState.scrollToItem(target)
+            val req = if (target == 0) firstChan else lastChan
+            // The target row is composed after the scroll; retry briefly until its focus requester is attached
+            repeat(20) {
+                if (runCatching { req.requestFocus() }.isSuccess) return@launch
+                kotlinx.coroutines.delay(30)
+            }
+        }
+    }
     val restoreId = remember { LastFocus.pending }
     LaunchedEffect(Unit) {
         val id = restoreId ?: return@LaunchedEffect
@@ -406,6 +421,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         if (catMenu && plainCat) OptionPopup(
                             listOf(
                                 if (n in CatFavs.list) "Aus Favoriten entfernen" else "Zu Favoriten hinzufügen", "Kategorie ausblenden",
+                                if (PrivateCats.isPrivate(Kind.LIVE, n)) "Nicht mehr privat" else "Privat machen",
                                 "Mit Hoch/Runter verschieben", "Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben", "Ans Ende verschieben", "Kategorien sortieren …"
                             ), -1, { catMenu = false }
                         ) { i ->
@@ -414,11 +430,12 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             when (i) {
                                 0 -> CatFavs.toggle(ctx, n)
                                 1 -> { if (sel == n) sel = "ALL"; HiddenCats.hide(ctx, n) }
-                                2 -> floatingCat = n
-                                3 -> CatOrder.move(ctx, CatOrder.LIVE, all, n, -1)
-                                4 -> CatOrder.move(ctx, CatOrder.LIVE, all, n, 1)
-                                5 -> CatOrder.toTop(ctx, CatOrder.LIVE, all, n)
-                                6 -> CatOrder.toBottom(ctx, CatOrder.LIVE, all, n)
+                                2 -> privateToggle(ctx, Kind.LIVE, n)
+                                3 -> floatingCat = n
+                                4 -> CatOrder.move(ctx, CatOrder.LIVE, all, n, -1)
+                                5 -> CatOrder.move(ctx, CatOrder.LIVE, all, n, 1)
+                                6 -> CatOrder.toTop(ctx, CatOrder.LIVE, all, n)
+                                7 -> CatOrder.toBottom(ctx, CatOrder.LIVE, all, n)
                                 else -> sortMenu = true
                             }
                         }
@@ -483,6 +500,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     // Held Down/Up key: at most ~9 steps per second, so a weak box is not flooded with scroll animations and rebinds
                     modifier = Modifier.onPreviewKeyEvent { e ->
                         if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && e.nativeKeyEvent.repeatCount == 0 && backToCategory()) true
+                        else if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount == 0 &&
+                            GuideWrapLogic.wrapTarget(chanFocusIdx, list.size, e.key == Key.DirectionDown)?.let { wrapChan(it) } != null) true
                         else if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount > 0) {
                             val now = android.os.SystemClock.uptimeMillis()
                             LiveHold.lastRepeat = now
@@ -496,10 +515,11 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         ChannelLine(
                             ch, (if (i == 0) Modifier.focusRequester(firstChan) else Modifier)
                                 .then(if (ch.id == restoreId) Modifier.focusRequester(restoreReq) else Modifier)
+                                .then(if (i == list.lastIndex) Modifier.focusRequester(lastChan) else Modifier)
                                 // Favorites: the focus follows a channel that was just moved
                                 .then(if (sel == FAV_CAT) Modifier.followFav(ch.id) else Modifier), curList,
                             onNewList = { newList(ch.id) },
-                            onFocus = { focusTarget = ch; inChannels = true; plScope.launch { holdJump(chanState, i) } },
+                            onFocus = { focusTarget = ch; inChannels = true; chanFocusIdx = i; plScope.launch { holdJump(chanState, i) } },
                             variants = variantsOf[ch.id].orEmpty(),
                             favShown = if (sel == FAV_CAT) list else null,
                             onVariant = { v -> ZapContext.list = list; ZapContext.key = sel; LiveMemory.setSel(ctx, sel); onOpen(v) }

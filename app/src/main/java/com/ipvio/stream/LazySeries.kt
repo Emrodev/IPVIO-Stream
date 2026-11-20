@@ -31,7 +31,7 @@ object LazySeries {
     fun clear() = done.clear()
 
     /** Load episodes. null = the provider does not respond (network, login). */
-    suspend fun load(@Suppress("UNUSED_PARAMETER") ctx: Context, i: Item): Item? {
+    suspend fun load(ctx: Context, i: Item): Item? {
         val have = full(i)
         if (have !== i) return have
         // Stalker portal: seasons and episodes via the portal's API
@@ -51,7 +51,7 @@ object LazySeries {
         val urls = XtreamLogic.lazyUrls(i)
         if (urls.isEmpty()) return i
         return withContext(Dispatchers.IO) {
-            val api = PlaylistStore.xtreamApi()
+            val api = PlaylistStore.xtreamApi(ctx)
             var eps: List<Episode>? = null
             for ((url, label) in urls) {
                 val (acct, sid) = XtreamLogic.parseLazy(url) ?: continue

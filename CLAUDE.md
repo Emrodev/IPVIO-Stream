@@ -122,6 +122,7 @@ Maintained in `docs/` (English), kept in line with the code:
 - `adr/NNNN-title.md` – one decision record per architectural decision (not for every small change)
 - `FEATURES.md`, `IPTV.md`, `PLAYER.md`, `SECURITY.md`, `TESTING.md`, `TECH-DEBT.md`, `REFACTORING-PROGRESS.md`
 - `RELEASE.md` (exists); `CHANGELOG.md` at repo root, updated for every task
+- `release-notes/vX.Y.md` – user-facing notes for every GitHub release (section 18)
 
 Documentation must describe the actual code. Mark unknowns as unknown.
 
@@ -150,3 +151,19 @@ The status list lives only in `docs/tasks/WORK_STATE.md` and `docs/REFACTORING-P
 - The test list (planned and existing checks) is in `docs/TESTING.md`.
 - CI warns when `app/src/main` changes without a change under `app/src/test`. The warning does not block.
 - Claude cannot run Gradle here. Report a test as passed only when CI or the maintainer shows it.
+
+## 18. Release notes
+
+Whenever a release is prepared (version bump in `app/build.gradle.kts`, a `release/*` branch, or the maintainer says "release"), the assistant always writes the release notes as part of the same change. A release without notes is not ready.
+
+1. **CHANGELOG.md:** rename `## Unreleased` to `## X.Y` (the new `versionName`) and start a new empty `## Unreleased` above it. Do not rewrite older sections.
+2. **Release notes:** create `docs/release-notes/vX.Y.md` from `docs/release-notes/TEMPLATE.md`. Source is the CHANGELOG section of this version (and of any version users may skip, e.g. a broken release). Rules:
+   - Written for users, not developers: no task IDs, class names, file paths or build internals. Internal-only changes go into one line "Internal changes" or are left out.
+   - English (section 4). German UI labels are quoted as they appear in the app.
+   - The first four bullet lines under the first heading are the highlights. The update dialog shows them: `release.yml` copies them into the `notes` of `update.json`, and the app's GitHub API fallback reads the same lines (`AppUpdate.kt`). Joined with " · " they must stay within 300 characters (`Round17Logic.kt` cuts the rest).
+   - State known limits honestly (e.g. "not measured", "needs your own API key").
+   - Say whether the update keeps user data and whether it must be installed by hand.
+3. **Publishing:** the file must be in `dev` before the merge into `main`. `release.yml` then uses it as the GitHub release text; without the file it falls back to GitHub's list of pull requests.
+4. **Report:** tell the maintainer which notes file the release will use.
+
+The assistant does not publish releases; the maintainer does.

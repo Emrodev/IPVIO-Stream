@@ -33,7 +33,11 @@ data class Meta(
     /** Language in which description and genres were loaded */
     val uiLang: String = "de",
     /** Match checked when opening the detail page (name/seasons, see [MatchLogic]). */
-    val checked: Boolean = false
+    val checked: Boolean = false,
+    /** Age rating as shown, e.g. "FSK 12" or "PG-13 (US)", see [AgeRatingLogic]. */
+    val age: String? = null,
+    /** The age rating was asked for (also true when none exists), so older cache entries load it once. */
+    val ageChecked: Boolean = false
 ) {
     /** Rating for sorting and filtering (0 to 10): first IMDb, then Rotten Tomatoes, then TMDB, last the provider's value. */
     fun score(): Double? =
@@ -184,11 +188,11 @@ object MetaRepo {
     private val omdbTried: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
-     * IMDb and Rotten Tomatoes rating also without TMDB: OMDb is then asked by title (and year).
+     * IMDb and Rotten Tomatoes rating (and the US age rating) also without TMDB: OMDb is then asked by title (and year).
      * Only once per title and app start; a hit is remembered on the device together with the provider info.
      */
     private suspend fun withOmdbTitle(ctx: Context, k: String, i: Item, m: Meta): Meta {
-        if (Config.OMDB_KEY.isBlank() || m.imdbRating != null || m.rtRating != null || !omdbTried.add(k)) return m
+        if (Config.OMDB_KEY.isBlank() || ((m.imdbRating != null || m.rtRating != null) && m.ageChecked) || !omdbTried.add(k)) return m
         val q = URLEncoder.encode(MatchLogic.searchTitle(i.title), "UTF-8")
         val yr = (m.year ?: i.year?.toString())?.takeIf { it.length == 4 && i.kind == Kind.MOVIE }?.let { "&y=$it" } ?: ""
         val type = if (i.kind == Kind.SERIES) "series" else "movie"
@@ -204,8 +208,10 @@ object MetaRepo {
                     if (r.optString("Source") == "Rotten Tomatoes") rt = r.optString("Value")
                 }
             }
-            if (ir == null && rt == null) return m
-            val nm = m.copy(imdbRating = ir, rtRating = rt, imdbId = m.imdbId ?: o.str("imdbID"))
+            val age = AgeRatingLogic.omdb(o.str("Rated"), AgeRatingLogic.country(Lang.tmdb()))
+            if (ir == null && rt == null && age == null) return m
+            val nm = m.copy(imdbRating = ir ?: m.imdbRating, rtRating = rt ?: m.rtRating, imdbId = m.imdbId ?: o.str("imdbID"),
+                age = m.age ?: age, ageChecked = true)
             provMem[k] = nm
             save(ctx, k, nm)
             nm
@@ -251,6 +257,7 @@ object MetaRepo {
             j.put("gids", m.genreIds.joinToString(",")); j.put("lang", m.lang); j.put("votes", m.votes)
             j.put("countries", m.countries.joinToString(",")); j.put("ui", m.uiLang)
             j.put("chk", m.checked); j.put("v", MATCH_V)
+            j.put("age", m.age); j.put("agec", m.ageChecked)
             File(dir(c), k.hashCode().toString()).writeText(j.toString())
         } catch (e: Exception) {
         }
@@ -274,7 +281,8 @@ object MetaRepo {
                 j.str("lang"), votes = j.optInt("votes"),
                 countries = (j.str("countries") ?: "").split(",").filter { it.isNotBlank() },
                 uiLang = j.optString("ui", "de"),
-                checked = j.optBoolean("chk")
+                checked = j.optBoolean("chk"),
+                age = j.str("age"), ageChecked = j.optBoolean("agec")
             )
         } catch (e: Exception) {
             null
@@ -394,11 +402,13 @@ object MetaRepo {
     suspend fun extended(ctx: Context, i: Item, rematched: Boolean = false): Meta? {
         if (!enabled()) return providerMeta(ctx, i)
         val b = basic(ctx, i) ?: return providerMeta(ctx, i)
-        if (b.extended && b.uiLang == Lang.code() && b.checked) return b
+        if (b.extended && b.uiLang == Lang.code() && b.checked && b.ageChecked) return b
         val type = if (b.isTv) "tv" else "movie"
+        val ratings = if (b.isTv) "content_ratings" else "release_dates"
+        val country = AgeRatingLogic.country(Lang.tmdb())
         val body = getNow(
             "https://api.themoviedb.org/3/$type/${b.tmdbId}?api_key=${Config.TMDB_KEY}" +
-                "&language=${Lang.tmdb()}&append_to_response=external_ids,videos&include_video_language=${Lang.code()},en,null"
+                "&language=${Lang.tmdb()}&append_to_response=external_ids,videos,$ratings&include_video_language=${Lang.code()},en,null"
         ) ?: return b
         var m = b
         try {
@@ -439,8 +449,9 @@ object MetaRepo {
                 ov = getNow("https://api.themoviedb.org/3/$type/${b.tmdbId}?api_key=${Config.TMDB_KEY}&language=en-US")
                     ?.let { runCatching { JSONObject(it).str("overview") }.getOrNull() }?.takeIf { it.isNotBlank() }
             }
+            val age = AgeRatingLogic.pick(ageByCountry(o, b.isTv), country)
             m = b.copy(overview = ov ?: b.overview.takeIf { b.uiLang == Lang.code() }, genres = genres, runtime = runtime,
-                trailerKey = trailer, imdbId = imdb, uiLang = Lang.code(), checked = true)
+                trailerKey = trailer, imdbId = imdb, uiLang = Lang.code(), checked = true, age = age, ageChecked = true)
         } catch (e: Exception) {
         }
         if (Config.OMDB_KEY.isNotBlank() && m.imdbId != null) {
@@ -456,7 +467,7 @@ object MetaRepo {
                             if (r.optString("Source") == "Rotten Tomatoes") rt = r.optString("Value")
                         }
                     }
-                    m = m.copy(imdbRating = ir, rtRating = rt)
+                    m = m.copy(imdbRating = ir, rtRating = rt, age = m.age ?: AgeRatingLogic.omdb(o.str("Rated"), country))
                 }
             } catch (e: Exception) {
             }
@@ -465,6 +476,29 @@ object MetaRepo {
         memPut(key(i), m)
         save(ctx, key(i), m)
         return m
+    }
+
+    /**
+     * Age ratings per country from a TMDB detail answer: "content_ratings" for series, "release_dates" for movies.
+     * Unknown or broken parts are skipped.
+     */
+    private fun ageByCountry(o: JSONObject, tv: Boolean): Map<String, String> {
+        val out = HashMap<String, String>()
+        val res = o.optJSONObject(if (tv) "content_ratings" else "release_dates")?.optJSONArray("results") ?: return out
+        for (x in 0 until res.length()) {
+            val r = res.optJSONObject(x) ?: continue
+            val cc = r.optString("iso_3166_1").uppercase()
+            if (cc.isEmpty()) continue
+            val cert = if (tv) r.optString("rating") else {
+                val dates = ArrayList<Pair<Int, String>>()
+                r.optJSONArray("release_dates")?.let { d ->
+                    for (y in 0 until d.length()) d.optJSONObject(y)?.let { dates.add(it.optInt("type") to it.optString("certification")) }
+                }
+                AgeRatingLogic.movieCert(dates)
+            }
+            if (!cert.isNullOrBlank()) out[cc] = cert
+        }
+        return out
     }
 
     private val tvSeasonMem = ConcurrentHashMap<String, List<EpisodeLogic.TmdbSeason>>()

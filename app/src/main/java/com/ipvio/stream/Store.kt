@@ -45,6 +45,8 @@ object AppSettings {
     var gridCols by mutableIntStateOf(4)
     var gridRows by mutableIntStateOf(3)
     var cardW by mutableIntStateOf(150)
+    /** Sort every list opens with: -1 = as before (per tab), otherwise an index from [SORTS]. */
+    var browseSort by mutableIntStateOf(-1)
     var subSize by mutableIntStateOf(1)
     var subColor by mutableIntStateOf(0)
     var subBg by mutableIntStateOf(1)
@@ -96,6 +98,7 @@ object AppSettings {
         gridCols = p.getInt("grid_cols", 6).coerceIn(3, 10)
         gridRows = p.getInt("grid_rows", 3).coerceIn(2, 8)
         cardW = p.getInt("card_w", 150).coerceIn(110, 220)
+        browseSort = p.getInt("browse_sort", -1).coerceIn(-1, SORTS.lastIndex)
         subSize = p.getInt("sub_size", 1).coerceIn(0, SubStyle.SIZES.lastIndex)
         subColor = p.getInt("sub_color", 0).coerceIn(0, SubStyle.COLORS.lastIndex)
         subBg = p.getInt("sub_bg", 1).coerceIn(0, SubStyle.BGS.lastIndex)
@@ -291,6 +294,12 @@ object AppSettings {
         prefs(c).edit().putInt("card_w", cardW).apply()
     }
 
+    /** 0..8 = fixed default sort for all lists, -1 = each list keeps its own (as before). */
+    fun setBrowseSort(c: Context, i: Int) {
+        browseSort = i.coerceIn(-1, SORTS.lastIndex)
+        prefs(c).edit().putInt("browse_sort", browseSort).apply()
+    }
+
     fun setSub(c: Context, size: Int, color: Int, bg: Int, edge: Int) {
         subSize = size; subColor = color; subBg = bg; subEdge = edge
         prefs(c).edit().putInt("sub_size", size).putInt("sub_color", color)
@@ -422,6 +431,7 @@ object History {
     }
 
     fun add(c: Context, id: String) {
+        if (PrivateCats.isPrivateId(id)) return   // private categories are never recorded (T-028)
         ids.remove(id)
         ids.add(0, id)
         while (ids.size > 80) ids.removeAt(ids.lastIndex)
@@ -438,6 +448,13 @@ object History {
     fun reload(c: Context) {
         val l = (prefs(c).getString("ids", "") ?: "").split("\n").filter { it.isNotBlank() }
         if (l != ids.toList()) { ids.clear(); ids.addAll(l) }
+    }
+
+    /** Removes several titles at once (a category was made private). */
+    fun removeAll(c: Context, remove: Set<String>) {
+        init(c)
+        if (!ids.removeAll { it in remove }) return
+        prefs(c).edit().putString("ids", ids.joinToString("\n")).apply()
     }
 }
 
@@ -468,6 +485,15 @@ object ResumeLog {
         val i = line.indexOf("  ")
         return if (i < 0) Lang.tr(line) else line.substring(0, i) + "  " + Lang.tr(line.substring(i + 2))
     }
+
+    /** Drops lines about these titles (a category was made private). Lines name a title by "#" + the last 4 id characters. */
+    fun removeFor(c: Context, ids: Set<String>) {
+        init(c)
+        val tails = ids.mapTo(HashSet()) { it.takeLast(4) }
+        if (lines.removeAll { l -> TAIL_RE.findAll(l).any { it.groupValues[1] in tails } })
+            prefs(c).edit().putString("l", lines.joinToString("\n")).apply()
+    }
+    private val TAIL_RE = Regex("#([^\\s:]{1,4})")
 
     fun add(c: Context, msg: String) {
         init(c)
@@ -513,6 +539,7 @@ object WatchStore {
      * Under 30 seconds nothing changes – a short peek does not delete an old resume point.
      */
     fun save(c: Context, e: Entry, next: Entry? = null) {
+        if (PrivateCats.isPrivateId(e.itemId)) return   // private categories: no resume point, no log line (T-028)
         val fin = ResumeLogic.finished(e.pos, e.dur)
         val old = entries.firstOrNull { it.itemId == e.itemId }
         val what = e.title.take(40) + " #" + e.itemId.takeLast(4) + " " + (e.pos / 1000) + "s/" + (e.dur / 1000) + "s"
@@ -532,6 +559,12 @@ object WatchStore {
     /** Remove from "Continue watching" (menu key on the card). */
     fun remove(c: Context, itemId: String) {
         if (entries.removeAll { it.itemId == itemId }) persist(c)
+    }
+
+    /** Removes several titles at once (a category was made private). */
+    fun removeAll(c: Context, ids: Set<String>) {
+        init(c)
+        if (entries.removeAll { it.itemId in ids }) persist(c)
     }
 
     private fun persist(c: Context) {
@@ -576,7 +609,7 @@ object EpProgress {
 
     @Synchronized
     fun put(c: Context, seriesId: String, season: Int, ep: Int, posMs: Long, durMs: Long) {
-        if (durMs <= 0) return
+        if (durMs <= 0 || PrivateCats.isPrivateId(seriesId)) return
         val m = load(c, seriesId)
         val v = ResumeLogic.EpPos((posMs / 1000).toInt(), (durMs / 1000).toInt())
         val k = ResumeLogic.key(season, ep)

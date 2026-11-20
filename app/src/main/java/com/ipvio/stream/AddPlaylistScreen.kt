@@ -4,28 +4,23 @@ import androidx.compose.ui.graphics.lerp
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import android.os.Handler
 import android.os.Looper
@@ -34,6 +29,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -69,7 +72,9 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
                 stalker = false
                 if (inp.isXtream) { xtream = true; host = inp.host; user = inp.user; pass = inp.pass } else { xtream = false; url = inp.url }
                 if (u == null) PlaylistStore.error = "Angaben unvollständig: Server, Benutzername und Passwort nötig."
-                else scope.launch { if (PlaylistStore.load(ctx, u, true)) onDone() }
+                else {
+                    scope.launch { if (PlaylistStore.load(ctx, u, true)) onDone() }
+                }
             }
         }
     }
@@ -221,17 +226,30 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
                 Text(BACKUP_HINT, color = Muted, fontSize = 15.sp)
             }
             PlaylistStore.error?.let { Text(it, color = DS.Danger, fontSize = 14.sp, lineHeight = 18.sp) }
-            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FocusButton(if (PlaylistStore.loading) "Lade…" else "Hinzufügen", primary = true, compact = true) {
-                    if (PlaylistStore.loading) return@FocusButton
-                    val finalUrl = if (stalker) StalkerLogic.source(portal, mac, sn, devId, devId2)?.encode() else if (xtream) PlaylistStore.xtreamUrl(host, user, pass) else url
-                    if (finalUrl == null) PlaylistStore.error = if (stalker) "Angaben unvollständig: Portal-Adresse und MAC-Adresse (z. B. 00:1A:79:12:34:56) nötig." else "Angaben unvollständig: Server, Benutzername und Passwort nötig."
-                    else if (xtream && !stalker && !backupsValid(backups)) PlaylistStore.error = BACKUP_INVALID
-                    else {
-                        if (xtream && !stalker) PlaylistStore.setBackups(ctx, finalUrl, backups.toList())
-                        scope.launch { if (PlaylistStore.load(ctx, finalUrl, true)) onDone() }
-                    }
+            // #90: some providers reject the VLC user-agent (403); this playlist can send the app's own identifier instead
+            var nativeUa by remember { mutableStateOf(false) }
+            // #75: box model for portals that accept only certain models (pressed again for the next one)
+            var stbModel by remember { mutableStateOf(StalkerModelLogic.DEFAULT) }
+            // Same start for "Hinzufügen" and "Sprachen wählen"; the second one asks for the languages first (#73, 19 Nov feedback)
+            fun startLoad(chooseLanguages: Boolean) {
+                if (PlaylistStore.loading) return
+                val finalUrl = if (stalker) StalkerLogic.source(portal, mac, sn, devId, devId2, stbModel)?.encode() else if (xtream) PlaylistStore.xtreamUrl(host, user, pass) else url
+                if (finalUrl == null) PlaylistStore.error = if (stalker) "Angaben unvollständig: Portal-Adresse und MAC-Adresse (z. B. 00:1A:79:12:34:56) nötig." else "Angaben unvollständig: Server, Benutzername und Passwort nötig."
+                else if (xtream && !stalker && !backupsValid(backups)) PlaylistStore.error = BACKUP_INVALID
+                else {
+                    if (xtream && !stalker) PlaylistStore.setBackups(ctx, finalUrl, backups.toList())
+                    PlaylistStore.setNativeUa(ctx, finalUrl, !stalker && nativeUa)
+                    if (chooseLanguages) PlaylistStore.requestLanguageChoice()
+                    scope.launch { if (PlaylistStore.load(ctx, finalUrl, true)) onDone() }
                 }
+            }
+            // Playlist too big for the memory: offer the language selection right here, instead of a second "Hinzufügen"
+            val tooBig = PlaylistStore.error == PlaylistStore.MSG_TOO_BIG || PlaylistStore.error == PlaylistLogic.TOO_BIG_HINT
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (!stalker) FocusButton(Lang.tr(if (nativeUa) "Kennung: IPVIO" else "Kennung: VLC"), compact = true) { nativeUa = !nativeUa }
+                if (stalker) FocusButton("STB $stbModel", compact = true) { stbModel = StalkerModelLogic.next(stbModel) }
+                FocusButton(if (PlaylistStore.loading) "Lade…" else "Hinzufügen", primary = true, compact = true) { startLoad(false) }
+                if (tooBig && !PlaylistStore.loading) FocusButton("Sprachen wählen", primary = true, compact = true) { startLoad(true) }
                 if (canCancel) FocusButton("Abbrechen", compact = true) { PlaylistStore.clearPending(ctx); onDone() }
                 // Nothing to add yet (first start): demo mode with sample entries and neutral placeholders, so the UI can be explored.
                 // Settings then offer "Playlist hinzufügen" to leave it.

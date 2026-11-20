@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -21,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -65,7 +69,8 @@ fun SearchScreen(
 ) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val all = PlaylistStore.channels
+    // Private categories (T-028) are not searchable; they stay reachable through their own category
+    val all = PlaylistStore.channels.let { PrivateCats.visible(it) }
     // Build the index in the background; searches also run in the background and only after a short typing pause
     // With very large playlists memory can run out while the index is built: then free the image cache and try once more,
     // and if it still does not fit, the search stays empty instead of the app crashing.
@@ -178,21 +183,44 @@ fun SearchScreen(
             ) {
                 Spacer(Modifier.weight(1f))
                 // Everything sits directly above the keyboard and is fully visible (wraps into more rows instead of scrolling away)
-                val recent = AppSettings.searchHistory.toList().take(6)
-                if (recent.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                val allRecent = AppSettings.searchHistory.toList()
+                val recent = allRecent.take(3)
+                var showAllHistory by remember { mutableStateOf(false) }
+                // Feedback 19 Nov: the last three searches in one row, "Alle anzeigen" opens the whole history.
+                // Suggestions have their own fixed area below, so a long history can no longer push them out of view.
+                if (allRecent.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     recent.forEachIndexed { i, term ->
                         // OK searches again, long OK / menu key removes just this entry
                         MiniChip(term, false, (if (i == 0) Modifier.focusRequester(firstHistory) else Modifier)
                             .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true) { SearchState.query = term }
                     }
+                    if (allRecent.size > 3) MiniChip("Alle anzeigen", false) { showAllHistory = true }
                     MiniChip("Verlauf löschen", false) { AppSettings.clearSearch(ctx) }
+                }
+                // #101: suggestions take at most two rows. The area has a fixed height, so the keyboard below never moves.
+                Column(Modifier.fillMaxWidth().height(70.dp).clipToBounds(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (showAllHistory) Dialog(onDismissRequest = { showAllHistory = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                    Column(Modifier.width(620.dp).heightIn(max = 640.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(Lang.tr("Letzte Suchanfragen"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                allRecent.forEach { term ->
+                                    MiniChip(term, false, raw = true) { SearchState.query = term; showAllHistory = false }
+                                }
+                            }
+                        }
+                    }
                 }
                 if (sugg.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     sugg.forEachIndexed { i, w ->
                         MiniChip(w.replaceFirstChar { it.uppercase() }, false, if (i == 0) Modifier.focusRequester(firstSugg) else Modifier, raw = true) {
                             SearchState.query = WordSuggest.apply(SearchState.query, w)
+                            // #101: the chip list changes after a pick and the focused chip disappears, so focus would fall
+                            // to the sidebar. Keep it in the search screen: back to the input (same target as Back).
+                            runCatching { ContentFocus.req.requestFocus() }
                         }
                     }
+                }
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SEARCH_FILTERS.forEachIndexed { i, name -> MiniChip(name, SearchState.filter == i) { SearchState.filter = i } }
@@ -203,7 +231,8 @@ fun SearchScreen(
                         SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
                         Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
                         inner = Modifier.focusRequester(ContentFocus.req).onFocusChanged { fieldFocused = it.isFocused || it.hasFocus },
-                        onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
+                        onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
+                        height = 48.dp
                     )
                 } else {
                 // Tappable: OK or a tap opens the device keyboard for typing (the app keyboard below stays available).
@@ -211,7 +240,8 @@ fun SearchScreen(
                 Field(
                     SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
                     Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
-                    onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } }
+                    onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
+                    height = 48.dp
                 )
                 // Own on-screen keyboard (instead of the TV's keyboard): hits appear while typing
                 SearchKeyboard(

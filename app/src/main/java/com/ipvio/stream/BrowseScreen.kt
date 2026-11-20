@@ -46,7 +46,7 @@ data class BrowseReq(val title: String, val items: List<Item>, val sort: Int = 0
 class BrowseState(req0: BrowseReq) {
     /** Titles of the view; grows when a Stalker category is loaded further on opening ([StalkerMore]). */
     var req by mutableStateOf(req0)
-    var sort by mutableIntStateOf(req.sort.coerceIn(0, 8))
+    var sort by mutableIntStateOf(defaultSort(req.sort))
     var minRi by mutableIntStateOf(0)
     var year by mutableStateOf("Alle")
     var genre by mutableStateOf<String?>(null)
@@ -88,7 +88,11 @@ object BrowsePrefs {
     }
 }
 
-private val SORTS = listOf("Neu hinzugefügt", "Beliebtheit", "Rating: beste zuerst", "Rating: schwächste zuerst", "Jahr: neueste zuerst", "Jahr: älteste zuerst", "A–Z", "Z–A", "Playlist")
+internal val SORTS = listOf("Neu hinzugefügt", "Beliebtheit", "Rating: beste zuerst", "Rating: schwächste zuerst", "Jahr: neueste zuerst", "Jahr: älteste zuerst", "A–Z", "Z–A", "Playlist")
+
+/** Sort a list starts with: the fixed default from the settings, otherwise the one the tab brought along. */
+internal fun defaultSort(tabSort: Int): Int =
+    if (AppSettings.browseSort in SORTS.indices) AppSettings.browseSort else tabSort.coerceIn(0, SORTS.lastIndex)
 private val RATING_LABELS = listOf("Alle", "≥ 5", "≥ 6", "≥ 7", "≥ 8", "≥ 9")
 private val RATING_VALUES = listOf(0.0, 5.0, 6.0, 7.0, 8.0, 9.0)
 private val DECADES = listOf("2020er", "2010er", "2000er", "1990er", "vor 1990")
@@ -150,7 +154,7 @@ private fun filterAndSort(items: List<Item>, k: BrowseKey): List<Item> {
             (k.lang == null || i.lang == k.lang)
     }
     return when (k.sort) {
-        0 -> f.asReversed()
+        0 -> RecentSortLogic.newestFirst(f) { it.added }   // #22: provider's added date, playlist order without dates
         1 -> f.sortedByCached(true) { MetaRepo.cached(it)?.votes ?: -1 }
         2 -> f.sortedByCached(true) { MetaRepo.cached(it)?.score() ?: -1.0 }
         3 -> f.sortedByCached(false) { MetaRepo.cached(it)?.score() ?: 99.0 }
@@ -295,7 +299,7 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
                     if (langOptions.size > 1) item {
                         val lo = listOf("Alle") + langOptions.map { if (it == LangTagLogic.UNKNOWN) Lang.tr("Ohne Kennung") else LangTagLogic.name(it) }
                         DropdownPill("Sprache", lo.getOrElse(langOptions.indexOf(state.lang) + 1) { "Alle" }, lo, langOptions.indexOf(state.lang) + 1,
-                            active = state.lang != null, icon = FIcon.Country) {
+                            active = state.lang != null, icon = FIcon.Language) {
                             state.lang = if (it == 0) null else langOptions[it - 1]
                             BrowseLangPrefs.set(ctx, browseKind, state.lang)
                         }
@@ -309,7 +313,7 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
                     }
                     item {
                         FilterPill("Zurücksetzen", false, icon = FIcon.Reset) {
-                            state.minRi = 0; state.year = "Alle"; state.genre = null; state.country = null; state.lang = null; BrowseLangPrefs.set(ctx, browseKind, null); state.source = -1; state.sort = req.sort.coerceIn(0, 8)
+                            state.minRi = 0; state.year = "Alle"; state.genre = null; state.country = null; state.lang = null; BrowseLangPrefs.set(ctx, browseKind, null); state.source = -1; state.sort = defaultSort(req.sort)
                         }
                     }
                     // View and grid: rarely needed, hence at the very end
@@ -336,7 +340,7 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
                 if (ready && list.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(AIcon.Sliders, "Keine Treffer", "Mit diesen Filtern gibt es hier keine Titel.", action = "Filter zurücksetzen") {
                         runCatching { filterFocus.requestFocus() }
-                        state.minRi = 0; state.year = "Alle"; state.genre = null; state.country = null; state.lang = null; BrowseLangPrefs.set(ctx, browseKind, null); state.source = -1; state.sort = req.sort.coerceIn(0, 8)
+                        state.minRi = 0; state.year = "Alle"; state.genre = null; state.country = null; state.lang = null; BrowseLangPrefs.set(ctx, browseKind, null); state.source = -1; state.sort = defaultSort(req.sort)
                     }
                 }
                 if (!ready) {

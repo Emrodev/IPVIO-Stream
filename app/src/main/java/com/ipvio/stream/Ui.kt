@@ -199,7 +199,9 @@ fun Field(
     /** "Done" on the on-screen keyboard. */
     onDone: (() -> Unit)? = null,
     /** Start in edit mode right away (keyboard opens without pressing OK first). */
-    autoOpen: Boolean = false
+    autoOpen: Boolean = false,
+    /** Height of the field (default 62 dp; the search screen uses a smaller one, #101). */
+    height: Dp = 62.dp
 ) {
     var f by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf(autoOpen) }
@@ -221,7 +223,7 @@ fun Field(
     val shape = RoundedCornerShape(16.dp)
     Box(
         modifier
-            .fillMaxWidth().height(62.dp)
+            .fillMaxWidth().height(height)
             .clip(shape).background(Surf)
             .border(DS.Border, if (f) Accent2 else Surf2, shape)
             .padding(horizontal = 20.dp),

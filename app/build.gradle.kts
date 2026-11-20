@@ -36,8 +36,8 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 9
-        versionName = "1.4.3"
+        versionCode = 10
+        versionName = "1.4.4"
         // Name under the icon; the debug build overrides it (see buildTypes)
         manifestPlaceholders["appLabel"] = "IPVIO Stream"
 
@@ -103,6 +103,8 @@ dependencies {
     // MPEG-DASH (.mpd) streams; without it Media3 throws IllegalStateException when such a stream is opened
     implementation("androidx.media3:media3-exoplayer-dash:1.11.1")
     implementation("androidx.media3:media3-ui:1.11.1")
+    // MetadataRetriever: reads the tracks of a stream from its header for the detail page (MediaProbe.kt, T-033)
+    implementation("androidx.media3:media3-inspector:1.11.1")
     // Software audio decoder (AC3/E-AC3/DTS ...) for headphones/Bluetooth, see SoftAudio.kt. GPL-3.0 – the reason the app is GPL-3.0.
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
 

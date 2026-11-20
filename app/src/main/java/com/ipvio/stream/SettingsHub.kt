@@ -1,13 +1,19 @@
 package com.ipvio.stream
 
 import android.content.Context
+import android.widget.Toast
+import java.io.File
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
@@ -54,6 +61,7 @@ private val CATS = listOf(
     Cat(AIcon.Tag, "Genres & Kategorien", "Automatische Genres, Kategorien"),
     Cat(AIcon.Live, "Live-TV & Guide", "TV-Programm, Senderlisten, Erinnerungen"),
     Cat(AIcon.Download, "Playlists", "Verwalten, Sprachen, Aktualisieren"),
+    Cat(AIcon.Lists, "Teillisten", "Nur bestimmte Sender pro Playlist laden"),
     Cat(AIcon.Person, "Profile", "Verlauf, Favoriten, Jugendschutz je Person"),
     Cat(AIcon.Star, "API-Schlüssel", "TMDB, IMDb, Rotten Tomatoes, Untertitel"),
     Cat(AIcon.Lock, "Jugendschutz", "PIN, Inhalte ab 18"),
@@ -73,6 +81,7 @@ private val CATS = listOf(
 object SettingsNav {
     const val PROFILES = 10
     const val HOME = 17
+    const val SUBLISTS = 20
     /** "Reset all settings" page; the donate page is always the last one (one after this). */
     const val RESET_ALL = 19
     var openPage by androidx.compose.runtime.mutableIntStateOf(-1)
@@ -139,20 +148,21 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 4 -> MenuPage(ctx)
                 5 -> PlayerPage(ctx)
                 6 -> AudioPage(ctx)
-                7 -> FilterPage(ctx) { page = 9 }
+                7 -> FilterPage(ctx) { page = 8 }
                 8 -> LivePage(ctx)
                 9 -> PlaylistPage(ctx, onAdd, reload)
-                10 -> ProfilesPage(ctx) { page = -1 }
-                11 -> ApiKeysPage(ctx)
-                12 -> ParentalPage(ctx) { page = -1 }
-                13 -> StoragePage(ctx)
-                14 -> DiagPage(ctx, reload)
-                16 -> BoomerPage(ctx) { page = -1 }
-                17 -> HomeLayoutPage(ctx)
-                15 -> ListImportPage(ctx)
+                10 -> SublistsPage(ctx)
+                11 -> ProfilesPage(ctx) { page = -1 }
+                12 -> ApiKeysPage(ctx)
+                13 -> ParentalPage(ctx) { page = -1 }
+                14 -> StoragePage(ctx)
+                15 -> DiagPage(ctx, reload)
+                17 -> BoomerPage(ctx) { page = -1 }
+                18 -> HomeLayoutPage(ctx)
+                16 -> ListImportPage(ctx)
                 SettingsNav.RESET_ALL -> ResetAllPage(ctx)
                 SettingsNav.RESET_ALL + 1 -> DonateSection(ctx)
-                else -> AboutPage(ctx)   // 18
+                else -> AboutPage(ctx)   // 19
             }
             // Every settings tab ends with a way back to the defaults. It resets only the settings of the tab that is open.
             if (SettingsResetLogic.hasReset(page)) {
@@ -254,6 +264,46 @@ internal fun ChoiceChip(label: String, selected: Boolean, dots: List<Color> = em
 @Composable
 internal fun ViewChip(label: String, selected: Boolean, onFocus: (Boolean) -> Unit, onClick: () -> Unit) =
     ChoiceChip(label, selected, onFocus = onFocus, check = false, onClick = onClick)   // headings: no check mark (only real settings get one)
+
+/** Single-select chip for sublist filter options (kind, quality, logo, tvg-id). */
+@Composable
+internal fun SelectRowSublist(label: String, selected: Boolean, onClick: () -> Unit) {
+    var f by remember { mutableStateOf(false) }
+    val sc by animateFloatAsState(if (f) focusScale(1.05f) else 1f, label = "srl")
+    val shape = RoundedCornerShape(50)
+    Row(
+        Modifier.graphicsLayer { scaleX = sc; scaleY = sc }.height(46.dp).clip(shape)
+            .background(if (f) DS.FocusFill else if (selected) DS.Overlay3 else Surf)
+            .border(DS.Border, if (f) DS.FocusFill else if (selected) Color(0x99FFFFFF) else DS.Hairline, shape)
+            .onFocusChanged { if (f != it.isFocused) { f = it.isFocused } }
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = if (f) DS.FocusInk else Color.White, fontSize = DS.TextBody, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
+        if (selected) AppIcon(AIcon.Check, if (f) DS.FocusInk else Accent2, size = 18.dp)
+    }
+}
+
+/** Multi-select chip: toggles on/off for sublist filter options (categories, languages). */
+@Composable
+internal fun MultiSelectRowSublist(label: String, selected: Boolean, onClick: () -> Unit) {
+    var f by remember { mutableStateOf(false) }
+    val sc by animateFloatAsState(if (f) focusScale(1.05f) else 1f, label = "msrl")
+    val shape = RoundedCornerShape(50)
+    Row(
+        Modifier.graphicsLayer { scaleX = sc; scaleY = sc }.height(46.dp).clip(shape)
+            .background(if (f) DS.FocusFill else if (selected) DS.Overlay3 else Surf)
+            .border(DS.Border, if (f) DS.FocusFill else if (selected) Color(0x99FFFFFF) else DS.Hairline, shape)
+            .onFocusChanged { if (f != it.isFocused) { f = it.isFocused } }
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = if (f) DS.FocusInk else Color.White, fontSize = DS.TextBody, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
+        if (selected) AppIcon(AIcon.Check, if (f) DS.FocusInk else Accent2, size = 18.dp)
+    }
+}
 
 /** Round color swatch for the custom color. */
 @Composable
@@ -431,6 +481,9 @@ private fun ParentalPage(ctx: Context, onExit: () -> Unit) {
         3 -> PinPad("PIN bestätigen", "Gib die PIN noch einmal ein.", err,
             { if (it == first) { Parental.setPin(ctx, it); Parental.unlocked = true; err = null; step = 0 } else { err = "Die PINs stimmen nicht überein"; step = 2 } },
             { step = 0 })
+        5 -> PinPad("Aktuelle PIN eingeben", "Zum Ändern die bisherige PIN eingeben.", err,
+            { if (Parental.verify(ctx, it)) { err = null; step = 2 } else err = Parental.pinError() },
+            { err = null; step = 0 })
         // Removing the PIN asks for the current PIN again, so it is protected like changing it
         4 -> PinPad("PIN eingeben", "Die Jugendschutz-Einstellungen sind mit einer PIN geschützt.", err,
             {
@@ -452,10 +505,12 @@ private fun ParentalPage(ctx: Context, onExit: () -> Unit) {
                 "Zeigt Titel und Sender für Erwachsene nie in den Reihen der Startseiten (Start, Filme, Serien), auch nicht unter „Zuletzt geschaut“ oder „Weiter schauen“. In Live TV, in den Kategorien und in der Suche bleiben sie erreichbar.",
                 Parental.homeHide
             ) { Parental.setHomeHide(ctx, it) }
+            PrivateCatsSection(ctx)
             SectionTitle("PIN")
             Text(if (Parental.pinSet) "PIN ist gesetzt" else "Keine PIN gesetzt", color = if (Parental.pinSet) Accent2 else Muted, fontSize = 16.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PillButton(if (Parental.pinSet) "PIN ändern" else "PIN festlegen", light = !Parental.pinSet) { err = null; step = 2 }
+                // #82: changing an existing PIN asks for the current PIN first (step 5), like removing it
+                PillButton(if (Parental.pinSet) "PIN ändern" else "PIN festlegen", light = !Parental.pinSet) { err = null; step = if (Parental.pinSet) 5 else 2 }
                 if (Parental.pinSet) PillButton("PIN entfernen") { err = null; step = 4 }
             }
             Hint("Mit einer PIN lässt sich der Schutz nur nach Eingabe der PIN ändern. Die Erkennung arbeitet mit Stichwörtern in Kategorie- und Titelnamen und ist kein vollständiger Filter. Beim Zurücksetzen aller Einstellungen bleibt die PIN erhalten.")
@@ -499,6 +554,8 @@ private fun GeneralPage(ctx: Context) {
     SectionTitle("Bedienung")
     ToggleRow("Tastatur des Geräts in der Suche", "Aus: die eingebaute Tastatur der App. An: die Tastatur deines Geräts (z. B. Gboard) mit allen Sprachen, Sprachfunktion und Einfügen. Mit OK auf das Suchfeld wird sie geöffnet.", AppSettings.systemKeyboard) { AppSettings.setSystemKeyboard(ctx, it) }
     ToggleRow("Beenden bestätigen", "Auf der Startseite muss „Zurück“ zweimal gedrückt werden, damit die App nicht aus Versehen schließt.", General.confirmExit) { General.setConfirmExit(ctx, it) }
+    // #95: the device's screensaver or sleep timer is blocked while the app is open (window flag, see ScreenAwake)
+    ToggleRow("Bildschirm beim Stöbern wach halten", "An: Der Fernseher geht nicht in den Bildschirmschoner oder Ruhezustand, solange die App offen ist. Aus: nur während der Wiedergabe.", General.keepAwakeBrowse) { General.setKeepAwakeBrowse(ctx, it) }
     // Phone/tablet: landscape (the UI is built for the TV)
     if (MobilePrefs.isMobile(ctx)) {
         val act = generateSequence<Context>(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()
@@ -891,6 +948,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
         "Speicher" to (Mem.totalMb(ctx).toString() + " MB · " + listOf("wenig", "mittel", "viel")[Mem.tier(ctx)]),
         "Letzter Fehler" to err,
         "Fehler seit Start" to Diag.errorCount.toString(),
+        "Log" to Diag.history.joinToString("\n") { DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date(it.first)) + "  " + it.second },
         "Bildschirm wach" to (if (ScreenAwake.isOn) Lang.tr("an") + " (" + ScreenAwake.reasons + ")" else Lang.tr("aus")) +
             ScreenAwake.history.joinToString("") {
                 "\n" + DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date(it.first)) + "  " +
@@ -899,7 +957,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
         "Weiterschauen" to (ResumeLog.also { it.init(ctx) }.lines.take(12).joinToString("\n") { ResumeLog.display(it) }.ifBlank { "noch nichts gemerkt" }),
         "Letzter Absturz" to (CrashLog.last(ctx)?.let { it.first + "  (" + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.second)) + ")" } ?: "keiner")
     )
-    lines.forEach { (k, v) ->
+    lines.filter { it.first != "Log" || it.second.isNotEmpty() }.forEach { (k, v) ->
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
             Text(v, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp))
@@ -911,7 +969,7 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton("Playlist neu laden", light = true, icon = AIcon.Refresh) { reload() }
         PillButton("Bericht kopieren") {
-            val text = lines.joinToString("\n") { it.first + ": " + it.second }
+            val text = lines.filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { it.first + ": " + it.second }
             runCatching {
                 val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
                 cm?.setPrimaryClip(android.content.ClipData.newPlainText("IPVIO Diagnose", text))
@@ -1275,6 +1333,10 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(pl.name + if (isActive) "  ·  " + Lang.tr("Hauptliste") else if (shown) "  ·  " + Lang.tr("zusätzlich angezeigt") else "", color = if (isActive || shown) Accent2 else Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, raw = true)
                 Text(PlaylistStore.hostOf(pl.url), color = Muted, fontSize = 13.sp, maxLines = 1)
+                // #111: channels, movies and series of this playlist as last loaded (nothing until it is loaded once)
+                PlaylistStore.typeCounts(ctx, pl.url)?.let { t ->
+                    Text(PlaylistCountLogic.summary(t, Lang.tr("Live TV"), Lang.tr("Filme"), Lang.tr("Serien")), color = Muted, fontSize = 13.sp, maxLines = 1)
+                }
                 val nb = if (editingB == i) 0 else PlaylistStore.backups(ctx, pl.url).size
                 if (nb > 0) Text("Backup-Server: $nb", color = Muted, fontSize = 13.sp, maxLines = 1)
                 val down = PlaylistStore.downServers(ctx, pl.url)
@@ -1334,6 +1396,12 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
         PillButton("+ Weitere Playlist hinzufügen", light = true) { onAdd() }
         PillButton("Aktive Playlist neu laden", icon = AIcon.Refresh) { reload() }
     }
+    PlaylistStore.refreshError?.let { Text(Lang.tr("Aktualisierung fehlgeschlagen: {0}").replace("{0}", Lang.tr(it)), color = DS.Danger, fontSize = 15.sp, raw = true) }
+    // Stored list broken or incomplete (e.g. a cut-off download): forget everything stored and download it again
+    if (PlaylistStore.lists.isNotEmpty()) {
+        ConfirmPill("Playlist komplett neu laden") { scope.launch { PlaylistStore.reloadFromScratch(ctx) } }
+        Hint("Discards everything stored for the active playlist and downloads it again from the provider. Helps when categories or channels are missing. Name, backup servers and language selection are kept.")
+    }
     LanguageFilterSection(ctx)
     SectionTitle("Automatisch aktualisieren")
     val modes = listOf("Bei jedem Start", "Alle paar Stunden", "Täglich", "Wöchentlich", "Nur von Hand")
@@ -1371,6 +1439,265 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
     Hint("„Bei jedem Start“ lädt die Playlist bei jedem Öffnen der App. Die geplanten Varianten laufen auch im Hintergrund, solange das Gerät eingeschaltet und online ist, und holen verpasste Termine beim nächsten Start nach. „Nur von Hand“ nutzt immer den gespeicherten Stand; Neu laden geht jederzeit mit dem Knopf oben. Die Uhrzeit richtet sich nach deiner Zeitzone unter „Sprache & Region“.")
     Hint("Läuft gerade ein Film oder Sender, wartet die Aktualisierung, bis du fertig bist – so ruckelt nichts.")
     Hint("Zugangsdaten werden nur auf diesem Gerät gespeichert und hier nicht angezeigt. Es ist immer eine Playlist aktiv. Mit „Zur Hauptliste machen“ wechselst du die Liste.")
+}
+
+@Composable
+private fun SublistsPage(ctx: Context) {
+    val scope = rememberCoroutineScope()
+    val lists = PlaylistStore.lists.toList()
+    var selectedPlaylistUrl by remember { mutableStateOf<String?>(null) }
+    var newSublistName by remember { mutableStateOf("") }
+    // Per-kind multi-select categories: Map<Kind, Set<String>>
+    var newSublistGroupsByKind by remember { mutableStateOf(emptyMap<Kind, Set<String>>()) }
+    var newSublistKind by remember { mutableIntStateOf(0) } // 0=any, 1=Live, 2=Movie, 3=Series
+    // Per-kind multi-select languages: Map<Kind, Set<String>>
+    var newSublistLangsByKind by remember { mutableStateOf(emptyMap<Kind, Set<String>>()) }
+    var newSublistQuality by remember { mutableIntStateOf(0) } // 0=any, 1=HD, 2=FHD, 3=4K
+    var newSublistHasLogo by remember { mutableIntStateOf(0) } // 0=any, 1=with, 2=without
+    var newSublistHasTvgId by remember { mutableIntStateOf(0) } // 0=any, 1=with, 2=without
+    var newSublistIncludeAdult by remember { mutableStateOf(true) }
+    // Bumped after any sublist change so the active/list display recomposes
+    var sublistTick by remember { mutableIntStateOf(0) }
+
+    Text("Sublists", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+    Hint("Set which channels of a playlist are loaded. Only matching entries make it into the list.")
+
+    // --- Playlist selection ---
+    SectionTitle("Select playlist")
+    if (lists.isEmpty()) {
+        Text("No playlists yet. Add a playlist first.", color = Muted, fontSize = 15.sp)
+    } else {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(lists) { pl ->
+                val isSelected = selectedPlaylistUrl == pl.url
+                ChoiceChip(pl.name, isSelected) { selectedPlaylistUrl = pl.url }
+            }
+        }
+    }
+
+    // --- New sublist form (shown when a playlist is selected) ---
+    selectedPlaylistUrl?.let { playlistUrl ->
+        val pl = lists.firstOrNull { it.url == playlistUrl } ?: return@let
+        val h = PlaylistStore.key(playlistUrl)
+
+        // Load categories and languages per kind from the cached playlist (unfiltered, for sublist creation)
+        LaunchedEffect(playlistUrl) {
+            scope.launch {
+                newSublistGroupsByKind = PlaylistStore.cachedPlaylistGroupsByKind(ctx, playlistUrl).mapValues { it.value.toSet() }
+                newSublistLangsByKind = PlaylistStore.cachedPlaylistLanguagesByKind(ctx, playlistUrl).mapValues { it.value.toSet() }
+            }
+        }
+
+        val cachedGroups: (Kind) -> List<String> = { k -> newSublistGroupsByKind.getOrDefault(k, emptySet()).toList() }
+        val cachedLangs: (Kind) -> List<String> = { k -> newSublistLangsByKind.getOrDefault(k, emptySet()).toList() }
+
+        SectionTitle("New sublist for ${pl.name}")
+        Field(newSublistName, { newSublistName = it }, "Sublist name (e.g. \"UK channels\" or \"4K movies\")")
+
+        // Type filter (single-select)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Type", color = Color.White, fontSize = 15.sp, modifier = Modifier.width(150.dp))
+            SelectRowSublist("Any", newSublistKind == 0) { newSublistKind = 0 }
+            SelectRowSublist("Live TV", newSublistKind == 1) { newSublistKind = 1 }
+            SelectRowSublist("Movies", newSublistKind == 2) { newSublistKind = 2 }
+            SelectRowSublist("Series", newSublistKind == 3) { newSublistKind = 3 }
+        }
+
+        // Categories per kind (multi-select, 3 sections)
+        val kindName = when (newSublistKind) { 1 -> "Live TV"; 2 -> "Movies"; 3 -> "Series"; else -> "All types" }
+        SectionTitle("Categories — $kindName")
+        Text("Select one or more categories for ${kindName.lowercase()}:", color = Muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.horizontalScroll(rememberScrollState())) {
+            MultiSelectRowSublist("Any", newSublistGroupsByKind.getOrDefault(Kind.LIVE, emptySet()).isEmpty() && newSublistGroupsByKind.getOrDefault(Kind.MOVIE, emptySet()).isEmpty() && newSublistGroupsByKind.getOrDefault(Kind.SERIES, emptySet()).isEmpty()) {
+                newSublistGroupsByKind = emptyMap()
+            }
+            Kind.entries.forEach { k ->
+                val kOptions = cachedGroups(k)
+                if (kOptions.isNotEmpty()) {
+                    Text(k.displayName, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.width(100.dp))
+                    kOptions.forEach { g ->
+                        val selected = g in newSublistGroupsByKind.getOrDefault(k, emptySet())
+                        MultiSelectRowSublist(g, selected) {
+                            newSublistGroupsByKind = newSublistGroupsByKind.toMutableMap().apply {
+                                put(k, if (selected) getOrDefault(k, emptySet()) - g else getOrDefault(k, emptySet()) + g)
+                            }.toMap()
+                        }
+                    }
+                }
+            }
+        }
+
+        // Languages per kind (multi-select, 3 sections)
+        SectionTitle("Languages — $kindName")
+        Text("Select one or more languages for ${kindName.lowercase()}:", color = Muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.horizontalScroll(rememberScrollState())) {
+            MultiSelectRowSublist("Any", newSublistLangsByKind.getOrDefault(Kind.LIVE, emptySet()).isEmpty() && newSublistLangsByKind.getOrDefault(Kind.MOVIE, emptySet()).isEmpty() && newSublistLangsByKind.getOrDefault(Kind.SERIES, emptySet()).isEmpty()) {
+                newSublistLangsByKind = emptyMap()
+            }
+            Kind.entries.forEach { k ->
+                val kOptions = cachedLangs(k)
+                if (kOptions.isNotEmpty()) {
+                    Text(k.displayName, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.width(100.dp))
+                    kOptions.forEach { l ->
+                        val selected = l in newSublistLangsByKind.getOrDefault(k, emptySet())
+                        MultiSelectRowSublist(l, selected) {
+                            newSublistLangsByKind = newSublistLangsByKind.toMutableMap().apply {
+                                put(k, if (selected) getOrDefault(k, emptySet()) - l else getOrDefault(k, emptySet()) + l)
+                            }.toMap()
+                        }
+                    }
+                }
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Quality", color = Color.White, fontSize = 15.sp, modifier = Modifier.width(150.dp))
+            SelectRowSublist("Any", newSublistQuality == 0) { newSublistQuality = 0 }
+            SelectRowSublist("HD", newSublistQuality == 1) { newSublistQuality = 1 }
+            SelectRowSublist("FHD", newSublistQuality == 2) { newSublistQuality = 2 }
+            SelectRowSublist("4K", newSublistQuality == 3) { newSublistQuality = 3 }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Logo", color = Color.White, fontSize = 15.sp, modifier = Modifier.width(150.dp))
+            SelectRowSublist("Any", newSublistHasLogo == 0) { newSublistHasLogo = 0 }
+            SelectRowSublist("With logo", newSublistHasLogo == 1) { newSublistHasLogo = 1 }
+            SelectRowSublist("Without logo", newSublistHasLogo == 2) { newSublistHasLogo = 2 }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("tvg-id", color = Color.White, fontSize = 15.sp, modifier = Modifier.width(150.dp))
+            SelectRowSublist("Any", newSublistHasTvgId == 0) { newSublistHasTvgId = 0 }
+            SelectRowSublist("With tvg-id", newSublistHasTvgId == 1) { newSublistHasTvgId = 1 }
+            SelectRowSublist("Without tvg-id", newSublistHasTvgId == 2) { newSublistHasTvgId = 2 }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ToggleRow("Include adult content", "Off: titles marked adult will not be loaded.", newSublistIncludeAdult) { newSublistIncludeAdult = it }
+        }
+
+        // Build filter from all selections
+        val f = SublistFilter(
+            enabled = true,
+            kind = when (newSublistKind) { 1 -> Kind.LIVE; 2 -> Kind.MOVIE; 3 -> Kind.SERIES; else -> null },
+            groupsByKind = newSublistGroupsByKind.filterValues { it.isNotEmpty() }.mapValues { it.value.toList() },
+            langsByKind = newSublistLangsByKind.filterValues { it.isNotEmpty() }.mapValues { it.value.toList() },
+            quality = when (newSublistQuality) { 1 -> "HD"; 2 -> "FHD"; 3 -> "4K"; else -> null },
+            hasLogo = when (newSublistHasLogo) { 1 -> true; 2 -> false; else -> null },
+            hasTvgId = when (newSublistHasTvgId) { 1 -> true; 2 -> false; else -> null },
+            includeAdult = newSublistIncludeAdult
+        )
+
+        PillButton("Save sublist") {
+            if (newSublistName.isBlank()) return@PillButton
+            // The form has no title rule field, so keep one from an imported sublist with this
+            // name instead of silently dropping it (e.g. an English-dub sublist).
+            val kept = SublistStore.allFor(ctx, h).firstOrNull { it.name == newSublistName }?.filter?.titlesByKind
+            SublistStore.upsert(ctx, h, SublistDef(newSublistName, if (kept.isNullOrEmpty()) f else f.copy(titlesByKind = kept)))
+            Toast.makeText(ctx, "Saved ${newSublistName}", Toast.LENGTH_SHORT).show()
+            // Reset form
+            newSublistName = ""
+            newSublistGroupsByKind = emptyMap()
+            newSublistKind = 0
+            newSublistLangsByKind = emptyMap()
+            newSublistQuality = 0
+            newSublistHasLogo = 0
+            newSublistHasTvgId = 0
+            newSublistIncludeAdult = true
+            sublistTick++
+            scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // --- Existing sublist management ---
+        SectionTitle("Existing sublists for ${pl.name}")
+        val activeName = remember(h, sublistTick) { SublistStore.active(ctx, h) }
+        val sublists = remember(h, sublistTick) { SublistStore.allFor(ctx, h) }
+        Text(
+            if (activeName != null) "Active: $activeName" else "Active: full playlist (no filter)",
+            color = if (activeName != null) Accent2 else Muted,
+            fontSize = 13.sp, fontWeight = FontWeight.Medium
+        )
+        if (activeName != null) {
+            // Proof that the filter really ran: how many titles of the playlist are kept.
+            val kept = PlaylistStore.sublistMatchCount
+            val total = PlaylistStore.sublistTotalCount
+            if (total > 0) {
+                Text(
+                    "$kept of $total titles in the playlist match this sublist",
+                    color = Muted, fontSize = 12.sp
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        if (sublists.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                sublists.forEach { def ->
+                    val isActive = def.name == activeName
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(def.name + if (isActive) "  ·  " + Lang.tr("active") else "", color = if (isActive) Accent2 else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (!isActive) SmallPill("Set active") {
+                            SublistStore.setActive(ctx, h, def.name)
+                            sublistTick++
+                            Toast.makeText(ctx, "Active: ${def.name}", Toast.LENGTH_SHORT).show()
+                            scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
+                        }
+                        SmallPill("Delete") {
+                            SublistStore.remove(ctx, h, def.name)
+                            Toast.makeText(ctx, "Deleted ${def.name}", Toast.LENGTH_SHORT).show()
+                            if (isActive) SublistStore.setActive(ctx, h, null)
+                            sublistTick++
+                            scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            if (activeName != null) {
+                PillButton("Load full playlist (clear active)") {
+                    SublistStore.setActive(ctx, h, null)
+                    sublistTick++
+                    Toast.makeText(ctx, "Active: full playlist", Toast.LENGTH_SHORT).show()
+                    scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
+                }
+            }
+        } else {
+            Text("No sublists yet for this playlist.", color = Muted, fontSize = 15.sp)
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // --- Export / Import ---
+        SectionTitle("Export / Import")
+        Text("Export sublists to edit on your computer, then import back.", color = Muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PillButton("Export JSON") {
+                SublistStore.exportFor(ctx, h)?.let { json ->
+                    val fname = "sublists_export_${PlaylistStore.key(playlistUrl)}.json"
+                    val file = File(ctx.filesDir, fname)
+                    file.writeText(json)
+                    Toast.makeText(ctx, "Exported to ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                } ?: Toast.makeText(ctx, "No sublists to export", Toast.LENGTH_SHORT).show()
+            }
+            PillButton("Import JSON") {
+                val fname = "sublists_export_${PlaylistStore.key(playlistUrl)}.json"
+                val file = File(ctx.filesDir, fname)
+                if (file.exists()) {
+                    val ok = SublistStore.importFor(ctx, h, file.readText())
+                    if (ok) {
+                        sublistTick++
+                        Toast.makeText(ctx, "Imported ${SublistStore.allFor(ctx, h).size} sublists", Toast.LENGTH_LONG).show()
+                        // Re-apply right away, so an already active sublist takes effect without a restart
+                        scope.launch { PlaylistStore.load(ctx, playlistUrl, false) }
+                    } else {
+                        Toast.makeText(ctx, "Import failed", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(ctx, "No export file found", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    Hint("Sublists are saved and can be activated, deleted, or created here. The active sublist is applied every time the playlist is refreshed.")
 }
 
 @Composable
@@ -1632,3 +1959,31 @@ private fun UpdateSection(ctx: Context) {
     Field(url, { url = it; AppUpdate.setUrl(ctx, it) }, "Eigene Update-Adresse (leer = GitHub)")
 }
 
+
+/** Private categories (T-028): list with "Nicht mehr privat" and the switch for parental-flagged categories. */
+@Composable
+private fun PrivateCatsSection(ctx: Context) {
+    PrivateCats.init(ctx)
+    SectionTitle("Private Kategorien")
+    Hint("Titles from a private category only show inside that category: not in history, continue watching, \"All …\", genres, search or the home pages. Make a category private in Live TV, Movies or Series with the menu key (or a long OK) on the category.")
+    ToggleRow(
+        "Jugendschutz-Kategorien immer privat",
+        "Alles, was der Jugendschutz erkennt, wird wie eine private Kategorie behandelt.",
+        PrivateCats.parental
+    ) { PrivateCats.setParental(ctx, it) }
+    val v = PrivateCats.version
+    val keys = remember(v) { PrivateCats.keys.toList() }
+    if (keys.isEmpty()) Text("Keine privaten Kategorien.", color = Muted, fontSize = 15.sp)
+    else Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (k in keys) {
+            val i = k.indexOf('\t')
+            val kind = if (i > 0) runCatching { Kind.valueOf(k.substring(0, i)) }.getOrNull() else null
+            val group = if (i > 0) k.substring(i + 1) else k
+            val kindLabel = when (kind) { Kind.LIVE -> "Live TV"; Kind.MOVIE -> "Filme"; Kind.SERIES -> "Serien"; null -> "" }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(Lang.tr(kindLabel) + "  ·  " + group, color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 560.dp))
+                if (kind != null) SmallPill("Nicht mehr privat") { privateToggle(ctx, kind, group) }
+            }
+        }
+    }
+}

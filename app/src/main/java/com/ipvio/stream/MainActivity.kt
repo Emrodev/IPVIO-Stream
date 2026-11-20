@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
         // Load settings early so colors and size are right in the very first frame.
         Profiles.init(this)
         Profiles.prewarm(this)
+        TlsFallback.init(this)   // #69: hosts the user agreed to (ipvio_tls)
         val pick = Profiles.needsPicker(this)
         if (!pick) AppSettings.init(this)
         General.init(this)
@@ -155,7 +156,10 @@ fun App(pick: Boolean = false) {
     CompositionLocalProvider(
         LocalDensity provides scaled,
         LocalBringIntoViewSpec provides SmoothSpec,
-        LocalOverscrollFactory provides null
+        LocalOverscrollFactory provides null,
+        // T-029: Arabic is laid out right to left (the other languages stay left to right)
+        androidx.compose.ui.platform.LocalLayoutDirection provides
+            (if (Lang.code() == "ar") androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr)
     ) {
         val c = LocalContext.current
         var picked by remember { mutableStateOf(!pick) }
@@ -166,6 +170,10 @@ fun App(pick: Boolean = false) {
         }
         // New version available: dialog with one button (above every screen)
         UpdatePromptHost()
+        // Provider certificate does not match its address: ask once per host before an unencrypted connection (#69)
+        TlsConsentDialog()
+        // #95: keep the screen awake while the app is open, if the user switched it on (default off)
+        KeepScreenOn("browse", General.keepAwakeBrowse)
         // First start without a playlist: one non-blocking card that checks for updates (T-014)
         if (picked) UpdateCardHost()
     }
@@ -186,7 +194,7 @@ private val SE_RE = Regex("""S(\d+)E(\d+)""")
 private fun AppContent() {
     val ctx = LocalContext.current
     remember {
-        AppSettings.init(ctx); WatchStore.init(ctx); History.init(ctx); Library.init(ctx); QualityStore.init(ctx)
+        AppSettings.init(ctx); WatchStore.init(ctx); History.init(ctx); Library.init(ctx); QualityStore.init(ctx); PrivateCats.init(ctx)
         PlaybackPrefs.init(ctx); PlayerSync.init(ctx); loadWishboxTexts(); DeadLinks.init(ctx); ChannelLists.init(ctx); Reminders.init(ctx); Reminders.schedule(ctx)
         // W-010b: live sync of favorites and history (silent; only when Google Drive is connected)
         LiveSync.start(ctx); 0
@@ -259,7 +267,9 @@ private fun AppContent() {
     // Do not fall into the screensaver while downloading and parsing the playlist
     KeepScreenOn("playlist", PlaylistStore.loading)
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)
-    LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); if (!DemoMode.active) Classifier.restart(ctx, all) }   // after the first screen is up, and debounced while the list is still changing
+    LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); if (!DemoMode.active) Classifier.restart(ctx, all) }
+    // Private categories (T-028): ids of their titles, so history and resume can skip them
+    LaunchedEffect(all) { PrivateCats.reload(all) }   // after the first screen is up, and debounced while the list is still changing
 
     fun start(item: Item, title: String, url: String, startMs: Long = 0L) {
         if (DemoMode.active) return   // sample entries have no stream address

@@ -14,7 +14,8 @@ import java.io.OutputStream
  * Version 4 (whole list, language at the front of each entry) and 3 (without language) are still read.
  */
 object PlaylistCacheIO {
-    const val VERSION = 5
+    /** 6 adds the provider's "added" date (#22) at the end of each entry; 3 to 5 are still read (date 0). */
+    const val VERSION = 6
     private const val MAX_STR = 1 shl 20      // 1 MB per text: anything larger can only be a corrupt file
     private const val MAX_COUNT = 2_000_000
 
@@ -57,7 +58,7 @@ object PlaylistCacheIO {
 
     private fun DataInputStream.head(url: String): Head? {
         val version = readInt()
-        if (version !in 3..5) return null
+        if (version !in 3..6) return null
         if (str() != url.trim()) return null
         val ne = count()
         val epg = ArrayList<String>(ne)
@@ -144,6 +145,7 @@ object PlaylistCacheIO {
             writeInt(e.variants.size)
             for (v in e.variants) { str(v.url); str(v.label); str(v.quality); str(v.lang) }
         }
+        writeLong(i.added)
     }
 
     /** Reads an entry; hidden languages return null (they are counted anyway). */
@@ -153,7 +155,7 @@ object PlaylistCacheIO {
         var lang: String? = if (version >= 4) pool.of(str() ?: LangTagLogic.UNKNOWN) else null
         if (lang != null) {
             counts[lang] = (counts[lang] ?: 0) + 1
-            if (LangTagLogic.hides(hidden, lang, kind)) { skipItemRest(); return null }
+            if (LangTagLogic.hides(hidden, lang, kind)) { skipItemRest(version); return null }
         }
         // Older caches: titles still with "&amp;" or "|EN|" – clean up while reading (fast, mostly unchanged)
         val rawTitle = str() ?: ""
@@ -179,6 +181,7 @@ object PlaylistCacheIO {
             }
             eps.add(Episode(season, num, et, eu, if (vars.size > 1) vars else emptyList(), eq))
         }
+        val added = if (version >= 6) readLong() else 0L
         if (lang == null) {
             lang = pool.of(LangTagLogic.of(group, rawTitle, kind == Kind.LIVE))
             counts[lang] = (counts[lang] ?: 0) + 1
@@ -186,11 +189,11 @@ object PlaylistCacheIO {
         }
         return Item(
             id = id, kind = kind, title = title, year = if (y < 0) null else y, url = url, logo = logo,
-            group = group, episodes = EpisodeTable.of(eps, pool), quality = quality, tvgId = tvg, lang = lang
+            group = group, episodes = EpisodeTable.of(eps, pool), quality = quality, tvgId = tvg, lang = lang, added = added
         )
     }
 
-    private fun DataInputStream.skipItemRest() {
+    private fun DataInputStream.skipItemRest(version: Int) {
         skipStr(); readInt(); skipStr(); skipStr(); skipStr(); skipStr(); skipStr()   // title, year, URL, logo, category, quality, tvg-id
         val n = count()
         for (k in 0 until n) {
@@ -198,5 +201,6 @@ object PlaylistCacheIO {
             val vc = count()
             for (j in 0 until vc) { skipStr(); skipStr(); skipStr(); skipStr() }
         }
+        if (version >= 6) readLong()
     }
 }
