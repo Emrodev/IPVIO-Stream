@@ -14,4 +14,5 @@ An: Der Fernseher geht nicht in den Bildschirmschoner oder Ruhezustand, solange 
 Aktuelle PIN eingeben¦Enter current PIN¦Mevcut PIN'i girin¦Unesi trenutni PIN¦¦¦Introducir PIN actual¦Saisir le code PIN actuel¦Inserisci il PIN attuale¦Huidige pincode invoeren
 Zum Ändern die bisherige PIN eingeben.¦To change it, enter the current PIN.¦Değiştirmek için mevcut PIN'i girin.¦Za promjenu unesi trenutni PIN.¦¦¦Para cambiarla, introduce la PIN actual.¦Pour la modifier, saisissez le code PIN actuel.¦Per cambiarlo, inserisci il PIN attuale.¦Om te wijzigen, voer de huidige pincode in.
 Neue Folgen¦New episodes¦Yeni bölümler¦Nove epizode¦¦¦Nuevos episodios¦Nouveaux épisodes¦Nuovi episodi¦Nieuwe afleveringen
+Im YouTube öffnen¦Open in YouTube¦YouTube'da aç¦Otvori na YouTubeu¦Otvori na YouTubeu¦Otvori na YouTubeu¦Abrir en YouTube¦Ouvrir dans YouTube¦Apri su YouTube¦Openen in YouTube
 """

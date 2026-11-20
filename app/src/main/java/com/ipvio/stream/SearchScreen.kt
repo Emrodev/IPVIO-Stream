@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -179,16 +182,33 @@ fun SearchScreen(
             ) {
                 Spacer(Modifier.weight(1f))
                 // Everything sits directly above the keyboard and is fully visible (wraps into more rows instead of scrolling away)
-                val recent = AppSettings.searchHistory.toList().take(6)
-                // #101: history and suggestions take at most two rows. The area has a fixed height, so the keyboard below never moves.
-                Column(Modifier.fillMaxWidth().height(70.dp).clipToBounds(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (recent.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                val allRecent = AppSettings.searchHistory.toList()
+                val recent = allRecent.take(3)
+                var showAllHistory by remember { mutableStateOf(false) }
+                // Feedback 19 Nov: the last three searches in one row, "Alle anzeigen" opens the whole history.
+                // Suggestions have their own fixed area below, so a long history can no longer push them out of view.
+                if (allRecent.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     recent.forEachIndexed { i, term ->
                         // OK searches again, long OK / menu key removes just this entry
                         MiniChip(term, false, (if (i == 0) Modifier.focusRequester(firstHistory) else Modifier)
                             .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true) { SearchState.query = term }
                     }
+                    if (allRecent.size > 3) MiniChip("Alle anzeigen", false) { showAllHistory = true }
                     MiniChip("Verlauf löschen", false) { AppSettings.clearSearch(ctx) }
+                }
+                // #101: suggestions take at most two rows. The area has a fixed height, so the keyboard below never moves.
+                Column(Modifier.fillMaxWidth().height(70.dp).clipToBounds(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (showAllHistory) Dialog(onDismissRequest = { showAllHistory = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                    Column(Modifier.width(620.dp).heightIn(max = 640.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(Lang.tr("Letzte Suchanfragen"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                allRecent.forEach { term ->
+                                    MiniChip(term, false, raw = true) { SearchState.query = term; showAllHistory = false }
+                                }
+                            }
+                        }
+                    }
                 }
                 if (sugg.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     sugg.forEachIndexed { i, w ->

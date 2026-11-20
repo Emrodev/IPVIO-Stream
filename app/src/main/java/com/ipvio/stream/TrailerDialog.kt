@@ -6,6 +6,8 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -20,7 +22,7 @@ import androidx.compose.ui.window.DialogProperties
  * keeps playing. Only the embed page is shown: navigation of the main frame is blocked.
  */
 @Composable
-fun TrailerDialog(key: String?, onClose: () -> Unit) {
+fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit = {}) {
     val html = TrailerLogic.embedHtml(key) ?: return
     val holder = remember { arrayOfNulls<WebView>(1) }
     Dialog(
@@ -51,6 +53,8 @@ fun TrailerDialog(key: String?, onClose: () -> Unit) {
                     }
                 },
             )
+            // Fallback (19 Nov feedback: black picture, no sound on some titles): the same trailer in YouTube
+            PillButton(Lang.tr("Im YouTube öffnen"), modifier = Modifier.align(Alignment.TopEnd).padding(24.dp), light = true) { onOpenExternal() }
         }
     }
 }

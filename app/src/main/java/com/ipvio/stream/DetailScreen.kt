@@ -149,7 +149,12 @@ private fun DetailScreenFull(
     var metaDone by remember(item.id) { mutableStateOf(!MetaRepo.usable(item) || item.kind == Kind.LIVE) }
     // #15: trailer in the app (WebView) when TMDB gave a video id; otherwise the external search as before
     var trailerKey by remember(item.id) { mutableStateOf<String?>(null) }
-    TrailerDialog(trailerKey) { trailerKey = null }
+    TrailerDialog(trailerKey, onClose = { trailerKey = null }, onOpenExternal = {
+        // Same trailer in the YouTube app or browser (the in-app player can stay black on some titles)
+        val k = trailerKey
+        trailerKey = null
+        openTrailer(ctx, k, item.title)
+    })
     LaunchedEffect(item.id) {
         MetaRepo.extended(ctx, item)?.let { meta = it }
         metaDone = true
