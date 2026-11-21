@@ -33,7 +33,7 @@ object ScreenAwake {
     val history = ArrayDeque<Pair<Long, String>>()
 
     private fun note(on: Boolean) {
-        history.addFirst(System.currentTimeMillis() to (if (on) "an (" + reasons + ")" else "aus"))
+        history.addFirst(System.currentTimeMillis() to (if (on) "on (" + reasons + ")" else "off"))
         while (history.size > 6) history.removeLast()
     }
 

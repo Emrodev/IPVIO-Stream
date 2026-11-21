@@ -43,7 +43,7 @@ object ZapContext {
 }
 
 /** How long the focus must rest on a category before the channel column switches to it (ms). */
-private const val CAT_REST_MS = 150L
+private const val CAT_REST_MS = 220L
 
 /** Remembers the last chosen category / list in Live TV (also across a restart). */
 object LiveMemory {

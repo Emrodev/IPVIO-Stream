@@ -174,7 +174,7 @@ object HostFailover {
                         return resp
                     }
                     markWorking(u)
-                    if (i > 0) Diag.report("Backup-Server genutzt, weil der erste nicht antwortet")
+                    if (i > 0) Diag.report("Backup server used because the first one did not answer")
                     refusal?.close()
                     return resp
                 } catch (e: IOException) {

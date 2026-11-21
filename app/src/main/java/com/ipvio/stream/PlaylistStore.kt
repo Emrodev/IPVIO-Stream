@@ -257,6 +257,19 @@ object PlaylistStore {
     private var epgSig = 0L
     private var inited = false
     private val loadLock = Mutex()
+
+    /**
+     * The parsed list of a playlist as last shown, kept softly (the system may drop it under memory pressure), so switching
+     * back to it needs no disk read and no parsing. Valid only while [gen] of the playlist is unchanged (any write of its
+     * stored cache bumps it) and the language/content selection is the same.
+     */
+    private class Snap(
+        val items: List<Item>, val epg: List<String>, val order: Map<String, Int>,
+        val counts: Map<String, Int>, val bytes: Map<String, Long>, val hidden: Set<String>, val gen: Int
+    )
+    private val stash = java.util.concurrent.ConcurrentHashMap<String, java.lang.ref.SoftReference<Snap>>()
+    private val gens = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private fun bumpGen(url: String) { gens.merge(url, 1, Int::plus); stash.remove(url) }
     @Volatile private var job: Job? = null
     /** Last parse was too big: show the language selection on the next load with a UI. */
     @Volatile private var askNext = false
@@ -328,7 +341,7 @@ object PlaylistStore {
         val enc = p.getString("lists_enc", null)
         val dec = if (enc != null) Secrets.decrypt(enc) else null
         // #112: the saved list exists but cannot be decrypted (e.g. the key was lost). It is kept, see persist()
-        if (enc != null && dec == null) Diag.report("Gespeicherte Playlist-Liste konnte nicht entschlüsselt werden")
+        if (enc != null && dec == null) Diag.report("The saved playlist list could not be decrypted")
         val json = dec ?: p.getString("lists", "[]")
         try {
             val a = JSONArray(json)
@@ -633,6 +646,7 @@ object PlaylistStore {
     private fun tmp(f: File) = File(f.path + ".tmp")
 
     private fun deleteFiles(c: Context, url: String) {
+        bumpGen(url)
         if (url.startsWith("file://")) runCatching { File(java.net.URI(url)).takeIf { it.path.contains("/imports/") }?.delete() }
         val main = listOf(cacheFile(c, url), gzFile(c, url), rawFile(c, url), partFile(c, url), infoFile(c, url), Catchup.file(c, url), stalkerMoreFile(c, url))
         (main + main.map { tmp(it) }).forEach { runCatching { it.delete() } }
@@ -642,6 +656,7 @@ object PlaylistStore {
         c: Context, url: String, list: List<Item>, epg: List<String>, order: Map<String, Int>,
         counts: Map<String, Int>, bytes: Map<String, Long>, hidden: Set<String>
     ) {
+        bumpGen(url)
         try {
             val f = cacheFile(c, url)
             val t = tmp(f)
@@ -1045,7 +1060,7 @@ object PlaylistStore {
                 if (wantAsk || LoadLogic.estimate(scan.bytes, hidden) > budget) {
                     if (!ask) {
                         // #73 diagnostics: memory limit and language filter at the moment the list is refused (numbers only)
-                        Diag.report("Speicher-Budget ${budget / 1_000_000} MB, Heap ${Runtime.getRuntime().maxMemory() / 1_000_000} MB, ${hidden.size} Sprachen ausgeblendet")
+                        Diag.report("Memory budget ${budget / 1_000_000} MB, heap ${Runtime.getRuntime().maxMemory() / 1_000_000} MB, ${hidden.size} languages hidden")
                         throw PlaylistError(MSG_TOO_BIG)
                     }
                     val now = scan.counts.keys - hidden
@@ -1090,6 +1105,7 @@ object PlaylistStore {
         c: Context, u: String, items: List<Item>, epg: List<String>, order: Map<String, Int>,
         counts: Map<String, Int>, bytes: Map<String, Long>, hidden: Set<String>
     ) {
+        stash[u] = java.lang.ref.SoftReference(Snap(items, epg, order, counts, bytes, hidden, gens[u] ?: 0))
         langCounts = counts
         langBytes = bytes
         shownHidden = hidden
@@ -1145,10 +1161,37 @@ object PlaylistStore {
      * the server is only asked when there is no stored copy yet. The old list is dropped first: keeping both lists in memory
      * at once ran weak devices (Fire TV Stick) out of memory.
      */
+    /**
+     * Switching back to a playlist shown before: its parsed list is still in memory, so it replaces the current one at once
+     * (no empty screen, no loading overlay, no disk read). false = not possible, the normal switch runs.
+     */
+    private suspend fun switchFromMemory(c: Context, i: Int): Boolean {
+        val u = PlaylistLogic.normalizeUrl(lists[i].url) ?: return false
+        val snap = stash[u]?.get() ?: return false
+        if (snap.gen != (gens[u] ?: 0)) return false
+        if (snap.hidden != PlaylistMode.withMode(c, u, LangFilter.hidden)) return false
+        if (SublistStore.active(c, key(u)) != null) return false   // a saved sublist filter is applied by the normal load
+        if (!loadLock.tryLock()) return false
+        try {
+            clearSublistForLoad()
+            activate(c, i)
+            error = null; refreshError = null
+            withContext(Dispatchers.IO) {
+                show(c, u, snap.items, snap.epg, snap.order, snap.counts, snap.bytes, snap.hidden)
+                runCatching { loadExtras(c, network = false) }.onFailure { if (it is CancellationException) throw it }
+            }
+            PlaylistDiag.log("switch", "from memory")
+            return true
+        } finally {
+            loadLock.unlock()
+        }
+    }
+
     suspend fun switchTo(c: Context, i: Int, fresh: Boolean = false) {
         ensure(c)
         if (i !in lists.indices) return
         if (loadLock.isLocked) return   // a load is already running: do not interfere
+        if (!fresh && switchFromMemory(c, i)) return
         activate(c, i)
         // Mark the load before the list is emptied: otherwise one frame shows "No channels yet" instead of the loading screen.
         // No suspension point between here and load(), so its lock is still free.
@@ -1625,6 +1668,7 @@ object PlaylistStore {
         val u = savedUrl(c) ?: return false
         if (loading || loadLock.isLocked) return false
         val files = listOf(cacheFile(c, u), gzFile(c, u), rawFile(c, u), partFile(c, u), infoFile(c, u))
+        bumpGen(u)
         withContext(Dispatchers.IO) { (files + files.map { tmp(it) }).forEach { runCatching { it.delete() } } }
         prefs(c).edit().remove(apiKey(u)).apply()
         PlaylistDiag.log("reload from scratch", "stored files deleted")
