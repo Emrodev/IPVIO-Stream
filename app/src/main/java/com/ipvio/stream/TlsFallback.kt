@@ -65,6 +65,12 @@ object TlsFallback {
     fun downgradeUrl(url: String): String? = TlsFallbackLogic.downgrade(url)
 
     /**
+     * The http address to use at once for a host the user has agreed to (no failing https attempt first), else null.
+     * Without this every request and every video segment first failed over https and then retried over http.
+     */
+    fun preferredUrl(url: String): String? = TlsFallbackLogic.preferred(url, agreed)
+
+    /**
      * Failed request [url] with error [e]: returns the http address if the user agreed for this host, otherwise null.
      * Without agreement the host is queued for the consent dialog (nothing is sent over http).
      */
@@ -85,11 +91,12 @@ object TlsFallback {
         val req = chain.request()
         val url = req.url
         if (!url.isHttps) return@Interceptor chain.proceed(req)
+        preferredUrl(url.toString())?.toHttpUrlOrNull()?.let { return@Interceptor chain.proceed(req.newBuilder().url(it).build()) }
         try {
             chain.proceed(req)
         } catch (e: IOException) {
             val low = fallbackFor(url.toString(), e)?.toHttpUrlOrNull() ?: throw e
-            Diag.report("Zertifikat passt nicht zur Adresse – Verbindung ohne Verschlüsselung (zugestimmt)")
+            Diag.report("Certificate does not match the address: connecting without encryption (you agreed)")
             chain.proceed(req.newBuilder().url(low).build())
         }
     }
