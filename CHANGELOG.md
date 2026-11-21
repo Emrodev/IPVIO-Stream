@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.4.7 (versionCode 13)
+- Live TV: playback over a connection without encryption (certificate does not match the address, you agreed) is repaired. The agreed host now goes straight to http instead of failing over https first before every request and every video segment, and addresses with characters such as "%", "|" or spaces are no longer re-encoded or rejected when switching to http. Reload the channel once if it still shows "connection stalled". Not device tested yet
+- Playlist switch: switching back to a playlist shown before replaces the list at once from memory (no empty screen, no loading, no disk read). If the system needed the memory, or the playlist, its languages or its content mode changed, the normal switch runs. Not measured, not device tested yet
+- Live TV categories: the channel column switches only after the focus rested for 0.22 s (was 0.15 s), so scrolling through the categories rebuilds the channel list less often
+- Diagnostics: all messages in Settings > Diagnostics are English now (certificate, backup server, playback, memory, trailer, screen-on log)
+
 ## 1.4.6 (versionCode 12)
 - Live TV: channels of providers whose live address has no "/live/" part ("http://host/user/pass/12345", also ".ts" or ".m3u8" at the end) stay in Live TV, even when their category is called "Sky Cinema", "Film" or "Movies". Before they showed up in Movies. Movie and series addresses ("/movie/", "/series/", video files) are not affected. Reload the playlist once after the update so it is sorted again. Not device tested yet
 - Settings > Playlists: the refresh option "Every few hours" was shown in German in every language (it had no translation); it is now translated in all languages

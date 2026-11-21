@@ -113,15 +113,15 @@ fun TrailerDialog(key: String?, onClose: () -> Unit, onOpenExternal: () -> Unit 
                                     request?.isForMainFrame != false
                                 // Diagnostics for the black-picture trailers (T-032): codes only, no addresses
                                 override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
-                                    Diag.report("Trailer: WebView-Fehler ${error?.errorCode} (Hauptseite=${request?.isForMainFrame != false})")
+                                    Diag.report("Trailer: WebView error ${error?.errorCode} (main page=${request?.isForMainFrame != false})")
                                 }
                                 // Same behaviour as the default (connection is refused); only reports the reason
                                 override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
-                                    Diag.report("Trailer: SSL-Fehler ${error?.primaryError}")
+                                    Diag.report("Trailer: SSL error ${error?.primaryError}")
                                     handler?.cancel()
                                 }
                                 override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
-                                    Diag.report("Trailer: HTTP ${errorResponse?.statusCode} (Hauptseite=${request?.isForMainFrame == true})")
+                                    Diag.report("Trailer: HTTP ${errorResponse?.statusCode} (main page=${request?.isForMainFrame == true})")
                                 }
                             }
                             // Player errors/states of the embed page; only lines of TrailerLogic.diagLine are written down
