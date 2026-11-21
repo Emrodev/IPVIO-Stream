@@ -168,4 +168,12 @@ http://h/x
         assertEquals(3, LoadFun.stage(15 * 60_000L))
         assertTrue(LoadFun.line(3 * 3_600_000L) != null)   // no crash even after hours (rotation)
     }
+
+    @Test fun parallelXtreamPartIsRetriedAloneOnNetworkErrorOrIncompleteAnswer() {
+        assertTrue(LoadLogic.retriesSequentially(java.io.IOException("reset")))
+        assertTrue(LoadLogic.retriesSequentially(PlaylistError("no list", incomplete = true)))
+        assertFalse(LoadLogic.retriesSequentially(PlaylistError("login failed")))
+        assertFalse(LoadLogic.retriesSequentially(java.util.concurrent.CancellationException("abort")))
+        assertFalse(LoadLogic.retriesSequentially(null))
+    }
 }

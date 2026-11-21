@@ -18,6 +18,12 @@ object Diag {
     var history by mutableStateOf<List<Pair<Long, String>>>(emptyList())
         private set
 
+    /** A neutral line for the log in Settings > Diagnostics (timings and the like): not counted as an error. */
+    @Synchronized
+    fun note(msg: String) {
+        history = DiagLogic.append(history, System.currentTimeMillis(), msg)
+    }
+
     @Synchronized
     fun report(msg: String) {
         val now = System.currentTimeMillis()

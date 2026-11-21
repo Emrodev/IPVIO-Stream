@@ -58,4 +58,9 @@ class SublistStoreTest {
         assertEquals("b", back[2]!![0].name)
         assertEquals(Kind.SERIES, back[2]!![0].filter.kind)
     }
+
+    @Test fun activeKeysPicksOnlyActiveSelections() {
+        val keys = listOf("sublists", "sublist_active_123", "sublist_active_-45", "sublists_active_cleared", "ipvio_filter")
+        assertEquals(listOf("sublist_active_123", "sublist_active_-45"), SublistStore.activeKeys(keys))
+    }
 }

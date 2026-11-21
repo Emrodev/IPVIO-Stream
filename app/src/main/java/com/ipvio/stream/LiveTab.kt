@@ -42,6 +42,9 @@ object ZapContext {
     var key: String? = null
 }
 
+/** How long the focus must rest on a category before the channel column switches to it (ms). */
+private const val CAT_REST_MS = 150L
+
 /** Remembers the last chosen category / list in Live TV (also across a restart). */
 object LiveMemory {
     fun sel(c: android.content.Context): String? = Profiles.sp(c, "ipvio_live").getString("sel", null)
@@ -120,6 +123,12 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // The tab opens on "Start" (home), except when coming back from a stream: then the last category with its channel list.
     // LastFocus.pending is set exactly in that case (MainActivity, back from the player).
     var sel by remember { mutableStateOf(if (LastFocus.pending != null) LiveMemory.sel(ctx) ?: "HOME" else "HOME") }
+    // The highlighted category follows the focus at once; the channel column (and everything computed from it) follows
+    // [sel] only after the focus has rested for a moment. Holding Down in the category column used to rebuild the channel
+    // list (grouping, quality bundling, all rows) for every category it passed, which made the scrolling stutter.
+    var hot by remember { mutableStateOf(sel) }
+    LaunchedEffect(sel) { if (hot != sel) hot = sel }   // other places set [sel] directly (menus, new list, search)
+    LaunchedEffect(hot) { if (hot != sel) { kotlinx.coroutines.delay(CAT_REST_MS); sel = hot } }
     HiddenCats.init(ctx)
     CatOrder.init(ctx)
     // Channel name search ("SEARCH" entry): text is kept while the tab is open
@@ -214,6 +223,16 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // scrolled from another category; then scroll to the top first and focus it once it is laid out.
     fun enterChannels() {
         inChannels = true
+        if (sel != hot) {
+            // Right/OK before the channel column caught up with the focused category: show it now, then focus its first row
+            sel = hot
+            plScope.launch {
+                kotlinx.coroutines.delay(40)
+                runCatching { chanState.scrollToItem(0) }
+                repeat(15) { kotlinx.coroutines.delay(30); if (focusOk(firstChan)) return@launch }
+            }
+            return
+        }
         if (focusOk(firstChan)) return
         plScope.launch {
             runCatching { chanState.scrollToItem(0) }
@@ -224,7 +243,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // The chosen row may be scrolled out of the category column: bring it into view first. False = let the default handle it.
     fun backToCategory(): Boolean {
         inChannels = false
-        val idx = names.indexOf(sel)
+        val idx = names.indexOf(hot)
         if (idx < 0) return false
         if (catState.layoutInfo.visibleItemsInfo.any { it.index == idx } && focusOk(ContentFocus.req)) return true
         plScope.launch {
@@ -293,9 +312,9 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     }
                     if (n == "SEARCH") {
                         CatRow(
-                            Lang.tr("Sender suchen") + if (query.isNotBlank()) ": $query" else "", -1, sel == "SEARCH",
-                            if (sel == "SEARCH") Modifier.focusRequester(ContentFocus.req) else Modifier,
-                            onFocus = { sel = "SEARCH" },
+                            Lang.tr("Sender suchen") + if (query.isNotBlank()) ": $query" else "", -1, hot == "SEARCH",
+                            if (hot == "SEARCH") Modifier.focusRequester(ContentFocus.req) else Modifier,
+                            onFocus = { hot = "SEARCH"; sel = "SEARCH" },
                             onRight = { runCatching { kbFirst.requestFocus() } },
                             onFav = {}, icon = AIcon.Edit, raw = true
                         ) { runCatching { kbFirst.requestFocus() } }
@@ -391,8 +410,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     val plainCat = ml == null && n != FAV_CAT && n != "ALL" && n != "REC" && n != "HOME" && !LiveGenre.isGenreKey(n) && groups.containsKey(n)
                     Box {
                         CatRow(
-                            label, count, n == sel,
-                            (if (n == sel) Modifier.focusRequester(ContentFocus.req) else Modifier).then(
+                            label, count, n == hot,
+                            (if (n == hot) Modifier.focusRequester(ContentFocus.req) else Modifier).then(
                                 if (plainCat && floatingCat == n) Modifier.onPreviewKeyEvent { k ->
                                     // While floating every key belongs to the move: Up/Down move, OK puts it down, Left/Right do nothing
                                     if (k.type != KeyEventType.KeyDown) return@onPreviewKeyEvent k.key != Key.Back
@@ -405,7 +424,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                                     }
                                 } else Modifier
                             ),
-                            onFocus = { sel = n; inChannels = false }, onRight = { enterChannels() },
+                            onFocus = { hot = n; inChannels = false }, onRight = { enterChannels() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null,
                             floating = plainCat && floatingCat == n

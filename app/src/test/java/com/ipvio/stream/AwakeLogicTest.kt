@@ -15,8 +15,9 @@ class AwakeLogicTest {
         assertTrue(need(true, AwakeLogic.STATE_BUFFERING))   // reloading and reconnecting
     }
 
-    @Test fun pause_ende_fehler_hintergrund_geben_frei() {
-        assertFalse(need(false, AwakeLogic.STATE_READY))      // pause / sleep timer
+    @Test fun pause_keepsScreenOn_sleepTimerAndEndRelease() {
+        assertTrue(need(false, AwakeLogic.STATE_READY))       // user pause: picture stays, screensaver stays off
+        assertFalse(AwakeLogic.playerNeedsScreen(false, AwakeLogic.STATE_READY, false, true, sleepExpired = true))  // sleep timer
         assertFalse(need(true, AwakeLogic.STATE_ENDED))       // end
         assertFalse(need(true, AwakeLogic.STATE_IDLE))        // stopped / after error
         assertFalse(need(true, AwakeLogic.STATE_READY, err = true))
@@ -31,7 +32,7 @@ class AwakeLogicTest {
             Triple(true, AwakeLogic.STATE_IDLE, true) to false,
             Triple(true, AwakeLogic.STATE_BUFFERING, false) to true,
             Triple(true, AwakeLogic.STATE_READY, false) to true,
-            Triple(false, AwakeLogic.STATE_READY, false) to false
+            Triple(false, AwakeLogic.STATE_READY, false) to true   // pause keeps the screen on
         )
         for ((s, want) in steps) assertEquals(want, need(s.first, s.second, s.third))
     }
