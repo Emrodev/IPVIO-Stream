@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Live TV: scrolling through the category list is smooth. The highlight follows the focus at once, but the channel column switches to a category only after the focus has rested on it for 0.15 s. Before, holding Down rebuilt the channel list (grouping, quality bundling, all rows) for every category passed. Right or OK on a category still opens its channels at once. Not measured, not device tested yet
 - Settings: the "Teillisten" page (per-playlist sublist filter) is removed (T-035). Saved sublist definitions stay on the device. An active sublist filter is switched off once after the update, so playlists show all channels again. Categories can still be hidden under "Genres & Kategorien". Not device tested yet
 - Settings: the profile circle on the home screen opens the Profiles page again (it opened the sublist page). "Über", "Alles zurücksetzen" and "Spende" each open their own page (they were shifted by one) (T-035). Not device tested yet
 - Performance (T-034, slow 1.4.4): the age rating is asked for only when a title is opened (detail page). In 1.4.4 it was asked for every title that got the focus (home slideshow, billboard, rows, search, list preview), and every TMDB detail stored before counted as outdated, so each focus started new TMDB and OMDb requests. Browsing no longer fetches it, also not for new titles; the info lines show it once the title was opened. Not device tested, nothing measured
