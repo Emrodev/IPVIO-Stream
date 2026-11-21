@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Settings > Playlists: every playlist has its own "Reload" button. On the main list it reloads it; on another list it makes that list the main list and downloads it again from the provider. Not device tested yet
 
 ## 1.4.5 (versionCode 11)
 - Live TV: scrolling through the category list is smooth. The highlight follows the focus at once, but the channel column switches to a category only after the focus has rested on it for 0.15 s. Before, holding Down rebuilt the channel list (grouping, quality bundling, all rows) for every category passed. Right or OK on a category still opens its channels at once. Not measured, not device tested yet
