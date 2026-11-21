@@ -146,9 +146,9 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 4 -> MenuPage(ctx)
                 5 -> PlayerPage(ctx)
                 6 -> AudioPage(ctx)
-                7 -> FilterPage(ctx) { page = 8 }
+                7 -> FilterPage(ctx)
                 8 -> LivePage(ctx)
-                9 -> PlaylistPage(ctx, onAdd, reload)
+                9 -> PlaylistPage(ctx, onAdd, reload) { page = 7 }
                 10 -> ProfilesPage(ctx) { page = -1 }
                 11 -> ApiKeysPage(ctx)
                 12 -> ParentalPage(ctx) { page = -1 }
@@ -557,7 +557,8 @@ private fun StoragePage(ctx: Context) {
     // Sizes and deleting run in the background: the metadata folder can contain tens of thousands of files
     var sizes by remember { mutableStateOf(List(General.AREAS.size) { 0L }) }
     LaunchedEffect(tick) { sizes = withContext(Dispatchers.IO) { General.AREAS.map { General.areaSize(ctx, it) } } }
-    SectionTitle("Zwischenspeicher")
+    SettingsTabs(listOf("Zwischenspeicher", "Verlauf", "Sicherung"), "storage") { tab ->
+    if (tab == 0) {
     General.AREAS.forEachIndexed { i, a ->
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(Modifier.width(420.dp)) {
@@ -569,14 +570,16 @@ private fun StoragePage(ctx: Context) {
     }
     Text("Gesamt: " + SettingsLogic.fmtBytes(sizes.sum()), color = Accent2, fontSize = 15.sp)
     Hint("Geleerte Daten lädt die App bei Bedarf neu. Titel-Infos und Bilder erscheinen danach kurz später. Der Playlist-Zwischenspeicher macht den Start schnell; ohne ihn wartet die App auf den Download.")
-    SectionTitle("Verlauf")
+    }
+    if (tab == 1) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         ConfirmPill("Suchverlauf löschen") { AppSettings.clearSearch(ctx) }
         ConfirmPill("Zuletzt geschaut löschen") { General.clearHistory(ctx) }
         ConfirmPill("Weiterschauen löschen") { General.clearResume(ctx) }
     }
     Hint("Meine Liste und Favoriten bleiben immer erhalten.")
-    SectionTitle("Sicherung")
+    }
+    if (tab == 2) {
     var backupMsg by remember { mutableStateOf<String?>(null) }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton("Sicherung erstellen") {
@@ -645,6 +648,8 @@ private fun StoragePage(ctx: Context) {
     Hint("„Speichern unter“ lässt dich den Ort wählen, zum Beispiel Google Drive, Downloads oder einen USB-Stick – so nimmst du die Sicherung auf ein anderes Gerät mit.")
     Hint("Gesichert werden Einstellungen, Favoriten, Verlauf, Weiterschauen und Profile. Playlists und Zugangsdaten sind nur in „Sicherung mit Playlists“ enthalten (die Datei enthält Passwörter, gib sie nicht weiter). Beim Wiederherstellen startet die App neu. Auf einem neuen Gerät geht das gleich beim Hinzufügen der ersten Playlist.")
     TransferSection(ctx)
+    }
+    }
 }
 
 @Composable
@@ -667,7 +672,8 @@ private fun MenuPage(ctx: Context) {
 
 @Composable
 private fun PlayerPage(ctx: Context) {
-    SectionTitle("Wiedergabe")
+    SettingsTabs(listOf("Wiedergabe", "Intro und nächste Folge", "Uhr im Bild", "Netzwerk und Bildrate", "Zusatzbild", "Quelle & Qualität"), "player") { tab ->
+    if (tab == 0) {
     val steps = listOf(5, 10, 15, 30, 60)
     val hides = listOf(3, 4, 5, 6, 8, 10, 15)
     SelectRow("Sprung links/rechts", "${AppSettings.seekStep} s", steps.map { "$it s" }, steps.indexOf(AppSettings.seekStep).coerceAtLeast(0)) {
@@ -684,7 +690,8 @@ private fun PlayerPage(ctx: Context) {
     ToggleRow("Endzeit anzeigen", "Zeigt, um wie viel Uhr der Film voraussichtlich endet.", AppSettings.showEndTime) {
         AppSettings.setPlayerExtra(ctx, AppSettings.autoNext, AppSettings.hideSec, it, AppSettings.autoSkipIntro)
     }
-    SectionTitle("Intro und nächste Folge")
+    }
+    if (tab == 1) {
     ToggleRow("Intro überspringen anbieten", "Zeigt bei Serien einen Knopf „Intro überspringen“, wenn Intro-Zeiten bekannt sind.", AppSettings.skipIntro) {
         AppSettings.setPlayer(ctx, it, AppSettings.showInfo, AppSettings.seekStep)
     }
@@ -697,7 +704,8 @@ private fun PlayerPage(ctx: Context) {
     ToggleRow("Abspann automatisch überspringen", "Startet die nächste Folge, sobald der Abspann beginnt. Geht nur, wenn für die Serie Abspann-Zeiten bekannt sind (TheIntroDB); sonst bleibt es beim Hinweis in den letzten 30 Sekunden.", AppSettings.autoSkipOutro) {
         AppSettings.setAutoOutro(ctx, it)
     }
-    SectionTitle("Uhr im Bild")
+    }
+    if (tab == 2) {
     if (AppSettings.clockOn) { Text("Vorschau", color = Muted, fontSize = 14.sp); ClockSample() }
     ToggleRow("Uhrzeit im Bild", "Zeigt die aktuelle Uhrzeit beim Abspielen in einer Ecke (nicht, solange die Steuerleiste offen ist).", AppSettings.clockOn) {
         AppSettings.setClock(ctx, it, AppSettings.clockPos, AppSettings.clockOpacity, AppSettings.clockSize)
@@ -726,7 +734,8 @@ private fun PlayerPage(ctx: Context) {
         }
         Hint("Die Uhr folgt der Zeitzone und dem 12/24-Stunden-Format aus den Einstellungen. Im Player geht es auch über Einstellungen > Uhrzeit.")
     }
-    SectionTitle("Netzwerk und Bildrate")
+    }
+    if (tab == 3) {
     val bufNames = listOf("Automatisch", "Normal", "Groß", "Sehr groß")
     SelectRow("Puffer (bei langsamem Internet)", bufNames[AppSettings.bufferMode], bufNames, AppSettings.bufferMode) { AppSettings.setBufferMode(ctx, it) }
     Hint("Ein größerer Puffer lädt mehr Film im Voraus und verhindert Ruckeln bei schwacher Leitung; dafür dauert der Start etwas länger und es wird mehr Speicher gebraucht. „Automatisch“ beginnt normal und vergrößert den Puffer von selbst, wenn es mehrfach ruckelt (aktuell Stufe ${AppSettings.bufferLearned}). Gilt ab dem nächsten gestarteten Titel.")
@@ -734,14 +743,19 @@ private fun PlayerPage(ctx: Context) {
         AppSettings.setAutoFps(ctx, it)
     }
     Hint("Intro-Zeiten stammen aus der Community-Datenbank TheIntroDB und gibt es nicht für jede Serie. Die Stream-Info erscheint nur bei Filmen und Serien.")
-    SectionTitle("Zusatzbild")
+    }
+    if (tab == 4) {
     DualPrefs.init(ctx)
     SelectRow("Anordnung", DualPrefs.ARRANGE_NAMES[DualPrefs.split], DualPrefs.ARRANGE_NAMES, DualPrefs.split) { DualPrefs.set(ctx, split = it) }
     SelectRow("Fenstergröße", DualPrefs.SIZE_NAMES[DualPrefs.size], DualPrefs.SIZE_NAMES, DualPrefs.size) { DualPrefs.set(ctx, size = it) }
     SelectRow("Position", DualPrefs.CORNER_NAMES[DualPrefs.corner], DualPrefs.CORNER_NAMES, DualPrefs.corner) { DualPrefs.set(ctx, corner = it) }
     Hint("Gilt für Bild-in-Bild. Deine Auswahl wird gespeichert.")
+    }
+    if (tab == 5) {
     SourceSettingsSection(ctx)
     DeadLinksSection(ctx)
+    }
+    }
 }
 
 @Composable
@@ -762,7 +776,8 @@ private fun DesignPage(ctx: Context) {
 
     // Space stays on the right for the preview
     Column(Modifier.padding(end = DesignPreview.WIDTH + 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-    SectionTitle("Fertige Designs")
+    SettingsTabs(listOf("Farbthema", "Hintergrund", "Animationen", "Anzeigegröße", "Bildschirm anpassen", "Schriftart"), "design") { tab ->
+    if (tab == 0) {
     Look.DESIGNS.chunked(3).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { d ->
@@ -825,7 +840,8 @@ private fun DesignPage(ctx: Context) {
         Hint("Farbe 1 färbt Knöpfe, Balken und markierte Flächen – die Schrift darauf wird automatisch hell oder dunkel, damit sie lesbar bleibt. Farbe 2 färbt Hervorhebungen, Rahmen und farbige Schrift. „Automatisch“ berechnet Farbe 2 passend zu Farbe 1.")
     }
 
-    SectionTitle("Hintergrund")
+    }
+    if (tab == 1) {
     Look.BGS.indices.chunked(2).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { i ->
@@ -836,6 +852,8 @@ private fun DesignPage(ctx: Context) {
         }
     }
 
+    }
+    if (tab == 2) {
     // Round 14: choice as fields (like the colors) – highlighting shows the effect in the preview, OK adopts it
     SectionTitle("Animationen")
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -843,7 +861,8 @@ private fun DesignPage(ctx: Context) {
             ChoiceChip(n, Look.motion == i, onFocus = { hover(it, Lang.tr(n)) { DesignPreview.motion = i } }) { save(motion = i) }
         }
     }
-    SectionTitle("Anzeigegröße")
+    }
+    if (tab == 3) {
     Look.SCALES.indices.chunked(3).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { i ->
@@ -858,13 +877,15 @@ private fun DesignPage(ctx: Context) {
     Hint("Standard ist 85 %: mehr Inhalt, Elemente bleiben gut lesbar. „Automatisch“ vergrößert die App auf sehr breiten Bildschirmen.")
     Hint("Animationen „Aus“ schaltet die Vergrößerung beim Fokus ab, „Dezent“ macht sie schwächer. Das schont schwache Geräte.")
 
-    SectionTitle("Bildschirm anpassen")
+    }
+    if (tab == 4) {
     var calibrate by remember { mutableStateOf(false) }
     PillButton("Bildschirmrand einstellen", light = true, icon = AIcon.Sliders) { calibrate = true }
     Hint("Zeigt einen Rahmen mit vier Ecken am Fernseher: Stelle den Rand ein, bis alle vier Ecken sichtbar sind. Hilft, wenn dein Fernseher Menü oder Texte am Rand abschneidet.")
     if (calibrate) FitCalibration { calibrate = false }
     ToggleRow("Uhr anzeigen", null, General.showClock) { General.setShowClock(ctx, it) }
-    SectionTitle("Schriftart")
+    }
+    if (tab == 5) {
     General.FONTS.indices.chunked(3).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { i ->
@@ -881,6 +902,8 @@ private fun DesignPage(ctx: Context) {
         }
     }
     Hint("Fünf klare Systemschriften, die auf jedem Gerät vorhanden sind. Die Schriftgröße wirkt zusätzlich zur Anzeigegröße.")
+    }
+    }
     }
 }
 
@@ -996,19 +1019,9 @@ private fun SubtitlePreview(size: Int, color: Int, bg: Int, edge: Int) {
 private val OUTLINE_OFFSETS = listOf(-1.5f to 0f, 1.5f to 0f, 0f to -1.5f, 0f to 1.5f, 1f to 1f, -1f to -1f, 1f to -1f, -1f to 1f)
 
 @Composable
-private fun FilterPage(ctx: Context, onLanguages: () -> Unit) {
-    ToggleRow("Automatische Genres", "Aus = Kategorien deines Anbieters (Standard). Umschalten geht auch direkt in der Ansicht „Kategorien“.", AppSettings.ipvioFilter) { AppSettings.set(ctx, it) }
-    val all = PlaylistStore.channels
-    val vod = remember(all) { all.count { it.kind != Kind.LIVE } }
-    if (!Classifier.supported(vod)) Hint("Deine Bibliothek ist für automatische Genres zu groß (über 60.000 Filme und Serien). Es werden die Kategorien deines Anbieters verwendet. Blende unter „Playlists“ > „Sprachen der Inhalte“ Sprachen aus, die du nicht brauchst – dann passt es wieder.")
-    Hint("Automatische Genres sortieren Titel nach Genre (Anime = Animation aus Japan). Beim ersten Mal dauert das einige Minuten, danach ist alles gespeichert. Aus = die Kategorien deines Anbieters in der Reihenfolge deines Anbieters. In der Ansicht „Kategorien“ kannst du jederzeit zwischen beiden wechseln.")
-    if (!MetaRepo.enabled()) Text("Automatische Genres brauchen einen TMDB-Schlüssel (Einstellungen > API-Schlüssel).", color = DS.Danger, fontSize = 15.sp)
-    if (Classifier.running) Text("${Classifier.phase} werden geladen … ${Classifier.progress} / ${Classifier.total}", color = Accent2, fontSize = 15.sp)
-    SectionTitle("Sprachen der Inhalte")
-    Hint("Welche Sprachen geladen werden, stellst du unter „Playlists“ ein – das bestimmt, was aus der Playlist geladen wird.")
-    PillButton("Sprachen der Inhalte öffnen", icon = AIcon.Globe) { onLanguages() }
-    // Switches below only change a draft; it is saved once with "Apply" (or when leaving the page), so the playlist
-    // is not filtered again after every single tick.
+private fun FilterPage(ctx: Context) {
+    // Switches of the "groups" and "categories" tabs only change a draft; it is saved once with "Apply" (or when leaving
+    // the page), so the playlist is not filtered again after every single tick. The draft survives a change of tab.
     IgnoredGroups.init(ctx)
     val ver = IgnoredGroups.version
     val base = remember(ver) { IgnoredGroups.snapshot() }
@@ -1018,8 +1031,36 @@ private fun FilterPage(ctx: Context, onLanguages: () -> Unit) {
     DisposableEffect(Unit) {
         onDispose { val (b, dr) = latest; IgnoredGroups.applyDraft(ctx, dr - b, b - dr) }
     }
-    IgnoredGroupsSection(d)
-    CategoryFilterSection(d)
+    // One place for everything that filters the playlist. The tabs, from the biggest cut to the smallest:
+    SettingsTabs(listOf("Sprachen der Inhalte", "Gruppen ignorieren", "Kategorien ein- und ausblenden", "Automatische Genres"), "filter") { tab ->
+        when (tab) {
+            0 -> {
+                Hint("1. What is loaded at all: is loaded at all. Languages you switch off are not read from the playlist, which saves memory and makes big playlists faster. Changing it loads the playlist again.")
+                LanguageFilterSection(ctx)
+            }
+            1 -> {
+                Hint("2. Hide whole bundles at once, by the tag of your provider (for example every category that starts with \"TR |\"). It works instantly, without reloading.")
+                IgnoredGroupsSection(d)
+            }
+            2 -> {
+                Hint("3. Hide single categories, or search for a name and switch all hits at once. It works instantly, without reloading. Groups and categories use the same hide list, so what you hide in either tab adds up.")
+                CategoryFilterSection(d)
+            }
+            else -> GenresFilterBlock(ctx)
+        }
+    }
+}
+
+/** Automatic genres (TMDB), as a tab of the filter page. */
+@Composable
+private fun GenresFilterBlock(ctx: Context) {
+    ToggleRow("Automatische Genres", "Aus = Kategorien deines Anbieters (Standard). Umschalten geht auch direkt in der Ansicht „Kategorien“.", AppSettings.ipvioFilter) { AppSettings.set(ctx, it) }
+    val all = PlaylistStore.channels
+    val vod = remember(all) { all.count { it.kind != Kind.LIVE } }
+    if (!Classifier.supported(vod)) Hint("Deine Bibliothek ist für automatische Genres zu groß (über 60.000 Filme und Serien). Es werden die Kategorien deines Anbieters verwendet. Blende unter „Playlists“ > „Sprachen der Inhalte“ Sprachen aus, die du nicht brauchst – dann passt es wieder.")
+    Hint("Automatische Genres sortieren Titel nach Genre (Anime = Animation aus Japan). Beim ersten Mal dauert das einige Minuten, danach ist alles gespeichert. Aus = die Kategorien deines Anbieters in der Reihenfolge deines Anbieters. In der Ansicht „Kategorien“ kannst du jederzeit zwischen beiden wechseln.")
+    if (!MetaRepo.enabled()) Text("Automatische Genres brauchen einen TMDB-Schlüssel (Einstellungen > API-Schlüssel).", color = DS.Danger, fontSize = 15.sp)
+    if (Classifier.running) Text("${Classifier.phase} werden geladen … ${Classifier.progress} / ${Classifier.total}", color = Accent2, fontSize = 15.sp)
 }
 
 /** Unsaved "ignore" switches of the filter page, shared by both sections. */
@@ -1063,7 +1104,6 @@ private fun CategoryFilterSection(d: IgnoreDraft) {
         }
     }
     if (groups.values.all { it.isEmpty() }) return
-    SectionTitle("Kategorien ein- und ausblenden")
     Hint("Blende einzelne Kategorien aus oder schalte alle aus und nur die gewünschten wieder ein. Ausgeblendete Kategorien verschwinden sofort überall, ohne die Playlist neu zu laden.")
     IgnoreDraftBar(d)
     val names = mapOf(Kind.MOVIE to "Filme", Kind.SERIES to "Serien", Kind.LIVE to "Live-TV")
@@ -1147,7 +1187,6 @@ private fun IgnoredGroupsSection(d: IgnoreDraft) {
             out
         }
     }
-    SectionTitle("Gruppen ignorieren")
     Hint("Titel und Sender sind nach der Kennung deines Anbieters gebündelt (z. B. „TR |“, „[EN]“, „AR:“). Schalte Bündel aus, die du nicht brauchst: Sie verschwinden sofort überall, ohne die Playlist neu zu laden. Ausgeschaltet heißt ignoriert. Hilft dort, wo der Sprachfilter eine Kennung nicht erkennt.")
     if (stats.isEmpty() || stats.values.all { it.isEmpty() }) { Hint("Noch keine Playlist geladen."); return }
     IgnoreDraftBar(d)
@@ -1196,7 +1235,6 @@ private fun LanguageFilterSection(ctx: Context) {
         big = !PlaylistStore.fits(draft)
         LangFilter.setAndApply(ctx, draft)
     }
-    SectionTitle("Sprachen der Inhalte")
     Hint("Blende Sprachen aus, die du nicht brauchst – sie verschwinden dann überall: Startseite, Filme, Serien, Live-TV und Suche. Erkannt wird die Kennzeichnung deines Anbieters (z. B. „DE |“, „[TR]“, „GERMAN“). Das ist bei IPTV-Anbietern die Sprache der Tonspur, nicht das Herkunftsland des Films.")
     if (list.isEmpty()) { Hint("Noch keine Playlist geladen."); return }
     Hint("Ausgeblendete Sprachen werden gar nicht erst geladen. Das spart viel Arbeitsspeicher und macht große Playlists schneller.")
@@ -1269,7 +1307,7 @@ private fun LivePage(ctx: Context) {
 }
 
 @Composable
-private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
+private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, onFilter: () -> Unit) {
     val scope = rememberCoroutineScope()
     var editing by remember { mutableIntStateOf(-1) }
     var name by remember { mutableStateOf("") }
@@ -1359,7 +1397,10 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
         ConfirmPill("Playlist komplett neu laden") { scope.launch { PlaylistStore.reloadFromScratch(ctx) } }
         Hint("Discards everything stored for the active playlist and downloads it again from the provider. Helps when categories or channels are missing. Name, backup servers and language selection are kept.")
     }
-    LanguageFilterSection(ctx)
+    // The language filter lives on the filter page now (Genres & categories), together with the other filters
+    SectionTitle("Sprachen der Inhalte")
+    Hint("Which languages are loaded, and which groups and categories are hidden, is set on the page Genres & categories.")
+    PillButton("Sprachen der Inhalte öffnen", icon = AIcon.Globe) { onFilter() }
     SectionTitle("Automatisch aktualisieren")
     val modes = listOf("Bei jedem Start", "Alle paar Stunden", "Täglich", "Wöchentlich", "Nur von Hand")
     SelectRow("Playlist aktualisieren", modes[General.refreshMode], modes, General.refreshMode) { General.setPlan(ctx, mode = it) }
