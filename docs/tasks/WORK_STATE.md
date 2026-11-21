@@ -97,3 +97,9 @@ T-027: review PR #66 (workflow change needs approval); optionally put `docs/rele
 Device tests of T-015 (steps in its task file; needs a test release with `update.json`) and of T-014 (first-start update card). Mode switch fix, demo mode, favorites reorder, settings reset: confirmed working by the maintainer on 12 Nov 2026. Still open: device tests of #45 backup, #47 Stalker, #49, #50, #52. Then decide T-010 and T-012 against the on-demand loading, and PR #40 / PR #9.
 Device tests of the mode switch fix (uncommitted) and of everything merged on 12 Nov 2026 (#41, #43, #45, #47 Stalker, #49 category order and refresh default, #50 Xtream progress, #52 online subtitle search from #9). Then decide T-010 and T-012 against the on-demand loading, and PR #40 / PR #9.
 >
+
+## T-034 – Remove the "Teillisten" settings page (current)
+- Done: settings card, page and chip helpers removed; page numbers realigned; one-time clear of active sublist selections (`clearActiveOnce`); unit test added; CHANGELOG Unreleased entries.
+- Not run: unit tests and compile (no Gradle or Kotlin compiler here). Maintainer test steps in `docs/tasks/T-034-remove-sublist-tab.md`.
+- Open: load filter code (PlaylistStore and friends) stays; needs its own approval. Category folders for "|DE| SPORT" (leading "|") and folders in Genres & Kategorien are the next task, not started.
+

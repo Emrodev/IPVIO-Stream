@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Settings: the "Teillisten" page (per-playlist sublist filter) is removed (T-034). Saved sublist definitions stay on the device. An active sublist filter is switched off once after the update, so playlists show all channels again. Categories can still be hidden under "Genres & Kategorien". Not device tested yet
+- Settings: the profile circle on the home screen opens the Profiles page again (it opened the sublist page). "Über", "Alles zurücksetzen" and "Spende" each open their own page (they were shifted by one) (T-034). Not device tested yet
 
 ## 1.4.4 (versionCode 10)
 - Trailer (T-032): the Trailer button now opens YouTube at once (the app or the browser), without the in-app player: on test devices the in-app trailer showed no picture and the cause was not found. YouTube starts in the app's own task, so Back should return to the detail page (the trailer id is now checked before it goes into the address). The in-app player code (`TrailerDialog.kt`) stays in the repository, unused. Not device tested yet
