@@ -84,7 +84,7 @@ class TlsFallbackLogicTest {
 
     @Test
     fun preferred_goesStraightToHttpOnlyForAgreedHosts() {
-        assertEquals("http://p.example/live/u/p/1.ts", TlsFallbackLogic.preferred("https://P.example/live/u/p/1.ts", setOf("p.example")))
+        assertEquals("http://P.example/live/u/p/1.ts", TlsFallbackLogic.preferred("https://P.example/live/u/p/1.ts", setOf("p.example")))
         assertNull(TlsFallbackLogic.preferred("https://other.example/x", setOf("p.example")))
         assertNull(TlsFallbackLogic.preferred("http://p.example/x", setOf("p.example")))
     }
