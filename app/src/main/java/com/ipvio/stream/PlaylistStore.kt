@@ -1145,7 +1145,7 @@ object PlaylistStore {
      * the server is only asked when there is no stored copy yet. The old list is dropped first: keeping both lists in memory
      * at once ran weak devices (Fire TV Stick) out of memory.
      */
-    suspend fun switchTo(c: Context, i: Int) {
+    suspend fun switchTo(c: Context, i: Int, fresh: Boolean = false) {
         ensure(c)
         if (i !in lists.indices) return
         if (loadLock.isLocked) return   // a load is already running: do not interfere
@@ -1158,7 +1158,7 @@ object PlaylistStore {
         setItems(emptyList())
         // Read the playlist stored on the device; download only when there is none yet (a switch back must not reload
         // the whole list from the server). Refreshing follows the refresh plan at app start or "Refresh" in the settings.
-        load(c, lists[i].url, false, skipNetworkWhenCached = true)
+        load(c, lists[i].url, false, skipNetworkWhenCached = !fresh)
     }
 
     /**
@@ -1169,6 +1169,15 @@ object PlaylistStore {
     fun switchAsync(c: Context, i: Int) {
         val app = c.applicationContext
         switchScope.launch { switchTo(app, i) }
+    }
+
+    /**
+     * "Reload" on a playlist of the list: makes it the main list and downloads it again from the provider
+     * (the stored copy is not used). Same scope as [switchAsync], so leaving the screen does not stop it.
+     */
+    fun reloadAsync(c: Context, i: Int) {
+        val app = c.applicationContext
+        switchScope.launch { switchTo(app, i, fresh = true) }
     }
 
     private val switchScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

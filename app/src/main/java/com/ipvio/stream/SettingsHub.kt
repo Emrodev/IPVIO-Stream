@@ -1306,6 +1306,8 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit) {
             }
             // Same as the playlist switch in Live TV: from the stored copy, without a new download
             if (!isActive) SmallPill("Zur Hauptliste machen") { PlaylistStore.switchAsync(ctx, i) }
+            // Download this playlist again (the main list is reloaded where it is; another one becomes the main list first)
+            SmallPill("Neu laden", icon = AIcon.Refresh) { if (isActive) reload() else PlaylistStore.reloadAsync(ctx, i) }
             // Content mode (Wishbox): Live TV + VOD / Live TV only / VOD only, cycles on OK
             val mode = remember(PlaylistMode.version, pl.url) { PlaylistMode.get(ctx, pl.url) }
             SmallPill(PlaylistMode.labels[mode]) {
