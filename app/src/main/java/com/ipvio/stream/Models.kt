@@ -349,9 +349,10 @@ object M3uParser {
 
     /**
      * Address of a live channel: contains "/live/" (Xtream "…/live/user/pass/123.ts", Stalker "stalker://…/live/…")
+     * or is the Xtream form without it ("…/user/pass/123", see [LiveUrlLogic.isXtreamLiveTail])
      * and is not a video file (a plain web server folder named "live" with .mp4 files stays a movie).
      */
-    internal fun isLiveUrl(url: String): Boolean = url.contains("/live/") && !isVideoFile(url)
+    internal fun isLiveUrl(url: String): Boolean = !isVideoFile(url) && LiveUrlLogic.isLive(url)
 
     /** The episode pattern needs an "S" directly followed by a digit; names without it skip the regular expression. */
     internal fun mayBeEpisode(name: String): Boolean {
