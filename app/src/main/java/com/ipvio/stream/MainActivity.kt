@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Load settings early so colors and size are right in the very first frame.
         Profiles.init(this)
-        SublistStore.clearActiveOnce(this)   // T-034: the sublist tab is gone; drop active filters once
+        SublistStore.clearActiveOnce(this)   // T-035: the sublist tab is gone; drop active filters once
         Profiles.prewarm(this)
         TlsFallback.init(this)   // #69: hosts the user agreed to (ipvio_tls)
         val pick = Profiles.needsPicker(this)

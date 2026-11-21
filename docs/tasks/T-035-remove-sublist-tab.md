@@ -1,4 +1,4 @@
-# T-034 – Remove the "Teillisten" settings page
+# T-035 – Remove the "Teillisten" settings page
 
 ## Goal
 The settings page "Teillisten" (sublists) is removed. It was a per-playlist filter applied while loading, with no
