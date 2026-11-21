@@ -9,6 +9,7 @@
 - Performance (T-034): no language is read at start any more. A language is read the first time it is shown, and only that language; German needs no dictionary at all. Before, all twelve languages (about 2,300 rows each) were read at every start
 - Player: a pause now keeps the screen on, so the screensaver no longer starts while a video is paused. The sleep timer still releases the screen, so the TV can go to sleep
 - Diagnostics: after the stored playlist is loaded, Settings > Diagnostics > Log shows a "Start:" line with the time to read the stored list, to build the screens and to load the translations, to find out what makes the app start slowly on large playlists. Diagnostics only, nothing else changes
+- Playlist setup (Xtream): live channels, movies and series load at the same time again, as before 1.4.4 (the sublist change had made them load one after the other, which slowed the first setup). If a provider refuses parallel requests (errors such as 884/885) or a part fails, only that part is fetched again, one by one, after the others have finished. Not measured, not device tested yet
 
 ## 1.4.4 (versionCode 10)
 - Trailer (T-032): the Trailer button now opens YouTube at once (the app or the browser), without the in-app player: on test devices the in-app trailer showed no picture and the cause was not found. YouTube starts in the app's own task, so Back should return to the detail page (the trailer id is now checked before it goes into the address). The in-app player code (`TrailerDialog.kt`) stays in the repository, unused. Not device tested yet
