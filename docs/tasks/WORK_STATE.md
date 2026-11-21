@@ -1,3 +1,9 @@
+Last update: 2026-11-21 (T-034 performance regression of 1.4.4). Read `CLAUDE.md` first, then this file.
+
+## Current task (21 Nov 2026)
+
+T-034: 1.4.4 is slow. Cause analysis and fixes in `docs/tasks/T-034-perf-1.4.4.md` (age rating refetch on every focus, Xtream sequential loading, stream check at once, all dictionary columns at start). Branch `claude/confident-heisenberg-ulq8q2` from `dev` (`5b0da1f`). Pure JVM tests ran (17/17). **Not built with Gradle, not device tested, nothing measured.** Next: maintainer builds, runs the device steps in the task file, then PR into `dev` and release 1.4.5 (release notes needed then, CLAUDE.md section 18).
+
 Last update: 2026-11-19 (GitHub issue batch, see `docs/tasks/T-027-issue-batch.md`). Read `CLAUDE.md` first, then this file.
 Last update: 2026-11-12 (T-027 in PR #66, rebased on dev). Read `CLAUDE.md` first, then this file.
 
@@ -97,3 +103,9 @@ T-027: review PR #66 (workflow change needs approval); optionally put `docs/rele
 Device tests of T-015 (steps in its task file; needs a test release with `update.json`) and of T-014 (first-start update card). Mode switch fix, demo mode, favorites reorder, settings reset: confirmed working by the maintainer on 12 Nov 2026. Still open: device tests of #45 backup, #47 Stalker, #49, #50, #52. Then decide T-010 and T-012 against the on-demand loading, and PR #40 / PR #9.
 Device tests of the mode switch fix (uncommitted) and of everything merged on 12 Nov 2026 (#41, #43, #45, #47 Stalker, #49 category order and refresh default, #50 Xtream progress, #52 online subtitle search from #9). Then decide T-010 and T-012 against the on-demand loading, and PR #40 / PR #9.
 >
+
+## T-035 – Remove the "Teillisten" settings page (current)
+- Done: settings card, page and chip helpers removed; page numbers realigned; one-time clear of active sublist selections (`clearActiveOnce`); unit test added; CHANGELOG Unreleased entries.
+- Not run: unit tests and compile (no Gradle or Kotlin compiler here). Maintainer test steps in `docs/tasks/T-035-remove-sublist-tab.md`.
+- Open: load filter code (PlaylistStore and friends) stays; needs its own approval. Category folders for "|DE| SPORT" (leading "|") and folders in Genres & Kategorien are the next task, not started.
+

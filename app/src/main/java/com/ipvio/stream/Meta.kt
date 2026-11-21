@@ -172,17 +172,17 @@ object MetaRepo {
     private val provFail = ConcurrentHashMap<String, Long>()
 
     /** Info from the provider (without a TMDB key). Remembered on the device, separate from the TMDB cache. */
-    suspend fun providerMeta(ctx: Context, i: Item): Meta? {
+    suspend fun providerMeta(ctx: Context, i: Item, needAge: Boolean = false): Meta? {
         if (i.kind == Kind.LIVE || !ProviderLogic.supports(i)) return null
         val k = "P|" + key(i)
-        provMem[k]?.let { return withOmdbTitle(ctx, k, i, it) }
+        provMem[k]?.let { return withOmdbTitle(ctx, k, i, it, needAge) }
         provFail[k]?.let { if (System.currentTimeMillis() - it < 120_000L) return null }
-        load(ctx, k)?.let { provMem[k] = it; return withOmdbTitle(ctx, k, i, it) }
+        load(ctx, k)?.let { provMem[k] = it; return withOmdbTitle(ctx, k, i, it, needAge) }
         val m = ProviderInfo.fetch(ctx, i)
         if (m == null) { provFail[k] = System.currentTimeMillis(); return null }
         provMem[k] = m
         save(ctx, k, m)
-        return withOmdbTitle(ctx, k, i, m)
+        return withOmdbTitle(ctx, k, i, m, needAge)
     }
 
     private val omdbTried: MutableSet<String> = ConcurrentHashMap.newKeySet()
@@ -191,8 +191,12 @@ object MetaRepo {
      * IMDb and Rotten Tomatoes rating (and the US age rating) also without TMDB: OMDb is then asked by title (and year).
      * Only once per title and app start; a hit is remembered on the device together with the provider info.
      */
-    private suspend fun withOmdbTitle(ctx: Context, k: String, i: Item, m: Meta): Meta {
-        if (Config.OMDB_KEY.isBlank() || ((m.imdbRating != null || m.rtRating != null) && m.ageChecked) || !omdbTried.add(k)) return m
+    private suspend fun withOmdbTitle(ctx: Context, k: String, i: Item, m: Meta, needAge: Boolean = false): Meta {
+        // Ratings already stored: ask again only on the detail page for a missing age rating (see [extended])
+        val hasRating = m.imdbRating != null || m.rtRating != null
+        if (Config.OMDB_KEY.isBlank() || (hasRating && (m.ageChecked || !needAge)) ||
+            // Own entry for the age check: a title asked while browsing is asked once more when it is opened
+            !omdbTried.add(if (needAge) "$k|age" else k)) return m
         val q = URLEncoder.encode(MatchLogic.searchTitle(i.title), "UTF-8")
         val yr = (m.year ?: i.year?.toString())?.takeIf { it.length == 4 && i.kind == Kind.MOVIE }?.let { "&y=$it" } ?: ""
         val type = if (i.kind == Kind.SERIES) "series" else "movie"
@@ -208,10 +212,11 @@ object MetaRepo {
                     if (r.optString("Source") == "Rotten Tomatoes") rt = r.optString("Value")
                 }
             }
-            val age = AgeRatingLogic.omdb(o.str("Rated"), AgeRatingLogic.country(Lang.tmdb()))
+            // Age rating only when the title was opened (detail page), see [extended]
+            val age = if (needAge) AgeRatingLogic.omdb(o.str("Rated"), AgeRatingLogic.country(Lang.tmdb())) else null
             if (ir == null && rt == null && age == null) return m
             val nm = m.copy(imdbRating = ir ?: m.imdbRating, rtRating = rt ?: m.rtRating, imdbId = m.imdbId ?: o.str("imdbID"),
-                age = m.age ?: age, ageChecked = true)
+                age = m.age ?: age, ageChecked = m.ageChecked || needAge)
             provMem[k] = nm
             save(ctx, k, nm)
             nm
@@ -399,16 +404,22 @@ object MetaRepo {
         }
     }
 
-    suspend fun extended(ctx: Context, i: Item, rematched: Boolean = false): Meta? {
-        if (!enabled()) return providerMeta(ctx, i)
-        val b = basic(ctx, i) ?: return providerMeta(ctx, i)
-        if (b.extended && b.uiLang == Lang.code() && b.checked && b.ageChecked) return b
+    /**
+     * [needAge] = true only on the detail page (the title was opened): only then is the age rating asked for. In 1.4.4
+     * it was asked for every title that got the focus (slideshow, billboard, rows, search), and every detail stored before
+     * counted as outdated, which made browsing slow. Elsewhere the details come without the age rating.
+     */
+    suspend fun extended(ctx: Context, i: Item, rematched: Boolean = false, needAge: Boolean = false): Meta? {
+        if (!enabled()) return providerMeta(ctx, i, needAge)
+        val b = basic(ctx, i) ?: return providerMeta(ctx, i, needAge)
+        if (MetaFreshLogic.fresh(b.extended, b.uiLang == Lang.code(), b.checked, b.ageChecked, needAge)) return b
         val type = if (b.isTv) "tv" else "movie"
-        val ratings = if (b.isTv) "content_ratings" else "release_dates"
+        // The age rating parts of the TMDB answer only when the title was opened
+        val ratings = if (!needAge) "" else if (b.isTv) ",content_ratings" else ",release_dates"
         val country = AgeRatingLogic.country(Lang.tmdb())
         val body = getNow(
             "https://api.themoviedb.org/3/$type/${b.tmdbId}?api_key=${Config.TMDB_KEY}" +
-                "&language=${Lang.tmdb()}&append_to_response=external_ids,videos,$ratings&include_video_language=${Lang.code()},en,null"
+                "&language=${Lang.tmdb()}&append_to_response=external_ids,videos$ratings&include_video_language=${Lang.code()},en,null"
         ) ?: return b
         var m = b
         try {
@@ -423,7 +434,7 @@ object MetaRepo {
                 val seasonsOk = !b.isTv || MatchLogic.seasonsFit(maxSeason, o.optInt("number_of_seasons"))
                 if (!nameOk || !seasonsOk) {
                     val better = rematch(ctx, i, b.tmdbId)
-                    if (better != null && better.tmdbId != b.tmdbId) return extended(ctx, i, rematched = true)
+                    if (better != null && better.tmdbId != b.tmdbId) return extended(ctx, i, rematched = true, needAge = needAge)
                 }
             }
             val genres = ArrayList<String>()
@@ -449,9 +460,9 @@ object MetaRepo {
                 ov = getNow("https://api.themoviedb.org/3/$type/${b.tmdbId}?api_key=${Config.TMDB_KEY}&language=en-US")
                     ?.let { runCatching { JSONObject(it).str("overview") }.getOrNull() }?.takeIf { it.isNotBlank() }
             }
-            val age = AgeRatingLogic.pick(ageByCountry(o, b.isTv), country)
+            val age = if (needAge) AgeRatingLogic.pick(ageByCountry(o, b.isTv), country) else b.age
             m = b.copy(overview = ov ?: b.overview.takeIf { b.uiLang == Lang.code() }, genres = genres, runtime = runtime,
-                trailerKey = trailer, imdbId = imdb, uiLang = Lang.code(), checked = true, age = age, ageChecked = true)
+                trailerKey = trailer, imdbId = imdb, uiLang = Lang.code(), checked = true, age = age, ageChecked = needAge || b.ageChecked)
         } catch (e: Exception) {
         }
         if (Config.OMDB_KEY.isNotBlank() && m.imdbId != null) {
@@ -467,7 +478,7 @@ object MetaRepo {
                             if (r.optString("Source") == "Rotten Tomatoes") rt = r.optString("Value")
                         }
                     }
-                    m = m.copy(imdbRating = ir, rtRating = rt, age = m.age ?: AgeRatingLogic.omdb(o.str("Rated"), country))
+                    m = m.copy(imdbRating = ir, rtRating = rt, age = m.age ?: if (needAge) AgeRatingLogic.omdb(o.str("Rated"), country) else null)
                 }
             } catch (e: Exception) {
             }

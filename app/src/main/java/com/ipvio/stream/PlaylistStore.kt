@@ -1374,10 +1374,14 @@ object PlaylistStore {
             // Old version (whole list without language counts) with a very large file and no language selection: do not load everything into memory
             val legacyTooBig = head.hidden == null && (hidden - LangTagLogic.PSEUDO).isEmpty() && cacheFile(c, u).length() > budget()
             if (!legacyTooBig && (head.hidden == null || head.hidden == hidden)) {
+                val t0 = android.os.SystemClock.elapsedRealtime()
                 val cached = readCache(c, u, hidden)
+                val t1 = android.os.SystemClock.elapsedRealtime()
                 if (cached != null && cached.counts.isNotEmpty()) {
                     PlaylistDiag.log("cache", PlaylistDiag.summary(cached.items) + " hidden=${hidden.sorted()}")
                     show(c, u, cached.items, cached.epg, cached.order, cached.counts, cached.bytes, hidden)
+                    // Start-up timing for Settings > Diagnostics: reading the stored list, then building it for the screens
+                    Diag.note("Start: stored list ${cached.items.size} items read in ${t1 - t0} ms, shown in ${android.os.SystemClock.elapsedRealtime() - t1} ms, translations ${Lang.loadMs} ms")
                     return Local.OK
                 }
             }

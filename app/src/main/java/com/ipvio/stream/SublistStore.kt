@@ -18,8 +18,15 @@ import org.json.JSONObject
 object SublistStore {
     private const val PREFS = "ipvio"
     private const val KEY = "sublists"
+    private const val ACTIVE_PREFIX = "sublist_active_"
+    private const val CLEARED_FLAG = "sublists_active_cleared"
 
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    // ------------------------------------------------------------------ Pure helpers (testable without Android)
+
+    /** The SharedPreferences keys that hold an active sublist selection (one per playlist). */
+    fun activeKeys(keys: Collection<String>): List<String> = keys.filter { it.startsWith(ACTIVE_PREFIX) }
 
     // ------------------------------------------------------------------ Pure JSON encoding (testable without Android)
 
@@ -77,14 +84,26 @@ object SublistStore {
 
     /** The currently active sublist name for a playlist, or null if none. */
     fun active(c: Context, urlHash: Int): String? {
-        return prefs(c).getString("sublist_active_$urlHash", null)
+        return prefs(c).getString("$ACTIVE_PREFIX$urlHash", null)
+    }
+
+    /**
+     * Run once after the sublist tab was removed: drop every active selection, so no playlist stays
+     * filtered without a way to switch the filter off. The sublist definitions themselves are kept.
+     */
+    fun clearActiveOnce(c: Context) {
+        val p = prefs(c)
+        if (p.getBoolean(CLEARED_FLAG, false)) return
+        val e = p.edit()
+        activeKeys(p.all.keys).forEach { e.remove(it) }
+        e.putBoolean(CLEARED_FLAG, true).apply()
     }
 
     /** Set the active sublist name (null = full playlist). */
     fun setActive(c: Context, urlHash: Int, name: String?) {
         val e = prefs(c).edit()
-        if (name == null) e.remove("sublist_active_$urlHash")
-        else e.putString("sublist_active_$urlHash", name)
+        if (name == null) e.remove("$ACTIVE_PREFIX$urlHash")
+        else e.putString("$ACTIVE_PREFIX$urlHash", name)
         e.apply()
     }
 

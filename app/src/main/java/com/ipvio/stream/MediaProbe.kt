@@ -34,6 +34,8 @@ object MediaProbe {
     private const val TAG = "MediaProbe"
     private const val TIMEOUT_MS = 20_000L
     private const val MAX_CACHED = 200
+    /** Time on the detail page before the check starts. */
+    const val START_DELAY_MS = 1_500L
 
     /** null = check failed or nothing found. */
     private val cache = object : LinkedHashMap<String, MediaProbeLogic.Info?>(64, 0.75f, true) {
@@ -114,7 +116,11 @@ fun ProbeLine(url: String) {
     PlaybackPrefs.init(ctx)
     if (!PlaybackPrefs.probe) return
     val info by produceState(MediaProbe.cached(url).second, url) {
-        if (!MediaProbe.cached(url).first) value = MediaProbe.probe(ctx, url)
+        if (MediaProbe.cached(url).first) return@produceState
+        // Only when the page stays open for a moment (1.4.5): a quick look or an immediate Play no longer opens a
+        // second connection to the provider next to the player, and fast browsing does not start a check per title
+        kotlinx.coroutines.delay(MediaProbe.START_DELAY_MS)
+        value = MediaProbe.probe(ctx, url)
     }
     val i = info ?: return
     val text = MediaProbeLogic.line(i, { langLabel(it) }, Lang.tr("Ton"), Lang.tr("Untertitel"))
