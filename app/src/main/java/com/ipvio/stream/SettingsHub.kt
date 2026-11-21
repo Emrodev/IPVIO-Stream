@@ -1035,7 +1035,7 @@ private fun FilterPage(ctx: Context) {
     SettingsTabs(listOf("Sprachen der Inhalte", "Gruppen ignorieren", "Kategorien ein- und ausblenden", "Automatische Genres"), "filter") { tab ->
         when (tab) {
             0 -> {
-                Hint("1. What is loaded at all: is loaded at all. Languages you switch off are not read from the playlist, which saves memory and makes big playlists faster. Changing it loads the playlist again.")
+                Hint("1. What is loaded at all: languages you switch off are not read from the playlist, which saves memory and makes big playlists faster. Changing it loads the playlist again.")
                 LanguageFilterSection(ctx)
             }
             1 -> {
