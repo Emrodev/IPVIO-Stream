@@ -196,12 +196,41 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
         return out
     }
 
+    /** Answer without a list where the provider does have categories: the list is incomplete (keep the previous one). */
+    /** [msg] stays a complete German text: it is the translation key (dictionaries). */
+    private fun incomplete(msg: String) = PlaylistError(msg, incomplete = true)
+
+    /** Movies as finished lines into [w]; returns their number. Throws an incomplete error if the film list is missing. */
+    private fun writeMovies(a: XtreamLogic.Acct, w: Writer): Int {
+        var n = 0
+        val vodCats = categories(a, "get_vod_categories")
+        val listed = stream(XtreamLogic.api(a, "get_vod_streams")) { f ->
+            XtreamLogic.movieEntry(a, f, vodCats)?.let { w.write(it); w.write("\n"); n++ }
+        }
+        // The provider lists film categories but delivers no film list: loading would end without any film
+        if (n == 0 && (vodCats.isNotEmpty() || !listed)) throw incomplete("Der Anbieter hat die Filmliste nicht geliefert. Die bisherige Liste bleibt erhalten – bitte später erneut versuchen.")
+        check()
+        return n
+    }
+
+    /** Series (one placeholder per series, the episodes come on opening via LazySeries) into [w]; returns their number. */
+    private fun writeSeries(a: XtreamLogic.Acct, w: Writer): Int {
+        val serCats = categories(a, "get_series_categories")
+        val series = ArrayList<XtreamLogic.Series>()
+        val listed = stream(XtreamLogic.api(a, "get_series")) { f -> XtreamLogic.seriesOf(f, serCats)?.let { series.add(it) } }
+        if (series.isEmpty() && (serCats.isNotEmpty() || !listed)) throw incomplete("Der Anbieter hat die Serienliste nicht geliefert. Die bisherige Liste bleibt erhalten – bitte später erneut versuchen.")
+        for (s in series) { w.write(XtreamLogic.lazyEntry(a, s)); w.write("\n") }
+        return series.size
+    }
+
     /**
      * Writes the whole list to [out]. Return value: number of entries (channels + movies + series).
      * For series only a placeholder arrives; [LazySeries] fetches the episodes only when a series is opened.
-     * Movies, series and live streams are fetched one after the other. Some providers reject parallel
-     * requests from the same client (they answer with their own error codes such as 884/885), so
-     * sequential loading avoids that.
+     * Movies and series are fetched at the same time as the channels (into temporary files, appended in the old order):
+     * the three downloads do not wait for each other, which is the biggest part of the first setup (restored in 1.4.5,
+     * 1.4.4 loaded them one after the other). Some providers refuse parallel requests (own error codes such as 884/885,
+     * or an error object instead of the list): a part that failed in parallel is fetched again on its own, after the
+     * channels, so such providers still load completely.
      */
     fun write(a: XtreamLogic.Acct, out: Writer): Int {
         onPhase("Zugang wird geprüft …")
@@ -209,47 +238,61 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
         var n = 0
         out.write(XtreamLogic.header(a)); out.write("\n")
 
-        onPhase("Filme werden geladen …")
-        val vodCats = categories(a, "get_vod_categories")
-        var movies = 0
-        val vodList = stream(XtreamLogic.api(a, "get_vod_streams")) { f ->
-            XtreamLogic.movieEntry(a, f, vodCats)?.let { out.write(it); out.write("\n"); n++; movies++ }
-        }
-        // The provider does list film categories but delivers no film list: only the categories were answered.
-        // Loading would end with a list without any film – the previous (complete) list must stay instead.
-        if (movies == 0 && (vodCats.isNotEmpty() || !vodList)) {
-            throw PlaylistError(
-                "Der Anbieter hat die Filmliste nicht geliefert. Die bisherige Liste bleibt erhalten – bitte später erneut versuchen.",
-                incomplete = true
-            )
-        }
+        val vodFile = java.io.File.createTempFile("ipvio_vod", ".part")
+        val serFile = java.io.File.createTempFile("ipvio_ser", ".part")
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+        val vodCount = java.util.concurrent.atomic.AtomicLong()
+        val serCount = java.util.concurrent.atomic.AtomicLong()
+        try {
+            // Writes one temporary file and reports its growth for the progress display. A repeated attempt starts the file
+            // again, so what the earlier attempt reported is taken back first.
+            fun fill(file: java.io.File, count: java.util.concurrent.atomic.AtomicLong, work: (Writer) -> Int): Int {
+                onTempBytes(-count.getAndSet(0))
+                return file.bufferedWriter(Charsets.UTF_8).use { w ->
+                    val cw = TempCounter(w) { k -> count.addAndGet(k); onTempBytes(k) }
+                    work(cw).also { cw.flush() }
+                }
+            }
+            fun job(file: java.io.File, count: java.util.concurrent.atomic.AtomicLong, work: (Writer) -> Int) =
+                pool.submit<Int> { fill(file, count, work) }
+            val vodJob = job(vodFile, vodCount) { writeMovies(a, it) }
+            val serJob = job(serFile, serCount) { writeSeries(a, it) }
 
-        onPhase("Serien werden geladen …")
-        val serCats = categories(a, "get_series_categories")
-        val series = ArrayList<XtreamLogic.Series>()
-        val serList = stream(XtreamLogic.api(a, "get_series")) { f -> XtreamLogic.seriesOf(f, serCats)?.let { series.add(it) } }
-        if (series.isEmpty() && (serCats.isNotEmpty() || !serList)) {
-            throw PlaylistError(
-                "Der Anbieter hat die Serienliste nicht geliefert. Die bisherige Liste bleibt erhalten – bitte später erneut versuchen.",
-                incomplete = true
-            )
-        }
-        for (s in series) { out.write(XtreamLogic.lazyEntry(a, s)); out.write("\n"); n++ }
+            onPhase("Sender werden geladen …")
+            val liveCats = categories(a, "get_live_categories")
+            var live = 0
+            val liveList = stream(XtreamLogic.api(a, "get_live_streams")) { f ->
+                XtreamLogic.liveEntry(a, f, liveCats)?.let { out.write(it); out.write("\n"); n++; live++ }
+            }
+            if (live == 0 && (liveCats.isNotEmpty() || !liveList)) throw incomplete("Der Anbieter hat die Senderliste nicht geliefert. Die bisherige Liste bleibt erhalten – bitte später erneut versuchen.")
+            check()
 
-        onPhase("Sender werden geladen …")
-        val liveCats = categories(a, "get_live_categories")
-        var live = 0
-        val liveList = stream(XtreamLogic.api(a, "get_live_streams")) { f ->
-            XtreamLogic.liveEntry(a, f, liveCats)?.let { out.write(it); out.write("\n"); n++; live++ }
+            fun take(f: java.util.concurrent.Future<Int>, file: java.io.File, tmp: java.util.concurrent.atomic.AtomicLong, again: (Writer) -> Int): Int {
+                val count = try { f.get() } catch (e: java.util.concurrent.ExecutionException) {
+                    val c = e.cause
+                    // Cancelled by the user: pass on. Anything else (network, refused parallel request, error object
+                    // instead of the list) is tried once more on its own; if that fails too, its error passes on.
+                    if (c is java.util.concurrent.CancellationException) throw c
+                    check()
+                    fill(file, tmp, again)
+                }
+                // From here the same characters are counted as part of the list: no longer count them as temporary
+                onTempBytes(-tmp.getAndSet(0))
+                file.reader(Charsets.UTF_8).use { it.copyTo(out) }
+                return count
+            }
+            onPhase("Filme werden geladen …")
+            n += take(vodJob, vodFile, vodCount) { writeMovies(a, it) }
+            check()
+            onPhase("Serien werden geladen …")
+            n += take(serJob, serFile, serCount) { writeSeries(a, it) }
+            out.flush()
+            return n
+        } finally {
+            pool.shutdownNow()
+            runCatching { vodFile.delete() }
+            runCatching { serFile.delete() }
         }
-        if (live == 0 && (liveCats.isNotEmpty() || !liveList)) {
-            throw PlaylistError(
-                "Der Anbieter hat die Senderliste nicht geliefert. Die bisherige Liste bleibt erhalten – bitte später erneut versuchen.",
-                incomplete = true
-            )
-        }
-        check()
-        return n
     }
 
 }

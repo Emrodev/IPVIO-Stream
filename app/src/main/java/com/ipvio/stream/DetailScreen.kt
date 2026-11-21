@@ -148,8 +148,10 @@ private fun DetailScreenFull(
     BackHandler(enabled = !embedded, onBack = onBack)
     var meta by remember(item.id) { mutableStateOf(MetaRepo.cached(item)) }
     var metaDone by remember(item.id) { mutableStateOf(!MetaRepo.usable(item) || item.kind == Kind.LIVE) }
-    LaunchedEffect(item.id) {
-        MetaRepo.extended(ctx, item)?.let { meta = it }
+    // The age rating is fetched for older stored details only on the real detail page, not in the list preview (1.4.5)
+    val needAge = !embedded || showActions
+    LaunchedEffect(item.id, needAge) {
+        MetaRepo.extended(ctx, item, needAge = needAge)?.let { meta = it }
         metaDone = true
     }
     val credits by produceState<Credits?>(null, meta?.tmdbId) {
