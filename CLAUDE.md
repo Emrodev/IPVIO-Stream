@@ -31,6 +31,7 @@ Working rules for AI-assisted changes to this repository. Read this file first i
 
 - Everything in the repository is in **English**: comments, KDoc, identifiers, file names, test names, commit messages, PR text, README, CHANGELOG, `docs/`.
 - Conversation with the maintainer may be in German.
+- **No German terms on GitHub, ever.** This covers CHANGELOG, README, `docs/`, release notes, release text, PR and issue text, commit messages and code comments. When text refers to something on screen, quote the English label from the dictionaries (the English column in `Dict*.kt`), never the German key. Exception: the German source strings inside the `Dict*.kt` dictionary files themselves (they are the translation keys).
 - Existing German identifiers and comments are translated in stages (see `docs/REFACTORING-PROGRESS.md`), not all at once.
 
 ## 5. Protected areas (no change without an approved plan)
@@ -159,7 +160,7 @@ Whenever a release is prepared (version bump in `app/build.gradle.kts`, a `relea
 1. **CHANGELOG.md:** rename `## Unreleased` to `## X.Y` (the new `versionName`) and start a new empty `## Unreleased` above it. Do not rewrite older sections.
 2. **Release notes:** create `docs/release-notes/vX.Y.md` from `docs/release-notes/TEMPLATE.md`. Source is the CHANGELOG section of this version (and of any version users may skip, e.g. a broken release). Rules:
    - Written for users, not developers: no task IDs, class names, file paths or build internals. Internal-only changes go into one line "Internal changes" or are left out.
-   - English (section 4). German UI labels are quoted as they appear in the app.
+   - English only (section 4). Never quote a German UI label. Use the English label from the app's English column (`Dict*.kt`), for example "Make private", not "Privat machen". The same applies to the CHANGELOG, README, docs, PR text, issue text and the GitHub release text.
    - The first four bullet lines under the first heading are the highlights. The update dialog shows them: `release.yml` copies them into the `notes` of `update.json`, and the app's GitHub API fallback reads the same lines (`AppUpdate.kt`). Joined with " · " they must stay within 300 characters (`Round17Logic.kt` cuts the rest).
    - State known limits honestly (e.g. "not measured", "needs your own API key").
    - Say whether the update keeps user data and whether it must be installed by hand.
