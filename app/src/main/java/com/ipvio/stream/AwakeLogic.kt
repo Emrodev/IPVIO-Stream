@@ -3,7 +3,7 @@ package com.ipvio.stream
 /**
  * Rules for when the screen must stay awake (without Android, testable).
  * Mandatory: while a stream plays or reloads, the screen must never turn off.
- * On pause, end, error and in the background it is released – no permanent lock when idle.
+ * A pause keeps the screen on (the picture stays on screen). The sleep timer, end, error and the background release it.
  */
 object AwakeLogic {
     // Same values as androidx.media3.common.Player.STATE_*
@@ -13,11 +13,14 @@ object AwakeLogic {
     const val STATE_ENDED = 4
 
     /**
-     * true while playback runs or is loading (also after a reconnect).
-     * playWhenReady = false means pause or sleep timer expired.
+     * true while playback runs, is loading (also after a reconnect) or is paused by the user.
+     * playWhenReady = false means pause or sleep timer expired; [sleepExpired] tells the two apart, so after the
+     * sleep timer the screen is released and the TV can go to sleep.
      */
-    fun playerNeedsScreen(playWhenReady: Boolean, state: Int, hasError: Boolean, foreground: Boolean): Boolean =
-        foreground && playWhenReady && !hasError && (state == STATE_BUFFERING || state == STATE_READY)
+    fun playerNeedsScreen(
+        playWhenReady: Boolean, state: Int, hasError: Boolean, foreground: Boolean, sleepExpired: Boolean = false
+    ): Boolean =
+        foreground && !hasError && (playWhenReady || !sleepExpired) && (state == STATE_BUFFERING || state == STATE_READY)
 }
 
 /**
