@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.4.6 (versionCode 12)
+- Live TV: channels of providers whose live address has no "/live/" part ("http://host/user/pass/12345", also ".ts" or ".m3u8" at the end) stay in Live TV, even when their category is called "Sky Cinema", "Film" or "Movies". Before they showed up in Movies. Movie and series addresses ("/movie/", "/series/", video files) are not affected. Reload the playlist once after the update so it is sorted again. Not device tested yet
+- Settings > Playlists: the refresh option "Every few hours" was shown in German in every language (it had no translation); it is now translated in all languages
+- Settings > Playlists: every playlist has its own "Reload" button. On the main list it reloads it; on another list it makes that list the main list and downloads it again from the provider. Not device tested yet
+- Settings: long pages now have tabs at the top, so you reach a setting without scrolling a long page. Design & color: Color theme, Background, Animations, Display size, Adjust screen, Font. Player: Playback, Intro and next episode, Clock, Network and frame rate, Second picture, Source & quality. Storage: Cache, History, Backup. Not device tested yet
+- Settings > Genres & categories: all filters of the playlist are on this page now, in tabs: Content languages (what is loaded at all), Ignore groups (hide whole provider tags such as "TR |"), Show and hide categories (single categories), Automatic genres. Each tab says what it does. The language filter is no longer repeated on Settings > Playlists, which has a button to this page instead. Also fixed: the button "Open content languages" on the filter page opened Live TV & Guide
+
 ## 1.4.5 (versionCode 11)
 - Live TV: scrolling through the category list is smooth. The highlight follows the focus at once, but the channel column switches to a category only after the focus has rested on it for 0.15 s. Before, holding Down rebuilt the channel list (grouping, quality bundling, all rows) for every category passed. Right or OK on a category still opens its channels at once. Not measured, not device tested yet
 - Settings: the "Sublists" page (per-playlist sublist filter) is removed (T-035). Saved sublist definitions stay on the device. An active sublist filter is switched off once after the update, so playlists show all channels again. Categories can still be hidden under "Genres & categories". Not device tested yet
