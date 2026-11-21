@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Live TV: channels of providers whose live address has no "/live/" part ("http://host/user/pass/12345", also ".ts" or ".m3u8" at the end) stay in Live TV, even when their category is called "Sky Cinema", "Film" or "Movies". Before they showed up in Movies. Movie and series addresses ("/movie/", "/series/", video files) are not affected. Reload the playlist once after the update so it is sorted again. Not device tested yet
+- Settings > Playlists: the refresh option "Every few hours" was shown in German in every language (it had no translation); it is now translated in all languages
 
 ## 1.4.5 (versionCode 11)
 - Live TV: scrolling through the category list is smooth. The highlight follows the focus at once, but the channel column switches to a category only after the focus has rested on it for 0.15 s. Before, holding Down rebuilt the channel list (grouping, quality bundling, all rows) for every category passed. Right or OK on a category still opens its channels at once. Not measured, not device tested yet
