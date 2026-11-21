@@ -27,4 +27,21 @@ class LiveUrlLogicTest {
     fun plainM3uAddress_withoutLiveSegment_isNotLive() {
         assertFalse(LiveUrlLogic.isLiveUrl("http://provider.example/stream/123"))
     }
+
+    @Test
+    fun xtreamLiveAddressWithoutLiveSegment_isLive() {
+        assertTrue(LiveUrlLogic.isLive("http://provider.example:8080/user/pass/12345"))
+        assertTrue(LiveUrlLogic.isLive("http://provider.example:8080/user/pass/12345.ts"))
+        assertTrue(LiveUrlLogic.isLive("http://provider.example/user/pass/12345.m3u8?token=x"))
+    }
+
+    @Test
+    fun movieSeriesAndFileAddresses_areNeverLiveByTail() {
+        assertFalse(LiveUrlLogic.isLive("http://provider.example:8080/movie/user/pass/12345.mkv"))
+        assertFalse(LiveUrlLogic.isLive("http://provider.example:8080/series/user/pass/12345.mp4"))
+        assertFalse(LiveUrlLogic.isLive("http://provider.example:8080/user/pass/12345.mkv"))
+        assertFalse(LiveUrlLogic.isLive("http://provider.example/stream/123"))          // no user and password
+        assertFalse(LiveUrlLogic.isLive("http://provider.example/user/pass/film-123"))  // not a number
+        assertFalse(LiveUrlLogic.isLive("http://provider.example/12345"))
+    }
 }
