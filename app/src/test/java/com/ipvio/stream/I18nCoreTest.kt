@@ -52,8 +52,18 @@ class I18nCoreTest {
     @Test fun lazyColumnIsReadOnFirstUse() {
         val nl = I18nCore.CODES.indexOf("nl")
         I18nCore.load("Lazy-Spalte Testtext¦Lazy column test text")
-        I18nCore.loadColumnLater(nl, "Lazy-Spalte Testtext¦Luie kolom testtekst")
+        I18nCore.loadColumn(nl, "Lazy-Spalte Testtext¦Luie kolom testtekst")
         assertEquals("Lazy column test text", I18nCore.translate("Lazy-Spalte Testtext", EN))
         assertEquals("Luie kolom testtekst", I18nCore.translate("Lazy-Spalte Testtext", nl))
+    }
+    @Test fun blockLoadedLaterReachesLanguageInUse() {
+        assertEquals("Parental controls", I18nCore.translate("Jugendschutz", EN))   // English now in use
+        I18nCore.load("Später geladener Testtext¦Text loaded later¦Sonra yüklenen metin")
+        assertEquals("Text loaded later", I18nCore.translate("Später geladener Testtext", EN))
+        assertEquals("Sonra yüklenen metin", I18nCore.translate("Später geladener Testtext", TR))
+    }
+    @Test fun registeringTheSameBlockTwiceIsHarmless() {
+        I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI)
+        assertEquals("Parental controls", I18nCore.translate("Jugendschutz", EN))
     }
 }
