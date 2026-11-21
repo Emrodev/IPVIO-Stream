@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 1.4.6 (versionCode 12)
 - Live TV: channels of providers whose live address has no "/live/" part ("http://host/user/pass/12345", also ".ts" or ".m3u8" at the end) stay in Live TV, even when their category is called "Sky Cinema", "Film" or "Movies". Before they showed up in Movies. Movie and series addresses ("/movie/", "/series/", video files) are not affected. Reload the playlist once after the update so it is sorted again. Not device tested yet
 - Settings > Playlists: the refresh option "Every few hours" was shown in German in every language (it had no translation); it is now translated in all languages
 - Settings > Playlists: every playlist has its own "Reload" button. On the main list it reloads it; on another list it makes that list the main list and downloads it again from the provider. Not device tested yet
