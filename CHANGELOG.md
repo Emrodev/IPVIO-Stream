@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Performance (T-034, slow 1.4.4): stored TMDB details from before 1.4.4 no longer count as outdated because the age rating is missing. In 1.4.4 every title that got the focus (home slideshow, billboard, rows, search, list preview) was fetched again from TMDB and OMDb. Now only the real detail page fetches a missing age rating, once per title. Not device tested, nothing measured
+- Performance (T-034): Xtream movies and series are loaded again in parallel with the channels (as in 1.2 to 1.4.3; 1.4.4 loaded the three lists one after the other). A part the provider refuses in parallel (error code or error answer instead of the list) is fetched again on its own, so providers that refuse parallel requests still load completely; the completeness checks of 1.4.4 stay. Not device tested, nothing measured
+- Performance (T-034): the stream check on the detail page (T-033) starts only after 1.5 s on the page: a quick look or an immediate Play no longer opens a second connection to the provider
+- Performance (T-034): the Dutch, Arabic and Polish dictionary columns are read the first time that language is used, not at every start
 
 ## 1.4.4 (versionCode 10)
 - Trailer (T-032): the Trailer button now opens YouTube at once (the app or the browser), without the in-app player: on test devices the in-app trailer showed no picture and the cause was not found. YouTube starts in the app's own task, so Back should return to the detail page (the trailer id is now checked before it goes into the address). The in-app player code (`TrailerDialog.kt`) stays in the repository, unused. Not device tested yet

@@ -1,3 +1,9 @@
+Last update: 2026-11-21 (T-034 performance regression of 1.4.4). Read `CLAUDE.md` first, then this file.
+
+## Current task (21 Nov 2026)
+
+T-034: 1.4.4 is slow. Cause analysis and fixes in `docs/tasks/T-034-perf-1.4.4.md` (age rating refetch on every focus, Xtream sequential loading, stream check at once, all dictionary columns at start). Branch `claude/confident-heisenberg-ulq8q2` from `dev` (`5b0da1f`). Pure JVM tests ran (17/17). **Not built with Gradle, not device tested, nothing measured.** Next: maintainer builds, runs the device steps in the task file, then PR into `dev` and release 1.4.5 (release notes needed then, CLAUDE.md section 18).
+
 Last update: 2026-11-19 (GitHub issue batch, see `docs/tasks/T-027-issue-batch.md`). Read `CLAUDE.md` first, then this file.
 Last update: 2026-11-12 (T-027 in PR #66, rebased on dev). Read `CLAUDE.md` first, then this file.
 

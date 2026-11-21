@@ -49,4 +49,11 @@ class I18nCoreTest {
         assertEquals(TR, I18nCore.indexForSystem("tr"))
         assertEquals(EN, I18nCore.indexForSystem("ja"))
     }
+    @Test fun lazyColumnIsReadOnFirstUse() {
+        val nl = I18nCore.CODES.indexOf("nl")
+        I18nCore.load("Lazy-Spalte Testtext¦Lazy column test text")
+        I18nCore.loadColumnLater(nl, "Lazy-Spalte Testtext¦Luie kolom testtekst")
+        assertEquals("Lazy column test text", I18nCore.translate("Lazy-Spalte Testtext", EN))
+        assertEquals("Luie kolom testtekst", I18nCore.translate("Lazy-Spalte Testtext", nl))
+    }
 }

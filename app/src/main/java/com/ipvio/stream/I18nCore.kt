@@ -72,8 +72,31 @@ object I18nCore {
 
     fun size() = exact.size + pats.size
 
+    /** Columns registered with [loadColumnLater] that are not read yet (language index → blocks). */
+    private val pendingColumns = HashMap<Int, Array<out String>>()
+    @Volatile private var anyPending = false
+
+    /**
+     * Like [loadColumn], but the blocks are only parsed the first time [translate] is asked for that language.
+     * Saves parsing thousands of rows of languages nobody uses on every start.
+     */
+    @Synchronized
+    fun loadColumnLater(li: Int, vararg blocks: String) {
+        if (li !in CODES.indices) return
+        pendingColumns[li] = blocks
+        anyPending = true
+    }
+
+    @Synchronized
+    private fun loadPending(li: Int) {
+        val b = pendingColumns.remove(li) ?: return
+        anyPending = pendingColumns.isNotEmpty()
+        loadColumn(li, *b)
+    }
+
     fun translate(s: String, li: Int): String {
         if (li <= 0 || li >= CODES.size || s.isEmpty()) return s
+        if (anyPending) loadPending(li)
         val m = memo[li]
         m[s]?.let { return it }
         val r = lookup(s, li, 0) ?: s
