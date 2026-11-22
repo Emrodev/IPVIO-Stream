@@ -34,7 +34,6 @@ internal fun SportSettingsPage(ctx: Context) {
     Hint("Später hinzugefügte Wettbewerbe (britische Ligen und Pokale, weitere europäische und Weltwettbewerbe, WNBA, College Basketball, LPGA, DP World Tour) sind zunächst aus. Manche zeigen vielleicht keine Spiele: ihre ESPN-Adressen sind nicht geprüft.")
     for (s in SportData.SPORTS) {
         val ls = SportData.LEAGUES.filter { it.sport == s.key }
-        if (ls.none { SportLeagues.on(it) } && ls.size < 2) continue
         for (l in ls) ToggleRow(l.name + "  ·  " + Lang.tr(s.label), null, SportLeagues.on(l)) { SportLeagues.toggle(ctx, l) }
     }
 

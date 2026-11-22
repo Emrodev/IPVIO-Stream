@@ -31,8 +31,15 @@ internal fun VpnSection(ctx: Context) {
             val text = withContext(Dispatchers.IO) {
                 runCatching {
                     ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { r ->
-                        val buf = CharArray(VpnLogic.MAX_BYTES + 1)
-                        String(buf, 0, maxOf(r.read(buf), 0))
+                        // Read until the end, but never more than one byte over the limit (the check then refuses the file)
+                        val sb = StringBuilder()
+                        val buf = CharArray(4096)
+                        while (sb.length <= VpnLogic.MAX_BYTES) {
+                            val n = r.read(buf)
+                            if (n < 0) break
+                            sb.append(buf, 0, n)
+                        }
+                        sb.toString()
                     }
                 }.getOrNull()
             }
