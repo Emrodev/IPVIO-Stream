@@ -19,7 +19,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
+import coil.compose.AsyncImage
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,7 +118,7 @@ private fun progressOf(h: ProgSearchLogic.Hit): Float {
 @Composable
 fun SearchScreen(
     tab: Int, state: LazyListState,
-    onOpen: (Item) -> Unit, onBrowse: (BrowseReq) -> Unit, onTab: (Int) -> Unit
+    onOpen: (Item) -> Unit, onBrowse: (BrowseReq) -> Unit, onTab: (Int) -> Unit, onPerson: (PersonRef) -> Unit = {}
 ) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -213,6 +217,13 @@ fun SearchScreen(
     val rlSport = remember(rl0) { rl0.filter { SearchSport.isSport(it) } }
     val liveAll = remember(rl0, prog.live, byId) { liveCardsOf(rl0, prog.live, byId) }
     val sportAll = remember(prog.sport, byId) { prog.sport.mapNotNull { h -> byId[h.channelId]?.let { HitCard(it, h) } } }
+    // People (T-053c): TMDB person search, debounced; empty without a TMDB key
+    val people by produceState(emptyList<PersonRef>(), q) {
+        if (q.length < 2) { value = emptyList(); return@produceState }
+        delay(350)
+        value = CreditsRepo.searchPeople(q)
+    }
+    val pe = if (fl == 0 || fl == 5) people else emptyList()
     // Rows of the selected category
     val rm = if (fl == 0 || fl == 1) rm0 else emptyList()
     val rs = if (fl == 0 || fl == 2) rs0 else emptyList()
@@ -229,13 +240,14 @@ fun SearchScreen(
     // Hero: the focused hit, or the first hit (the best match) when nothing is focused
     val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: liveCards.firstOrNull()?.item ?: sportCards.firstOrNull()?.item ?: hist.firstOrNull())
     // Category tiles: the counts are derived from the hits (sport channels are part of the live channels too)
-    val countAll = rm0.size + rs0.size + liveAll.size + sportAll.size
+    val countAll = rm0.size + rs0.size + liveAll.size + sportAll.size + people.size
     val tileCounts = listOf(
         Triple(0, AIcon.Grid, countAll),
         Triple(2, AIcon.Layers, rs0.size),
         Triple(3, AIcon.Live, liveAll.size),
         Triple(4, AIcon.Pulse, rlSport.size + sportAll.size),
-        Triple(1, AIcon.Categories, rm0.size)
+        Triple(1, AIcon.Categories, rm0.size),
+        Triple(5, AIcon.Person, people.size)
     )
     // Result rows: the category of the best match comes first
     val bestKey = when {
@@ -244,7 +256,7 @@ fun SearchScreen(
         preview?.kind == Kind.LIVE -> "rl"
         else -> "rm"
     }
-    val rowOrder = listOf(bestKey) + listOf("rm", "rs", "rl", "sp").filter { it != bestKey }
+    val rowOrder = listOf(bestKey) + listOf("rm", "rs", "rl", "sp", "pe").filter { it != bestKey }
     // Suggestions: titles of the hits that match the typed text
     val suggItems = remember(rm0, rs0, rl0, q, searching) {
         if (q.length < 2 || searching) emptyList() else (rm0 + rs0 + rl0).distinctBy { it.title }.take(3)
@@ -254,6 +266,7 @@ fun SearchScreen(
         2 -> rs.isEmpty()
         3 -> liveCards.isEmpty()
         4 -> liveCards.isEmpty() && sportCards.isEmpty()
+        5 -> people.isEmpty()
         else -> rm.isEmpty() && rs.isEmpty() && liveCards.isEmpty() && sportCards.isEmpty()
     }
 
@@ -432,7 +445,7 @@ fun SearchScreen(
                             }
                         } else item(key = "nohits") {
                             // Selected category has no hits: say so, name the categories that do have hits, offer all hits
-                            val others = listOf("Filme" to rm0.size, "Serien" to rs0.size, "Live TV" to liveAll.size, "Sport" to sportAll.size)
+                            val others = listOf("Filme" to rm0.size, "Serien" to rs0.size, "Live TV" to liveAll.size, "Sport" to sportAll.size, "Personen" to people.size)
                                 .filter { it.second > 0 }.joinToString(", ") { Lang.tr(it.first) }
                             Column(
                                 Modifier.padding(horizontal = DS.PageX, vertical = 16.dp).fillMaxWidth()
@@ -442,6 +455,7 @@ fun SearchScreen(
                                 Text(Lang.tr("Keine {0} zu „{1}“").replace("{0}", Lang.tr(SEARCH_FILTERS[fl])).replace("{1}", q),
                                     color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, raw = true)
                                 if (others.isNotEmpty()) Text(Lang.tr("Treffer gibt es in {0}.").replace("{0}", others), color = Muted, fontSize = 15.sp, raw = true)
+                                if (fl == 5 && !MetaRepo.enabled()) Text(Lang.tr("Personen-Suche braucht einen TMDB-Schlüssel."), color = Muted, fontSize = 15.sp, raw = true)
                                 PillButton("Alle Treffer zeigen", light = true) { SearchState.filter = 0 }
                             }
                         }
@@ -463,6 +477,7 @@ fun SearchScreen(
                                     AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Live TV", liveCards.map { it.item }, S_SORT_AZ))
                                 }
                             }
+                            "pe" -> if (pe.isNotEmpty()) item(key = "pe") { PeopleRow(pe, onPerson) }
                             "sp" -> if (sportCards.isNotEmpty()) item(key = "sp") {
                                 HitRow("Sport", sportCards, cardW, true, openS, if (firstKey == "sp") firstRes else null) {
                                     AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Sport", sportCards.map { it.item }, S_SORT_AZ))
@@ -701,7 +716,7 @@ private fun SportCard(c: HitCard, onClick: () -> Unit, modifier: Modifier) {
     }
 }
 
-private val SEARCH_FILTERS = listOf("Alle", "Filme", "Serien", "Live TV", "Sport")
+private val SEARCH_FILTERS = listOf("Alle", "Filme", "Serien", "Live TV", "Sport", "Personen")
 
 /** Heuristic for the sports hub filter: channel name or category looks like sports. */
 internal object SearchSport {
@@ -836,5 +851,42 @@ private fun MiniChip(label: String, selected: Boolean, modifier: Modifier = Modi
         contentAlignment = Alignment.Center
     ) {
         Text(label, color = if (f) DS.FocusInk else Color.White, fontSize = 14.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1, raw = raw)
+    }
+}
+
+/** Row of people found by the search (T-053c): round photo and name; a tap opens the person page. */
+@Composable
+private fun PeopleRow(list: List<PersonRef>, onPerson: (PersonRef) -> Unit) {
+    Column(Modifier.padding(top = 22.dp)) {
+        Text(Lang.tr("Personen"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = DS.PageX))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = DS.PageX, vertical = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            itemsIndexed(list.take(40)) { _, p -> PersonCard(p, 130.dp) { onPerson(p) } }
+        }
+    }
+}
+
+@Composable
+private fun PersonCard(p: PersonRef, w: Dp, onClick: () -> Unit) {
+    var f by remember { mutableStateOf(false) }
+    val s by animateFloatAsState(if (f) focusScale(1.06f) else 1f, label = "personcard")
+    Column(
+        Modifier.width(w).graphicsLayer { scaleX = s; scaleY = s }
+            .onFocusChanged { f = it.isFocused }
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            Modifier.size(w).clip(CircleShape).background(Surf2).border(if (f) DS.FocusBorder else 0.dp, if (f) Accent2 else Color.Transparent, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            if (p.photo != null) AsyncImage(p.photo, p.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            else Text(raw = true, text = p.name.take(1), color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.ExtraBold)
+        }
+        Text(raw = true, text = p.name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+            maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }

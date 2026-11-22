@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Search: new category "People" next to Live TV, Movies and Series. It finds actors and directors (TMDB search, needs your TMDB key) and a tap opens their page. Not device tested yet
 - Person page: new layout. Profile column (photo, name, facts, biography) and tabs on the right: Overview and Filmography. Filmography shows all titles of the person, newest first, with a filter for all, movies or series. Titles that are not in your playlist are dimmed and marked "Not in your playlist". Not device tested yet
 - The Downloads entry in the sidebar appears only when at least one download exists. Downloads tab: "Play" for finished downloads (plays from the device, also offline). Not device tested yet
 - New sidebar tab "Downloads": all downloads with status and the queue actions (pause, resume, retry, delete). It is shown by default; existing menu orders get it automatically. Not device tested yet
