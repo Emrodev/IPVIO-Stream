@@ -49,7 +49,7 @@ Source: project note `t002_stand.md`.
 |---|---|---|
 | `/restore` reserves 4 MB up front (after the code check) | open | |
 | ZIP parsing in `ListImport.kt` has no size limit | open | |
-| Error message „Eingabe unvollständig oder ungültig“ (incomplete or invalid input) is shown for several different cases | open | Better messages need new texts in 10 languages (maintainer decision) |
+| Error message „Input incomplete or invalid“ (incomplete or invalid input) is shown for several different cases | open | Better messages need new texts in 10 languages (maintainer decision) |
 
 ## 5. Android configuration (facts, not status items)
 

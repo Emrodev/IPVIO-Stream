@@ -14,7 +14,7 @@ The card also has the toggle for the automatic check (`AppUpdate.setAuto`). It i
 - `UpdateCard.kt` (new): `UpdateCardHost()`, the Compose card. Reuses `PillButton` and `ToggleRow`.
 - `AppUpdate.kt`: two small functions for the new key `first_card_seen` in `ipvio_upd` (`firstCardSeen`, `markFirstCardSeen`). Existing keys and functions are untouched.
 - `MainActivity.kt`: one line in `App()`, `if (picked) UpdateCardHost()` after `UpdatePromptHost()`.
-- `DictK.kt`: six new rows in 10 columns under "First-start update check card". The existing keys "Neue Version {0} (installiert: {1})", "Erneut versuchen", "Schließen" and "Automatisch nach Updates suchen" are reused.
+- `DictK.kt`: six new rows in 10 columns under "First-start update check card". The existing keys "New version {0} (installed: {1})", "Try again", "Close" and "Check for updates automatically" are reused.
 - `UpdateCardLogicTest.kt` (new): 12 JUnit tests.
 - No new dependency, no manifest change.
 
@@ -22,18 +22,18 @@ The card also has the toggle for the automatic check (`AppUpdate.setAuto`). It i
 
 - **Shown once:** the key `first_card_seen` is written the first time the decision is made, whether the card is shown or skipped. It is shown only if the key is absent **and** no playlist is saved yet. Consequence: users who update an existing install (they have a playlist) never see the card, and the key is set silently for them. A fresh install or cleared data shows it.
 - **Non-blocking, no focus steal:** no `requestFocus`, no `Dialog`. `AddPlaylistScreen` keeps its own start focus. The card sits at the bottom centre; the D-pad reaches it by moving down, OK activates the toggle and the buttons.
-- **No automatic start dialog while the card is up:** `check()` sets `AppUpdate.available`, which would open the modal `UpdatePromptHost` and take the focus. The card therefore sets `AppUpdate.promptDismissed = true` before it checks. "Update anzeigen" sets it back to `false`, which opens the existing dialog ("Jetzt aktualisieren" / "Später"). Side effect: if the card is closed without opening the dialog, the start dialog stays hidden until the next app start (same as "Später"); the bell at the top right still shows the update.
-- **Errors:** an `IOException` (no network, DNS, timeout, TLS) shows "Keine Verbindung. Prüfe das Netzwerk und versuche es erneut." with "Erneut versuchen". Other errors (for example "Fehler 403" or "Noch keine Veröffentlichung gefunden" from `AppUpdate`) show their short message, also with "Erneut versuchen". The check itself ends after at most about 25 s through the OkHttp timeouts (connect 10 s, read 15 s); the card adds no timer of its own.
+- **No automatic start dialog while the card is up:** `check()` sets `AppUpdate.available`, which would open the modal `UpdatePromptHost` and take the focus. The card therefore sets `AppUpdate.promptDismissed = true` before it checks. "Update anzeigen" sets it back to `false`, which opens the existing dialog ("Update now" / "Later"). Side effect: if the card is closed without opening the dialog, the start dialog stays hidden until the next app start (same as "Later"); the bell at the top right still shows the update.
+- **Errors:** an `IOException` (no network, DNS, timeout, TLS) shows "No connection. Check the network and try again." with "Try again". Other errors (for example "Error 403" or "No release found yet" from `AppUpdate`) show their short message, also with "Try again". The check itself ends after at most about 25 s through the OkHttp timeouts (connect 10 s, read 15 s); the card adds no timer of its own.
 - **Backup:** `ipvio_upd` is part of the backup (`Backup.NAMES`), so the new key travels with it. Restoring a backup on a fresh device therefore does not show the card. Intended.
 
 - **Closes by itself (T-025):** the card goes away as soon as a playlist is being loaded or is saved, or the demo mode is entered. See `T-025-update-card-auto-hide.md`.
 
 ## Acceptance criteria
 
-1. Fresh install or cleared data: the card appears on the add-playlist screen and shows "Suche nach Updates …", then one of the result states.
+1. Fresh install or cleared data: the card appears on the add-playlist screen and shows "Checking for updates …", then one of the result states.
 2. Up to date: shows the installed version.
 3. Older APK installed and a newer release on GitHub: shows "Neue Version … (installiert: …)"; "Update anzeigen" opens the existing dialog; no dialog opens by itself.
-4. Offline: error text and "Erneut versuchen"; after the network is back, Retry shows the result.
+4. Offline: error text and "Try again"; after the network is back, Retry shows the result.
 5. The toggle changes `AppUpdate.auto` (same value as in Settings > App-Aktualisierung).
 6. Restart of the app: the card does not appear again.
 7. The add-playlist screen still starts with the focus on its first button; the remote works on the card (down, left/right, OK).

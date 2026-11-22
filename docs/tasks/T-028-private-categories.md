@@ -102,7 +102,7 @@ Implemented as planned. Deviations:
 
 - **Confirmation:** a toast after "Privat machen" instead of a confirm dialog. The toast says that history is cleared for that category.
 - **Movies and series:** the "Privat machen" entry is in the list view of the category page (menu key / long OK), where the move entries already were. The tile view has no menu.
-- **Favorites:** private favorites are kept in the Favorites tab, but they no longer show in the home rows ("Meine Sender", "Live TV gerade").
+- **Favorites:** private favorites are kept in the Favorites tab, but they no longer show in the home rows ("My channels", "Live TV right now").
 - **Own channel lists:** a private channel drops out of an own channel list, because those lists resolve against the visible channels.
 - **Sport tab:** the game-to-channel matching is unchanged and can still offer a private channel (follow-up if needed).
 

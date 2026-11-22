@@ -20,7 +20,7 @@ Favoriting itself already existed (`Library.favs`, SharedPreferences `ipvio_lib`
 - `HomeParts.kt`: optional `reorder` parameter on `PosterTile`, `LandscapeCard`, `ChannelDetailCard`, `ChannelDetailRows`, `cardGridItems`; `null` = unchanged behaviour (My list, history, browse).
 - `HomeScreen.kt`: pass the section lists at the three favorites call sites.
 - `LiveTab.kt`: `ChannelLine` / `ChannelMenu` get optional `favShown`; set only in the favorites category.
-- Labels reuse existing dictionary rows ("Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben", "Aus Favoriten entfernen"); no dictionary change.
+- Labels reuse existing dictionary rows ("Move up", "Move down", "Move to top", "Remove from favorites"); no dictionary change.
 
 ## Not changed (on purpose)
 

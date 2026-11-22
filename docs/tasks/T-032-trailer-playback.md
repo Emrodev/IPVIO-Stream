@@ -12,14 +12,14 @@ Trailers play inside the app on Android TV / Fire TV. Today some titles show a *
 
 - Some titles: black picture, no sound.
 - Some titles: "no app found" when the external fallback is used.
-- The button "Im YouTube öffnen" (top right in the trailer dialog) was not reachable with the TV remote. **Fixed in commit `ad589a4`** (focus), not device tested yet.
+- The button "Open in YouTube" (top right in the trailer dialog) was not reachable with the TV remote. **Fixed in commit `ad589a4`** (focus), not device tested yet.
 
 ## Current code (verified by reading)
 
 | File | What it does |
 |---|---|
 | `app/src/main/java/com/ipvio/stream/DetailScreen.kt` | `trailerKey` state (line ~151); `TrailerDialog(...)` (line ~152); the trailer button calls `TrailerLogic.validKey(meta?.trailerKey)` and opens the dialog, otherwise `openTrailer(...)` (line ~533). `openTrailer` opens `https://www.youtube.com/watch?v=KEY` or a YouTube search. |
-| `app/src/main/java/com/ipvio/stream/TrailerDialog.kt` | Full-screen `Dialog` with a `WebView`. Loads HTML with `loadDataWithBaseURL("https://www.youtube-nocookie.com", html, ...)`. `shouldOverrideUrlLoading` blocks main-frame navigation. `settings.javaScriptEnabled = true`, `domStorageEnabled = true`, `mediaPlaybackRequiresUserGesture = false`. WebView is `isFocusable = false` since `ad589a4`. Button "Im YouTube öffnen" has focus on open. |
+| `app/src/main/java/com/ipvio/stream/TrailerDialog.kt` | Full-screen `Dialog` with a `WebView`. Loads HTML with `loadDataWithBaseURL("https://www.youtube-nocookie.com", html, ...)`. `shouldOverrideUrlLoading` blocks main-frame navigation. `settings.javaScriptEnabled = true`, `domStorageEnabled = true`, `mediaPlaybackRequiresUserGesture = false`. WebView is `isFocusable = false` since `ad589a4`. Button "Open in YouTube" has focus on open. |
 | `app/src/main/java/com/ipvio/stream/TrailerLogic.kt` | `validKey` (regex `^[A-Za-z0-9_-]{6,20}$`), `embedHtml(key)`: an iframe `https://www.youtube-nocookie.com/embed/KEY?autoplay=1&playsinline=1&rel=0`, `allow="autoplay; encrypted-media; picture-in-picture"`. |
 | `app/src/main/java/com/ipvio/stream/Meta.kt` | Trailer key comes from TMDB (`trailerKey` in `Meta`, line ~24). Meta lookup only runs when `Config.TMDB_KEY` is set (`Meta.enabled()`, line ~162). |
 | `app/src/test/java/com/ipvio/stream/TrailerLogicTest.kt` | Tests for `validKey` and `embedHtml` (JVM). |
@@ -54,10 +54,10 @@ Trailers play inside the app on Android TV / Fire TV. Today some titles show a *
 ## Test steps for the maintainer (device or Fire TV)
 
 1. Open a movie with a trailer (TMDB key set).
-2. Press Trailer. Check: the dialog opens; the button "Im YouTube öffnen" is highlighted.
+2. Press Trailer. Check: the dialog opens; the button "Open in YouTube" is highlighted.
 3. Pick one title that was black before. Note: picture yes/no, sound yes/no.
 4. Press Back. Check: the dialog closes, no sound keeps playing.
-5. Press "Im YouTube öffnen". Check: the YouTube app or browser opens the same trailer.
+5. Press "Open in YouTube". Check: the YouTube app or browser opens the same trailer.
 6. Open Settings > Diagnose and copy the lines containing "Trailer".
 
 ## Open decisions (ask the maintainer)

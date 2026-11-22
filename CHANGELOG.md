@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Stalker portal messages about a portal that does not respond (with the address and MAC check hint) now show in English. For German they are unchanged. Not device tested yet
+- The new English texts of the last changes (search, portal, Live TV and player messages) are translated into Turkish, Bosnian, Croatian, Serbian, Spanish, French, Italian, Dutch, Arabic and Polish. German is unchanged. Not device tested yet
+- The "What's new" list and some player and settings hints (wishbox round 2) were not loaded before: they showed German in English and other languages. They are translated now. German and the existing translations are unchanged. Not device tested yet
+- Some status and error lines with numbers or names (for example "OpenSubtitles: error 500", "Loading categories (2/9) …", "Search „…“ · Movies") now show in English. For German they are unchanged. Not device tested yet
+- Some messages and hints that had no translation before (for example the portal, provider list and subtitle search messages, the first-start hints of the playlist import) now show in English. For German they are unchanged. For the other languages they used to show German and now show English. Not device tested yet
 
 ## 1.4.7 (versionCode 13)
 - Live TV: playback over a connection without encryption (certificate does not match the address, you agreed) is repaired. The agreed host now goes straight to http instead of failing over https first before every request and every video segment, and addresses with characters such as "%", "|" or spaces are no longer re-encoded or rejected when switching to http. Reload the channel once if it still shows "connection stalled". Not device tested yet
