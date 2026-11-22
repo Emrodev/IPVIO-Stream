@@ -15,8 +15,8 @@ class DownloadLogicTest {
         assertTrue(DownloadLogic.supported("https://host/movie/u/p/42.mkv?token=abc"))
     }
 
-    @Test fun playlistsAndOtherSchemesAreNotSupportedYet() {
-        assertFalse(DownloadLogic.supported("http://host/movie/u/p/42.m3u8"))
+    @Test fun hlsIsSupportedDashAndOtherSchemesAreNot() {
+        assertTrue(DownloadLogic.supported("http://host/movie/u/p/42.m3u8"))
         assertFalse(DownloadLogic.supported("http://host/movie/u/p/42.mpd?x=1"))
         assertFalse(DownloadLogic.supported("file:///storage/42.mp4"))
     }

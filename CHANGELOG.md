@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Movies: HLS streams (.m3u8) can be downloaded too. The download button first lists the qualities of the stream (for example 1080p or 720p with the bitrate) and downloads the chosen one. Finished downloads play offline. Not device tested yet
 - Settings > Storage > Downloads (new tab): all movie downloads with title, status, size and total, and a delete button per download. Not device tested yet
 - Downloaded movies play from the download when the same address is played, also without a network connection. Every other stream is played as before. Not device tested yet
 - Movies: "Download" button on the detail page (single files only; HLS and DASH come later). A notice about the provider terms is shown once before the first download. Downloads are stored in the app folder on external storage and need at least 2 GB free. Not played back from the download yet, and no download list yet. Not device tested yet

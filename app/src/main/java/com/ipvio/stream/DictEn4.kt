@@ -25,4 +25,8 @@ Fertig¦Done
 Fehlgeschlagen¦Failed
 Keine Downloads.¦No downloads.
 Die Dateien liegen auf diesem Gerät. Löschen gibt den Speicher frei.¦The files are stored on this device. Deleting frees the space.
+Qualität wählen¦Choose quality
+Abbrechen¦Cancel
+Qualitäten werden geladen …¦Loading qualities …
+Die Playlist konnte nicht geladen werden.¦The playlist could not be loaded.
 """

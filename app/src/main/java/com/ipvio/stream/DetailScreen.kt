@@ -198,7 +198,7 @@ private fun DetailScreenFull(
     val qCap = remember { PlaybackPrefs.cap(ctx) }
     fun pick(ep: Episode) = pickVariant(ep, prefQ, prefLang, prefLabel, qCap)
     val playUrl = if (item.kind == Kind.SERIES) eps.firstOrNull()?.let { pick(it).url }
-        else movieVars.firstOrNull { it.label == prefLabel }?.url ?: item.url
+        else DownloadStore.localUrlFor(ctx, item) ?: (movieVars.firstOrNull { it.label == prefLabel }?.url ?: item.url)
 
     val tmdbId = meta?.tmdbId
     val imdbId = meta?.imdbId

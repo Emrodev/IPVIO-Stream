@@ -6,6 +6,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.media3.common.DataSpec
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
@@ -82,16 +83,28 @@ object DownloadStore {
         }
     }
 
-    /** Starts the download of a movie. False = refused (not supported, or not enough free space). */
-    fun enqueue(c: Context, item: Item, url: String): Boolean {
-        if (!DownloadLogic.supported(url) || !DownloadLogic.hasRoom(freeBytes(c))) return false
+    /**
+     * Starts the download of a movie. [variantUrl] = the chosen quality of an HLS master playlist (null = [url] itself).
+     * False = refused (not supported, or not enough free space).
+     */
+    fun enqueue(c: Context, item: Item, url: String, variantUrl: String? = null): Boolean {
+        val src = variantUrl ?: url
+        if (!DownloadLogic.supported(src) || !DownloadLogic.hasRoom(freeBytes(c))) return false
         val id = DownloadLogic.keyFor(item)
         progress[id] = 0
         // No custom cache key: the cache key is the address, so the player finds the download by the address it plays
         // The title travels with the request (shown in the download list)
-        val request = DownloadRequest.Builder(id, Uri.parse(url)).setData(item.title.toByteArray(Charsets.UTF_8)).build()
+        val builder = DownloadRequest.Builder(id, Uri.parse(src)).setData(item.title.toByteArray(Charsets.UTF_8))
+        if (HlsLogic.isHls(src)) builder.setMimeType(MimeTypes.APPLICATION_M3U8)
+        val request = builder.build()
         DownloadService.sendAddDownload(c, VodDownloadService::class.java, request, true)
         return true
+    }
+
+    /** Address to play for [item] when it is downloaded (the chosen quality for HLS), otherwise null. */
+    fun localUrlFor(c: Context, item: Item): String? {
+        val id = DownloadLogic.keyFor(item)
+        return manager(c).currentDownloads.firstOrNull { it.request.id == id && it.state == Download.STATE_COMPLETED }?.request?.uri?.toString()
     }
 
     /** One row of the download list: id, title, Media3 state, bytes on the storage. */
@@ -122,8 +135,12 @@ object DownloadStore {
             .setCache(store!!)
             .setUpstreamDataSourceFactory(upstream)
             .setCacheWriteDataSinkFactory(null)
-        return DataSource.Factory { DownloadAwareDataSource(cacheFactory.createDataSource(), upstream.createDataSource()) { doneUris.contains(it.toString()) } }
+        return DataSource.Factory { DownloadAwareDataSource(cacheFactory.createDataSource(), upstream.createDataSource()) { isLocal(it) } }
     }
+
+    /** Read from the cache: a finished download, or a segment or playlist that the cache already holds (HLS). */
+    private fun isLocal(u: Uri): Boolean =
+        doneUris.contains(u.toString()) || (store?.getCachedLength(u.toString(), 0, 1) ?: 0L) > 0L
 }
 
 /** Picks the cache or the network per opened address (T-052a). Keeps the choice until the address is closed. */

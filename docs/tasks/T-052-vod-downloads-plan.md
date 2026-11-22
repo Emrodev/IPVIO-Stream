@@ -90,3 +90,8 @@ Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (Ult
 ## T-052a third part (download list, code only)
 - Settings > Storage > Downloads: list of all downloads with status, size, total, delete. The title is stored with the download request.
 - Still open from the plan: series episodes, HLS and DASH, Wi-Fi-only, quality choice, automatic deletion after X days, per-profile folders. Not built, not device tested.
+
+## T-052a fourth part (HLS and quality choice, code only)
+- `HlsLogic.kt` (pure): reads the master playlist, lists variants with label (height and Mbit/s) and absolute address. Test `HlsLogicTest`.
+- `DownloadStore`: HLS requests use the MIME type `application/x-mpegURL`. A finished download is played from its variant address (`localUrlFor`, used in the detail page). The player reads a file from the cache if the cache already holds its first byte (`isLocal`), so HLS segments come from the cache offline.
+- Open: size estimate per quality (needs the duration), Wi-Fi-only, series episodes, automatic deletion, per-profile folders, DASH. Not built, not device tested. HLS offline playback is the riskiest part: check it first on a device.
