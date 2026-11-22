@@ -99,6 +99,18 @@ object RemoteHub {
                     ",\"s\":" + RemoteLogic.arr(s.take(LIMIT).map(::itemJson)) +
                     ",\"l\":" + RemoteLogic.arr(l.take(LIMIT).map(::liveJson)) + "}"
             }
+            "prog" -> {
+                // Programme search (T-051a): the loaded guide of the visible live channels; "t" = live or up (upcoming)
+                val mode = if (q["t"] == "up") ProgSearchLogic.Mode.UPCOMING else ProgSearchLogic.Mode.LIVE
+                val text = q["q"].orEmpty().take(80)
+                val hits = ArrayList<ProgSearchLogic.Hit>()
+                for (c in PrivateCats.visible(all)) {
+                    if (c.kind != Kind.LIVE) continue
+                    val tid = c.tvgId ?: continue
+                    for (e in Xmltv.forChannel(tid)) if (ProgSearchLogic.matches(e.title, text)) hits.add(ProgSearchLogic.Hit(c.id, c.title, e.title, e.start, e.end))
+                }
+                RemoteLogic.arr(ProgSearchLogic.select(hits, System.currentTimeMillis() / 1000, mode).map { RemoteLogic.prog(it.channelId, it.channel, it.title, it.start, it.end) })
+            }
             "resume" -> {
                 val byId = all.associateBy { it.id }
                 RemoteLogic.arr(WatchStore.entries.mapNotNull { e ->

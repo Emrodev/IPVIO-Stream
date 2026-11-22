@@ -93,7 +93,7 @@ Text is written in English. The German labels of the maintainer's sketch are rep
 - T-051b: `SearchScreen.kt` (layout), `ChannelSearch.kt`, `GuideSearch.kt` (only if the derived counts live there), `ViewSettings.kt` (only if a tile is reused).
 
 ## Status of the parts
-- T-051a: not started. Waiting for the answers to open questions 1–3.
+- T-051a: **implemented** on the phone search page (new "TV guide" tab), not built, not device tested. Defaults used, since the open questions were not answered: "Upcoming" = starts within 24 hours; hidden channels and ignored categories are left out (only the visible live channels, as the TV search does); a result starts the channel on the TV through the existing play action. Source: the guide (XMLTV) of the loaded playlist only. Channels whose guide comes from the Xtream address alone are **not** searched (open). Files: `ProgSearchLogic.kt` (pure logic), `ProgSearchLogicTest.kt`, `RemoteHub.kt` (route `prog`), `RemoteLogic.kt` (tab and page script; the script was not executed here).
 - T-051b: **layout implemented** from the maintainer's three screenshots (22 Nov 2026), in `SearchScreen.kt`. Not built with Gradle, not device tested. Details below.
 
 ### T-051b implementation notes

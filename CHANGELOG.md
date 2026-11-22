@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Phone: new "TV guide" tab on the phone search page. Type a programme title, for example "Formula 1", and see which channel shows it now ("Live now") or next ("Upcoming", next 24 hours). Tapping a result starts that channel on the TV. Uses the TV guide (XMLTV) of your playlist only. Not device tested yet
+- Texts of the new search screen and the VPN import now have English entries, so they no longer show German in other languages. Not device tested yet
 - Settings > General > VPN: the WireGuard file can now be sent from your phone over the Wi-Fi, like the playlist import (the file contains a private key, so send it only over your own Wi-Fi). Not device tested yet
 - Settings > General > VPN: the file picker no longer closes the app on devices without a file picker (for example some Fire TV sticks); a note explains the Wi-Fi import instead. Not device tested yet
 - Settings hub: the settings areas are smaller and shown four per row, so more of them are visible at once. Their descriptions may take two lines. Not device tested yet

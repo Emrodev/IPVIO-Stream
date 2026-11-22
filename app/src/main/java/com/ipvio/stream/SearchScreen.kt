@@ -198,7 +198,7 @@ fun SearchScreen(
                 Modifier.width(600.dp).fillMaxHeight().padding(start = DS.PageX, top = 22.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Suche", color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold, raw = true)
+                Text(Lang.tr("Suche"), color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold, raw = true)
                 Box(Modifier.fillMaxWidth()) {
                     if (AppSettings.systemKeyboard) {
                         // The device's own keyboard (e.g. Gboard) in a normal text field: OK or a tap opens it
@@ -226,12 +226,13 @@ fun SearchScreen(
                         contentAlignment = Alignment.Center
                     ) { AppIcon(AIcon.Close, Color.White, size = 18.dp) }
                 }
-                Text("${rm0.size + rs0.size + rl0.size} Treffer in ${listOf(rm0, rs0, rl0).count { it.isNotEmpty() }} Kategorien",
+                Text(Lang.tr("{0} Treffer in {1} Kategorien").replace("{0}", (rm0.size + rs0.size + rl0.size).toString())
+                    .replace("{1}", listOf(rm0, rs0, rl0).count { it.isNotEmpty() }.toString()),
                     color = Muted, fontSize = 15.sp, raw = true)
                 // Fixed area: the same height in both states, so the keyboard below never moves
                 Column(Modifier.fillMaxWidth().height(250.dp).clipToBounds(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (SearchState.query.isNotBlank()) {
-                        Text("Vorschläge", color = Muted, fontSize = 16.sp, fontWeight = FontWeight.Bold, raw = true)
+                        Text(Lang.tr("Vorschläge"), color = Muted, fontSize = 16.sp, fontWeight = FontWeight.Bold, raw = true)
                         suggItems.forEach { item ->
                             SuggestionRow(item, q) {
                                 SearchState.query = item.title.take(60)
@@ -253,7 +254,7 @@ fun SearchScreen(
                         val allRecent = AppSettings.searchHistory.toList()
                         val recent = allRecent.take(3)
                         var showAllHistory by remember { mutableStateOf(false) }
-                        Text("Letzte Suchen", color = Muted, fontSize = 16.sp, fontWeight = FontWeight.Bold, raw = true)
+                        Text(Lang.tr("Letzte Suchen"), color = Muted, fontSize = 16.sp, fontWeight = FontWeight.Bold, raw = true)
                         if (allRecent.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             recent.forEachIndexed { i, term ->
                                 // OK searches again, long OK / menu key removes just this entry
@@ -361,14 +362,15 @@ fun SearchScreen(
                     } else if (fl != 0 && rm.isEmpty() && rs.isEmpty() && rl.isEmpty()) item(key = "nohits") {
                         // Selected category has no hits: say so, name the categories that do have hits, offer all hits
                         val others = listOf("Filme" to rm0.size, "Serien" to rs0.size, "Live TV" to rl0.size)
-                            .filter { it.second > 0 }.joinToString(", ") { it.first }
+                            .filter { it.second > 0 }.joinToString(", ") { Lang.tr(it.first) }
                         Column(
                             Modifier.padding(horizontal = DS.PageX, vertical = 16.dp).fillMaxWidth()
                                 .clip(RoundedCornerShape(DS.RadiusM)).background(Surf).padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Keine ${SEARCH_FILTERS[fl]} zu „$q“", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, raw = true)
-                            if (others.isNotEmpty()) Text("Treffer gibt es in $others.", color = Muted, fontSize = 15.sp, raw = true)
+                            Text(Lang.tr("Keine {0} zu „{1}“").replace("{0}", Lang.tr(SEARCH_FILTERS[fl])).replace("{1}", q),
+                                color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, raw = true)
+                            if (others.isNotEmpty()) Text(Lang.tr("Treffer gibt es in {0}.").replace("{0}", others), color = Muted, fontSize = 15.sp, raw = true)
                             PillButton("Alle Treffer zeigen", light = true) { SearchState.filter = 0 }
                         }
                     }
@@ -424,7 +426,7 @@ private fun CategoryTile(icon: AIcon, count: Int, label: String, selected: Boole
             AppIcon(icon, Color.White, size = 22.dp)
             Text(count.toString(), color = Color.White, fontSize = spx(30), fontWeight = FontWeight.ExtraBold, raw = true)
         }
-        Text(label, color = Muted, fontSize = 15.sp, maxLines = 1, raw = true)
+        Text(label, color = Muted, fontSize = 15.sp, maxLines = 1)
     }
 }
 

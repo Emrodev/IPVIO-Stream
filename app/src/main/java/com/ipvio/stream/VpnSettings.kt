@@ -79,7 +79,8 @@ internal fun VpnSection(ctx: Context) {
     DisposableEffect(Unit) { onDispose { server.stop() } }
 
     SectionTitle("VPN")
-    Hint("Verbindet das Gerät über WireGuard mit dem Server deines VPN-Anbieters, auch für den Videostream. Lade bei deinem Anbieter eine WireGuard-Konfigurationsdatei (.conf) herunter und wähle sie hier aus oder sende sie vom Handy über das WLAN. Der Schlüssel wird verschlüsselt gespeichert und nie angezeigt. Es gibt keinen Kill-Switch: bricht die Verbindung ab, läuft der Verkehr ohne VPN weiter. Ob das VPN auf deinem Gerät läuft, ist nicht geprüft.")
+    Hint("Verbindet das Gerät über WireGuard mit dem Server deines VPN-Anbieters, auch für den Videostream. Lade bei deinem Anbieter eine WireGuard-Konfigurationsdatei (.conf) herunter und wähle sie hier aus. Der Schlüssel wird verschlüsselt gespeichert und nie angezeigt. Es gibt keinen Kill-Switch: bricht die Verbindung ab, läuft der Verkehr ohne VPN weiter. Ob das VPN auf deinem Gerät läuft, ist nicht geprüft.")
+    Hint("Oder die Datei vom Handy über das WLAN senden.")
     if (!has) {
         PillButton("WireGuard-Datei auswählen", light = true) {
             try { pick.launch(arrayOf("*/*")) } catch (e: Exception) { noPicker = true }
