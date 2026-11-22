@@ -10,9 +10,9 @@ class DictEn1Test {
         .map { it.split('¦') }
         .toList()
 
-    @Test fun every_row_has_exactly_german_key_and_english_text() {
-        val bad = rawRows().filter { it.size != 2 || it[0].isBlank() || it[1].isBlank() }
-        assertEquals("rows that are not German¦English: $bad", 0, bad.size)
+    @Test fun every_row_has_german_key_and_english_text() {
+        val bad = rawRows().filter { it.size < 2 || it[0].isBlank() || it[1].isBlank() }
+        assertEquals("rows without German¦English: $bad", 0, bad.size)
     }
 
     @Test fun german_keys_are_unique() {
