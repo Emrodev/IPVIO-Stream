@@ -4,7 +4,9 @@ The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not a
 
 ## Current task
 
-T-036: clean up this file and add project commands `/start` and `/new-task` (`.claude/commands/`). Task file `docs/tasks/T-036-workflow-state-and-commands.md`. No app code changed. Branch `claude/great-lovelace-tlhb6f`.
+T-036 (done, committed `dd4c17a`): this file, the archive, `/start`, `/new-task`. Task file `docs/tasks/T-036-workflow-state-and-commands.md`.
+
+T-037 (done, in the branch commit after `dd4c17a`): `/protected-check` and the release-notes skill, each with a check script in `.claude/scripts/`. Task file `docs/tasks/T-037-protected-check-release-notes.md`. No app code changed. Branch `claude/great-lovelace-tlhb6f`.
 
 ## Release state (from git log, 2026-11-22)
 
@@ -24,7 +26,7 @@ The full list with test steps is in `docs/tasks/WORK_STATE-history.md`, section 
 
 ## Task IDs
 
-- Highest ID in `docs/tasks/`: T-036 (this task). **Next free ID: T-037** (use `/new-task`, which checks this).
+- Highest ID in `docs/tasks/`: T-037. **Next free ID: T-038** (use `/new-task`, which checks this).
 - IDs used by more than one file: T-009, T-014, T-026, T-027, T-032. The files are not renamed here, because the old log and other task files refer to them by name. Renaming needs a decision.
 
 ## Conventions
