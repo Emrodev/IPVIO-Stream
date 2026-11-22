@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Some status and error lines with numbers or names (for example "OpenSubtitles: error 500", "Loading categories (2/9) …", "Search „…“ · Movies") now show in English. For German they are unchanged. Not device tested yet
 - Some messages and hints that had no translation before (for example the portal, provider list and subtitle search messages, the first-start hints of the playlist import) now show in English. For German they are unchanged. For the other languages they used to show German and now show English. Not device tested yet
 
 ## 1.4.7 (versionCode 13)

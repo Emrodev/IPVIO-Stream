@@ -26,7 +26,7 @@ object Lang {
         if (loaded) return
         loaded = true
         val t0 = android.os.SystemClock.elapsedRealtime()
-        I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO, DictP, DictEn1)
+        I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO, DictP, DictEn1, DictEn2)
         // 1.4.5: only registered here; I18nCore parses a language the first time it is used (German: never)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6)
         I18nCore.loadColumn(I18nCore.CODES.indexOf("ar"), DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6)
