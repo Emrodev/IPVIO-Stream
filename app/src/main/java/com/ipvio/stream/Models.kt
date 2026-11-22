@@ -138,7 +138,12 @@ data class Item(
     /** Source with several playlists shown at once: 0 = main playlist, 1 … = further ones (see [MultiLogic]). */
     val src: Int = 0,
     /** #22: date the provider added the title (Unix seconds, 0 = unknown, e.g. older caches or M3U). */
-    val added: Long = 0L
+    val added: Long = 0L,
+    /**
+     * T-054: further provider categories of a series that the list merged from several entries (same name in several
+     * categories). [group] stays the first one; the category screens list the series in these as well. Empty for everything else.
+     */
+    val moreGroups: List<String> = emptyList()
 ) {
     // Key for the metadata cache: computed once per title instead of anew on every sort comparison.
     // Own field instead of "by lazy": saves two helper objects per title with 100,000+ titles.
@@ -403,6 +408,14 @@ object M3uParser {
         var suf = ByteArray(32)
         var sufLen = 0
         var done = false
+        /** T-054: further categories in which the same series appeared (the series is merged into one title). */
+        var more: ArrayList<String>? = null
+
+        fun addGroup(g: String) {
+            if (g == group) return
+            val m = more ?: ArrayList<String>(2).also { more = it }
+            if (m.size < CategoryLogic.MAX_MORE_GROUPS && g !in m) m.add(g)
+        }
 
         fun add(season: Int, num: Int, p: String, url: String, label: String, q: String?, lang: String?) {
             if (n == ss.size) {
@@ -466,6 +479,7 @@ object M3uParser {
                         SeriesAcc(title, attr(e.info, "tvg-logo")?.ifBlank { null }, group, q, kd.lang)
                     }
                     if (acc.done) return@entries
+                    acc.addGroup(group)
                     val season = m?.groupValues?.get(2)?.toIntOrNull() ?: 1
                     val num = m?.groupValues?.get(3)?.toIntOrNull() ?: (acc.n + 1)
                     val vl = pool.ofOrNull(LANG.find(e.name)?.groupValues?.get(1)?.uppercase())
@@ -508,7 +522,8 @@ object M3uParser {
                 }
                 i = j
             }
-            out.add(Item("s_$key", Kind.SERIES, acc.title, null, "", acc.logo, acc.group, EpisodeTable.of(eps, pool), acc.q, lang = acc.lang))
+            out.add(Item("s_$key", Kind.SERIES, acc.title, null, "", acc.logo, acc.group, EpisodeTable.of(eps, pool), acc.q, lang = acc.lang,
+                moreGroups = acc.more ?: emptyList()))
         }
         out.trimToSize()
         return ParsedPlaylist(out, epgFromHeader(header), st.counts(), st.bytes, catchup)

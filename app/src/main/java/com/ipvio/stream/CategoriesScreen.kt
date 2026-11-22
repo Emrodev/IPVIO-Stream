@@ -159,6 +159,11 @@ fun CategoriesScreen(
                         folder = null
                         AppSettings.set(ctx, mode == 0)
                     }
+                    // T-054: switch the playlist without leaving for the settings (as in Live TV). The categories belong to the playlist,
+                    // so the screen closes and the movie or series page opens it again once the new playlist is there.
+                    if (tab in 1..2 && PlaylistStore.lists.size > 1) {
+                        AreaPlaylistPill(tab) { CatMemory.reset(); AppNav.pendingVodCats = tab; onBack() }
+                    }
                     if (saved && area != null) {
                         val sorts = listOf("Standard", "A–Z", "Eigene Reihenfolge")
                         val si = CatOrder.mode(area).coerceIn(0, 2)

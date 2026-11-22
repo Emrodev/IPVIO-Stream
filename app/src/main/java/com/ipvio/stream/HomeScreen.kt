@@ -91,7 +91,7 @@ private fun ipvioGroups(list: List<Item>): Map<String, List<Item>> {
 }
 
 private fun providerGroups(list: List<Item>): Map<String, List<Item>> {
-    val g = list.groupBy { it.group }
+    val g = CategoryLogic.byGroup(list)
     val order = PlaylistStore.catOrder
     if (order.isEmpty()) return g
     return g.entries.sortedBy { order[it.key] ?: 1_000_000 }.associate { it.key to it.value }
@@ -114,12 +114,14 @@ private class HomeData(
 private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>, noAdult: Boolean = false): HomeData {
     val live = ArrayList<Item>(); val movies0 = ArrayList<Item>(); val series0 = ArrayList<Item>()
     for (i in all) when (i.kind) { Kind.LIVE -> live.add(i); Kind.MOVIE -> movies0.add(i); Kind.SERIES -> series0.add(i) }
-    // Show the same movie in several versions (HD, 4K, …) only once; the version is chosen on the detail page (source)
-    val moviesAll = PlaylistLogic.firstPerKey(movies0) { it.mk + "|" + it.lang }
+    // Show the same movie in several versions (HD, 4K, …) only once in "All movies", genres, rows and Top lists; the version
+    // is chosen on the detail page (source). The provider categories below are built from the full list (T-054): a film that
+    // the provider puts into two categories is in both, so a category has as many titles as at the provider.
+    val moviesAll = CategoryLogic.uniqueMovies(movies0)
     val genresOk = MetaRepo.enabled() && Classifier.supported(moviesAll.size + series0.size)
     val ipvio = ipvioWanted && genresOk
     // Provider categories keep everything; private categories (T-028) are left out of "All", genres, rows and Top lists
-    val movieP = providerGroups(moviesAll)
+    val movieP = providerGroups(movies0)
     val seriesP = providerGroups(series0)
     val movies = PrivateCats.filter(moviesAll)
     val series = PrivateCats.filter(series0)
@@ -127,7 +129,8 @@ private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>,
     val rm = if (noAdult) movies.filterNot { ParentalLogic.isAdult(it.group, it.title) } else movies
     val rs = if (noAdult) series.filterNot { ParentalLogic.isAdult(it.group, it.title) } else series
     val trendItems = if (trend.isEmpty()) emptyList() else (rm.asSequence() + rs.asSequence()).filter { Trending.norm(it.title) in trend }.toList()
-    val rowMP = if (rm === movies) movieP else providerGroups(rm)
+    // Home rows by category: the same full category lists, without the titles that "no adult titles on the home pages" hides
+    val rowMP = if (rm === movies) movieP else providerGroups(PrivateCats.filter(movies0).filterNot { ParentalLogic.isAdult(it.group, it.title) })
     val rowSP = if (rs === series) seriesP else providerGroups(rs)
     return HomeData(
         live, movies, series, providerGroups(live), movieP, seriesP,
@@ -345,8 +348,10 @@ fun HomeScreen(
         }
     }
     // W-002: chosen in the menu with "straight to the categories" on: open them once the titles of this area are there
-    LaunchedEffect(AppNav.pendingVodCats, tab, vodBase.isNotEmpty()) {
-        if (AppNav.pendingVodCats == tab && tab in 1..2 && vodBase.isNotEmpty()) { AppNav.pendingVodCats = -1; openCats() }
+    // T-054: also after a playlist switch in the categories screen; wait until the titles of the NEW playlist are computed (cached != null),
+    // otherwise the old playlist's categories would open again.
+    LaunchedEffect(AppNav.pendingVodCats, tab, vodBase.isNotEmpty(), cached != null) {
+        if (AppNav.pendingVodCats == tab && tab in 1..2 && vodBase.isNotEmpty() && cached != null) { AppNav.pendingVodCats = -1; openCats() }
     }
     // Asked by the View settings' live preview (consumed at once so a later visit does not open it again)
     LaunchedEffect(AppNav.openCatsSignal) { if (AppNav.openCatsSignal > 0) { AppNav.openCatsSignal = 0; if (tab == 1) openCats() } }

@@ -322,9 +322,10 @@ private fun ClockPill() {
 /**
  * Playlist selection for movies and series (separate per area): "All playlists" or one of the shown playlists.
  * A playlist that is not shown is activated and loaded (as in Live TV).
+ * [onSwitched] runs after a pick that changed something (the categories screen uses it to reopen with the new playlist, T-054).
  */
 @Composable
-private fun AreaPlaylistPill(tab: Int) {
+internal fun AreaPlaylistPill(tab: Int, modifier: Modifier = Modifier, onSwitched: () -> Unit = {}) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val pls = PlaylistStore.lists.toList()
     val multiView = PlaylistStore.sourceNames.size > 1
@@ -335,7 +336,8 @@ private fun AreaPlaylistPill(tab: Int) {
         val si = if (multiView) k else 0
         (pls.indices.firstOrNull { PlaylistStore.shownIndex(it) == si } ?: PlaylistStore.active) + off
     }
-    DropdownPill("Playlist", opts.getOrElse(cur) { "" }, opts, cur, active = multiView && k >= 0, icon = FIcon.Grid) { pick ->
+    DropdownPill("Playlist", opts.getOrElse(cur) { "" }, opts, cur, active = multiView && k >= 0, modifier = modifier, icon = FIcon.Grid) { pick ->
+        if (pick == cur) return@DropdownPill
         if (multiView && pick == 0) AreaSource.set(tab, -1)
         else {
             val pi = pick - off
@@ -343,6 +345,7 @@ private fun AreaPlaylistPill(tab: Int) {
             if (si >= 0) { if (multiView) AreaSource.set(tab, si) }
             else { AreaSource.set(tab, -1); PlaylistStore.switchAsync(ctx, pi) }
         }
+        onSwitched()
     }
 }
 

@@ -1,4 +1,4 @@
-Last update: 2026-11-22 (T-047, faster start). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-22 (T-054, complete categories and playlist switch). Read `CLAUDE.md` first, then this file.
 
 The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not add new entries there.
 
@@ -17,6 +17,8 @@ T-048a (playlist edit window, same branch): row with Reload + Edit, window with 
 T-049 (sports alert jump, Sports Hub settings page, 26 more competitions off by default, own DNS) is in the same branch, see `docs/tasks/T-049-sports-vpn-dns-trakt-batch.md`. VPN and Trakt are not started. JVM tests 67/67, not built, not device tested.
 
 Release 1.4.8 (versionCode 14) prepared on 22 Nov 2026 at the maintainer's request ("GO"): version bump, CHANGELOG section, `docs/release-notes/v1.4.8.md`, in-app What's new. **Open: Trakt** (T-049g, needs the maintainer's Trakt API app: client ID and secret; plan T-031). Not device tested.
+
+T-054 (branch `claude/youthful-bohr-7ejf3n`): movie categories showed fewer titles than the provider because the movie list was reduced to one entry per title before it was split into categories; a merged series was only in its first category. Fixed (`CategoryLogic.kt`, `Item.moreGroups`, cache version 7), plus a "Playlist" pill in the categories screen. JVM tests 442/442 in a scratch Gradle project (Android-free files only), not built with the app's Gradle, not device tested. **Open: missing Live TV channels are not explained** (needs the counts from Settings > Playlists and from TiviMate), series merged by name ("Dark (2017)" / "Dark (2020)") need a decision. Task file `docs/tasks/T-054-categories-complete-and-playlist-switch.md`. Next: maintainer builds, runs the steps in the task file. IDs T-051 to T-053 are on `claude/exciting-cori-6wbewl`.
 
 ## Release state (from git log, 2026-11-22)
 

@@ -14,8 +14,11 @@ import java.io.OutputStream
  * Version 4 (whole list, language at the front of each entry) and 3 (without language) are still read.
  */
 object PlaylistCacheIO {
-    /** 6 adds the provider's "added" date (#22) at the end of each entry; 3 to 5 are still read (date 0). */
-    const val VERSION = 6
+    /**
+     * 6 adds the provider's "added" date (#22) at the end of each entry; 7 adds the further categories of a merged series
+     * (T-054) after it. 3 to 6 are still read (date 0, no further categories).
+     */
+    const val VERSION = 7
     private const val MAX_STR = 1 shl 20      // 1 MB per text: anything larger can only be a corrupt file
     private const val MAX_COUNT = 2_000_000
 
@@ -58,7 +61,7 @@ object PlaylistCacheIO {
 
     private fun DataInputStream.head(url: String): Head? {
         val version = readInt()
-        if (version !in 3..6) return null
+        if (version !in 3..7) return null
         if (str() != url.trim()) return null
         val ne = count()
         val epg = ArrayList<String>(ne)
@@ -146,6 +149,8 @@ object PlaylistCacheIO {
             for (v in e.variants) { str(v.url); str(v.label); str(v.quality); str(v.lang) }
         }
         writeLong(i.added)
+        writeInt(i.moreGroups.size)
+        for (g in i.moreGroups) str(g)
     }
 
     /** Reads an entry; hidden languages return null (they are counted anyway). */
@@ -182,6 +187,7 @@ object PlaylistCacheIO {
             eps.add(Episode(season, num, et, eu, if (vars.size > 1) vars else emptyList(), eq))
         }
         val added = if (version >= 6) readLong() else 0L
+        val more = if (version >= 7) count().let { m -> if (m == 0) emptyList() else ArrayList<String>(m).also { l -> for (j in 0 until m) l.add(pool.of(str() ?: "")) } } else emptyList()
         if (lang == null) {
             lang = pool.of(LangTagLogic.of(group, rawTitle, kind == Kind.LIVE))
             counts[lang] = (counts[lang] ?: 0) + 1
@@ -189,7 +195,7 @@ object PlaylistCacheIO {
         }
         return Item(
             id = id, kind = kind, title = title, year = if (y < 0) null else y, url = url, logo = logo,
-            group = group, episodes = EpisodeTable.of(eps, pool), quality = quality, tvgId = tvg, lang = lang, added = added
+            group = group, episodes = EpisodeTable.of(eps, pool), quality = quality, tvgId = tvg, lang = lang, added = added, moreGroups = more
         )
     }
 
@@ -202,5 +208,6 @@ object PlaylistCacheIO {
             for (j in 0 until vc) { skipStr(); skipStr(); skipStr(); skipStr() }
         }
         if (version >= 6) readLong()
+        if (version >= 7) { val m = count(); for (j in 0 until m) skipStr() }
     }
 }

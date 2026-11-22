@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Movies and Series > Categories: a category now shows every title the provider puts into it. Before, a film that is in two categories (for example a genre and "All films 2026") was only listed in the first one, so the second showed fewer titles than the provider or TiviMate (100 instead of 200). A series that the provider lists in several categories is now in each of them after the next playlist reload. "All movies", the genres and the home rows still show a film only once; the same film twice in one category (for example HD and 4K) now shows twice there. Not device tested yet
+- Movies and Series > Categories: a "Playlist" button (with several playlists) switches the playlist like in Live TV. The categories of the chosen playlist open again by themselves. Not device tested yet
+- The stored playlist (cache) has a new version to remember the further categories of a series. The old stored list is still read; a downgrade to an older app version loads the playlist again. Not device tested yet
 - Docs: README gets an install troubleshooting pointer, a "Privacy and security" section (API keys, backup servers, phone remote over plain HTTP, VPN without kill switch, own DNS), a "Known limitations" section and a link to the test documentation. No app change
 
 ## 1.4.8 (versionCode 14)
