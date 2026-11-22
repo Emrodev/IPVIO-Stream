@@ -5,7 +5,12 @@ package com.ipvio.stream
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.media3.common.DataSpec
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.TransferListener
+import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.cache.NoOpCacheEvictor
@@ -30,6 +35,9 @@ object DownloadStore {
     val progress = mutableStateMapOf<String, Int>()
 
     private var manager: DownloadManager? = null
+    private var store: SimpleCache? = null
+    /** Addresses of finished downloads: the player reads these from the cache (cache key = address). */
+    private val doneUris: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /** Folder of the downloads (app-specific, no permission needed). */
     fun folder(c: Context): File = File(c.getExternalFilesDir(null) ?: c.filesDir, "downloads")
@@ -44,6 +52,7 @@ object DownloadStore {
         val db = StandaloneDatabaseProvider(app)
         val dir = folder(app).apply { mkdirs() }
         val cache = SimpleCache(dir, NoOpCacheEvictor(), db)
+        store = cache
         val http = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(15_000)
@@ -53,7 +62,10 @@ object DownloadStore {
         m.setMaxParallelDownloads(1)
         m.addListener(object : DownloadManager.Listener {
             override fun onDownloadChanged(manager: DownloadManager, download: Download, finalException: Exception?) = update(download)
-            override fun onDownloadRemoved(manager: DownloadManager, download: Download) { progress.remove(download.request.id) }
+            override fun onDownloadRemoved(manager: DownloadManager, download: Download) {
+                progress.remove(download.request.id)
+                doneUris.remove(download.request.uri.toString())
+            }
         })
         m.currentDownloads.forEach { update(it) }
         manager = m
@@ -61,6 +73,8 @@ object DownloadStore {
     }
 
     private fun update(d: Download) {
+        val addr = d.request.uri.toString()
+        if (d.state == Download.STATE_COMPLETED) doneUris.add(addr) else if (d.state != Download.STATE_DOWNLOADING) doneUris.remove(addr)
         progress[d.request.id] = when (d.state) {
             Download.STATE_COMPLETED -> DONE
             Download.STATE_FAILED -> FAILED
@@ -73,7 +87,8 @@ object DownloadStore {
         if (!DownloadLogic.supported(url) || !DownloadLogic.hasRoom(freeBytes(c))) return false
         val id = DownloadLogic.keyFor(item)
         progress[id] = 0
-        val request = DownloadRequest.Builder(id, Uri.parse(url)).setCustomCacheKey(id).build()
+        // No custom cache key: the cache key is the address, so the player finds the download by the address it plays
+        val request = DownloadRequest.Builder(id, Uri.parse(url)).build()
         DownloadService.sendAddDownload(c, VodDownloadService::class.java, request, true)
         return true
     }
@@ -81,5 +96,48 @@ object DownloadStore {
     /** Removes a download and its file. */
     fun remove(c: Context, item: Item) {
         DownloadService.sendRemoveDownload(c, VodDownloadService::class.java, DownloadLogic.keyFor(item), false)
+    }
+
+    /**
+     * Data source factory for playback (T-052a): a finished download is read from the cache, every other address goes to
+     * [upstream] exactly as before. The cache is read only, so streaming never fills it.
+     */
+    fun playbackFactory(c: Context, upstream: DataSource.Factory): DataSource.Factory {
+        manager(c)
+        val cacheFactory = CacheDataSource.Factory()
+            .setCache(store!!)
+            .setUpstreamDataSourceFactory(upstream)
+            .setCacheWriteDataSinkFactory(null)
+        return DataSource.Factory { DownloadAwareDataSource(cacheFactory.createDataSource(), upstream.createDataSource()) { doneUris.contains(it.toString()) } }
+    }
+}
+
+/** Picks the cache or the network per opened address (T-052a). Keeps the choice until the address is closed. */
+@androidx.media3.common.util.UnstableApi
+class DownloadAwareDataSource(
+    private val local: DataSource, private val remote: DataSource, private val isDone: (android.net.Uri) -> Boolean
+) : DataSource {
+    private var current: DataSource? = null
+
+    override fun open(dataSpec: DataSpec): Long {
+        val d = if (isDone(dataSpec.uri)) local else remote
+        current = d
+        return d.open(dataSpec)
+    }
+
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int = current?.read(buffer, offset, length) ?: -1
+
+    override fun getUri(): android.net.Uri? = current?.uri
+
+    override fun getResponseHeaders(): Map<String, List<String>> = current?.responseHeaders ?: emptyMap()
+
+    override fun close() {
+        current?.close()
+        current = null
+    }
+
+    override fun addTransferListener(transferListener: TransferListener) {
+        local.addTransferListener(transferListener)
+        remote.addTransferListener(transferListener)
     }
 }

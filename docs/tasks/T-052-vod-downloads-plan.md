@@ -81,3 +81,8 @@ Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (Ult
 - Done (code, not built): `DownloadLogic.kt` (rules, test `DownloadLogicTest`), `DownloadStore.kt` (Media3 DownloadManager, SimpleCache in the app folder on external storage, max one download at a time), `VodDownloadService.kt` (foreground service, manifest entry `dataSync`), `DownloadUi.kt` (button and one-time notice), hook in `DetailScreen.kt`, English rows in `DictEn4.kt`.
 - Open: playback of a finished download (the player must read the cache: `CacheDataSource` in front of the stream source, player core, approval needed); download list with delete and storage view; series episodes; Wi-Fi-only option; quality choice; auto-delete; per-profile folders.
 - Media3 API used: `DownloadManager`, `DownloadRequest`, `DownloadService.sendAddDownload`, `DownloadNotificationHelper`, `StandaloneDatabaseProvider`, `SimpleCache`, `NoOpCacheEvictor`. **Compile check pending** (no Gradle here).
+
+## T-052a second part (playback, code only)
+- `DownloadStore.playbackFactory` puts a read-only cache source in front of the player source (`PlayerScreen.kt`, one line). Finished addresses read from the cache, every other address goes to the old source unchanged (`DownloadAwareDataSource`).
+- The download key is now the stream address (no custom cache key), so the player finds the download by the address it plays. If the host failover changes the address, playback falls back to the network.
+- Open: download list with delete and storage view; series; Wi-Fi-only; quality; auto-delete; per profile. Not built, not device tested. Player core change: needs the maintainer's review.
