@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Settings > Storage > Downloads (new tab): all movie downloads with title, status, size and total, and a delete button per download. Not device tested yet
 - Downloaded movies play from the download when the same address is played, also without a network connection. Every other stream is played as before. Not device tested yet
 - Movies: "Download" button on the detail page (single files only; HLS and DASH come later). A notice about the provider terms is shown once before the first download. Downloads are stored in the app folder on external storage and need at least 2 GB free. Not played back from the download yet, and no download list yet. Not device tested yet
 - Live TV multi view: four streams at once in a 2x2 grid (new layout "Four in a grid"). Each tile starts a little after the previous one, the muted tiles use lower picture sizes and bitrates. Many providers allow only one or two connections per login, and weak devices may not decode four streams smoothly. Not device tested yet

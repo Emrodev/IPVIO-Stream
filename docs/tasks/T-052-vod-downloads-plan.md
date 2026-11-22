@@ -86,3 +86,7 @@ Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (Ult
 - `DownloadStore.playbackFactory` puts a read-only cache source in front of the player source (`PlayerScreen.kt`, one line). Finished addresses read from the cache, every other address goes to the old source unchanged (`DownloadAwareDataSource`).
 - The download key is now the stream address (no custom cache key), so the player finds the download by the address it plays. If the host failover changes the address, playback falls back to the network.
 - Open: download list with delete and storage view; series; Wi-Fi-only; quality; auto-delete; per profile. Not built, not device tested. Player core change: needs the maintainer's review.
+
+## T-052a third part (download list, code only)
+- Settings > Storage > Downloads: list of all downloads with status, size, total, delete. The title is stored with the download request.
+- Still open from the plan: series episodes, HLS and DASH, Wi-Fi-only, quality choice, automatic deletion after X days, per-profile folders. Not built, not device tested.

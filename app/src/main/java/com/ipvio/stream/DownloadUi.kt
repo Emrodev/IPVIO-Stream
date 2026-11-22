@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 
 private const val VOD_PREFS = "ipvio_vod"
 
@@ -71,4 +73,32 @@ fun VodDownloadButton(item: Item, url: String, h: Int) {
             }
         }
     }
+}
+
+/** T-052a: list of the downloads in Settings > Storage, with delete and the space they take. */
+@Composable
+fun DownloadsSettings(ctx: Context) {
+    // Reading the progress map makes the list update while a download runs
+    val rows = run { DownloadStore.progress.size; DownloadStore.entries(ctx) }
+    if (rows.isEmpty()) {
+        Text("Keine Downloads.", color = Muted, fontSize = 16.sp)
+        return
+    }
+    Text("Gesamt: " + SettingsLogic.fmtBytes(rows.sumOf { it.bytes }), color = Accent2, fontSize = 15.sp)
+    rows.forEach { r ->
+        val st = DownloadStore.progress[r.id] ?: if (r.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED) DownloadStore.DONE else 0
+        val status = when (st) {
+            DownloadStore.DONE -> "Fertig"
+            DownloadStore.FAILED -> "Fehlgeschlagen"
+            else -> Lang.tr("Lädt {0} %").replace("{0}", st.toString())
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.width(420.dp)) {
+                Text(raw = true, text = r.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(status + "  ·  " + SettingsLogic.fmtBytes(r.bytes), color = Muted, fontSize = 13.sp)
+            }
+            ConfirmPill("Löschen") { DownloadStore.removeId(ctx, r.id) }
+        }
+    }
+    Text("Die Dateien liegen auf diesem Gerät. Löschen gibt den Speicher frei.", color = Muted, fontSize = 13.sp)
 }

@@ -564,7 +564,7 @@ private fun StoragePage(ctx: Context) {
     // Sizes and deleting run in the background: the metadata folder can contain tens of thousands of files
     var sizes by remember { mutableStateOf(List(General.AREAS.size) { 0L }) }
     LaunchedEffect(tick) { sizes = withContext(Dispatchers.IO) { General.AREAS.map { General.areaSize(ctx, it) } } }
-    SettingsTabs(listOf("Zwischenspeicher", "Verlauf", "Sicherung"), "storage") { tab ->
+    SettingsTabs(listOf("Zwischenspeicher", "Verlauf", "Sicherung", "Downloads"), "storage") { tab ->
     if (tab == 0) {
     General.AREAS.forEachIndexed { i, a ->
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -586,6 +586,7 @@ private fun StoragePage(ctx: Context) {
     }
     Hint("Meine Liste und Favoriten bleiben immer erhalten.")
     }
+    if (tab == 3) DownloadsSettings(ctx)
     if (tab == 2) {
     var backupMsg by remember { mutableStateOf<String?>(null) }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

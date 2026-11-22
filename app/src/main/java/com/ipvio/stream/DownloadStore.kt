@@ -88,9 +88,23 @@ object DownloadStore {
         val id = DownloadLogic.keyFor(item)
         progress[id] = 0
         // No custom cache key: the cache key is the address, so the player finds the download by the address it plays
-        val request = DownloadRequest.Builder(id, Uri.parse(url)).build()
+        // The title travels with the request (shown in the download list)
+        val request = DownloadRequest.Builder(id, Uri.parse(url)).setData(item.title.toByteArray(Charsets.UTF_8)).build()
         DownloadService.sendAddDownload(c, VodDownloadService::class.java, request, true)
         return true
+    }
+
+    /** One row of the download list: id, title, Media3 state, bytes on the storage. */
+    class Entry(val id: String, val title: String, val state: Int, val bytes: Long)
+
+    /** All downloads (finished, running, failed), for the download list. */
+    fun entries(c: Context): List<Entry> = manager(c).currentDownloads.map { d ->
+        Entry(d.request.id, runCatching { String(d.request.data ?: ByteArray(0), Charsets.UTF_8) }.getOrDefault(d.request.id), d.state, d.bytesDownloaded)
+    }
+
+    /** Removes a download by id and its file. */
+    fun removeId(c: Context, id: String) {
+        DownloadService.sendRemoveDownload(c, VodDownloadService::class.java, id, false)
     }
 
     /** Removes a download and its file. */

@@ -21,4 +21,8 @@ Download entfernen¦Remove download
 Verstanden¦Got it
 Downloads sind nur für Inhalte gedacht, die du rechtmäßig nutzen darfst. Die Bedingungen deines Anbieters gelten. Die Dateien bleiben auf diesem Gerät.¦Downloads are only meant for content you are allowed to use. Your provider's terms apply. The files stay on this device.
 Nicht genug freier Speicher für einen Download.¦Not enough free storage for a download.
+Fertig¦Done
+Fehlgeschlagen¦Failed
+Keine Downloads.¦No downloads.
+Die Dateien liegen auf diesem Gerät. Löschen gibt den Speicher frei.¦The files are stored on this device. Deleting frees the space.
 """
