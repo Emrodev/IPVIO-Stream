@@ -722,7 +722,13 @@ private fun DetailScreenFull(
                                         if (!seen && resumeSE?.let { ResumeLogic.key(it.first, it.second) } == k) WatchStore.remove(ctx, item.id)
                                         progVer++
                                     }
-                                ) { onPlay(v.url, item.title + " S" + ep.season + "E" + ep.num, 0L) }
+                                    , dlState = DownloadStore.progress[DownloadLogic.keyFor(episodeDownloadItem(item, ep))],
+                                    onMenu = { startEpisodeDownload(ctx, item, ep, v.url) }
+                                ) {
+                                    // a finished download plays from the device, otherwise the stream as before
+                                    val local = DownloadStore.localUrlFor(ctx, episodeDownloadItem(item, ep))
+                                    onPlay(local ?: v.url, item.title + " S" + ep.season + "E" + ep.num, 0L)
+                                }
                             }
                         }
                     }
@@ -744,7 +750,7 @@ private fun DetailScreenFull(
 }
 
 @Composable
-private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.EpPos?, modifier: Modifier, onFocus: () -> Unit, onToggleSeen: () -> Unit, onClick: () -> Unit) {
+private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.EpPos?, modifier: Modifier, onFocus: () -> Unit, onToggleSeen: () -> Unit, dlState: Int? = null, onMenu: (() -> Unit)? = null, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(dpx(16))
     // Round 17b: the selected episode floats forward (glass, shadow, slightly larger) instead of a white frame; the others stay calm
@@ -757,6 +763,8 @@ private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.E
             .border(1.dp, if (f) Color(0x33FFFFFF) else Color.Transparent, shape)
             .onFocusChanged { f = it.isFocused; if (it.isFocused) onFocus() }
             .favKeys(onToggleSeen)
+            // T-052a: menu key starts the download of this episode
+            .then(if (onMenu != null) Modifier.onPreviewKeyEvent { ev -> if (ev.type == KeyEventType.KeyDown && ev.key == Key.Menu) { onMenu(); true } else false } else Modifier)
             .clickable(onClick = onClick)
             .padding(dpx(14)),
         horizontalArrangement = Arrangement.spacedBy(dpx(22)), verticalAlignment = Alignment.CenterVertically
@@ -786,6 +794,9 @@ private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.E
                 em?.imdb?.let { Badge("IMDb $it", Color(0xFFF5C518), Color.Black) }
                 if (em?.imdb == null) em?.rating?.let { RatingBadge(it, Color(0x26FFFFFF)) }
                 em?.runtime?.let { Badge("$it Min") }
+                // T-052a: download state of the episode
+                if (dlState == DownloadStore.DONE) Badge("Heruntergeladen", DS.Scrim, Accent2)
+                else if (dlState != null && dlState >= 0) Badge(Lang.tr("Lädt {0} %").replace("{0}", dlState.toString()), DS.Scrim, Accent2)
             }
             em?.air?.let { Text(raw = true, text = it, color = Muted, fontSize = spx(16)) }
             em?.overview?.let { Text(raw = true, text = it, color = if (f) Tok.TextMid else Tok.TextLow, fontSize = spx(18), lineHeight = spx(25), maxLines = 3, overflow = TextOverflow.Ellipsis) }

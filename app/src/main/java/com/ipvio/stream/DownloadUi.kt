@@ -24,10 +24,10 @@ import kotlinx.coroutines.launch
 private const val VOD_PREFS = "ipvio_vod"
 
 /** T-052a: the notice about the provider terms is shown once, before the first download. */
-private fun noticeAccepted(c: Context): Boolean =
+fun noticeAccepted(c: Context): Boolean =
     runCatching { c.getSharedPreferences(VOD_PREFS, Context.MODE_PRIVATE).getBoolean("notice_ok", false) }.getOrDefault(false)
 
-private fun acceptNotice(c: Context) {
+fun acceptNotice(c: Context) {
     runCatching { c.getSharedPreferences(VOD_PREFS, Context.MODE_PRIVATE).edit().putBoolean("notice_ok", true).apply() }
 }
 
@@ -117,6 +117,14 @@ fun VodDownloadButton(item: Item, url: String, h: Int) {
 @Composable
 fun DownloadsSettings(ctx: Context) {
     var wifi by remember { mutableStateOf(DownloadStore.wifiOnly(ctx)) }
+    val dayChoices = listOf(0, 14, 30, 90)
+    var autoIdx by remember { mutableStateOf(dayChoices.indexOf(DownloadStore.autoDeleteDays(ctx)).coerceAtLeast(0)) }
+    SelectRow("Automatisch löschen", if (autoIdx == 0) "Aus" else Lang.tr("{0} Tage").replace("{0}", dayChoices[autoIdx].toString()),
+        listOf("Aus", "14 Tage", "30 Tage", "90 Tage"), autoIdx, active = autoIdx > 0) { i ->
+        autoIdx = i
+        DownloadStore.setAutoDeleteDays(ctx, dayChoices[i])
+    }
+    Text("Nicht genutzte Downloads werden nach der gewählten Zeit gelöscht. Als genutzt gilt der Tag, an dem du den Download zuletzt abgespielt hast.", color = Muted, fontSize = 13.sp)
     ToggleRow("Nur im WLAN laden", "Downloads warten, wenn kein ungemessenes Netz (WLAN oder Ethernet) da ist.", wifi) {
         wifi = it
         DownloadStore.setWifiOnly(ctx, it)
@@ -144,4 +152,23 @@ fun DownloadsSettings(ctx: Context) {
         }
     }
     Text("Die Dateien liegen auf diesem Gerät. Löschen gibt den Speicher frei.", color = Muted, fontSize = 13.sp)
+}
+
+/** Episode as download item (T-052a): id from the series, season and number. */
+fun episodeDownloadItem(item: Item, ep: Episode): Item =
+    DownloadLogic.episodeItem(item, ep.season, ep.num, item.title + " S" + ep.season + "E" + ep.num)
+
+/** Menu key on an episode (T-052a): starts its download in the best quality, after the one-time notice. */
+fun startEpisodeDownload(c: Context, item: Item, ep: Episode, url: String) {
+    val msg = when {
+        !noticeAccepted(c) -> "Bestätige erst den Hinweis bei einem Film."
+        !DownloadLogic.supported(url) -> "Dieser Stream lässt sich nicht herunterladen."
+        !DownloadLogic.hasRoom(DownloadStore.freeBytes(c)) -> "Nicht genug freier Speicher für einen Download."
+        else -> null
+    }
+    if (msg != null) {
+        android.widget.Toast.makeText(c, Lang.tr(msg), android.widget.Toast.LENGTH_LONG).show()
+        return
+    }
+    DownloadStore.startBest(c, episodeDownloadItem(item, ep), url)
 }

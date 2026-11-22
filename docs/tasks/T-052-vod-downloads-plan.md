@@ -99,3 +99,10 @@ Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (Ult
 ## T-052a fifth part (Wi-Fi only, code only)
 - Switch "Nur im WLAN laden" on Settings > Storage > Downloads (default off). Stored in `ipvio_vod`; applied through `DownloadManager.setRequirements` (unmetered network or any network).
 - Still open: automatic deletion after X days, series episodes, size per quality, per-profile folders, DASH.
+
+## T-052a sixth part (code only)
+- Series episodes: menu key on an episode starts its download (best HLS quality, chosen automatically); the episode shows its state; playback uses the local copy when present. Episode id: series id, season, number.
+- DASH (.mpd) downloads as a whole stream (no quality choice).
+- Per profile: folder `downloads` for profile 0, `downloads_p<ID>` otherwise (same rule as the other profile files).
+- Automatic deletion: off by default; 14, 30 or 90 days. "Used" = the day of the last playback (written at most once per hour); a download that was never played counts from its first check.
+- Still open: size estimate per quality (needs the playlist duration), HLS offline playback is untested and the riskiest part.

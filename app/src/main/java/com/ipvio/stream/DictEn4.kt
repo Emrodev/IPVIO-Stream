@@ -31,4 +31,15 @@ Qualitäten werden geladen …¦Loading qualities …
 Die Playlist konnte nicht geladen werden.¦The playlist could not be loaded.
 Nur im WLAN laden¦Download only on Wi-Fi
 Downloads warten, wenn kein ungemessenes Netz (WLAN oder Ethernet) da ist.¦Downloads wait when no unmetered network (Wi-Fi or Ethernet) is available.
+Bestätige erst den Hinweis bei einem Film.¦Confirm the notice on a movie first.
+Dieser Stream lässt sich nicht herunterladen.¦This stream cannot be downloaded.
+Heruntergeladen¦Downloaded
+Automatisch löschen¦Delete automatically
+Nicht genutzte Downloads werden nach der gewählten Zeit gelöscht. Als genutzt gilt der Tag, an dem du den Download zuletzt abgespielt hast.¦Unused downloads are deleted after the chosen time. A download counts as used on the day you last played it.
+{0} Tage¦{0} days
+Aus¦Off
+14 Tage¦14 days
+30 Tage¦30 days
+90 Tage¦90 days
+Menütaste = herunterladen¦Menu key = download
 """

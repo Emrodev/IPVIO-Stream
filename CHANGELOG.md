@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Downloads: series episodes (menu key on an episode starts its download in the best quality; the episode shows "Downloaded" or the progress), DASH (.mpd) streams, a separate download folder per profile, automatic deletion of downloads not used for 14, 30 or 90 days (off by default). Not device tested yet
 - Settings > Storage > Downloads: new switch "Download only on Wi-Fi" (off by default). When it is on, downloads wait until an unmetered network is available. Not device tested yet
 - Movies: HLS streams (.m3u8) can be downloaded too. The download button first lists the qualities of the stream (for example 1080p or 720p with the bitrate) and downloads the chosen one. Finished downloads play offline. Not device tested yet
 - Settings > Storage > Downloads (new tab): all movie downloads with title, status, size and total, and a delete button per download. Not device tested yet
