@@ -24,6 +24,8 @@ Or download the APK directly: [IPVIO-Stream.apk (latest release)](https://github
 
 **Requirements:** Android 7.0 (API 24) or newer. No account or registration needed.
 
+**If the install fails:** check that the device has enough free space, that the download finished completely, and that the APK comes from the official release. An APK signed by someone else cannot replace the installed app without removing your data. More in the [FAQ](docs/FAQ.md).
+
 Adding a playlist with the TV remote is slow? Scan the QR code under *Playlists > Enter on phone* with your phone and send the link, the Xtream login or a playlist file to the TV. Details: [docs/PHONE.md](docs/PHONE.md).
 
 ---
@@ -190,6 +192,27 @@ The app ships **without any API keys**. You can add your own free keys under **S
 
 ---
 
+## Privacy and security
+
+- **API keys** are stored only on the device.
+- **Xtream backup servers** receive the login of their playlist. Add only addresses you trust.
+- **Phone remote** pages use plain HTTP on your local network and are protected only by a 4-digit code. Use them only on your own, trusted Wi-Fi.
+- **Cleartext traffic** is allowed in the app, because many IPTV providers serve their streams over plain HTTP.
+- **VPN** (*Settings > General > VPN*, new in 1.4.8): there is no kill switch yet. If the tunnel drops, traffic continues without the VPN.
+- **Own DNS server** (*Settings > General > DNS server*): plain DNS sends the names of visited hosts unencrypted. Use an https address for encrypted lookups. The setting does not cover the video stream.
+
+The full list of known items is in [docs/SECURITY.md](docs/SECURITY.md).
+
+---
+
+## Known limitations
+
+- Some recent changes are not yet tested on a real device. The [CHANGELOG](CHANGELOG.md) marks them as "Not device tested yet".
+- Sports competitions added in 1.4.8 start switched off. Their data addresses are not verified yet (*Settings > Sports Hub*).
+- Free subtitle search access depends on the service. See [docs/SUBTITLES.md](docs/SUBTITLES.md).
+
+---
+
 ## Community
 
 - **Reddit:** [r/ipvio](https://www.reddit.com/r/ipvio). Questions, news, tips and feedback from other users.
@@ -230,7 +253,7 @@ Optional Google Drive sync and backup: [docs/GOOGLE_DRIVE.md](docs/GOOGLE_DRIVE.
 
 Developers can optionally copy `secrets.properties.example` to `secrets.properties` (ignored by Git) and put their keys there. They are only used when no key was entered in the app.
 
-Unit tests for the pure logic: `./gradlew test`
+Unit tests for the pure logic: `./gradlew test`. The test list and CI status are in [docs/TESTING.md](docs/TESTING.md).
 
 ## Project layout
 
