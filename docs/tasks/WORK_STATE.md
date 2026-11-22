@@ -1,3 +1,11 @@
+Last update: 2026-11-22 (T-036 start-up handoff, playlist mode fix). Read `CLAUDE.md` first, then this file.
+
+## Current task (22 Nov 2026)
+
+- Playlist content mode change now waits for a running load (`PlaylistStore.modeChanged`, `SettingsHub.kt`), CHANGELOG under Unreleased. Committed and pushed on `claude/epic-albattani-ses0se`. Not built, not device tested.
+- T-036 start-up speed: analysis and plan only, see `docs/tasks/T-036-startup-handoff.md` (the handoff for the next session). No startup code changed. Measurement first.
+- T-034 (1.4.4 slowness) lives on `claude/confident-heisenberg-ulq8q2`, not on this branch.
+
 Last update: 2026-11-21 (T-034 performance regression of 1.4.4). Read `CLAUDE.md` first, then this file.
 
 ## Current task (21 Nov 2026)
