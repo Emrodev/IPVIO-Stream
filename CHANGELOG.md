@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Live TV multi view: four streams at once in a 2x2 grid (new layout "Four in a grid"). Each tile starts a little after the previous one, the muted tiles use lower picture sizes and bitrates. Many providers allow only one or two connections per login, and weak devices may not decode four streams smoothly. Not device tested yet
 - Search (TV): the Live TV row also finds channels whose running show matches the search (for example a documentary about a team), with the show and a progress bar. New Sport row: sport shows running now or in the next 24 hours, with league, event, time and channel. The hero has no "Watch" button any more: OK on a marked title opens its details. Not device tested yet
 - Phone: new "TV guide" tab on the phone search page. Type a programme title, for example "Formula 1", and see which channel shows it now ("Live now") or next ("Upcoming", next 24 hours). Tapping a result starts that channel on the TV. Uses the TV guide of your playlist: the XMLTV guide and the short guide of Xtream channels (at most 40 channels are fetched per search, so the first search can be partial). Not device tested yet
 - Texts of the new search screen and the VPN import now have English entries, so they no longer show German in other languages. Not device tested yet
