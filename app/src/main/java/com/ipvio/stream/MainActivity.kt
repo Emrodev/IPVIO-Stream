@@ -44,6 +44,8 @@ class MainActivity : ComponentActivity() {
         val pick = Profiles.needsPicker(this)
         if (!pick) AppSettings.init(this)
         General.init(this)
+        // T-047: read the stored playlist while the first screen is built (not with the profile picker: the profile is not chosen yet)
+        if (!pick) Thread({ runCatching { PlaylistStore.preread(applicationContext) } }, "list-preread").start()
         // T-047: parse the dictionary of the UI language off the main thread while the first screen is built (German: nothing to do)
         Thread({ runCatching { Lang.prewarm() } }, "lang-prewarm").start()
         Boomer.init(this)

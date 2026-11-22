@@ -255,7 +255,9 @@ object PlaylistStore {
         }
     }
     private var epgSig = 0L
-    private var inited = false
+    @Volatile private var inited = false
+    private var initing = false   // T-047: set while [ensure] runs, so a call from inside it returns (as before)
+    private val initLock = Any()
     private val loadLock = Mutex()
 
     /**
@@ -334,7 +336,15 @@ object PlaylistStore {
 
     private fun ensure(c: Context) {
         if (inited) return
-        inited = true
+        // T-047: also called by the read-ahead thread; other threads wait until the lists are filled
+        synchronized(initLock) {
+            if (inited || initing) return
+            initing = true
+            try { ensureOnce(c) } finally { inited = true }
+        }
+    }
+
+    private fun ensureOnce(c: Context) {
         cleanupStale(c)
         val p = prefs(c)
         // Prefers the encrypted version; the old plain-text version is adopted and replaced on first start.
@@ -693,6 +703,40 @@ object PlaylistStore {
         } catch (e: OutOfMemoryError) {
             null
         }
+    }
+
+    /** T-047: stored list read ahead on a background thread at the start (result for one address, language selection and file state). */
+    private class Pre(val url: String, val hidden: Set<String>, val stamp: Long, val task: java.util.concurrent.FutureTask<PlaylistCacheIO.Cached?>)
+    @Volatile private var pre: Pre? = null
+
+    private fun stampOf(f: File): Long = f.length() * 31 + f.lastModified()
+
+    /**
+     * Starts reading the stored list of the active playlist while the first screen is built (call from a background thread).
+     * Same conditions as [fromLocal]; if anything differs there, the result is simply not used. Nothing is shown from here.
+     */
+    fun preread(c: Context) {
+        try {
+            val u = savedUrl(c)?.let { PlaylistLogic.normalizeUrl(it) } ?: return
+            if (pending(c)?.autoResume == true) return   // the add screen continues loading instead
+            val hidden = PlaylistMode.withMode(c, u, LangFilter.hidden)
+            val head = readHeader(c, u) ?: return
+            if (head.hidden != hidden || head.counts.isEmpty()) return
+            val f = cacheFile(c, u)
+            val task = java.util.concurrent.FutureTask<PlaylistCacheIO.Cached?> { readCache(c, u, hidden) }
+            pre = Pre(u, hidden, stampOf(f), task)
+            task.run()
+        } catch (e: Throwable) {
+            pre = null
+        }
+    }
+
+    /** The read-ahead result if it still fits (waits if it is still running), otherwise null. Used once. */
+    private fun takePreread(c: Context, u: String, hidden: Set<String>): PlaylistCacheIO.Cached? {
+        val p = pre ?: return null
+        pre = null
+        if (p.url != u || p.hidden != hidden || p.stamp != stampOf(cacheFile(c, u))) return null
+        return try { p.task.get() } catch (e: Exception) { null }
     }
 
     private fun sig(l: List<Item>): Long {
@@ -1427,7 +1471,7 @@ object PlaylistStore {
             val legacyTooBig = head.hidden == null && (hidden - LangTagLogic.PSEUDO).isEmpty() && cacheFile(c, u).length() > budget()
             if (!legacyTooBig && (head.hidden == null || head.hidden == hidden)) {
                 val t0 = android.os.SystemClock.elapsedRealtime()
-                val cached = readCache(c, u, hidden)
+                val cached = takePreread(c, u, hidden) ?: readCache(c, u, hidden)
                 val t1 = android.os.SystemClock.elapsedRealtime()
                 if (cached != null && cached.counts.isNotEmpty()) {
                     PlaylistDiag.log("cache", PlaylistDiag.summary(cached.items) + " hidden=${hidden.sorted()}")
@@ -1478,6 +1522,7 @@ object PlaylistStore {
         try {
             return loadInner(c, url, save, skipNetworkWhenCached, ask, resumed)
         } finally {
+            pre = null   // T-047: an unused read-ahead must not keep the list in memory
             loading = false   // also on cancel: otherwise the loading state (and the screen keep-awake) would stay stuck
             heavy = false
             langAsk = null
