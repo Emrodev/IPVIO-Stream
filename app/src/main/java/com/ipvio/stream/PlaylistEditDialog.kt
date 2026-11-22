@@ -57,7 +57,7 @@ internal fun PlaylistEditDialog(ctx: Context, index: Int, scope: CoroutineScope,
         ) {
             Text(Lang.tr("Playlist bearbeiten"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text(PlaylistStore.hostOf(url), color = Muted, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Column(Modifier.weight(1f, fill = false).heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Field(name, { name = it }, "Name der Playlist")
                 SelectRow("Inhalt der Playlist", PlaylistMode.labels[mode], PlaylistMode.labels, mode, active = mode != PlaylistMode.ALL) { mode = it }
                 if (!isActive && orig.shown) {

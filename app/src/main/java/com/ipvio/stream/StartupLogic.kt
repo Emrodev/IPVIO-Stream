@@ -9,8 +9,8 @@ object StartupLogic {
     const val CATCHUP_DELAY_MS = 5_000L
 
     /**
-     * [shownFromStore] = the stored list is on screen now. [userStarted] = the user added or reloaded the list by hand
-     * (a visible loading screen is expected: no waiting). Only the silent refresh at a start is moved back, so the
+     * [shownFromStore] = the stored list is on screen now. [userStarted] = not the silent refresh at the app start: the user
+     * reloaded, switched or added the list (no waiting). Only the silent refresh at a start is moved back, so the
      * first screens get the CPU and the network connection.
      */
     fun refreshDelayMs(shownFromStore: Boolean, userStarted: Boolean): Long =

@@ -20,6 +20,8 @@ Start path: `MainActivity.onCreate` → `App` → `AppContent` (`remember` inits
 - **Stored list read ahead (second round).** `PlaylistStore.preread` runs on a background thread from `onCreate` (not with the profile picker, not when an interrupted add resumes). It reads the stored list with the same conditions as `fromLocal` (header matches the language selection and content mode). `fromLocal` takes the result once if address, language selection and file state (size, time) still match; if the read is still running it waits for it instead of reading twice; otherwise it reads as before. An unused result is dropped when the load ends. `PlaylistStore.ensure` is now thread safe (it set its flag before the lists were filled; with a second thread the main thread could have seen an empty list and opened the add screen).
 - Diagnostics line "Start: …" now also shows the background parse time.
 
+- Review round (22 Nov 2026): the delay before the refresh applies only to the silent refresh at the app start (`load(..., startup = true)` from `MainActivity`), not to a reload, switch or add by the user. `refreshOthersDue` (T-048b) waits up to 3 minutes while the main list holds the load lock.
+
 ## Risks
 - Playlist freshness: a due refresh starts 4 s later. The list on screen is the stored one either way.
 - While the refresh waits, `PlaylistStore.loading` is already true and the load lock is held (as before while it downloaded). A reload pressed in these 4 s is ignored as it was during a download.

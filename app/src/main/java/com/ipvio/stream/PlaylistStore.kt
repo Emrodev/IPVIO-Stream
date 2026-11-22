@@ -1306,6 +1306,9 @@ object PlaylistStore {
      */
     suspend fun refreshOthersDue(c: Context) {
         ensure(c)
+        // The main list may still be loading (it holds the load lock): wait for it, at most 3 minutes, instead of skipping this round
+        var waited = 0
+        while (loadLock.isLocked && waited < 36) { kotlinx.coroutines.delay(5_000); waited++ }
         val now = System.currentTimeMillis()
         val due = lists.indices.filter { i ->
             i != active && PlaylistRefreshLogic.otherDue(PlaylistRefresh.get(c, lists[i].url), PlaylistRefresh.lastFor(c, lists[i].url), now, General.zone())
@@ -1568,11 +1571,11 @@ object PlaylistStore {
      */
     suspend fun load(
         c: Context, url: String, save: Boolean, skipNetworkWhenCached: Boolean = false,
-        ask: Boolean = true, resumed: Boolean = false
+        ask: Boolean = true, resumed: Boolean = false, startup: Boolean = false
     ): Boolean {
         if (!loadLock.tryLock()) return rawChannels.isNotEmpty()
         try {
-            return loadInner(c, url, save, skipNetworkWhenCached, ask, resumed)
+            return loadInner(c, url, save, skipNetworkWhenCached, ask, resumed, startup)
         } finally {
             pre = null   // T-047: an unused read-ahead must not keep the list in memory
             loading = false   // also on cancel: otherwise the loading state (and the screen keep-awake) would stay stuck
@@ -1585,7 +1588,7 @@ object PlaylistStore {
         }
     }
 
-    private suspend fun loadInner(c: Context, url: String, save: Boolean, skipNetworkWhenCached: Boolean, ask: Boolean, resumed: Boolean): Boolean {
+    private suspend fun loadInner(c: Context, url: String, save: Boolean, skipNetworkWhenCached: Boolean, ask: Boolean, resumed: Boolean, startup: Boolean): Boolean {
         ensure(c)
         val u = PlaylistLogic.normalizeUrl(url) ?: run { error = "Bitte eine gültige Adresse eingeben (beginnt mit http:// oder https://)."; return false }
         // Restore the saved sublist for this playlist so the filter is applied while loading.
@@ -1616,7 +1619,7 @@ object PlaylistStore {
             return true
         }
         // T-047: the stored list is on screen: start the silent refresh a few seconds later, so the first screens are not slowed down
-        val wait = StartupLogic.refreshDelayMs(usedCache, save)
+        val wait = StartupLogic.refreshDelayMs(usedCache, userStarted = !startup)
         if (wait > 0) kotlinx.coroutines.delay(wait)
         error = null
         val before = sig(primaryItems)
