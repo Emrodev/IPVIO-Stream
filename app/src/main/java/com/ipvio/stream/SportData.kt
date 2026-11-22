@@ -63,6 +63,41 @@ object SportData {
         Sport("cricket", "Cricket"), Sport("golf", "Golf")
     )
 
+    /**
+     * T-049c: more competitions (UK tiers and cups, more European and world competitions, WNBA, college basketball, LPGA, DP World Tour).
+     * They use the same ESPN scoreboard as the leagues above. The paths are **unverified** (not tried against the live service here);
+     * a path that does not answer simply shows no games. They start switched off (see [SportLeagues]), so nothing new is queried
+     * until the user switches a league on in Settings > Sports Hub.
+     */
+    private val EXTRA_LEAGUES = listOf(
+        League("Championship", "soccer/eng.2", "Fußball"),
+        League("League One", "soccer/eng.3", "Fußball"),
+        League("League Two", "soccer/eng.4", "Fußball"),
+        League("FA Cup", "soccer/eng.fa", "Fußball"),
+        League("EFL Cup", "soccer/eng.league_cup", "Fußball"),
+        League("Scottish Premiership", "soccer/sco.1", "Fußball"),
+        League("Scottish Championship", "soccer/sco.2", "Fußball"),
+        League("Scottish Cup", "soccer/sco.tennents", "Fußball"),
+        League("Eredivisie", "soccer/ned.1", "Fußball"),
+        League("Primeira Liga", "soccer/por.1", "Fußball"),
+        League("Süper Lig", "soccer/tur.1", "Fußball"),
+        League("Belgian Pro League", "soccer/bel.1", "Fußball"),
+        League("Conference League", "soccer/uefa.europa.conf", "Fußball"),
+        League("DFB-Pokal", "soccer/ger.dfb_pokal", "Fußball"),
+        League("Copa del Rey", "soccer/esp.copa_del_rey", "Fußball"),
+        League("Coppa Italia", "soccer/ita.coppa_italia", "Fußball"),
+        League("Coupe de France", "soccer/fra.coupe_de_france", "Fußball"),
+        League("Nations League", "soccer/uefa.nations", "Fußball"),
+        League("European Championship", "soccer/uefa.euro", "Fußball"),
+        League("World Cup", "soccer/fifa.world", "Fußball"),
+        League("Copa Libertadores", "soccer/conmebol.libertadores", "Fußball"),
+        League("NWSL", "soccer/usa.nwsl", "Fußball"),
+        League("WNBA", "basketball/wnba", "Basketball", "basketball"),
+        League("College Basketball (men)", "basketball/mens-college-basketball", "Basketball", "basketball"),
+        League("LPGA Tour", "golf/lpga", "Golf", "golf", KIND_GOLF),
+        League("DP World Tour", "golf/eur", "Golf", "golf", KIND_GOLF)
+    )
+
     val LEAGUES = listOf(
         League("Bundesliga", "soccer/ger.1", "Fußball"),
         League("2. Bundesliga", "soccer/ger.2", "Fußball"),
@@ -86,7 +121,10 @@ object SportData {
         League("UFC", "mma/ufc", "Kampfsport", "ufc", KIND_FIGHT),
         League("PGA Tour", "golf/pga", "Golf", "golf", KIND_GOLF),
         League("Cricket", "cricket", "Rugby & Cricket", "cricket", KIND_CRICKET)
-    )
+    ) + EXTRA_LEAGUES
+
+    /** Names of the leagues that start switched off. */
+    val EXTRA_NAMES: List<String> get() = EXTRA_LEAGUES.map { it.name }
 
     /** Popular competitions for the overview (shown if active). */
     val POPULAR = listOf("Premier League", "Champions League", "Bundesliga", "LaLiga", "NBA", "NFL", "NHL", "MLB")
@@ -553,6 +591,19 @@ object SportLeagues {
         if (inited) return
         inited = true
         off.addAll((prefs(c).getString("off", "") ?: "").split("|").filter { it.isNotBlank() })
+        // T-049c: the competitions added later start switched off (once); the user switches on what they follow
+        if (prefs(c).getInt("seed", 0) < 1) {
+            SportData.EXTRA_NAMES.forEach { if (it !in off) off.add(it) }
+            prefs(c).edit().putString("off", off.joinToString("|")).putInt("seed", 1).apply()
+        }
+    }
+
+    /** Switch all leagues of one sport on or off at once (Settings > Sports Hub). */
+    fun setSport(c: Context, sport: String, on: Boolean) {
+        init(c)
+        val names = SportData.LEAGUES.filter { it.sport == sport }.map { it.name }
+        if (on) off.removeAll(names.toSet()) else names.forEach { if (it !in off) off.add(it) }
+        prefs(c).edit().putString("off", off.joinToString("|")).apply()
     }
 
     fun on(l: SportData.League) = l.name !in off

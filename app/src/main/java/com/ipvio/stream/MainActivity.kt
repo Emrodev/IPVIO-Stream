@@ -76,6 +76,16 @@ class MainActivity : ComponentActivity() {
         setContent { App(pick) }
     }
 
+    /** T-049a: OK on a sports alert (goal, kick-off) jumps to a channel that shows the game; every other key as usual. */
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val ok = event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == android.view.KeyEvent.KEYCODE_ENTER
+        if (ok && SportAlerts.current?.game != null && SportAlerts.jumpTarget(SportAlerts.current) != null) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) SportAlerts.jump()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     /** Reminder tapped while the app is already running: open the channel. */
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
@@ -273,6 +283,7 @@ private fun AppContent() {
 
     val all = PlaylistStore.channels
     val liveAll = remember(all) { all.filter { it.kind == Kind.LIVE } }
+    SideEffect { SportAlerts.liveChannels = liveAll }
     // Do not fall into the screensaver while downloading and parsing the playlist
     KeepScreenOn("playlist", PlaylistStore.loading)
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)

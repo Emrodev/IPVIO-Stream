@@ -36,7 +36,27 @@ import kotlinx.coroutines.coroutineScope
  * The delay holds notifications back in case you watch the game itself with a delay (IPTV often lags 20–60 s).
  */
 object SportAlerts {
-    class Alert(val title: String, val text: String)
+    /** [game] = the game of a kick-off or score alert; OK then jumps to a channel that shows it (T-049a). */
+    class Alert(val title: String, val text: String, val game: SportData.Game? = null)
+
+    /** Live channels of the playlist, set by the app scaffold (for [jumpTarget]). */
+    @Volatile var liveChannels: List<Item> = emptyList()
+
+    /** The channel that shows the game of the alert on screen, or null (no game, switched off, no matching channel). */
+    fun jumpTarget(a: Alert?): Item? {
+        val g = a?.game ?: return null
+        if (!SportHubPrefs.jumpOnAlert) return null
+        return SportWatch.channels(g, liveChannels).firstOrNull()
+    }
+
+    /** OK pressed while an alert is on screen: open the channel. true = the key was used. */
+    fun jump(): Boolean {
+        val a = current ?: return false
+        val ch = jumpTarget(a) ?: return false
+        current = null
+        AppNav.openChannel = ch.id
+        return true
+    }
 
     var current by mutableStateOf<Alert?>(null)
     var enabled by mutableStateOf(true)
@@ -82,6 +102,7 @@ object SportAlerts {
     fun init(c: Context) {
         if (inited) return
         inited = true
+        SportHubPrefs.init(c)
         enabled = prefs(c).getBoolean("on", true)
         delaySec = prefs(c).getInt("delay", 30).takeIf { it in DELAYS } ?: 30
         miniOn = prefs(c).getBoolean("mini", false)
@@ -140,9 +161,9 @@ object SportAlerts {
                         }
                         if (prev == null) continue
                         if (prev.state == 0 && g.state == 1) {
-                            post(Alert(Lang.tr("Dein Team spielt jetzt"), g.home.short + " – " + g.away.short + "  ·  " + g.league), 0)
+                            post(Alert(Lang.tr("Dein Team spielt jetzt"), g.home.short + " – " + g.away.short + "  ·  " + g.league, g), 0)
                         } else if (g.state == 1 && prev.state == 1 && (prev.h != h || prev.a != a)) {
-                            launch { post(Alert(Lang.tr("Punkte!"), line), delaySec) }
+                            launch { post(Alert(Lang.tr("Punkte!"), line, g), delaySec) }
                         }
                     }
                 } else { last.clear(); live = emptyList() }
@@ -171,6 +192,10 @@ fun SportAlertHost() {
         ) {
             Text(a.title, color = Accent2, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
             Text(raw = true, text = a.text, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            // T-049a: OK jumps to the game when a channel for it is known
+            if (androidx.compose.runtime.remember(a, SportWatch.version) { SportAlerts.jumpTarget(a) } != null) {
+                Text("OK: Zum Spiel", color = Accent2, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
     val games = SportAlerts.live

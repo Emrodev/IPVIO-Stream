@@ -69,6 +69,7 @@ private val CATS = listOf(
     Cat(AIcon.Download, "Listen importieren", "Letterboxd, MyAnimeList, Trakt"),
     Cat(AIcon.Live, "Boomer Mode", "Ganz einfach: große Kacheln zum Auswählen"),
     Cat(AIcon.Sliders, "Startseite anpassen", "Reihen und Widgets wählen und ordnen"),
+    Cat(AIcon.Live, "Sports Hub", "Sportarten, Wettbewerbe, Hinweise, Bereiche"),
     Cat(AIcon.Info, "Über IPVIO Stream", "Version, Quellen, Updates"),
     // Resets every settings tab at once (each tab 0..8 has its own reset for just that tab)
     Cat(AIcon.Warning, "Alles zurücksetzen", "Alle Einstellungen auf Standard"),
@@ -81,7 +82,9 @@ object SettingsNav {
     const val PROFILES = 10
     const val HOME = 17
     /** "Reset all settings" page; the donate page is always the last one (one after this). */
-    const val RESET_ALL = 19
+    const val RESET_ALL = 20
+    /** T-049d: Settings > Sports Hub. */
+    const val SPORT = 18
     var openPage by androidx.compose.runtime.mutableIntStateOf(-1)
 }
 
@@ -157,7 +160,8 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 15 -> ListImportPage(ctx)
                 16 -> BoomerPage(ctx) { page = -1 }
                 SettingsNav.HOME -> HomeLayoutPage(ctx)
-                18 -> AboutPage(ctx)
+                SettingsNav.SPORT -> SportSettingsPage(ctx)
+                19 -> AboutPage(ctx)
                 SettingsNav.RESET_ALL -> ResetAllPage(ctx)
                 SettingsNav.RESET_ALL + 1 -> DonateSection(ctx)
             }
