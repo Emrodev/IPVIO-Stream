@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Settings > Playlists: every playlist row now has only "Reload" and "Edit". "Edit" opens a window with the settings of that playlist (name, content mode, backup servers, Make main list, Delete). Changes count only when you choose "Apply". "Reload" on a playlist that is not the main list now reloads it in the background and does not make it the main list. Not device tested yet
 - Faster start: the texts of the chosen language (English and all other languages except German) are prepared in the background while the first screen is built, and the silent playlist refresh and the catch-up request wait a few seconds after the stored list is shown. The stored playlist is also read in the background during the start. Nothing changes in what you see. Not measured, not device tested yet
 - Stalker portal messages about a portal that does not respond (with the address and MAC check hint) now show in English. For German they are unchanged. Not device tested yet
 - The new English texts of the last changes (search, portal, Live TV and player messages) are translated into Turkish, Bosnian, Croatian, Serbian, Spanish, French, Italian, Dutch, Arabic and Polish. German is unchanged. Not device tested yet

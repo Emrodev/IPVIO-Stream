@@ -1,6 +1,33 @@
 # T-048 – Manage page per playlist, apply step, refresh plan per playlist
 
-Status: **PLAN, waiting for approval** (CLAUDE.md sections 6 and 7: visible change for existing users, new stored keys). No code changed yet.
+Status: **T-048a implemented** (edit window with Apply, Reload of other lists in the background). **T-048b (refresh plan per playlist) not started.** Not built, not device tested.
+
+## Decisions (maintainer, 22 Nov 2026)
+- The buttons on the row (content mode, rename, backup servers, make main list, stop showing additionally, delete) move into a **window** opened with "Edit" on the row. Each playlist has its own window.
+- Order: T-048a first, then T-048b (recommended order, accepted by default).
+- Background refresh of other playlists by their own plan: yes, cache only (T-048b).
+- Reload on a playlist that is not the main list: refresh in the background, do not make it the main list.
+
+## T-048a as built
+- `SettingsHub.kt`: each row shows name, host, counts and two buttons: Reload and Edit. A line "Reloading …" shows while another list reloads.
+- `PlaylistEditDialog.kt` (new): name, content mode, "shown additionally" (only for lists already shown), backup servers (Xtream). They are a draft; **Apply** stores them (rename, backup servers after validation, mode with re-parse from the stored list, stop showing additionally). **Cancel** and Back drop the draft. "Make main list" and "Delete" (with the usual second press) are actions and run at once.
+- `PlaylistManageLogic.kt` (new, pure): which parts of the draft changed. `DictPm.kt` (new): 7 English rows, other languages fall back to English; registered in `Lang.kt`.
+- `PlaylistStore.reloadOtherAsync`: `refreshCacheOnly` for a list that is not the main list; if it is shown next to the main list, its part is rebuilt from the new copy. Does nothing while another load runs.
+- No new stored keys in T-048a.
+
+## T-048a test results
+- Ran (JDK 21, Kotlin 2.0.21 compiler from the Gradle install, JUnit 4.13.2): `PlaylistManageLogicTest` (5), `I18nCoreTest`, `StartupLogicTest`, `DictConsistencyTest`, `DictEn1Test`, `DictEn3Test`: pass. `DictEn2Test` fails (2 tests, "Krimi" vs "Crime") in this setup with and without this change, so not caused by it; not investigated.
+- Not run: Gradle build, `SettingsHub.kt`, `PlaylistEditDialog.kt`, `PlaylistStore.kt` not compiled, no device test.
+
+## T-048a device test steps (maintainer)
+1. Settings > Playlists: every row shows only Reload and Edit.
+2. Edit: change the content mode and rename, press Cancel: nothing changed. Again, press Apply: name and mode changed, the list is rebuilt without a new download.
+3. Edit on a list with backup servers: invalid address then Apply shows the error and stores nothing; valid address stores it.
+4. Edit on the main list: no "Make main list". On another list: "Make main list" switches at once.
+5. Delete asks a second press; deleting the main list loads the next one; deleting the last one opens "Add playlist".
+6. Reload on a list that is not the main list: "Reloading …" shows, the main list stays, counts of that list update afterwards.
+7. Back (remote) in the window drops the draft. The fields and the focus order work with the remote and the on-screen keyboard.
+
 
 ## Request (maintainer, 22 Nov 2026, German, summarised)
 1. Every playlist has its own reload button.

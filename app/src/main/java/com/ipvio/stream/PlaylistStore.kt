@@ -1267,6 +1267,30 @@ object PlaylistStore {
         switchScope.launch { switchTo(app, i, fresh = true) }
     }
 
+    /** Address of the playlist that [reloadOtherAsync] is reloading right now (null = none). */
+    var reloadingOther by mutableStateOf<String?>(null)
+        private set
+
+    /**
+     * "Reload" on a playlist that is not the main list (T-048): downloads it again into its stored copy without making it the
+     * main list. If it is shown next to the main list, that part is rebuilt from the new copy. A running load is not disturbed.
+     */
+    fun reloadOtherAsync(c: Context, i: Int) {
+        val app = c.applicationContext
+        switchScope.launch {
+            ensure(app)
+            if (i !in lists.indices || i == active || reloadingOther != null || loadLock.isLocked) return@launch
+            val u = lists[i].url
+            reloadingOther = u
+            try {
+                val ok = refreshCacheOnly(app, u)
+                if (ok && isShown(i)) { extras.remove(u); applyMulti(app) }
+            } finally {
+                reloadingOther = null
+            }
+        }
+    }
+
     private val switchScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     /** Add a playlist sent from the phone settings (issue 18): loaded and adopted like "Add playlist" on the TV. */

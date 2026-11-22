@@ -1309,12 +1309,8 @@ private fun LivePage(ctx: Context) {
 @Composable
 private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, onFilter: () -> Unit) {
     val scope = rememberCoroutineScope()
+    // Index of the playlist in the edit window (-1 = closed)
     var editing by remember { mutableIntStateOf(-1) }
-    var name by remember { mutableStateOf("") }
-    // Editing the backup servers of an Xtream playlist
-    var editingB by remember { mutableIntStateOf(-1) }
-    var backups by remember { mutableStateOf(backupList(emptyList())) }
-    var backupErr by remember { mutableStateOf<String?>(null) }
     PlaylistStore.savedUrl(ctx)
     if (Secrets.plainFallback) Hint("Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.")
     Text("Meine Playlists (${PlaylistStore.lists.size})", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -1332,63 +1328,20 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
                 PlaylistStore.typeCounts(ctx, pl.url)?.let { t ->
                     Text(PlaylistCountLogic.summary(t, Lang.tr("Live TV"), Lang.tr("Filme"), Lang.tr("Serien")), color = Muted, fontSize = 13.sp, maxLines = 1)
                 }
-                val nb = if (editingB == i) 0 else PlaylistStore.backups(ctx, pl.url).size
+                val nb = PlaylistStore.backups(ctx, pl.url).size
                 if (nb > 0) Text("Backup-Server: $nb", color = Muted, fontSize = 13.sp, maxLines = 1)
                 val down = PlaylistStore.downServers(ctx, pl.url)
                 if (down.isNotEmpty()) Text("Nicht erreichbar: " + down.joinToString(", "), color = Color(0xFFFF8A80), fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-            // "Show as well" can no longer be switched on (1.4.2); playlists already shown can still be switched off
-            if (!isActive && shown) SmallPill("Nicht mehr zusätzlich anzeigen") {
-                PlaylistStore.setShown(ctx, i, false)
-                scope.launch { PlaylistStore.applyMulti(ctx) }
-            }
-            // Same as the playlist switch in Live TV: from the stored copy, without a new download
-            if (!isActive) SmallPill("Zur Hauptliste machen") { PlaylistStore.switchAsync(ctx, i) }
-            // Download this playlist again (the main list is reloaded where it is; another one becomes the main list first)
-            SmallPill("Neu laden", icon = AIcon.Refresh) { if (isActive) reload() else PlaylistStore.reloadAsync(ctx, i) }
-            // Content mode (Wishbox): Live TV + VOD / Live TV only / VOD only, cycles on OK
-            val mode = remember(PlaylistMode.version, pl.url) { PlaylistMode.get(ctx, pl.url) }
-            SmallPill(PlaylistMode.labels[mode]) {
-                PlaylistMode.set(ctx, pl.url, (mode + 1) % PlaylistMode.labels.size)
-                // Parsed again from the stored list without network (the mode is applied while loading, saves memory)
-                scope.launch { if (!PlaylistStore.reapplyLanguages(ctx)) PlaylistStore.applyMode(ctx) }
-            }
-            SmallPill("Umbenennen") { editing = i; name = pl.name }
-            if (XtreamLogic.fromUrl(pl.url) != null) SmallPill("Backup-Server") {
-                val b = PlaylistStore.backups(ctx, pl.url)
-                editingB = i; backups = backupList(b); backupErr = null
-            }
-            SmallPill("Löschen") {
-                val wasActive = isActive
-                editingB = -1
-                PlaylistStore.remove(ctx, i)
-                if (PlaylistStore.lists.isEmpty()) onAdd()
-                else if (wasActive) {
-                    val u = PlaylistStore.lists[PlaylistStore.active].url
-                    scope.launch { PlaylistStore.load(ctx, u, false) }
-                }
-            }
+            // Reload and Edit; everything else is in the edit window (T-048)
+            if (PlaylistStore.reloadingOther == pl.url) Text("Wird neu geladen …", color = Accent2, fontSize = 14.sp)
+            // Download this playlist again (the main list is reloaded where it is; another one is refreshed in the background)
+            SmallPill("Neu laden", icon = AIcon.Refresh) { if (isActive) reload() else PlaylistStore.reloadOtherAsync(ctx, i) }
+            SmallPill("Bearbeiten") { editing = i }
         }
     }
     PlaylistStore.extraError?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 15.sp) }
-    if (editing >= 0) {
-        Field(name, { name = it }, "Name der Playlist")
-        PillButton("Name speichern", light = true) { PlaylistStore.rename(ctx, editing, name); editing = -1 }
-    }
-    if (editingB in PlaylistStore.lists.indices) {
-        XtreamLogic.fromUrl(PlaylistStore.lists[editingB].url)?.base?.let { main ->
-            Text("Hauptserver: $main", color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            HostHealthLine(main)
-        }
-        BackupFields(backups)
-        PillButton("+ Backup-Server") { backups.add("") }
-        Hint(BACKUP_HINT)
-        StatusLine(backupErr, color = Color(0xFFFF8A80), fontSize = 15.sp)
-        PillButton("Backup-Server speichern", light = true) {
-            if (!backupsValid(backups)) backupErr = BACKUP_INVALID
-            else { PlaylistStore.setBackups(ctx, PlaylistStore.lists[editingB].url, backups.toList()); editingB = -1 }
-        }
-    }
+    if (editing in PlaylistStore.lists.indices) PlaylistEditDialog(ctx, editing, scope, onAdd) { editing = -1 }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton("+ Weitere Playlist hinzufügen", light = true) { onAdd() }
         PillButton("Aktive Playlist neu laden", icon = AIcon.Refresh) { reload() }

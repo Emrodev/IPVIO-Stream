@@ -12,6 +12,8 @@ T-038 (done, in the branch commit after `5cdea91`): `/english-check`, report onl
 
 T-047 (faster start, branch `claude/pensive-galileo-i3tza8`): language dictionary parsed in a background thread, thread-safe `Lang` load, silent refresh 4 s and catch-up 5 s after the stored list is shown. Task file `docs/tasks/T-047-first-start-speed.md`. JVM tests ran (18/18). Not built with Gradle, not device tested, nothing measured. Next: maintainer builds, runs the steps in the task file, compares start time.
 
+T-048a (playlist edit window, same branch): row with Reload + Edit, window with Apply/Cancel, Reload of other lists in the background. Task file `docs/tasks/T-048-playlist-manage-page.md`. Next: T-048b, refresh plan per playlist (new keys, worker, backup list). Not built, not device tested.
+
 ## Release state (from git log, 2026-11-22)
 
 - Latest release: **1.4.7** (`versionCode` 13), merged into `main` (PR #144, merge `ef3d17e`) and `dev` (PR #143, merge `09fcc2a`). Release notes: `docs/release-notes/v1.4.7.md`.
