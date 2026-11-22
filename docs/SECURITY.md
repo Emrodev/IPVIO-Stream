@@ -72,3 +72,7 @@ Source: project note `t002_stand.md`.
 ## 8. Planned work
 
 Task status is tracked in `docs/REFACTORING-PROGRESS.md` and `docs/tasks/WORK_STATE.md`.
+
+## VPN and DNS (T-049e, T-049f)
+- VPN: the WireGuard configuration (it contains a private key) is stored encrypted with the Android key store in `ipvio_vpn` and is refused when no key store exists. It is not part of the backup and never shown or logged. No kill switch: if the tunnel drops, traffic continues unprotected (open item). The tunnel library is `com.wireguard.android:tunnel`.
+- Own DNS: plain DNS over UDP sends the names of the visited hosts unencrypted to the chosen server; the https form (DNS over HTTPS) encrypts them. If the server does not answer, the device DNS is used (so the setting cannot lock the app out, but it also does not guarantee the DNS is used). The setting covers the app's OkHttp traffic, not the video stream.

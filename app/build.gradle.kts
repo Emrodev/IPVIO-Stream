@@ -36,8 +36,8 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 13
-        versionName = "1.4.7"
+        versionCode = 14
+        versionName = "1.4.8"
         // Name under the icon; the debug build overrides it (see buildTypes)
         manifestPlaceholders["appLabel"] = "IPVIO Stream"
 
@@ -107,6 +107,9 @@ dependencies {
     implementation("androidx.media3:media3-inspector:1.11.1")
     // Software audio decoder (AC3/E-AC3/DTS ...) for headphones/Bluetooth, see SoftAudio.kt. GPL-3.0 – the reason the app is GPL-3.0.
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
+
+    // T-049e: VPN with WireGuard (official tunnel library, Apache-2.0; runs the Go backend and the VpnService). See AppVpn.kt
+    implementation("com.wireguard.android:tunnel:1.0.20230706")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("io.coil-kt:coil-compose:2.7.0")

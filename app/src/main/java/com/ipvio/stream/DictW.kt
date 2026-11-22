@@ -68,6 +68,7 @@ Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Up
  * add dictionaries there). Called once at app start; loading is additive.
  */
 fun loadWishboxTexts() {
+    // T-047: Lang registers all three blocks at the start (DictNlW last, as here before). Registering the same block again is ignored.
     I18nCore.load(DictW)
     I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNlW)
     I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPlW)

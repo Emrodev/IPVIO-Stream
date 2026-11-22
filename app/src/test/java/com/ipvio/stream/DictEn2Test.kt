@@ -12,8 +12,8 @@ class DictEn2Test {
 
     @Test fun opensubtitles_error() = assertEquals("OpenSubtitles: error 500", en("OpenSubtitles: Fehler 500"))
     @Test fun server_error() = assertEquals("Server error 500", en("Server-Fehler 500"))
-    @Test fun series_genre() = assertEquals("Series · Krimi", en("Serien · Krimi"))
-    @Test fun movies_genre() = assertEquals("Movies · Krimi", en("Filme · Krimi"))
+    @Test fun series_genre() = assertEquals("Series · Crime", en("Serien · Krimi"))
+    @Test fun movies_genre() = assertEquals("Movies · Crime", en("Filme · Krimi"))
     @Test fun loading_channels() = assertEquals("Loading channels (5000) …", en("Sender werden geladen (5000) …"))
     @Test fun loading_categories() = assertEquals("Loading categories (2/9) …", en("Kategorien werden geladen (2/9) …"))
     @Test fun search_movies() = assertEquals("Search „Batman“ · Movies", en("Suche „Batman“ · Filme"))

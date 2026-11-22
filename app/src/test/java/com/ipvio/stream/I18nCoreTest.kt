@@ -66,4 +66,19 @@ class I18nCoreTest {
         I18nCore.load(DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI)
         assertEquals("Parental controls", I18nCore.translate("Jugendschutz", EN))
     }
+    @Test fun prepareParsesTheLanguageAhead() {
+        val nl = I18nCore.CODES.indexOf("nl")
+        I18nCore.load("Vorwärm-Testtext¦Prewarm test text¦¦¦¦¦¦¦¦Voorverwarm testtekst")
+        I18nCore.prepare(nl)
+        I18nCore.prepare(0)       // German: nothing to do
+        I18nCore.prepare(99)      // out of range: ignored
+        assertEquals("Voorverwarm testtekst", I18nCore.translate("Vorwärm-Testtext", nl))
+    }
+    @Test fun prepareOnAnotherThreadGivesTheSameTexts() {
+        val t = Thread { I18nCore.prepare(TR) }
+        t.start()
+        assertEquals("Parental controls", I18nCore.translate("Jugendschutz", EN))
+        t.join()
+        assertEquals(I18nCore.translate("Jugendschutz", TR), I18nCore.translate("Jugendschutz", TR))
+    }
 }

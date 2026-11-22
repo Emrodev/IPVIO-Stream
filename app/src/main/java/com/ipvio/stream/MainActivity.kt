@@ -44,6 +44,11 @@ class MainActivity : ComponentActivity() {
         val pick = Profiles.needsPicker(this)
         if (!pick) AppSettings.init(this)
         General.init(this)
+        AppDns.init(this)   // T-049f: before the first connection
+        // T-047: read the stored playlist while the first screen is built (not with the profile picker: the profile is not chosen yet)
+        if (!pick) Thread({ runCatching { PlaylistStore.preread(applicationContext) } }, "list-preread").start()
+        // T-047: parse the dictionary of the UI language off the main thread while the first screen is built (German: nothing to do)
+        Thread({ runCatching { Lang.prewarm() } }, "lang-prewarm").start()
         Boomer.init(this)
         HomeLayout.init(this); BoomerLayout.init(this)
         SidebarPrefs.init(this)
@@ -70,6 +75,16 @@ class MainActivity : ComponentActivity() {
         ScreenAwake.attach(this)
         intent?.getStringExtra(Reminders.EXTRA_CH)?.let { AppNav.openChannel = it }
         setContent { App(pick) }
+    }
+
+    /** T-049a: OK on a sports alert (goal, kick-off) jumps to a channel that shows the game; every other key as usual. */
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val ok = event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == android.view.KeyEvent.KEYCODE_ENTER
+        if (ok && SportAlerts.current?.game != null && SportAlerts.jumpTarget(SportAlerts.current) != null) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) SportAlerts.jump()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     /** Reminder tapped while the app is already running: open the channel. */
@@ -237,9 +252,13 @@ private fun AppContent() {
         withContext(Dispatchers.IO) { General.cleanupLegacy(ctx) }
         if (resumeAdd) return@LaunchedEffect
         PlaylistStore.savedUrl(ctx)?.let { u ->
-            val skip = !SettingsLogic.refreshDue(General.plan(), General.lastRefresh, System.currentTimeMillis(), General.zone())
-            val ok = PlaylistStore.load(ctx, u, false, skip)
-            if (ok && !skip) General.markRefreshed(ctx)
+            // T-048b: the plan of this playlist (its own, otherwise the general one)
+            val skip = !SettingsLogic.refreshDue(PlaylistRefresh.effective(ctx, u), PlaylistRefresh.lastFor(ctx, u), System.currentTimeMillis(), General.zone())
+            val ok = PlaylistStore.load(ctx, u, false, skip, startup = true)
+            if (ok && !skip) PlaylistRefresh.markFor(ctx, u)
+            // Other playlists with their own plan that is due: in the background, after the first screens
+            delay(20_000)
+            runCatching { PlaylistStore.refreshOthersDue(ctx) }
         }
     }
 
@@ -265,6 +284,7 @@ private fun AppContent() {
 
     val all = PlaylistStore.channels
     val liveAll = remember(all) { all.filter { it.kind == Kind.LIVE } }
+    SideEffect { SportAlerts.liveChannels = liveAll }
     // Do not fall into the screensaver while downloading and parsing the playlist
     KeepScreenOn("playlist", PlaylistStore.loading)
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)
