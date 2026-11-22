@@ -1357,6 +1357,7 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
     Hint("Which languages are loaded, and which groups and categories are hidden, is set on the page Genres & categories.")
     PillButton("Sprachen der Inhalte öffnen", icon = AIcon.Globe) { onFilter() }
     SectionTitle("Automatisch aktualisieren")
+    Hint("Gilt für alle Playlists ohne eigenen Plan. Einen eigenen Plan stellst du bei „Bearbeiten“ einer Playlist ein.")
     val modes = listOf("Bei jedem Start", "Alle paar Stunden", "Täglich", "Wöchentlich", "Nur von Hand")
     SelectRow("Playlist aktualisieren", modes[General.refreshMode], modes, General.refreshMode) { General.setPlan(ctx, mode = it) }
     if (General.refreshMode == 1) {

@@ -1,6 +1,6 @@
 # T-048 – Manage page per playlist, apply step, refresh plan per playlist
 
-Status: **T-048a implemented** (edit window with Apply, Reload of other lists in the background). **T-048b (refresh plan per playlist) not started.** Not built, not device tested.
+Status: **T-048a implemented** (edit window with Apply, Reload of other lists in the background). **T-048b (refresh plan per playlist) implemented.** Not built, not device tested.
 
 ## Decisions (maintainer, 22 Nov 2026)
 - The buttons on the row (content mode, rename, backup servers, make main list, stop showing additionally, delete) move into a **window** opened with "Edit" on the row. Each playlist has its own window.
@@ -75,3 +75,20 @@ Status: **T-048a implemented** (edit window with Apply, Reload of other lists in
 1. Order: build 048a first, then 048b (recommended), or everything at once?
 2. Background refresh of non-main lists according to their own plan (cache only)?
 3. Reload on a non-main list: keep "make main first" or refresh in the background?
+
+## T-048b as built
+- Each playlist has its own refresh plan in the edit window (part of the draft, stored with Apply): General setting (default), At every start, Every few hours, Daily, Weekly, By hand only. Without an own plan nothing changes: the general plan and the general "last updated" apply, as before.
+- New SharedPreferences file `ipvio_plrefresh` (keys `p_<hash>` plan, `t_<hash>` last refresh; hash of the normalised address like `ipvio_plmode`). Not profile-scoped and **not added to the backup `NAMES`** (the list is profile-scoped, and `ipvio_plmode` is outside it too; whether both belong in the backup stays an open decision, see `docs/TECH-DEBT.md` row 4). Removed with the playlist.
+- `PlaylistRefreshLogic.kt` (pure) and `PlaylistRefresh.kt` (storage). `MainActivity`: the main list is refreshed by its own plan; 20 s after the start, other lists with an own plan that is due are refreshed in the background. `UpdateWorker`: main list by its own plan, then `PlaylistStore.refreshOthersDue` (cache only, one list at a time, not while playing). `Updater.apply` keeps the hourly job when any list has an own plan of 1 to 3.
+- A list that is not the main list is refreshed only if it has an own plan; "By hand only" never. "At every start" for another list means: at each app start (20 s later).
+- The settings page "Automatically update" now says that it is the default for lists without their own plan.
+- JVM tests ran: `PlaylistRefreshLogicTest` (8), `PlaylistManageLogicTest` (6), `I18nCoreTest`, `StartupLogicTest`, `DictConsistencyTest`: 37/37. Not run: Gradle build; `PlaylistStore.kt`, `Updater.kt`, `MainActivity.kt`, `PlaylistEditDialog.kt`, `SettingsHub.kt` not compiled; no device test.
+
+## T-048b device test steps (maintainer)
+1. Edit a playlist > "Update playlist": the choices show; "General setting" shows the hint. Pick Daily with an hour and minute a few minutes ahead, Apply, close the app. Settings shows "Last updated" and "Next update" for that list.
+2. On a list that is not the main list: Daily, "never updated": 20 s after the next start, "Reloading …" shows and its counts update.
+3. A list with "By hand only" is never touched, also not by the background job (check with the hourly job after a few hours or `adb shell cmd jobscheduler run`).
+4. Main list with an own plan "Weekly" while the general plan is "Daily": it refreshes only weekly.
+5. Delete a playlist and add it again: its plan is gone (General setting).
+6. The general setting still works for lists without an own plan (daily refresh of the main list as before).
+7. While a film plays, no background refresh starts.

@@ -9,4 +9,7 @@ Inhalt der Playlist¦Playlist content
 Wird neu geladen …¦Reloading …
 Zusätzlich angezeigt¦Shown additionally
 Einstellungen dieser Playlist¦Settings of this playlist
+Gilt für alle Playlists ohne eigenen Plan. Einen eigenen Plan stellst du bei „Bearbeiten“ einer Playlist ein.¦Applies to all playlists without their own plan. Set an own plan with "Edit" on a playlist.
+Allgemeine Einstellung¦General setting
+Diese Playlist folgt der allgemeinen Einstellung unter „Automatisch aktualisieren“. Eine Playlist, die nicht die Hauptliste ist, wird dann nicht automatisch aktualisiert.¦This playlist follows the general setting under "Update automatically". A playlist that is not the main list is then not updated automatically.
 """

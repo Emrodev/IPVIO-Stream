@@ -589,6 +589,7 @@ object PlaylistStore {
         ensure(c)
         if (i !in lists.indices) return
         deleteFiles(c, lists[i].url)
+        PlaylistRefresh.clear(c, lists[i].url)
         prefs(c).edit().remove(backupKey(lists[i].url)).apply()
         if (adding == lists[i].url) adding = null
         extras.remove(lists[i].url)
@@ -1267,29 +1268,56 @@ object PlaylistStore {
         switchScope.launch { switchTo(app, i, fresh = true) }
     }
 
-    /** Address of the playlist that [reloadOtherAsync] is reloading right now (null = none). */
+    /** Address of the playlist that [refreshOtherNow] is reloading right now (null = none). */
     var reloadingOther by mutableStateOf<String?>(null)
         private set
 
-    /**
-     * "Reload" on a playlist that is not the main list (T-048): downloads it again into its stored copy without making it the
-     * main list. If it is shown next to the main list, that part is rebuilt from the new copy. A running load is not disturbed.
-     */
+    /** "Reload" on a playlist that is not the main list (T-048): see [refreshOtherNow]. */
     fun reloadOtherAsync(c: Context, i: Int) {
         val app = c.applicationContext
-        switchScope.launch {
-            ensure(app)
-            if (i !in lists.indices || i == active || reloadingOther != null || loadLock.isLocked) return@launch
-            val u = lists[i].url
-            reloadingOther = u
-            try {
-                val ok = refreshCacheOnly(app, u)
-                if (ok && isShown(i)) { extras.remove(u); applyMulti(app) }
-            } finally {
-                reloadingOther = null
+        switchScope.launch { refreshOtherNow(app, i) }
+    }
+
+    /**
+     * Downloads a playlist that is not the main list again into its stored copy, without making it the main list. If it is
+     * shown next to the main list, that part is rebuilt from the new copy. A list with its own refresh plan notes the time.
+     * false = nothing done (a load runs, wrong list) or the download failed.
+     */
+    suspend fun refreshOtherNow(c: Context, i: Int): Boolean {
+        ensure(c)
+        if (i !in lists.indices || i == active || reloadingOther != null || loadLock.isLocked) return false
+        val u = lists[i].url
+        reloadingOther = u
+        try {
+            val ok = refreshCacheOnly(c, u)
+            if (ok) {
+                if (PlaylistRefreshLogic.hasOwnPlan(PlaylistRefresh.get(c, u))) PlaylistRefresh.markFor(c, u)
+                if (isShown(i)) { extras.remove(u); applyMulti(c) }
             }
+            return ok
+        } finally {
+            reloadingOther = null
         }
     }
+
+    /**
+     * Refreshes the lists that are not the main list and whose own plan is due (T-048b); one after the other, not while
+     * something is playing. Called by the background job and some seconds after the start.
+     */
+    suspend fun refreshOthersDue(c: Context) {
+        ensure(c)
+        val now = System.currentTimeMillis()
+        val due = lists.indices.filter { i ->
+            i != active && PlaylistRefreshLogic.otherDue(PlaylistRefresh.get(c, lists[i].url), PlaylistRefresh.lastFor(c, lists[i].url), now, General.zone())
+        }
+        for (i in due) {
+            if (AppNav.playing) return
+            refreshOtherNow(c, i)
+        }
+    }
+
+    /** Addresses of all playlists (for the background job). */
+    fun allUrls(c: Context): List<String> { ensure(c); return lists.map { it.url } }
 
     private val switchScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 

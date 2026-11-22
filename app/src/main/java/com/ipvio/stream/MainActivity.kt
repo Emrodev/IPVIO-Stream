@@ -241,9 +241,13 @@ private fun AppContent() {
         withContext(Dispatchers.IO) { General.cleanupLegacy(ctx) }
         if (resumeAdd) return@LaunchedEffect
         PlaylistStore.savedUrl(ctx)?.let { u ->
-            val skip = !SettingsLogic.refreshDue(General.plan(), General.lastRefresh, System.currentTimeMillis(), General.zone())
+            // T-048b: the plan of this playlist (its own, otherwise the general one)
+            val skip = !SettingsLogic.refreshDue(PlaylistRefresh.effective(ctx, u), PlaylistRefresh.lastFor(ctx, u), System.currentTimeMillis(), General.zone())
             val ok = PlaylistStore.load(ctx, u, false, skip)
-            if (ok && !skip) General.markRefreshed(ctx)
+            if (ok && !skip) PlaylistRefresh.markFor(ctx, u)
+            // Other playlists with their own plan that is due: in the background, after the first screens
+            delay(20_000)
+            runCatching { PlaylistStore.refreshOthersDue(ctx) }
         }
     }
 

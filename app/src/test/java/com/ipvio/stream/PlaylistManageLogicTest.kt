@@ -24,4 +24,8 @@ class PlaylistManageLogicTest {
         assertTrue(PlaylistManageLogic.changes(base, base.copy(backups = listOf("http://a.tv:80", "http://b.tv:80"))).backups)
         assertEquals(true, PlaylistManageLogic.changes(base, base.copy(backups = emptyList())).any)
     }
+    @Test fun refreshPlanChangeIsDetected() {
+        assertFalse(PlaylistManageLogic.changes(base, base.copy()).refresh)
+        assertTrue(PlaylistManageLogic.changes(base, base.copy(refresh = PlaylistRefreshLogic.Spec(2))).refresh)
+    }
 }
