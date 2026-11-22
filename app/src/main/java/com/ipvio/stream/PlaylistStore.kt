@@ -1588,7 +1588,7 @@ object PlaylistStore {
         }
     }
 
-    private suspend fun loadInner(c: Context, url: String, save: Boolean, skipNetworkWhenCached: Boolean, ask: Boolean, resumed: Boolean, startup: Boolean): Boolean {
+    private suspend fun loadInner(c: Context, url: String, save: Boolean, skipNetworkWhenCached: Boolean, ask: Boolean, resumed: Boolean, startup: Boolean = false): Boolean {
         ensure(c)
         val u = PlaylistLogic.normalizeUrl(url) ?: run { error = "Bitte eine gültige Adresse eingeben (beginnt mit http:// oder https://)."; return false }
         // Restore the saved sublist for this playlist so the filter is applied while loading.
