@@ -14,6 +14,9 @@ object ProgSearchLogic {
     /** Most results sent to the phone per request. */
     const val LIMIT = 50
 
+    /** Xtream channels without guide in the playlist: at most this many short guides are fetched per request (time limit of the phone request). */
+    const val XTREAM_FETCH_PER_REQUEST = 40
+
     /** Upcoming = starts after now and within this many seconds. */
     const val UPCOMING_SPAN_SEC = 24L * 3600L
 
