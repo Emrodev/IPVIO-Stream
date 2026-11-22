@@ -21,7 +21,7 @@ def _sources():
     if not os.environ.get('DICT_W_OFF'):
         # DictW main block only: the Polish block DictPlW is a separate string in the same file
         srcs.append(open(base+'DictW.kt',encoding='utf-8').read().split('"""')[1].splitlines())
-    for f in sorted(glob.glob(base+'Dict[A-P].kt'))+sorted(glob.glob(base+'DictEn*.kt')):
+    for f in sorted(glob.glob(base+'Dict[A-P].kt'))+sorted(glob.glob(base+'DictEn[0-9].kt')):
         srcs.append(open(f,encoding='utf-8').read().splitlines())
     return srcs
 for lines in _sources():          # same order as I18nCore.load
