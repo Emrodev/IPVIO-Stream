@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Person page: new layout. Profile column (photo, name, facts, biography) and tabs on the right: Overview, Filmography (grid of the titles in your playlist, all / movies / series, newest first), Awards, Media, Similar. The last three say that the app has no data yet. Not device tested yet
 - The Downloads entry in the sidebar appears only when at least one download exists. Downloads tab: "Play" for finished downloads (plays from the device, also offline). Not device tested yet
 - New sidebar tab "Downloads": all downloads with status and the queue actions (pause, resume, retry, delete). It is shown by default; existing menu orders get it automatically. Not device tested yet
 - Downloads: queue actions per download in Settings > Storage > Downloads (pause, resume, retry after a failure, delete). Series: "Download season" queues every episode of the shown season. Not device tested yet

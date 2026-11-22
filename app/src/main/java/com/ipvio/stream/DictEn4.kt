@@ -49,4 +49,12 @@ Pausiert¦Paused
 Wartet¦Waiting
 Staffel laden¦Download season
 Downloads¦Downloads
+Filmografie¦Filmography
+Auszeichnungen¦Awards
+Medien¦Media
+Ähnlich¦Similar
+Geburtsort¦Birthplace
+Biografie¦Biography
+Dafür gibt es noch keine Daten.¦There is no data for this yet.
+Keine Titel für diesen Filter.¦No titles for this filter.
 """
