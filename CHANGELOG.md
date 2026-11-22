@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- The Downloads entry in the sidebar appears only when at least one download exists. Downloads tab: "Play" for finished downloads (plays from the device, also offline). Not device tested yet
 - New sidebar tab "Downloads": all downloads with status and the queue actions (pause, resume, retry, delete). It is shown by default; existing menu orders get it automatically. Not device tested yet
 - Downloads: queue actions per download in Settings > Storage > Downloads (pause, resume, retry after a failure, delete). Series: "Download season" queues every episode of the shown season. Not device tested yet
 - Downloads: series episodes (menu key on an episode starts its download in the best quality; the episode shows "Downloaded" or the progress), DASH (.mpd) streams, a separate download folder per profile, automatic deletion of downloads not used for 14, 30 or 90 days (off by default). Not device tested yet

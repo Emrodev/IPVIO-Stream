@@ -137,7 +137,7 @@ fun DownloadsSettings(ctx: Context) {
 
 /** The list of all downloads with queue actions (used by the settings page and by the Downloads tab). */
 @Composable
-fun DownloadList(ctx: Context) {
+fun DownloadList(ctx: Context, onPlay: ((DownloadStore.Entry) -> Unit)? = null) {
     // Reading the progress map makes the list update while a download runs
     val rows = run { DownloadStore.progress.size; DownloadStore.entries(ctx) }
     if (rows.isEmpty()) {
@@ -160,6 +160,7 @@ fun DownloadList(ctx: Context) {
                 Text(status + "  ·  " + SettingsLogic.fmtBytes(r.bytes), color = Muted, fontSize = 13.sp)
             }
             // Queue actions: pause or continue, retry after a failure, delete
+            if (r.state == dl.STATE_COMPLETED && onPlay != null) PillButton("Abspielen", light = true) { onPlay(r) }
             if (r.state == dl.STATE_STOPPED) PillButton("Fortsetzen", light = true) { DownloadStore.resume(ctx, r.id) }
             else if (r.state == dl.STATE_DOWNLOADING || r.state == dl.STATE_QUEUED) PillButton("Pausieren", light = true) { DownloadStore.pause(ctx, r.id) }
             if (r.state == dl.STATE_FAILED) PillButton("Wiederholen", light = true) { DownloadStore.retry(ctx, r.id) }
@@ -190,7 +191,7 @@ fun startEpisodeDownload(c: Context, item: Item, ep: Episode, url: String) {
 
 /** Downloads tab in the sidebar (T-052a): the list with queue actions, with the sidebar beside it. */
 @Composable
-fun DownloadsTab(tab: Int, onTab: (Int) -> Unit) {
+fun DownloadsTab(tab: Int, onTab: (Int) -> Unit, onPlay: (DownloadStore.Entry) -> Unit) {
     val ctx = LocalContext.current
     val sideFocus = remember { FocusRequester() }
     Box(Modifier.fillMaxSize().sidebarPad()) {
@@ -199,7 +200,7 @@ fun DownloadsTab(tab: Int, onTab: (Int) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text("Downloads", color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold)
-            DownloadList(ctx)
+            DownloadList(ctx, onPlay)
         }
         Sidebar(tab, onTab, Modifier.align(SidebarPrefs.align()), sideFocus) { }
     }

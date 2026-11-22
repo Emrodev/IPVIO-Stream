@@ -115,3 +115,8 @@ Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (Ult
 - Menu id 11 (`MenuLogic.DOWNLOADS`), label "Downloads", icon drawn in `Sidebar.kt`, page `DownloadsTab` in `DownloadUi.kt`, routing in `MainActivity.kt`.
 - The list is shared by the settings page and the tab (`DownloadList`).
 - Open: playing a download from the tab (the tab only manages), the sidebar order for users who already changed it.
+
+## Sidebar tab: visibility and playback
+- The Downloads entry is shown only while `DownloadStore.hasAny` is true (at least one download in the manager).
+- Finished downloads have a "Play" button in the tab; it starts the playback with the download address, so the cache serves it.
+- Open: the sidebar hides the entry while the tab is open and the last download is removed (the page stays until the next visit).

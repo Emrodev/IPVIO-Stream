@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -197,7 +198,9 @@ fun Sidebar(tab: Int, onTab: (Int) -> Unit, modifier: Modifier, activeFocus: Foc
     val expanded = (focusIn && !ViewLive.active) || SidebarPrefs.labels
     val fm = LocalFocusManager.current
     val scope = rememberCoroutineScope()
-    val visible = AppSettings.menuOrder.filter { it !in AppSettings.menuHidden }
+    val ctx = LocalContext.current
+    // T-052a: the Downloads entry is shown only when at least one download exists
+    val visible = AppSettings.menuOrder.filter { it !in AppSettings.menuHidden && (it != MenuLogic.DOWNLOADS || DownloadStore.hasAny(ctx)) }
     val activeVisible = tab in visible
     // Entry that receives the "active" focus requester: the active tab, or the first entry when the active tab is hidden
     // (Search is hidden by default); without it Back from the search results had no sidebar item to go to (T-013)

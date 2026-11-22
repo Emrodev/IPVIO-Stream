@@ -162,11 +162,11 @@ object DownloadStore {
     }
 
     /** One row of the download list: id, title, Media3 state, bytes on the storage. */
-    class Entry(val id: String, val title: String, val state: Int, val bytes: Long)
+    class Entry(val id: String, val title: String, val state: Int, val bytes: Long, val url: String)
 
     /** All downloads (finished, running, failed), for the download list. */
     fun entries(c: Context): List<Entry> = manager(c).currentDownloads.map { d ->
-        Entry(d.request.id, runCatching { String(d.request.data ?: ByteArray(0), Charsets.UTF_8) }.getOrDefault(d.request.id), d.state, d.bytesDownloaded)
+        Entry(d.request.id, runCatching { String(d.request.data ?: ByteArray(0), Charsets.UTF_8) }.getOrDefault(d.request.id), d.state, d.bytesDownloaded, d.request.uri.toString())
     }
 
     /** Stop reason used for a paused download (any value other than "none" keeps it stopped). */
@@ -187,6 +187,12 @@ object DownloadStore {
         Handler(Looper.getMainLooper()).postDelayed({
             DownloadService.sendAddDownload(c, VodDownloadService::class.java, request, true)
         }, 500L)
+    }
+
+    /** True when at least one download exists (the sidebar tab is shown only then). */
+    fun hasAny(c: Context): Boolean {
+        manager(c)
+        return progress.isNotEmpty()
     }
 
     /** Removes a download by id and its file (and its use record). */

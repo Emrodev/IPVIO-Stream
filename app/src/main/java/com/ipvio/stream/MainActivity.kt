@@ -523,7 +523,8 @@ private fun AppContent() {
                 onBrowse = { browse = BrowseState(it) },
                 onTab = { goTab(it) }
             ) }
-            tab == MenuLogic.DOWNLOADS -> Box(Modifier.fillMaxSize().screenEnter(tab)) { DownloadsTab(tab = tab, onTab = { goTab(it) }) }
+            tab == MenuLogic.DOWNLOADS -> Box(Modifier.fillMaxSize().screenEnter(tab)) { DownloadsTab(tab = tab, onTab = { goTab(it) },
+                onPlay = { e -> start(Item(e.id, Kind.MOVIE, e.title, null, e.url, null, "Downloads"), e.title, e.url, 0L) }) }
             else -> Box(Modifier.fillMaxSize().screenEnter(tab)) { HomeScreen(
                 tab = tab, onTab = { goTab(it) }, states = states,
                 onOpen = open,
