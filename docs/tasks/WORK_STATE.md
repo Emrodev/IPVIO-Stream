@@ -1,5 +1,7 @@
 Last update: 2026-11-22 (T-047, faster start). Read `CLAUDE.md` first, then this file.
 
+**Latest session (22 Nov 2026): read `docs/tasks/HANDOFF-2026-11-22.md` first.** Branch `claude/exciting-cori-6wbewl` holds all of it; nothing is built or device tested yet.
+
 The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not add new entries there.
 
 ## Current task
