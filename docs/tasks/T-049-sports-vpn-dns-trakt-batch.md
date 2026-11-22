@@ -78,3 +78,8 @@ See the questions asked in the chat (22 Nov 2026).
 - **Unverified:** the library version (`1.0.20230706`) and its API are from memory and not built here; the system VPN consent dialog with a remote control and the VpnService on Fire OS; extra APK size (native Go library per ABI); whether `minSdk 24` needs core library desugaring. The CI build is the first check.
 - **Tests:** `VpnLogicTest` (5) passed on the JVM. Not run: Gradle build, device.
 - **Device test steps:** 1. Settings > General > VPN: choose a `.conf` from a provider (USB stick or the file picker). Wrong file: a clear message. 2. Connect: the system asks once for permission; "VPN connected"; check the public IP in a browser app or a "what is my IP" site. 3. Play a live channel: it plays through the VPN. 4. Disconnect: IP back to normal. 5. Delete the configuration. 6. A release build starts (R8 keep rule).
+
+## Open
+- **T-049g Trakt (mark watched VOD): open, postponed by the maintainer (22 Nov 2026).** Needs a registered Trakt API app (client ID and secret) and the plan of `T-031`.
+- VPN: no kill switch, no start with the device, no per-app routing.
+- Sports: the ESPN paths of the 26 new competitions are unverified; a possible filter for the channel list of a game (T-049b).

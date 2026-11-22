@@ -16,6 +16,8 @@ T-048a (playlist edit window, same branch): row with Reload + Edit, window with 
 
 T-049 (sports alert jump, Sports Hub settings page, 26 more competitions off by default, own DNS) is in the same branch, see `docs/tasks/T-049-sports-vpn-dns-trakt-batch.md`. VPN and Trakt are not started. JVM tests 67/67, not built, not device tested.
 
+Release 1.4.8 (versionCode 14) prepared on 22 Nov 2026 at the maintainer's request ("GO"): version bump, CHANGELOG section, `docs/release-notes/v1.4.8.md`, in-app What's new. **Open: Trakt** (T-049g, needs the maintainer's Trakt API app: client ID and secret; plan T-031). Not device tested.
+
 ## Release state (from git log, 2026-11-22)
 
 - Latest release: **1.4.7** (`versionCode` 13), merged into `main` (PR #144, merge `ef3d17e`) and `dev` (PR #143, merge `09fcc2a`). Release notes: `docs/release-notes/v1.4.7.md`.

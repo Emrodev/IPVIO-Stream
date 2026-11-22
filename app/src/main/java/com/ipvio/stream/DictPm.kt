@@ -61,4 +61,13 @@ Der PrivateKey fehlt in der Konfiguration.¦The PrivateKey is missing in the con
 Der Endpoint (Server) fehlt in der Konfiguration.¦The Endpoint (server) is missing in the configuration.
 Die WireGuard-Konfiguration ist ungültig.¦The WireGuard configuration is invalid.
 Dieses Gerät hat keinen sicheren Schlüsselspeicher. Die Konfiguration wird nicht gespeichert.¦This device has no secure key store. The configuration is not stored.
+Neu: VPN mit WireGuard (Einstellungen > Allgemein). Datei deines VPN-Anbieters auswählen, verbinden, fertig – auch der Videostream läuft durch das VPN¦New: VPN with WireGuard (Settings > General). Choose the file of your VPN provider and connect – the video stream goes through the VPN too
+Neu: eigener DNS-Server (Einstellungen > Allgemein): Cloudflare, Google, Quad9 oder eine eigene Adresse¦New: own DNS server (Settings > General): Cloudflare, Google, Quad9 or your own address
+Neu: Einstellungen > Sports Hub – wähle deine Sportarten und Wettbewerbe, die Hinweise und die Bereiche des Sports Hub¦New: Settings > Sports Hub – choose your sports and competitions, the alerts and the tabs of the Sports Hub
+Sport: bei einem Tor- oder Anstoß-Hinweis springt OK direkt zu einem Sender mit dem Spiel¦Sports: on a goal or kick-off popup, OK jumps straight to a channel that shows the game
+26 weitere Wettbewerbe: englische Ligen und Pokale, Schottland, Niederlande, EM, WM und mehr (zunächst aus)¦26 more competitions: English leagues and cups, Scotland, the Netherlands, Euro, World Cup and more (off at first)
+Playlists: pro Playlist ein Fenster „Bearbeiten“ mit „Übernehmen“, und ein eigener Aktualisierungsplan für jede Playlist¦Playlists: an "Edit" window for every playlist with "Apply", and its own update plan for every playlist
+Playlists: „Neu laden“ bei einer Nebenliste lädt im Hintergrund und macht sie nicht mehr zur Hauptliste¦Playlists: "Reload" on a playlist that is not the main list loads in the background and no longer makes it the main list
+Schnellerer Start der App¦Faster app start
+Das VPN und die neuen Sport-Wettbewerbe sind noch nicht auf allen Geräten getestet¦The VPN and the new sports competitions have not been tested on all devices yet
 """

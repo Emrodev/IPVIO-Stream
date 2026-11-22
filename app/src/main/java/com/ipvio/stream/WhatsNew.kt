@@ -72,6 +72,17 @@ object WhatsNew {
     const val BUG_FIXES = "## Bug fixes (hopefully lol)"
 
     val NOTES: Map<String, List<String>> = mapOf(
+        "1.4.8" to listOf(
+            "Neu: VPN mit WireGuard (Einstellungen > Allgemein). Datei deines VPN-Anbieters auswählen, verbinden, fertig – auch der Videostream läuft durch das VPN",
+            "Neu: eigener DNS-Server (Einstellungen > Allgemein): Cloudflare, Google, Quad9 oder eine eigene Adresse",
+            "Neu: Einstellungen > Sports Hub – wähle deine Sportarten und Wettbewerbe, die Hinweise und die Bereiche des Sports Hub",
+            "Sport: bei einem Tor- oder Anstoß-Hinweis springt OK direkt zu einem Sender mit dem Spiel",
+            "26 weitere Wettbewerbe: englische Ligen und Pokale, Schottland, Niederlande, EM, WM und mehr (zunächst aus)",
+            "Playlists: pro Playlist ein Fenster „Bearbeiten“ mit „Übernehmen“, und ein eigener Aktualisierungsplan für jede Playlist",
+            "Playlists: „Neu laden“ bei einer Nebenliste lädt im Hintergrund und macht sie nicht mehr zur Hauptliste",
+            "Schnellerer Start der App",
+            "Das VPN und die neuen Sport-Wettbewerbe sind noch nicht auf allen Geräten getestet"
+        ),
         "1.4.3" to listOf(
             "Handy: neue Einstellungen über das Zahnrad oben – Playlists, Kategorien sortieren und ausblenden, Jugendschutz, Sprache",
             "Handy: neuer Reiter „Sport“ mit den Spielen von heute, deinen Lieblingsteams und „Meine Liste“; Spiele direkt am Fernseher starten",
