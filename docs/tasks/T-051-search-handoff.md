@@ -94,4 +94,15 @@ Text is written in English. The German labels of the maintainer's sketch are rep
 
 ## Status of the parts
 - T-051a: not started. Waiting for the answers to open questions 1–3.
-- T-051b: not started. Waiting for the screenshot and the maintainer's approval of the plan.
+- T-051b: **layout implemented** from the maintainer's three screenshots (22 Nov 2026), in `SearchScreen.kt`. Not built with Gradle, not device tested. Details below.
+
+### T-051b implementation notes
+- Left column 600 dp: heading, field with clear button, hit count, fixed area (suggestions or last searches, 250 dp), keyboard at the bottom. The old filter chip row is replaced by the category tiles.
+- Right side: hero of the focused hit (or best match), buttons "Ansehen", "Details", "Merkliste" (toggles the watchlist), 5 category tiles, then the result rows.
+- Tile order: All · Series · Live TV · Sport · Movies. Tile counts: All = movies + series + live; Sport is a part of Live TV (it is counted in both, as in the code before).
+- Row order: the category of the best match first. Empty selected category: notice with the other categories that have hits and "Show all hits".
+- Suggestions are titles of the current hits (up to 3); the typed part is bold. Word suggestions from the earlier code stay as chips below them.
+- Focus: keyboard → right → first tile; tiles → up → "Ansehen", tiles → down → first result card.
+- Not done from the sketch: the magnifier icon (no search icon in the icon set `AppIcons.kt`), the "Best match" label next to the badge, the card subtitles for Sport ("league + event") and the Live TV progress bar check. The "Backdrop" label in the sketch is an annotation and is not shown.
+- "Ansehen" and "Details" both open the detail page, as a card click does today. Whether "Ansehen" should start playback is **open**.
+- New German UI keys need entries in the dictionaries (open): "Suche", "Vorschläge", "Letzte Suchen", "Alle Treffer zeigen", "Auf der Merkliste", "Merkliste", "Ansehen", "Details", the "Keine … zu" and "Treffer gibt es in" notices, the hit count line.

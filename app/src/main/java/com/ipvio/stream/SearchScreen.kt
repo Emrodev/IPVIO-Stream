@@ -29,8 +29,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -60,7 +58,11 @@ internal object SearchCache {
     @Synchronized fun suggest(all: List<Item>): WordSuggest = sug?.takeIf { it.first === all }?.second ?: WordSuggest(all).also { sug = all to it }
 }
 
-/** Search (tab 4): "Recently watched" separated into movies, series and Live TV. */
+/**
+ * Search (tab 4). T-051b layout (from the maintainer's sketch, 1920x1080): navigation on the left, a fixed search column
+ * (heading, field, hit count, suggestions or last searches, on-screen keyboard), and on the right the hero of the focused hit,
+ * the category tiles and the result rows. Search logic, index and filters are unchanged; only the arrangement is new.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
@@ -107,6 +109,8 @@ fun SearchScreen(
     val firstRes = remember { FocusRequester() }
     val firstHistory = remember { FocusRequester() }
     val sideFocus = remember { FocusRequester() }
+    val tilesFirst = remember { FocusRequester() }
+    val heroFirst = remember { FocusRequester() }
     var inSidebar by remember { mutableStateOf(false) }
 
     SideEffect { NavState.tab = tab; ContentFocus.tab = tab }
@@ -150,8 +154,8 @@ fun SearchScreen(
     val fl = SearchState.filter
     // Word suggestions for the word being typed
     val sugg = remember(SearchState.query, suggestIdx) { suggestIdx?.suggest(WordSuggest.lastWord(SearchState.query)).orEmpty() }
-    // Sports hub filter: live channels that look like sports channels (the hub itself opens with the button)
-    val rlSport = remember(rl0, fl == 4) { if (fl == 4) rl0.filter { SearchSport.isSport(it) } else emptyList() }
+    // Sports filter: live channels that look like sports channels (the hub itself opens with the button). Counted for the tile too.
+    val rlSport = remember(rl0) { rl0.filter { SearchSport.isSport(it) } }
     val rl = when (fl) { 0, 3 -> rl0; 4 -> rlSport; else -> emptyList() }
     val rs = if (fl == 0 || fl == 2) rs0 else emptyList()
     // The same movie in several versions only once (the source is chosen on the detail page)
@@ -165,84 +169,116 @@ fun SearchScreen(
         if (!toInput) runCatching { sideFocus.requestFocus() }
     }
 
-    // Window positions of the search row and of its input field: the results column starts at the field's top edge
-    var rowY by remember { mutableStateOf(0f) }
-    var fieldY by remember { mutableStateOf(0f) }
+    // Hero: the focused hit, or the first hit (the best match) when nothing is focused
+    val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: hist.firstOrNull())
+    // Category tiles: the counts are derived from the hits (sport is a part of the live channels)
+    val tileCounts = listOf(
+        Triple(0, AIcon.Grid, rm0.size + rs0.size + rl0.size),
+        Triple(2, AIcon.Layers, rs0.size),
+        Triple(3, AIcon.Live, rl0.size),
+        Triple(4, AIcon.Pulse, rlSport.size),
+        Triple(1, AIcon.Categories, rm0.size)
+    )
+    // Result rows: the category of the best match comes first
+    val bestKey = when (preview?.kind) { Kind.SERIES -> "rs"; Kind.LIVE -> "rl"; else -> "rm" }
+    val rowOrder = listOf(bestKey) + listOf("rm", "rs", "rl").filter { it != bestKey }
+    // Suggestions: titles of the hits that match the typed text
+    val suggItems = remember(rm0, rs0, rl0, q, searching) {
+        if (q.length < 2 || searching) emptyList() else (rm0 + rs0 + rl0).distinctBy { it.title }.take(3)
+    }
+
     Box(Modifier.fillMaxSize()) {
         // Cinema view: the scene image of the highlighted title fills the screen, the info sits big on top of it
-        val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: hist.firstOrNull())
         // Darkened (dim 0.5) so white text stays readable on bright scene images
         BillboardBackdrop(preview, Modifier.fillMaxSize(), dim = 0.5f)
         Column(Modifier.fillMaxSize().sidebarPad()) {
-            SearchHeroInfo(preview, Modifier.fillMaxWidth().height(196.dp).padding(start = DS.PageX, end = DS.PageX, top = 22.dp))
-        Row(Modifier.weight(1f).fillMaxWidth().onGloballyPositioned { rowY = it.positionInWindow().y }) {
-            // Left: input, quick filters, suggestions and last searches above the keyboard, the keyboard at the bottom
+        Row(Modifier.weight(1f).fillMaxWidth()) {
+            // Left: heading, input, hit count, suggestions or last searches; the on-screen keyboard at the bottom
             Column(
-                Modifier.width(430.dp).fillMaxHeight().padding(start = DS.PageX, top = 8.dp, bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                Modifier.width(600.dp).fillMaxHeight().padding(start = DS.PageX, top = 22.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Spacer(Modifier.weight(1f))
-                // Everything sits directly above the keyboard and is fully visible (wraps into more rows instead of scrolling away)
-                val allRecent = AppSettings.searchHistory.toList()
-                val recent = allRecent.take(3)
-                var showAllHistory by remember { mutableStateOf(false) }
-                // Feedback 19 Nov: the last three searches in one row, "Alle anzeigen" opens the whole history.
-                // Suggestions have their own fixed area below, so a long history can no longer push them out of view.
-                if (allRecent.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    recent.forEachIndexed { i, term ->
-                        // OK searches again, long OK / menu key removes just this entry
-                        MiniChip(term, false, (if (i == 0) Modifier.focusRequester(firstHistory) else Modifier)
-                            .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true) { SearchState.query = term }
+                Text("Suche", color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold, raw = true)
+                Box(Modifier.fillMaxWidth()) {
+                    if (AppSettings.systemKeyboard) {
+                        // The device's own keyboard (e.g. Gboard) in a normal text field: OK or a tap opens it
+                        Field(
+                            SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
+                            Modifier.fillMaxWidth(),
+                            inner = Modifier.focusRequester(ContentFocus.req).onFocusChanged { fieldFocused = it.isFocused || it.hasFocus },
+                            onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
+                            height = 48.dp
+                        )
+                    } else {
+                        // Tappable: OK or a tap opens the device keyboard for typing (the app keyboard below stays available).
+                        // Deliberately not wired to fieldFocused: that flag belongs to the BackHandler and tracks the app keyboard only.
+                        Field(
+                            SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
+                            Modifier.fillMaxWidth(),
+                            onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
+                            height = 48.dp
+                        )
                     }
-                    if (allRecent.size > 3) MiniChip("Alle anzeigen", false) { showAllHistory = true }
-                    MiniChip("Verlauf löschen", false) { AppSettings.clearSearch(ctx) }
+                    // Clear button (X) at the right end of the field
+                    if (SearchState.query.isNotEmpty()) Box(
+                        Modifier.align(Alignment.CenterEnd).padding(end = 10.dp).size(36.dp).clip(RoundedCornerShape(50))
+                            .background(Surf2).clickable { SearchState.query = "" },
+                        contentAlignment = Alignment.Center
+                    ) { AppIcon(AIcon.Close, Color.White, size = 18.dp) }
                 }
-                // #101: suggestions take at most two rows. The area has a fixed height, so the keyboard below never moves.
-                Column(Modifier.fillMaxWidth().height(70.dp).clipToBounds(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (showAllHistory) Dialog(onDismissRequest = { showAllHistory = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                    Column(Modifier.width(620.dp).heightIn(max = 640.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(Lang.tr("Letzte Suchanfragen"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                allRecent.forEach { term ->
-                                    MiniChip(term, false, raw = true) { SearchState.query = term; showAllHistory = false }
+                Text("${rm0.size + rs0.size + rl0.size} Treffer in ${listOf(rm0, rs0, rl0).count { it.isNotEmpty() }} Kategorien",
+                    color = Muted, fontSize = 15.sp, raw = true)
+                // Fixed area: the same height in both states, so the keyboard below never moves
+                Column(Modifier.fillMaxWidth().height(250.dp).clipToBounds(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (SearchState.query.isNotBlank()) {
+                        Text("Vorschläge", color = Muted, fontSize = 16.sp, fontWeight = FontWeight.Bold, raw = true)
+                        suggItems.forEach { item ->
+                            SuggestionRow(item, q) {
+                                SearchState.query = item.title.take(60)
+                                runCatching { ContentFocus.req.requestFocus() }
+                            }
+                        }
+                        if (sugg.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            sugg.forEachIndexed { i, w ->
+                                MiniChip(w.replaceFirstChar { it.uppercase() }, false, if (i == 0) Modifier.focusRequester(firstSugg) else Modifier, raw = true) {
+                                    SearchState.query = WordSuggest.apply(SearchState.query, w)
+                                    // #101: the chip list changes after a pick and the focused chip disappears, so focus would fall
+                                    // to the sidebar. Keep it in the search screen: back to the input (same target as Back).
+                                    runCatching { ContentFocus.req.requestFocus() }
+                                }
+                            }
+                        }
+                    } else {
+                        // Field empty: last searches as chips and "Clear history"
+                        val allRecent = AppSettings.searchHistory.toList()
+                        val recent = allRecent.take(3)
+                        var showAllHistory by remember { mutableStateOf(false) }
+                        Text("Letzte Suchen", color = Muted, fontSize = 16.sp, fontWeight = FontWeight.Bold, raw = true)
+                        if (allRecent.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            recent.forEachIndexed { i, term ->
+                                // OK searches again, long OK / menu key removes just this entry
+                                MiniChip(term, false, (if (i == 0) Modifier.focusRequester(firstHistory) else Modifier)
+                                    .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true) { SearchState.query = term }
+                            }
+                            if (allRecent.size > 3) MiniChip("Alle anzeigen", false) { showAllHistory = true }
+                            MiniChip("Verlauf löschen", false) { AppSettings.clearSearch(ctx) }
+                        }
+                        if (showAllHistory) Dialog(onDismissRequest = { showAllHistory = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                            Column(Modifier.width(620.dp).heightIn(max = 640.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(Lang.tr("Letzte Suchanfragen"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        allRecent.forEach { term ->
+                                            MiniChip(term, false, raw = true) { SearchState.query = term; showAllHistory = false }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                if (sugg.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    sugg.forEachIndexed { i, w ->
-                        MiniChip(w.replaceFirstChar { it.uppercase() }, false, if (i == 0) Modifier.focusRequester(firstSugg) else Modifier, raw = true) {
-                            SearchState.query = WordSuggest.apply(SearchState.query, w)
-                            // #101: the chip list changes after a pick and the focused chip disappears, so focus would fall
-                            // to the sidebar. Keep it in the search screen: back to the input (same target as Back).
-                            runCatching { ContentFocus.req.requestFocus() }
-                        }
-                    }
-                }
-                }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SEARCH_FILTERS.forEachIndexed { i, name -> MiniChip(name, SearchState.filter == i) { SearchState.filter = i } }
-                }
-                if (AppSettings.systemKeyboard) {
-                    // The device's own keyboard (e.g. Gboard) in a normal text field: OK or a tap opens it
-                    Field(
-                        SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
-                        Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
-                        inner = Modifier.focusRequester(ContentFocus.req).onFocusChanged { fieldFocused = it.isFocused || it.hasFocus },
-                        onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
-                        height = 48.dp
-                    )
-                } else {
-                // Tappable: OK or a tap opens the device keyboard for typing (the app keyboard below stays available).
-                // Deliberately not wired to fieldFocused: that flag belongs to the BackHandler and tracks the app keyboard only.
-                Field(
-                    SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
-                    Modifier.fillMaxWidth().onGloballyPositioned { fieldY = it.positionInWindow().y },
-                    onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
-                    height = 48.dp
-                )
+                Spacer(Modifier.weight(1f))
+                if (!AppSettings.systemKeyboard) {
                 // Own on-screen keyboard (instead of the TV's keyboard): hits appear while typing
                 SearchKeyboard(
                     Modifier.fillMaxWidth(),
@@ -254,19 +290,42 @@ fun SearchScreen(
                     onVoice = if (canVoice) ({ runCatching { voice.launch(VoiceSearch.intent()) }.onFailure { canVoice = false } }) else null,
                     firstKey = ContentFocus.req,
                     onFocusChange = { fieldFocused = it },
-                    onRight = {
-                        val target = if (firstKey.isNotEmpty()) firstRes else null
-                        target != null && runCatching { target.requestFocus() }.isSuccess
-                    }
+                    onRight = { runCatching { tilesFirst.requestFocus() }.isSuccess }
                 )
                 }
             }
-            // Right: the hits
-            // Starts at the height of the input field (the results sit level with the search bar, the Sports Hub button too)
-            val resultsTop = with(androidx.compose.ui.platform.LocalDensity.current) { (fieldY - rowY).coerceAtLeast(0f).toDp() }
-            Column(Modifier.weight(1f).fillMaxHeight().padding(top = resultsTop)) {
+            // Right: hero, category tiles, result rows
+            Column(Modifier.weight(1f).fillMaxHeight()) {
+                SearchHeroInfo(preview, Modifier.fillMaxWidth().height(300.dp).padding(start = DS.PageX, end = DS.PageX, top = 22.dp))
+                if (preview != null) Row(Modifier.padding(start = DS.PageX, top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val watched = Library.isWatch(preview.id)
+                    PillButton("Ansehen", Modifier.focusRequester(heroFirst), light = true, icon = AIcon.Play) { onOpen(preview) }
+                    PillButton("Details", icon = AIcon.Info) { onOpen(preview) }
+                    PillButton(if (watched) "Auf der Merkliste" else "Merkliste", icon = if (watched) AIcon.Check else AIcon.Plus) { Library.toggleWatch(ctx, preview.id) }
+                }
+                // Category tiles: the selected one filters the rows below; tiles with 0 hits are dimmed but still focusable
+                Row(
+                    Modifier.fillMaxWidth().padding(start = DS.PageX, end = DS.PageX, top = 16.dp).onPreviewKeyEvent { e ->
+                        if (e.type != KeyEventType.KeyDown) false
+                        else when (e.key) {
+                            Key.DirectionUp -> runCatching { heroFirst.requestFocus() }.isSuccess
+                            Key.DirectionDown -> runCatching { firstRes.requestFocus() }.isSuccess
+                            else -> false
+                        }
+                    },
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    tileCounts.forEachIndexed { i, (filter, icon, count) ->
+                        CategoryTile(
+                            icon, count, SEARCH_FILTERS[filter], fl == filter,
+                            Modifier.weight(1f).then(if (i == 0) Modifier.focusRequester(tilesFirst) else Modifier)
+                        ) { SearchState.filter = filter }
+                    }
+                }
+                // Result rows (scroll below the tiles)
+                Box(Modifier.weight(1f).fillMaxWidth()) {
                 CompositionLocalProvider(LocalSearchFocus provides { focusItem = it }) {
-                    LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = state, contentPadding = PaddingValues(bottom = 48.dp)) {
+                    LazyColumn(Modifier.fillMaxWidth(), state = state, contentPadding = PaddingValues(bottom = 48.dp)) {
                 if (fl == 4) item(key = "hubbtn") {
                     Row(Modifier.padding(horizontal = DS.PageX, vertical = 6.dp)) {
                         PillButton("Sports Hub öffnen", icon = AIcon.Live) { onTab(MenuLogic.SPORT) }
@@ -295,28 +354,46 @@ fun SearchScreen(
                     val openS: (Item) -> Unit = { i -> AppSettings.addSearch(ctx, q); onOpen(i) }
                     if (searching) item {
                         Text("Suche …", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(horizontal = DS.PageX, vertical = 16.dp))
-                    } else if (rm.isEmpty() && rs.isEmpty() && rl.isEmpty()) item {
+                    } else if (fl == 0 && rm.isEmpty() && rs.isEmpty() && rl.isEmpty()) item {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             EmptyState(AIcon.Info, "Keine Treffer", "Prüfe die Schreibweise oder suche nach einem Teil des Titels. Kleine Tippfehler findet die Suche trotzdem.")
                         }
-                    }
-                    if (rm.isNotEmpty()) item(key = "rm") {
-                        SearchRow("Filme", rm, cardW, openS, if (firstKey == "rm") firstRes else null) {
-                            AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Filme", rm, S_SORT_AZ))
+                    } else if (fl != 0 && rm.isEmpty() && rs.isEmpty() && rl.isEmpty()) item(key = "nohits") {
+                        // Selected category has no hits: say so, name the categories that do have hits, offer all hits
+                        val others = listOf("Filme" to rm0.size, "Serien" to rs0.size, "Live TV" to rl0.size)
+                            .filter { it.second > 0 }.joinToString(", ") { it.first }
+                        Column(
+                            Modifier.padding(horizontal = DS.PageX, vertical = 16.dp).fillMaxWidth()
+                                .clip(RoundedCornerShape(DS.RadiusM)).background(Surf).padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("Keine ${SEARCH_FILTERS[fl]} zu „$q“", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, raw = true)
+                            if (others.isNotEmpty()) Text("Treffer gibt es in $others.", color = Muted, fontSize = 15.sp, raw = true)
+                            PillButton("Alle Treffer zeigen", light = true) { SearchState.filter = 0 }
                         }
                     }
-                    if (rs.isNotEmpty()) item(key = "rs") {
-                        SearchRow("Serien", rs, cardW, openS, if (firstKey == "rs") firstRes else null) {
-                            AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Serien", rs, S_SORT_AZ))
-                        }
-                    }
-                    if (rl.isNotEmpty()) item(key = "rl") {
-                        SearchRow("Live TV", rl, cardW, openS, if (firstKey == "rl") firstRes else null) {
-                            AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Live TV", rl, S_SORT_AZ))
+                    rowOrder.forEach { key ->
+                        when (key) {
+                            "rm" -> if (rm.isNotEmpty()) item(key = "rm") {
+                                SearchRow("Filme", rm, cardW, openS, if (firstKey == "rm") firstRes else null) {
+                                    AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Filme", rm, S_SORT_AZ))
+                                }
+                            }
+                            "rs" -> if (rs.isNotEmpty()) item(key = "rs") {
+                                SearchRow("Serien", rs, cardW, openS, if (firstKey == "rs") firstRes else null) {
+                                    AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Serien", rs, S_SORT_AZ))
+                                }
+                            }
+                            "rl" -> if (rl.isNotEmpty()) item(key = "rl") {
+                                SearchRow("Live TV", rl, cardW, openS, if (firstKey == "rl") firstRes else null) {
+                                    AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Live TV", rl, S_SORT_AZ))
+                                }
+                            }
                         }
                     }
                 }
                     }
+                }
                 }
             }
         }
@@ -326,6 +403,50 @@ fun SearchScreen(
             { id -> if (id == tab) scope.launch { state.scrollToItem(0) }; onTab(id) },
             Modifier.align(SidebarPrefs.align()), sideFocus
         ) { inSidebar = it }
+    }
+}
+
+/** Category tile: icon, big hit count, name. The selected tile has a lighter fill; a tile with 0 hits is dimmed. */
+@Composable
+private fun CategoryTile(icon: AIcon, count: Int, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    var f by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(DS.RadiusM)
+    Column(
+        modifier.graphicsLayer { alpha = if (count == 0) 0.45f else 1f }.clip(shape)
+            .background(if (selected) Surf2 else Surf)
+            .border(if (f) DS.FocusBorder else DS.Border, if (f) Accent2 else if (selected) Accent2 else DS.Hairline, shape)
+            .onFocusChanged { f = it.isFocused }
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            AppIcon(icon, Color.White, size = 22.dp)
+            Text(count.toString(), color = Color.White, fontSize = spx(30), fontWeight = FontWeight.ExtraBold, raw = true)
+        }
+        Text(label, color = Muted, fontSize = 15.sp, maxLines = 1, raw = true)
+    }
+}
+
+/** Suggestion row: the typed part in bold, the rest normal, the category of the hit on the right. Picking it fills the field. */
+@Composable
+private fun SuggestionRow(item: Item, typed: String, onPick: () -> Unit) {
+    var f by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(12.dp)
+    val starts = item.title.startsWith(typed, ignoreCase = true) && typed.isNotEmpty()
+    Row(
+        Modifier.fillMaxWidth().height(44.dp).clip(shape).background(if (f) DS.FocusFill else Surf)
+            .border(DS.Border, if (f) DS.FocusFill else DS.Hairline, shape)
+            .onFocusChanged { f = it.isFocused }
+            .clickable(onClick = onPick)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(Modifier.weight(1f)) {
+            if (starts) Text(item.title.take(typed.length), color = if (f) DS.FocusInk else Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, raw = true)
+            Text(if (starts) item.title.drop(typed.length) else item.title, color = if (f) DS.FocusInk else Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, raw = true)
+        }
+        Text(Lang.tr(kindLabel(item.kind)), color = if (f) DS.FocusInk else Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, raw = true)
     }
 }
 
@@ -551,7 +672,7 @@ private fun SearchHeroInfo(item: Item?, modifier: Modifier) {
                 else -> m?.overview.orEmpty()
             }
             if (body.isNotBlank()) Text(raw = true, text = TitleText.short(body, 200), color = Tok.TextMid, fontSize = 17.sp, lineHeight = 24.sp,
-                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
 }

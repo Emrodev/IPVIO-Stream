@@ -4,6 +4,7 @@
 - Settings > General > VPN: the WireGuard file can now be sent from your phone over the Wi-Fi, like the playlist import (the file contains a private key, so send it only over your own Wi-Fi). Not device tested yet
 - Settings > General > VPN: the file picker no longer closes the app on devices without a file picker (for example some Fire TV sticks); a note explains the Wi-Fi import instead. Not device tested yet
 - Settings hub: the settings areas are smaller and shown four per row, so more of them are visible at once. Their descriptions may take two lines. Not device tested yet
+- Search (TV): new layout. Search field with clear button, suggestions from the matching titles, last searches, the on-screen keyboard at the bottom. On the right, the hero of the focused title with Watch, Details and Watchlist buttons, then five category tiles with hit counts and the result rows. Search results are unchanged. Not device tested yet
 
 ## 1.4.8 (versionCode 14)
 - Settings > General > VPN (new): connect the device through WireGuard. Choose the `.conf` file of your VPN provider, then connect and disconnect there. The video stream goes through the VPN as well. The key is stored encrypted and never shown. There is no kill switch yet. Not device tested yet, and not checked on Fire TV
