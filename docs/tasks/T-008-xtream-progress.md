@@ -24,7 +24,7 @@ Not changed: download order, requests, timeouts, file names, list format.
 ## Test steps (maintainer)
 
 1. Add or refresh an Xtream playlist that is loaded via the API (or one that showed "256 KB" before).
-2. While "Filme werden geladen …" / "Serien werden geladen …" is shown, the number keeps growing.
+2. While "Loading movies …" / "Loading series …" is shown, the number keeps growing.
 3. The number never goes back; at the end the playlist is complete (number of movies and series as before).
 4. If the number really stops for more than two minutes: note the text under the bar and the playlist type and report it.
 

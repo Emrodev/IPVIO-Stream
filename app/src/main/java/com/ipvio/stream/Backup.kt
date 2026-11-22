@@ -35,7 +35,9 @@ object Backup {
         // 1.4: own order of categories (Live TV, movies, series)
         "ipvio_catorder",
         // T-028: private categories
-        "ipvio_privatecats"
+        "ipvio_privatecats",
+        // T-049d: Sports Hub settings
+        "ipvio_sportset"
     )
 
     /** Own API keys (TMDB, OMDb); not profile-scoped. Only travel inside the encrypted part of a sync. */

@@ -94,7 +94,7 @@ class HubCtx(val nav: HubNav, val live: List<Item>, private val onPlay: (Item, L
 private object HubMemory {
     /** Pages that were open when a live stream started (restored when the hub comes back). */
     var keep: List<HubPage> = emptyList()
-    var tab = 0
+    var tab = -1   // -1 = not opened yet in this session: the start tab of the settings applies
     var sport: String? = null
     var day = 0
 }
@@ -113,7 +113,8 @@ fun SportHub(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
     SportLeagues.init(ctx)
     SportHubFavs.init(ctx)
     SportFix.init(ctx)
-    var tab by remember { mutableIntStateOf(HubMemory.tab) }
+    SportHubPrefs.init(ctx)
+    var tab by remember { mutableIntStateOf(SportHubLogic.resolve(if (HubMemory.tab >= 0) HubMemory.tab else SportHubPrefs.startTab, SportHubPrefs.hidden())) }
     var sport by remember { mutableStateOf(HubMemory.sport) }
     var retry by remember { mutableIntStateOf(0) }
     var scoreDlg by remember { mutableStateOf(false) }
@@ -168,6 +169,7 @@ fun SportHub(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
         ) {
             item(key = "scoreov") { FilterPill("Score-Overlay", SportAlerts.miniOn, aicon = AIcon.Live) { scoreDlg = true } }
             itemsIndexed(HUB_TABS) { i, t ->
+                if (i !in SportHubLogic.visible(SportHubPrefs.hidden())) return@itemsIndexed
                 // The chosen tab is where the focus lands when coming from the sidebar (the channel tab has its own target)
                 val base = if (i == tab && tab != 6) Modifier.focusRequester(ContentFocus.req) else Modifier.trackFocus()
                 // Live tab: Down goes to the sport filter first (not to the competition row below it)

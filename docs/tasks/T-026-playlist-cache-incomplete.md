@@ -28,14 +28,14 @@ the playlist seems to do nothing.
     playlist, releases the old list and downloads again. Playlist entry, name, backup servers, content mode and language selection stay.
   - diagnostic logs (`PlaylistDiag`, logcat tag `IPVIO-PL`): numbers and category names only.
 - `XtreamApi.kt`: `liveCategoryNames`.
-- `SettingsHub.kt`: refresh error line, button "Playlist komplett neu laden" (with confirmation) and an English hint.
+- `SettingsHub.kt`: refresh error line, button "Reload playlist from scratch" (with confirmation) and an English hint.
 - `DictM.kt`: 3 rows (incomplete message, refresh error, button label).
 - Storage format unchanged (cache version stays 5, no new files or keys).
 
 ## Acceptance criteria
 - A live channel in a category with "Movies" in its name appears in Live TV.
 - A cut-off download is never stored as cache; the old list stays and an error is shown.
-- "Playlist komplett neu laden" downloads the active playlist again from scratch.
+- "Reload playlist from scratch" downloads the active playlist again from scratch.
 
 ## Risks
 - Behaviour change: 24/7 movie channels with live addresses move from Movies to Live TV.
@@ -54,7 +54,7 @@ The maintainer could not test yet (13 Nov 2026). Merge into `main` only after th
 
 ## Open: device test steps for the maintainer
 1. Build the release APK from `fix/playlist-cache` (copy `keystore.properties` and `local.properties` from `ipvio-release`), install over 1.4.1.
-2. Settings > Playlists > "Playlist komplett neu laden", confirm.
+2. Settings > Playlists > "Reload playlist from scratch", confirm.
 3. Live TV: categories after "AS" are there, "EU | DE | Movies and Series" is in Live TV.
 4. If categories are still missing: `adb logcat -d -s IPVIO-PL` and send the output.
 5. Optional: refresh with no network; the line "Aktualisierung fehlgeschlagen: …" appears in Settings > Playlists and the old list stays.

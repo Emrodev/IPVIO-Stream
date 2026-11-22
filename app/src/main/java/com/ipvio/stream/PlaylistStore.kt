@@ -255,7 +255,9 @@ object PlaylistStore {
         }
     }
     private var epgSig = 0L
-    private var inited = false
+    @Volatile private var inited = false
+    private var initing = false   // T-047: set while [ensure] runs, so a call from inside it returns (as before)
+    private val initLock = Any()
     private val loadLock = Mutex()
 
     /**
@@ -334,7 +336,15 @@ object PlaylistStore {
 
     private fun ensure(c: Context) {
         if (inited) return
-        inited = true
+        // T-047: also called by the read-ahead thread; other threads wait until the lists are filled
+        synchronized(initLock) {
+            if (inited || initing) return
+            initing = true
+            try { ensureOnce(c) } finally { inited = true }
+        }
+    }
+
+    private fun ensureOnce(c: Context) {
         cleanupStale(c)
         val p = prefs(c)
         // Prefers the encrypted version; the old plain-text version is adopted and replaced on first start.
@@ -579,6 +589,7 @@ object PlaylistStore {
         ensure(c)
         if (i !in lists.indices) return
         deleteFiles(c, lists[i].url)
+        PlaylistRefresh.clear(c, lists[i].url)
         prefs(c).edit().remove(backupKey(lists[i].url)).apply()
         if (adding == lists[i].url) adding = null
         extras.remove(lists[i].url)
@@ -693,6 +704,40 @@ object PlaylistStore {
         } catch (e: OutOfMemoryError) {
             null
         }
+    }
+
+    /** T-047: stored list read ahead on a background thread at the start (result for one address, language selection and file state). */
+    private class Pre(val url: String, val hidden: Set<String>, val stamp: Long, val task: java.util.concurrent.FutureTask<PlaylistCacheIO.Cached?>)
+    @Volatile private var pre: Pre? = null
+
+    private fun stampOf(f: File): Long = f.length() * 31 + f.lastModified()
+
+    /**
+     * Starts reading the stored list of the active playlist while the first screen is built (call from a background thread).
+     * Same conditions as [fromLocal]; if anything differs there, the result is simply not used. Nothing is shown from here.
+     */
+    fun preread(c: Context) {
+        try {
+            val u = savedUrl(c)?.let { PlaylistLogic.normalizeUrl(it) } ?: return
+            if (pending(c)?.autoResume == true) return   // the add screen continues loading instead
+            val hidden = PlaylistMode.withMode(c, u, LangFilter.hidden)
+            val head = readHeader(c, u) ?: return
+            if (head.hidden != hidden || head.counts.isEmpty()) return
+            val f = cacheFile(c, u)
+            val task = java.util.concurrent.FutureTask<PlaylistCacheIO.Cached?> { readCache(c, u, hidden) }
+            pre = Pre(u, hidden, stampOf(f), task)
+            task.run()
+        } catch (e: Throwable) {
+            pre = null
+        }
+    }
+
+    /** The read-ahead result if it still fits (waits if it is still running), otherwise null. Used once. */
+    private fun takePreread(c: Context, u: String, hidden: Set<String>): PlaylistCacheIO.Cached? {
+        val p = pre ?: return null
+        pre = null
+        if (p.url != u || p.hidden != hidden || p.stamp != stampOf(cacheFile(c, u))) return null
+        return try { p.task.get() } catch (e: Exception) { null }
     }
 
     private fun sig(l: List<Item>): Long {
@@ -1223,6 +1268,60 @@ object PlaylistStore {
         switchScope.launch { switchTo(app, i, fresh = true) }
     }
 
+    /** Address of the playlist that [refreshOtherNow] is reloading right now (null = none). */
+    var reloadingOther by mutableStateOf<String?>(null)
+        private set
+
+    /** "Reload" on a playlist that is not the main list (T-048): see [refreshOtherNow]. */
+    fun reloadOtherAsync(c: Context, i: Int) {
+        val app = c.applicationContext
+        switchScope.launch { refreshOtherNow(app, i) }
+    }
+
+    /**
+     * Downloads a playlist that is not the main list again into its stored copy, without making it the main list. If it is
+     * shown next to the main list, that part is rebuilt from the new copy. A list with its own refresh plan notes the time.
+     * false = nothing done (a load runs, wrong list) or the download failed.
+     */
+    suspend fun refreshOtherNow(c: Context, i: Int): Boolean {
+        ensure(c)
+        if (i !in lists.indices || i == active || reloadingOther != null || loadLock.isLocked) return false
+        val u = lists[i].url
+        reloadingOther = u
+        try {
+            val ok = refreshCacheOnly(c, u)
+            if (ok) {
+                if (PlaylistRefreshLogic.hasOwnPlan(PlaylistRefresh.get(c, u))) PlaylistRefresh.markFor(c, u)
+                if (isShown(i)) { extras.remove(u); applyMulti(c) }
+            }
+            return ok
+        } finally {
+            reloadingOther = null
+        }
+    }
+
+    /**
+     * Refreshes the lists that are not the main list and whose own plan is due (T-048b); one after the other, not while
+     * something is playing. Called by the background job and some seconds after the start.
+     */
+    suspend fun refreshOthersDue(c: Context) {
+        ensure(c)
+        // The main list may still be loading (it holds the load lock): wait for it, at most 3 minutes, instead of skipping this round
+        var waited = 0
+        while (loadLock.isLocked && waited < 36) { kotlinx.coroutines.delay(5_000); waited++ }
+        val now = System.currentTimeMillis()
+        val due = lists.indices.filter { i ->
+            i != active && PlaylistRefreshLogic.otherDue(PlaylistRefresh.get(c, lists[i].url), PlaylistRefresh.lastFor(c, lists[i].url), now, General.zone())
+        }
+        for (i in due) {
+            if (AppNav.playing) return
+            refreshOtherNow(c, i)
+        }
+    }
+
+    /** Addresses of all playlists (for the background job). */
+    fun allUrls(c: Context): List<String> { ensure(c); return lists.map { it.url } }
+
     private val switchScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     /** Add a playlist sent from the phone settings (issue 18): loaded and adopted like "Add playlist" on the TV. */
@@ -1427,13 +1526,13 @@ object PlaylistStore {
             val legacyTooBig = head.hidden == null && (hidden - LangTagLogic.PSEUDO).isEmpty() && cacheFile(c, u).length() > budget()
             if (!legacyTooBig && (head.hidden == null || head.hidden == hidden)) {
                 val t0 = android.os.SystemClock.elapsedRealtime()
-                val cached = readCache(c, u, hidden)
+                val cached = takePreread(c, u, hidden) ?: readCache(c, u, hidden)
                 val t1 = android.os.SystemClock.elapsedRealtime()
                 if (cached != null && cached.counts.isNotEmpty()) {
                     PlaylistDiag.log("cache", PlaylistDiag.summary(cached.items) + " hidden=${hidden.sorted()}")
                     show(c, u, cached.items, cached.epg, cached.order, cached.counts, cached.bytes, hidden)
                     // Start-up timing for Settings > Diagnostics: reading the stored list, then building it for the screens
-                    Diag.note("Start: stored list ${cached.items.size} items read in ${t1 - t0} ms, shown in ${android.os.SystemClock.elapsedRealtime() - t1} ms, translations ${Lang.loadMs} ms")
+                    Diag.note("Start: stored list ${cached.items.size} items read in ${t1 - t0} ms, shown in ${android.os.SystemClock.elapsedRealtime() - t1} ms, translations ${Lang.loadMs} ms registered, ${Lang.prewarmMs} ms parsed in the background")
                     return Local.OK
                 }
             }
@@ -1472,12 +1571,13 @@ object PlaylistStore {
      */
     suspend fun load(
         c: Context, url: String, save: Boolean, skipNetworkWhenCached: Boolean = false,
-        ask: Boolean = true, resumed: Boolean = false
+        ask: Boolean = true, resumed: Boolean = false, startup: Boolean = false
     ): Boolean {
         if (!loadLock.tryLock()) return rawChannels.isNotEmpty()
         try {
-            return loadInner(c, url, save, skipNetworkWhenCached, ask, resumed)
+            return loadInner(c, url, save, skipNetworkWhenCached, ask, resumed, startup)
         } finally {
+            pre = null   // T-047: an unused read-ahead must not keep the list in memory
             loading = false   // also on cancel: otherwise the loading state (and the screen keep-awake) would stay stuck
             heavy = false
             langAsk = null
@@ -1488,7 +1588,7 @@ object PlaylistStore {
         }
     }
 
-    private suspend fun loadInner(c: Context, url: String, save: Boolean, skipNetworkWhenCached: Boolean, ask: Boolean, resumed: Boolean): Boolean {
+    private suspend fun loadInner(c: Context, url: String, save: Boolean, skipNetworkWhenCached: Boolean, ask: Boolean, resumed: Boolean, startup: Boolean = false): Boolean {
         ensure(c)
         val u = PlaylistLogic.normalizeUrl(url) ?: run { error = "Bitte eine gültige Adresse eingeben (beginnt mit http:// oder https://)."; return false }
         // Restore the saved sublist for this playlist so the filter is applied while loading.
@@ -1518,6 +1618,9 @@ object PlaylistStore {
             if (save) finishSave(c, u)
             return true
         }
+        // T-047: the stored list is on screen: start the silent refresh a few seconds later, so the first screens are not slowed down
+        val wait = StartupLogic.refreshDelayMs(usedCache, userStarted = !startup)
+        if (wait > 0) kotlinx.coroutines.delay(wait)
         error = null
         val before = sig(primaryItems)
         heavy = true

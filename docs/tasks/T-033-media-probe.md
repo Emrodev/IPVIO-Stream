@@ -23,10 +23,10 @@ HDR10/HLG, Dolby Vision, audio tracks (language, codec, channels, Atmos) and sub
 - `DetailScreen.kt`: `ProbeLine(playUrl)` below the info line, only on the full detail page, not for live channels or
   demo mode. Series: the first episode of the shown season (the URL the Play button uses).
 - `Playback.kt`: `PlaybackPrefs.probe`, key `probe` in `ipvio_playback` (new key, default on).
-- `SettingsExtra.kt`: toggle "Technische Infos auf der Detailseite" under "Quelle & Qualität".
+- `SettingsExtra.kt`: toggle "Technical info on the detail page" under "Source & quality".
 - `SettingsReset.kt`: the player page reset switches it back on.
 - Dictionaries: 2 new rows in `DictO.kt` (en, tr, bs, sr, es, fr, it), `DictNl6.kt`, `DictAr6.kt`, `DictPl7.kt`.
-  "Ton" and "Untertitel" in the line reuse existing rows.
+  "Audio" and "Subtitles" in the line reuse existing rows.
 
 ## Storage (CLAUDE.md section 5)
 One new key `probe` (Boolean) in `ipvio_playback`. No existing key or file changes. The cache is memory only.
@@ -41,7 +41,7 @@ One new key `probe` (Boolean) in `ipvio_playback`. No existing key or file chang
 - `MediaProbe` marks a server as failed in `HostFailover` like the player does when the main server is down.
 
 ## Acceptance criteria
-- A 4K HDR movie shows e.g. "4K · HEVC · HDR10 · Ton: Deutsch (E-AC-3 5.1), Englisch (AC-3 5.1) · Untertitel: Deutsch".
+- A 4K HDR movie shows e.g. "4K · HEVC · HDR10 · Audio: German (E-AC-3 5.1), English (AC-3 5.1) · Subtitles: German".
 - A failing or slow stream shows no line and no error text; the rest of the page works as before.
 - Play right after opening the page starts normally (the check is cancelled).
 - Switch off: no line, no request.
@@ -58,12 +58,12 @@ One new key `probe` (Boolean) in `ipvio_playback`. No existing key or file chang
 - Not tested on a device.
 
 ## Test steps for the maintainer
-1. Open a movie on the detail page: after a moment a grey line appears below the info line (resolution, codec, HDR, Ton, Untertitel).
+1. Open a movie on the detail page: after a moment a grey line appears below the info line (resolution, codec, HDR, Audio, Subtitles).
 2. A 4K HDR / Dolby Vision movie: "4K", "HDR10" and/or "Dolby Vision" appear. A movie with Atmos: "E-AC-3 Atmos".
 3. Open a movie and press Play at once: playback starts normally, also with a one-connection account.
 4. Leave the page and open it again: the line appears at once (cache), no new request.
 5. Open a series: the line describes the first episode of the shown season.
-6. Settings > Player > Quelle & Qualität: switch "Technische Infos auf der Detailseite" off; the line is gone.
+6. Settings > Player > Source & quality: switch "Technical info on the detail page" off; the line is gone.
 7. Reset the player settings page: the switch is on again.
 8. Stream that does not load (dead link): no line, no error, page works.
 9. Logcat (debug build) tag `MediaProbe`: time per check and the result, no addresses.

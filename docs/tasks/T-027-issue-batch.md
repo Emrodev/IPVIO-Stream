@@ -9,14 +9,14 @@ Branch: `claude/jolly-ride-mr9tgm`.
 | Issue | Topic | Status | Commit | JVM tests |
 |---|---|---|---|---|
 | #69 | No silent http fallback on certificate mismatch | Implemented: consent dialog, stored agreement | `0bad579`, `7fdda3c` | `TlsFallbackLogicTest` 8/8 |
-| #90 | Per-playlist user-agent | Implemented: "Kennung: VLC / IPVIO" in the add screen | `40faa51` | `PlaylistUaLogicTest` 4/4 |
+| #90 | Per-playlist user-agent | Implemented: "User agent: VLC / IPVIO" in the add screen | `40faa51` | `PlaylistUaLogicTest` 4/4 |
 | #111 | Counts per playlist | Implemented: stored at load, shown in settings | `ff33a00` | `PlaylistCountLogicTest` 4/4 |
 | #15 | Trailer inside the app | Implemented: WebView embed of the TMDB trailer | `06030c9` | `TrailerLogicTest` 3/3 |
 | #95 | Keep the screen awake while browsing | Implemented as an option (default off) | `a8c752b` | none (flag logic reused) |
 | #102 | Live channels in a movie group | Implemented: live address stays live | `9086e1b` | `LiveUrlLogicTest` 4/4 |
 | #112 | Playlist vanishes | Partly: unreadable list is no longer overwritten | `bc9e0a9` | none |
-| #82 | PIN could be changed without the current PIN | Implemented: "PIN ändern" asks for the current PIN first (removing it already did) | see git log | none (UI) |
-| #22 | "Neu hinzugefügt" by the provider's date | Implemented (approved 19 Nov): cache format version 6, movies only | `cb9bb32` | RecentSortLogicTest 3/3, PlaylistCacheAddedTest 2/2 |
+| #82 | PIN could be changed without the current PIN | Implemented: "Change PIN" asks for the current PIN first (removing it already did) | see git log | none (UI) |
+| #22 | "Recently added" by the provider's date | Implemented (approved 19 Nov): cache format version 6, movies only | `cb9bb32` | RecentSortLogicTest 3/3, PlaylistCacheAddedTest 2/2 |
 | #75 | Stalker box model | Implemented (approved 19 Nov): "STB <model>" button, default MAG250 | `c5c093a` | StalkerModelLogicTest 6/6 |
 | #107 | TV-guide wrap-around | Reported as done by the maintainer (19 Nov) | — | — |
 | #68 | Signed release APK with provenance in CI | Decision: no workflow change without a separate approval. Proposal below | — | — |
@@ -41,7 +41,7 @@ Not changed. 24/7 channels fall into the "unknown" language bucket and adult gro
 - **#15:** D-pad control of the embedded YouTube player on Fire TV is unverified. YouTube may refuse embedding for some videos (error page).
 - **#95:** unverified that `FLAG_KEEP_SCREEN_ON` also blocks the Fire TV screensaver (not only the screen timeout).
 - **#69 and #108/#104:** the consent dialog appears after a certificate error. For a movie or episode the player retries a few times; if the user agrees during those retries, playback continues. Otherwise the error remains. Check whether a provider's episode host has a certificate mismatch (see logs).
-- **#73:** the message "Die gewählten Inhalte sind zu groß für den Speicher dieses Geräts" comes from the memory budget of the app (`LoadLogic.budget`, based on the maximum heap), not from free storage. The check cannot be judged without the device's memory limit and the playlist type. A diagnostic line now shows the memory budget, the maximum heap and the number of hidden languages when a list is refused without asking (Settings > Diagnose). Needed: that line, the device model, the playlist type (Xtream, Stalker, M3U).
+- **#73:** the message "The selected content is too large for this device's memory" comes from the memory budget of the app (`LoadLogic.budget`, based on the maximum heap), not from free storage. The check cannot be judged without the device's memory limit and the playlist type. A diagnostic line now shows the memory budget, the maximum heap and the number of hidden languages when a list is refused without asking (Settings > Diagnose). Needed: that line, the device model, the playlist type (Xtream, Stalker, M3U).
 - **#108 and #104:** no logs yet. Possible causes to check: the change in `TlsFallback` (#69, a certificate mismatch on a stream host), the R8 build of 1.4.3 (T-024, not confirmed), the retry rules (`IptvLoadErrorPolicy`, `PlayerScreen.onPlayerError`). Logcat from the moment of the error is needed.
 
 ## Regression check
@@ -51,10 +51,10 @@ All 41 pure JVM test classes that compile without Android (281 tests) pass, afte
 ## Test steps for the maintainer
 
 1. **#69:** see `docs/tasks/T-026-tls-consent.md`.
-2. **#90:** add an Xtream or M3U playlist with "Kennung: VLC" (default) and check it loads as before. Then add a second one with "Kennung: IPVIO" and check it loads (the provider that gave 403 is the test case).
-3. **#111:** open Settings > Playlists after a load: each playlist shows "Live TV: n · Filme: n · Serien: n".
+2. **#90:** add an Xtream or M3U playlist with "User agent: VLC" (default) and check it loads as before. Then add a second one with "User agent: IPVIO" and check it loads (the provider that gave 403 is the test case).
+3. **#111:** open Settings > Playlists after a load: each playlist shows "Live TV: n · Movies: n · Series: n".
 4. **#15:** open a movie with a trailer (TMDB key set): Trailer plays in the app; Back closes it; no sound after closing. A movie without a trailer opens the YouTube search as before.
-5. **#95:** Settings > "Bildschirm beim Stöbern wach halten" on, leave the app idle on a screen for longer than the screensaver delay: the screen stays on. Off: as before.
+5. **#95:** Settings > "Keep the screen awake while browsing" on, leave the app idle on a screen for longer than the screensaver delay: the screen stays on. Off: as before.
 6. **#102:** in a playlist with a "Movies" group that contains live channels (e.g. HBO Comedy): the channel is in Live TV, not under Movies.
 7. **#112:** no test possible without the broken state. Check that a normal load, saving and restarting still keeps the playlists.
 

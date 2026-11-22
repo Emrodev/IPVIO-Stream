@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.Request
 import org.json.JSONObject
@@ -143,6 +144,7 @@ object Catchup {
         val due = srcs.indices.filter { srcs[it].x != null && System.currentTimeMillis() - srcs[it].saved.xtAt >= REFRESH_MS }
         if (due.isEmpty()) return
         job = scope.launch {
+            delay(StartupLogic.CATCHUP_DELAY_MS)   // T-047: not in the first seconds after a start
             for (i in due) {
                 val s = srcs[i]; val x = s.x ?: continue
                 val api = "${x.host}/player_api.php?username=${x.user}&password=${x.pass}"

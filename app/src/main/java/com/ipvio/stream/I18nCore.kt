@@ -127,6 +127,12 @@ object I18nCore {
         if (!ready[li]) { fill(li); ready[li] = true; readyMask = readyMask or (1 shl li) }
     }
 
+    /** Parses the dictionary of language [li] now (for a background thread at the start); no effect for German. */
+    fun prepare(li: Int) {
+        if (li <= 0 || li >= CODES.size) return
+        if (readyMask and (1 shl li) == 0) ensure(li)
+    }
+
     @Synchronized
     fun size(): Int { readKeys(); return exact.size + pats.size }
 
