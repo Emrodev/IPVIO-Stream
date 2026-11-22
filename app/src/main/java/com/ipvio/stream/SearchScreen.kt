@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
@@ -41,9 +42,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val S_SORT_AZ = 6
 private const val S_SORT_PLAYLIST = 8
@@ -58,11 +63,53 @@ internal object SearchCache {
     @Synchronized fun suggest(all: List<Item>): WordSuggest = sug?.takeIf { it.first === all }?.second ?: WordSuggest(all).also { sug = all to it }
 }
 
+/** Programme hits for the typed text: [live] = shows on other channels running now, [sport] = sport shows running now or in the next 24 hours. */
+private class ProgState(val live: List<ProgSearchLogic.Hit>, val sport: List<ProgSearchLogic.Hit>)
+
+/** One card of a result row: the channel, and the programme when the card is a programme hit (null = channel name hit). */
+private class HitCard(val item: Item, val program: ProgSearchLogic.Hit?)
+
 /**
- * Search (tab 4). T-051b layout (from the maintainer's sketch, 1920x1080): navigation on the left, a fixed search column
- * (heading, field, hit count, suggestions or last searches, on-screen keyboard), and on the right the hero of the focused hit,
- * the category tiles and the result rows. Search logic, index and filters are unchanged; only the arrangement is new.
+ * Programme search for the TV (T-051b): the running shows of the live channels and the sport shows, matched against the typed text.
+ * XMLTV guide first; Xtream channels without XMLTV get their short guide (at most [ProgSearchLogic.XTREAM_FETCH_PER_REQUEST], 9 s).
  */
+private suspend fun progHits(all: List<Item>, q: String): ProgState {
+    val xt = all.filter { it.kind == Kind.LIVE && !Xmltv.has(it.tvgId) && Epg.supported(it) && Epg.peek(it) == null }
+        .take(ProgSearchLogic.XTREAM_FETCH_PER_REQUEST)
+    if (xt.isNotEmpty()) withTimeoutOrNull(9_000) { coroutineScope { xt.map { async { Epg.now(it) } }.awaitAll() } }
+    val now = System.currentTimeMillis() / 1000
+    val sportIds = HashSet<String>()
+    val hits = ArrayList<ProgSearchLogic.Hit>()
+    for (c in all) {
+        if (c.kind != Kind.LIVE) continue
+        if (SearchSport.isSport(c)) sportIds.add(c.id)
+        val list = if (Xmltv.has(c.tvgId)) Xmltv.forChannel(c.tvgId) else Epg.peek(c).orEmpty()
+        for (e in list) if (ProgSearchLogic.matches(e.title, q)) hits.add(ProgSearchLogic.Hit(c.id, c.title, e.title, e.start, e.end))
+    }
+    val live = ProgSearchLogic.select(hits.filter { it.channelId !in sportIds }, now, ProgSearchLogic.Mode.LIVE)
+    val sport = (ProgSearchLogic.select(hits.filter { it.channelId in sportIds }, now, ProgSearchLogic.Mode.LIVE) +
+        ProgSearchLogic.select(hits.filter { it.channelId in sportIds }, now, ProgSearchLogic.Mode.UPCOMING)).sortedBy { it.start }
+    return ProgState(live, sport)
+}
+
+/** Live channel cards: the channel name hits (with their running show if one matches), then the programme hits of other channels. */
+private fun liveCardsOf(names: List<Item>, progs: List<ProgSearchLogic.Hit>, byId: Map<String, Item>): List<HitCard> {
+    val nameIds = names.mapTo(HashSet()) { it.id }
+    val out = ArrayList<HitCard>()
+    for (c in names) out.add(HitCard(c, progs.firstOrNull { it.channelId == c.id }))
+    for (h in progs) if (h.channelId !in nameIds) byId[h.channelId]?.let { out.add(HitCard(it, h)) }
+    return out
+}
+
+/** Share of a running show that has passed, 0..1. */
+private fun progressOf(h: ProgSearchLogic.Hit): Float {
+    val now = System.currentTimeMillis() / 1000
+    return ((now - h.start).toFloat() / (h.end - h.start).coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
+}
+
+/** Search (tab 4). T-051b layout (from the maintainer's sketch, 1920x1080): navigation on the left, a fixed search column
+ *  (heading, field, hit count, suggestions or last searches, on-screen keyboard), and on the right the hero of the focused hit,
+ *  the category tiles and the result rows. Search logic and filters are unchanged; programme hits are added for the live and sport rows. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
@@ -73,6 +120,7 @@ fun SearchScreen(
     val scope = rememberCoroutineScope()
     // Private categories (T-028) are not searchable; they stay reachable through their own category
     val all = PlaylistStore.channels.let { PrivateCats.visible(it) }
+    val byId = remember(all) { all.associateBy { it.id } }
     // Build the index in the background; searches also run in the background and only after a short typing pause
     // With very large playlists memory can run out while the index is built: then free the image cache and try once more,
     // and if it still does not fit, the search stays empty instead of the app crashing.
@@ -154,14 +202,23 @@ fun SearchScreen(
     val fl = SearchState.filter
     // Word suggestions for the word being typed
     val sugg = remember(SearchState.query, suggestIdx) { suggestIdx?.suggest(WordSuggest.lastWord(SearchState.query)).orEmpty() }
-    // Sports filter: live channels that look like sports channels (the hub itself opens with the button). Counted for the tile too.
+    // Programme hits (running shows, sport shows); the result is kept only for the query it was made for
+    val progFor by produceState(q to ProgState(emptyList(), emptyList()), q, all) {
+        if (q.length < 2) { value = q to ProgState(emptyList(), emptyList()); return@produceState }
+        delay(250)
+        value = q to progHits(all, q)
+    }
+    val prog = if (progFor.first == q && !searching) progFor.second else ProgState(emptyList(), emptyList())
+    // Sport: channel name hits that look like sports channels (sport filter), and the sport shows
     val rlSport = remember(rl0) { rl0.filter { SearchSport.isSport(it) } }
-    val rl = when (fl) { 0, 3 -> rl0; 4 -> rlSport; else -> emptyList() }
+    val liveAll = remember(rl0, prog.live, byId) { liveCardsOf(rl0, prog.live, byId) }
+    val sportAll = remember(prog.sport, byId) { prog.sport.mapNotNull { h -> byId[h.channelId]?.let { HitCard(it, h) } } }
+    // Rows of the selected category
+    val rm = if (fl == 0 || fl == 1) rm0 else emptyList()
     val rs = if (fl == 0 || fl == 2) rs0 else emptyList()
-    // The same movie in several versions only once (the source is chosen on the detail page)
-    val rmAll: List<Item> = rm0   // already one per movie (see the search above)
-    val rm = if (fl == 0 || fl == 1) rmAll else emptyList()
-    val firstKey = when { rm.isNotEmpty() -> "rm"; rs.isNotEmpty() -> "rs"; rl.isNotEmpty() -> "rl"; else -> "" }
+    val liveCards: List<HitCard> = when (fl) { 0, 3 -> liveAll; 4 -> rlSport.map { HitCard(it, null) }; else -> emptyList() }
+    val sportCards: List<HitCard> = if (fl == 0 || fl == 4) sportAll else emptyList()
+    val firstKey = when { rm.isNotEmpty() -> "rm"; rs.isNotEmpty() -> "rs"; liveCards.isNotEmpty() -> "rl"; sportCards.isNotEmpty() -> "sp"; else -> "" }
     // Back: from a hit (or any other element) first to the input (field or app keyboard); from the input to the sidebar
     BackHandler(enabled = !inSidebar) {
         // requestFocus returns false (no exception) when the target is not on screen: then go on to the sidebar instead of doing nothing
@@ -170,21 +227,34 @@ fun SearchScreen(
     }
 
     // Hero: the focused hit, or the first hit (the best match) when nothing is focused
-    val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: rl.firstOrNull() ?: hist.firstOrNull())
-    // Category tiles: the counts are derived from the hits (sport is a part of the live channels)
+    val preview = focusItem ?: (rm.firstOrNull() ?: rs.firstOrNull() ?: liveCards.firstOrNull()?.item ?: sportCards.firstOrNull()?.item ?: hist.firstOrNull())
+    // Category tiles: the counts are derived from the hits (sport channels are part of the live channels too)
+    val countAll = rm0.size + rs0.size + liveAll.size + sportAll.size
     val tileCounts = listOf(
-        Triple(0, AIcon.Grid, rm0.size + rs0.size + rl0.size),
+        Triple(0, AIcon.Grid, countAll),
         Triple(2, AIcon.Layers, rs0.size),
-        Triple(3, AIcon.Live, rl0.size),
-        Triple(4, AIcon.Pulse, rlSport.size),
+        Triple(3, AIcon.Live, liveAll.size),
+        Triple(4, AIcon.Pulse, rlSport.size + sportAll.size),
         Triple(1, AIcon.Categories, rm0.size)
     )
     // Result rows: the category of the best match comes first
-    val bestKey = when (preview?.kind) { Kind.SERIES -> "rs"; Kind.LIVE -> "rl"; else -> "rm" }
-    val rowOrder = listOf(bestKey) + listOf("rm", "rs", "rl").filter { it != bestKey }
+    val bestKey = when {
+        preview != null && sportAll.any { it.item.id == preview.id } -> "sp"
+        preview?.kind == Kind.SERIES -> "rs"
+        preview?.kind == Kind.LIVE -> "rl"
+        else -> "rm"
+    }
+    val rowOrder = listOf(bestKey) + listOf("rm", "rs", "rl", "sp").filter { it != bestKey }
     // Suggestions: titles of the hits that match the typed text
     val suggItems = remember(rm0, rs0, rl0, q, searching) {
         if (q.length < 2 || searching) emptyList() else (rm0 + rs0 + rl0).distinctBy { it.title }.take(3)
+    }
+    val selectedEmpty = when (fl) {
+        1 -> rm.isEmpty()
+        2 -> rs.isEmpty()
+        3 -> liveCards.isEmpty()
+        4 -> liveCards.isEmpty() && sportCards.isEmpty()
+        else -> rm.isEmpty() && rs.isEmpty() && liveCards.isEmpty() && sportCards.isEmpty()
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -226,8 +296,8 @@ fun SearchScreen(
                         contentAlignment = Alignment.Center
                     ) { AppIcon(AIcon.Close, Color.White, size = 18.dp) }
                 }
-                Text(Lang.tr("{0} Treffer in {1} Kategorien").replace("{0}", (rm0.size + rs0.size + rl0.size).toString())
-                    .replace("{1}", listOf(rm0, rs0, rl0).count { it.isNotEmpty() }.toString()),
+                Text(Lang.tr("{0} Treffer in {1} Kategorien").replace("{0}", countAll.toString())
+                    .replace("{1}", listOf(rm0.size, rs0.size, liveAll.size, sportAll.size).count { it > 0 }.toString()),
                     color = Muted, fontSize = 15.sp, raw = true)
                 // Fixed area: the same height in both states, so the keyboard below never moves
                 Column(Modifier.fillMaxWidth().height(250.dp).clipToBounds(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -298,10 +368,10 @@ fun SearchScreen(
             // Right: hero, category tiles, result rows
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 SearchHeroInfo(preview, Modifier.fillMaxWidth().height(300.dp).padding(start = DS.PageX, end = DS.PageX, top = 22.dp))
+                // Detail page: a marked title is opened with OK (no own "Watch" button)
                 if (preview != null) Row(Modifier.padding(start = DS.PageX, top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     val watched = Library.isWatch(preview.id)
-                    PillButton("Ansehen", Modifier.focusRequester(heroFirst), light = true, icon = AIcon.Play) { onOpen(preview) }
-                    PillButton("Details", icon = AIcon.Info) { onOpen(preview) }
+                    PillButton("Details", Modifier.focusRequester(heroFirst), light = true, icon = AIcon.Info) { onOpen(preview) }
                     PillButton(if (watched) "Auf der Merkliste" else "Merkliste", icon = if (watched) AIcon.Check else AIcon.Plus) { Library.toggleWatch(ctx, preview.id) }
                 }
                 // Category tiles: the selected one filters the rows below; tiles with 0 hits are dimmed but still focusable
@@ -355,23 +425,25 @@ fun SearchScreen(
                     val openS: (Item) -> Unit = { i -> AppSettings.addSearch(ctx, q); onOpen(i) }
                     if (searching) item {
                         Text("Suche …", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(horizontal = DS.PageX, vertical = 16.dp))
-                    } else if (fl == 0 && rm.isEmpty() && rs.isEmpty() && rl.isEmpty()) item {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            EmptyState(AIcon.Info, "Keine Treffer", "Prüfe die Schreibweise oder suche nach einem Teil des Titels. Kleine Tippfehler findet die Suche trotzdem.")
-                        }
-                    } else if (fl != 0 && rm.isEmpty() && rs.isEmpty() && rl.isEmpty()) item(key = "nohits") {
-                        // Selected category has no hits: say so, name the categories that do have hits, offer all hits
-                        val others = listOf("Filme" to rm0.size, "Serien" to rs0.size, "Live TV" to rl0.size)
-                            .filter { it.second > 0 }.joinToString(", ") { Lang.tr(it.first) }
-                        Column(
-                            Modifier.padding(horizontal = DS.PageX, vertical = 16.dp).fillMaxWidth()
-                                .clip(RoundedCornerShape(DS.RadiusM)).background(Surf).padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(Lang.tr("Keine {0} zu „{1}“").replace("{0}", Lang.tr(SEARCH_FILTERS[fl])).replace("{1}", q),
-                                color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, raw = true)
-                            if (others.isNotEmpty()) Text(Lang.tr("Treffer gibt es in {0}.").replace("{0}", others), color = Muted, fontSize = 15.sp, raw = true)
-                            PillButton("Alle Treffer zeigen", light = true) { SearchState.filter = 0 }
+                    } else if (selectedEmpty) {
+                        if (fl == 0) item {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                EmptyState(AIcon.Info, "Keine Treffer", "Prüfe die Schreibweise oder suche nach einem Teil des Titels. Kleine Tippfehler findet die Suche trotzdem.")
+                            }
+                        } else item(key = "nohits") {
+                            // Selected category has no hits: say so, name the categories that do have hits, offer all hits
+                            val others = listOf("Filme" to rm0.size, "Serien" to rs0.size, "Live TV" to liveAll.size, "Sport" to sportAll.size)
+                                .filter { it.second > 0 }.joinToString(", ") { Lang.tr(it.first) }
+                            Column(
+                                Modifier.padding(horizontal = DS.PageX, vertical = 16.dp).fillMaxWidth()
+                                    .clip(RoundedCornerShape(DS.RadiusM)).background(Surf).padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(Lang.tr("Keine {0} zu „{1}“").replace("{0}", Lang.tr(SEARCH_FILTERS[fl])).replace("{1}", q),
+                                    color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, raw = true)
+                                if (others.isNotEmpty()) Text(Lang.tr("Treffer gibt es in {0}.").replace("{0}", others), color = Muted, fontSize = 15.sp, raw = true)
+                                PillButton("Alle Treffer zeigen", light = true) { SearchState.filter = 0 }
+                            }
                         }
                     }
                     rowOrder.forEach { key ->
@@ -386,9 +458,14 @@ fun SearchScreen(
                                     AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Serien", rs, S_SORT_AZ))
                                 }
                             }
-                            "rl" -> if (rl.isNotEmpty()) item(key = "rl") {
-                                SearchRow("Live TV", rl, cardW, openS, if (firstKey == "rl") firstRes else null) {
-                                    AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Live TV", rl, S_SORT_AZ))
+                            "rl" -> if (liveCards.isNotEmpty()) item(key = "rl") {
+                                HitRow("Live TV", liveCards, cardW, false, openS, if (firstKey == "rl") firstRes else null) {
+                                    AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Live TV", liveCards.map { it.item }, S_SORT_AZ))
+                                }
+                            }
+                            "sp" -> if (sportCards.isNotEmpty()) item(key = "sp") {
+                                HitRow("Sport", sportCards, cardW, true, openS, if (firstKey == "sp") firstRes else null) {
+                                    AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Sport", sportCards.map { it.item }, S_SORT_AZ))
                                 }
                             }
                         }
@@ -558,6 +635,71 @@ private fun SearchRow(
     }
 }
 
+/** Row of live channels or sport shows (T-051b): a live card shows the running show and its progress, a sport card the event, time and channel. */
+@Composable
+private fun HitRow(
+    title: String, list: List<HitCard>, cardW: Int, sport: Boolean, onOpen: (Item) -> Unit,
+    firstReq: FocusRequester? = null, onAll: () -> Unit
+) {
+    val rowState = RowStates.get("${NavState.tab}|$title")
+    val headerReq = remember { FocusRequester() }
+    val firstCard = firstReq ?: remember { FocusRequester() }
+    val report = LocalSearchFocus.current
+    Column {
+        SearchRowHeader(title, list.size, headerReq, firstCard, rowState, onAll)
+        Box(
+            Modifier.onPreviewKeyEvent { e ->
+                if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && e.nativeKeyEvent.repeatCount == 0) {
+                    runCatching { headerReq.requestFocus() }.isSuccess
+                } else false
+            }
+        ) {
+            LazyRow(
+                state = rowState,
+                contentPadding = PaddingValues(horizontal = DS.PageX, vertical = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                itemsIndexed(list.take(60)) { i, c ->
+                    val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) report(c.item) }
+                    val w = Modifier.width((cardW * 4 / 3).dp).then(fr)
+                    if (sport) SportCard(c, { onOpen(c.item) }, w)
+                    else LiveCard(c.item, { onOpen(c.item) }, w, nowTitle = c.program?.title, progress = c.program?.let { progressOf(it) })
+                }
+                item { SearchAllTile(true, (cardW * 4 / 3).dp, onAll) }
+            }
+        }
+    }
+}
+
+/** Sport card (T-051b): league (the channel group) and event on top, the event title, time and channel below. */
+@Composable
+private fun SportCard(c: HitCard, onClick: () -> Unit, modifier: Modifier) {
+    var f by remember { mutableStateOf(false) }
+    val s by animateFloatAsState(if (f) focusScale(1.04f) else 1f, label = "sportcard")
+    val shape = RoundedCornerShape(DS.RadiusM)
+    val p = c.program
+    Column(
+        modifier.graphicsLayer { scaleX = s; scaleY = s }.focusGlow(f, shape).clip(shape).background(Surf)
+            .border(DS.FocusBorder, if (f) Accent2 else Surf2, shape)
+            .onFocusChanged { f = it.isFocused }
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            Modifier.fillMaxWidth().height(110.dp)
+                .background(Brush.linearGradient(listOf(colorFor(c.item).copy(alpha = .8f), Surf2)))
+                .padding(12.dp)
+        ) {
+            Text(raw = true, text = c.item.group.ifBlank { c.item.title }, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.TopStart))
+        }
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Text(raw = true, text = p?.title ?: c.item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(raw = true, text = (if (p != null) hhmm(p.start) + " – " + hhmm(p.end) + "  ·  " else "") + c.item.title, color = Muted, fontSize = 13.sp,
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+    }
+}
 
 private val SEARCH_FILTERS = listOf("Alle", "Filme", "Serien", "Live TV", "Sport")
 

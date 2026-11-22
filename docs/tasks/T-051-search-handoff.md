@@ -106,3 +106,10 @@ Text is written in English. The German labels of the maintainer's sketch are rep
 - Not done from the sketch: the magnifier icon (no search icon in the icon set `AppIcons.kt`), the "Best match" label next to the badge, the card subtitles for Sport ("league + event") and the Live TV progress bar check. The "Backdrop" label in the sketch is an annotation and is not shown.
 - "Ansehen" and "Details" both open the detail page, as a card click does today. Whether "Ansehen" should start playback is **open**.
 - New German UI keys need entries in the dictionaries (open): "Suche", "Vorschläge", "Letzte Suchen", "Alle Treffer zeigen", "Auf der Merkliste", "Merkliste", "Ansehen", "Details", the "Keine … zu" and "Treffer gibt es in" notices, the hit count line.
+
+### T-051b second round (decided by the maintainer)
+- No magnifier icon, no "Best match" label, no "Watch" button (OK on a marked title opens the details).
+- Live TV row: channels whose name matches, and channels whose running show matches (progress bar, show title as subtitle).
+- Sport row: sport channels whose show matches, running now or in the next 24 hours (league = channel group, event, time, channel).
+- Counts: Live TV tile counts channel and show hits; Sport tile counts sport channel and sport show hits. Shows on sport channels are not counted as live.
+- TV programme search uses the XMLTV guide, and the cached short guide of Xtream channels (at most 40 fetched per search, 9 s). Not built, not device tested.
