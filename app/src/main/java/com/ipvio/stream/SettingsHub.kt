@@ -524,6 +524,7 @@ private fun GeneralPage(ctx: Context) {
             if (act != null) MobilePrefs.set(act, it)
         }
     }
+    DnsSection(ctx)
 }
 
 internal fun canStartFromBoot(ctx: Context): Boolean =

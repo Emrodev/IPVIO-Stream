@@ -29,4 +29,14 @@ Sofort¦Immediately
 Bereiche des Sports Hub¦Sports Hub tabs
 Blende Bereiche aus, die du nicht brauchst. Mindestens ein Bereich bleibt immer.¦Hide tabs you do not use. At least one tab always stays.
 Startbereich¦Start tab
+DNS-Server¦DNS server
+Systemstandard¦System default
+Eigene Adresse¦Own address
+Der DNS-Server löst die Adressen der Anbieter und Dienste auf, mit denen die App spricht. Hilft, wenn ein Anbieter beim Provider gesperrt ist, und für mehr Privatsphäre. Antwortet der Server nicht, nutzt die App den DNS des Geräts. Gilt nicht für den Videostream selbst und nicht für ein VPN.¦The DNS server looks up the addresses of the providers and services the app talks to. It helps when a provider is blocked by your internet provider, and for more privacy. If the server does not answer, the app uses the device's DNS. It does not apply to the video stream itself or to a VPN.
+IP-Adresse oder https://…/dns-query (bis zu 3, mit Leerzeichen getrennt)¦IP address or https://…/dns-query (up to 3, separated by spaces)
+Ungültig: eine IP-Adresse wie 1.1.1.1 oder eine https-Adresse eingeben.¦Invalid: enter an IP address like 1.1.1.1 or an https address.
+DNS speichern¦Save DNS
+DNS testen¦Test DNS
+Keine Antwort von {0}¦No answer from {0}
+OK: example.com → {0}¦OK: example.com → {0}
 """

@@ -14,6 +14,8 @@ T-047 (faster start, branch `claude/pensive-galileo-i3tza8`): language dictionar
 
 T-048a (playlist edit window, same branch): row with Reload + Edit, window with Apply/Cancel, Reload of other lists in the background. Task file `docs/tasks/T-048-playlist-manage-page.md`. T-048b (refresh plan per playlist) is in the same branch: new file `ipvio_plrefresh` (not in the backup, open decision), worker and start use the plan of each list. JVM tests 37/37. Not built, not device tested. Next: maintainer builds and runs the steps in the task file.
 
+T-049 (sports alert jump, Sports Hub settings page, 26 more competitions off by default, own DNS) is in the same branch, see `docs/tasks/T-049-sports-vpn-dns-trakt-batch.md`. VPN and Trakt are not started. JVM tests 67/67, not built, not device tested.
+
 ## Release state (from git log, 2026-11-22)
 
 - Latest release: **1.4.7** (`versionCode` 13), merged into `main` (PR #144, merge `ef3d17e`) and `dev` (PR #143, merge `09fcc2a`). Release notes: `docs/release-notes/v1.4.7.md`.

@@ -1,6 +1,6 @@
 # T-049 – Batch of wishes: sports hub, VPN and DNS, Trakt
 
-Status: **PLAN, waiting for approval** (CLAUDE.md sections 6 and 7). No code. Source: the maintainer's list of 22 Nov 2026 (user requests, one marked as from a Reddit user). This is several features, not small fixes, so it is split into subtasks that can be built and tested one by one.
+Status: **T-049a, c, d and f implemented** (decided by the maintainer on 22 Nov 2026: sports alert, more leagues and the Sports Hub settings tab, own DNS). T-049b needed little (see below). **VPN (e) and Trakt (g) not started**: the maintainer wants a VPN solution in the app, not necessarily WireGuard; the choice of solution and library still needs approval. Not built with Gradle, not device tested. Source: the maintainer's list of 22 Nov 2026 (user requests, one marked as from a Reddit user). This is several features, not small fixes, so it is split into subtasks that can be built and tested one by one.
 
 ## What exists today (read in the code, nothing run)
 - Sports hub: `SportHub.kt`, `SportLeague.kt`, `SportData.kt` (ESPN public but unofficial endpoints `site.api.espn.com`, league list with paths), `SportAlerts.kt` (popup when a favourite team is about to play, kicks off or scores), `SportWatch.kt` (finds channels for a game: manual assignment, TV guide, channel name), `SportLogic.kt` (13 sport categories from keywords: `CATS`).
@@ -51,3 +51,21 @@ See the questions asked in the chat (22 Nov 2026).
 ## Risks
 - Nothing here can be built or run by the assistant; all new data sources and the VPN need device tests.
 - New third-party endpoints and a VPN library change the privacy and support picture of the app; both need the maintainer's decision and a mention in `docs/SECURITY.md`.
+
+## Built (22 Nov 2026)
+- **T-049a** `SportAlerts.kt`, `MainActivity.kt`: kick-off and score alerts carry their game. While one is on screen and a channel is known for the game (`SportWatch`, same matching as Watch Live), the popup shows "OK: go to the game" and OK opens that channel (`AppNav.openChannel`). The OK key is only taken while such a popup is visible. Can be switched off in Settings > Sports Hub.
+- **T-049b** Watch Live (`WatchPage`) already lists the channels for a game with the reason (hand-picked, TV guide, channel name), availability and a manual assignment. No new filter was built; say which filter is missing.
+- **T-049c** `SportData.kt`: 26 more competitions (English divisions and cups, Scottish, Dutch, Portuguese, Turkish, Belgian leagues, Conference League, national cups, Nations League, Euro, World Cup, Libertadores, NWSL, WNBA, college basketball, LPGA, DP World Tour). Their ESPN paths are **unverified**. They start switched off (`SportLeagues` seed), so nothing new is queried until they are switched on. Sky Sports is a broadcaster, not a data source; the leagues Sky shows are covered by these ESPN entries and the channel matching by name.
+- **T-049d** New page Settings > Sports Hub (`SportSettings.kt`, `SportHubPrefs.kt`, `SportHubLogic.kt`): sports on/off (switches all leagues of a sport), each competition, live results on/off, alerts (on/off, delay, OK jumps to the game), score overlay, which hub tabs are shown, start tab. New file `ipvio_sportset` (profile-scoped, added to the backup list). The settings page numbers moved: About is 19, Reset all 20.
+- **T-049f** `DnsLogic.kt` (pure, DNS messages and server list), `AppDns.kt` (OkHttp `Dns`), `NetSettings.kt` (Settings > General > DNS server: presets Cloudflare, Google, Quad9 or an own IP address or https DoH address, a test button). Applies to all OkHttp traffic (playlists, TV guide, metadata, sports, updates). The system DNS is used if the chosen server does not answer. New file `ipvio_dns` (device-level, not in the backup).
+- Not covered by the DNS setting: the video stream itself (the player uses its own HTTP stack with the system DNS; routing it through OkHttp needs `media3-datasource-okhttp`, a new dependency) and traffic through a VPN.
+
+## Tests
+- JVM (Kotlin 2.0.21 compiler of the Gradle install, JUnit 4.13.2): `DnsLogicTest` (8), `SportHubLogicTest` (8), with the earlier tests 67/67. Not run: Gradle build and the Android files (`AppDns.kt`, `NetSettings.kt`, `SportSettings.kt`, `SportHubPrefs.kt`, `SportAlerts.kt`, `SportHub.kt`, `SettingsHub.kt`, `Net.kt`), device tests.
+
+## Device test steps (maintainer)
+1. Settings > Sports Hub: switch all sports off except football, open the hub: only football is listed, tabs you hid are gone, the start tab opens first.
+2. Switch on a new competition (for example Championship): games or an empty list; tell which paths show nothing.
+3. Follow a team, wait for a kick-off or score popup: "OK: go to the game" shows if a channel matches; OK opens it. Without a match no hint and OK works as usual.
+4. Settings > General > DNS server: pick Cloudflare, press "Test DNS" (OK with an address). Load a playlist; then enter a wrong address: the app still loads (fallback).
+5. An https address such as https://dns.google/dns-query works for the test.
