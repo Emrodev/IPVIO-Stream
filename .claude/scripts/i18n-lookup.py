@@ -13,7 +13,7 @@ PH=re.compile(r'\{(#?)(\d)\}')
 DECO=re.compile(r'^([‹›\s]*)(.*?)([\s‹›]*)$', re.S)
 DOT=re.compile(r'\s*·\s*')
 exact={}; pats=[]
-files=sorted(glob.glob(REPO+'app/src/main/java/com/ipvio/stream/Dict[A-P].kt')+glob.glob(REPO+'app/src/main/java/com/ipvio/stream/DictEn[12].kt'))
+files=sorted(glob.glob(REPO+'app/src/main/java/com/ipvio/stream/Dict[A-P].kt')+glob.glob(REPO+'app/src/main/java/com/ipvio/stream/DictEn*.kt'))
 for f in files:
     for l in open(f,encoding='utf-8'):
         p=l.rstrip('\n').split('¦')
