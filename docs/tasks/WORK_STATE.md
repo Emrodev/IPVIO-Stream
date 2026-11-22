@@ -8,7 +8,7 @@ T-036 (done, committed `dd4c17a`): this file, the archive, `/start`, `/new-task`
 
 T-037 (done, commit `5cdea91`): `/protected-check` and the release-notes skill, each with a check script in `.claude/scripts/`. Task file `docs/tasks/T-037-protected-check-release-notes.md`.
 
-T-038 (done, in the branch commit after `5cdea91`): `/english-check`, report only, with `.claude/scripts/english-check.sh`. Task file `docs/tasks/T-038-english-check.md`. T-039 (done, in the branch commit after `7778f0f`): inventory of German text outside `Dict*.kt`, report `docs/quality/german-strings-2026-11-22.md`. About 700 lines outside the translation keys, by word-list estimate. T-040 (done, in the branch commit after `fff53a8`): option C of T-039 — 21 docs and the archive translated to the English dictionary labels. Open: option A, started as T-041 (measurement only so far: 184 unique German texts without a dictionary row, see the correction in the German-strings report). And 7 CHANGELOG lines in released sections (section 18). No app code changed.
+T-038 (done, in the branch commit after `5cdea91`): `/english-check`, report only, with `.claude/scripts/english-check.sh`. Task file `docs/tasks/T-038-english-check.md`. T-039 (done, in the branch commit after `7778f0f`): inventory of German text outside `Dict*.kt`, report `docs/quality/german-strings-2026-11-22.md`. About 700 lines outside the translation keys, by word-list estimate. T-040 (done, in the branch commit after `fff53a8`): option C of T-039 — 21 docs and the archive translated to the English dictionary labels. T-041 (stage 1 of option A, in the branch commit after `9638dba`): 16 English rows in `DictEn1.kt`, registered in `Lang.kt`, JVM test `DictEn1Test`, CHANGELOG entry. Not built, not device tested. Open: stage 2 (templated and fragmented texts, about 110 unique), stage 3 (translations), and whether other languages should keep German as the fallback for new rows (currently English). And 7 CHANGELOG lines in released sections (section 18). No app code changed.
 
 ## Release state (from git log, 2026-11-22)
 
@@ -28,7 +28,7 @@ The full list with test steps is in `docs/tasks/WORK_STATE-history.md`, section 
 
 ## Task IDs
 
-- Highest ID in `docs/tasks/`: T-040. **Next free ID: T-041** (use `/new-task`, which checks this).
+- Highest ID in `docs/tasks/`: T-041. **Next free ID: T-042** (use `/new-task`, which checks this).
 - IDs used by more than one file: T-009, T-014, T-026, T-027, T-032. The files are not renamed here, because the old log and other task files refer to them by name. Renaming needs a decision.
 
 ## Conventions

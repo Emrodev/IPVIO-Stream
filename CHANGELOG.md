@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Some messages and hints that had no translation before (for example the portal, provider list and subtitle search messages, the first-start hints of the playlist import) now show in English. For German they are unchanged. For the other languages they used to show German and now show English. Not device tested yet
 
 ## 1.4.7 (versionCode 13)
 - Live TV: playback over a connection without encryption (certificate does not match the address, you agreed) is repaired. The agreed host now goes straight to http instead of failing over https first before every request and every video segment, and addresses with characters such as "%", "|" or spaces are no longer re-encoded or rejected when switching to http. Reload the channel once if it still shows "connection stalled". Not device tested yet
