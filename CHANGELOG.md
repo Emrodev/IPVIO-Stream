@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Settings > General > VPN (new): connect the device through WireGuard. Choose the `.conf` file of your VPN provider, then connect and disconnect there. The video stream goes through the VPN as well. The key is stored encrypted and never shown. There is no kill switch yet. Not device tested yet, and not checked on Fire TV
 - Sports: on a kick-off or score popup of your teams, "OK: go to the game" opens a channel that shows the game (switch off in Settings > Sports Hub). Not device tested yet
 - Settings > Sports Hub (new page): choose the sports and competitions you follow (switched-off ones are not queried), alerts and delay, the tabs of the Sports Hub and the tab it opens on. 26 more competitions were added (English divisions and cups, Scottish, Dutch, Portuguese, Turkish and Belgian leagues, national cups, Nations League, Euro, World Cup, Libertadores, NWSL, WNBA, college basketball, LPGA, DP World Tour); they start switched off and their ESPN addresses are not verified. Not device tested yet
 - Settings > General > DNS server (new): use Cloudflare, Google, Quad9 or an own DNS server (an IP address or an https address) for the app's connections. If the server does not answer, the device's DNS is used. It does not apply to the video stream itself. Not device tested yet

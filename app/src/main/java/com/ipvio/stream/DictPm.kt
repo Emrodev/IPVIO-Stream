@@ -39,4 +39,26 @@ DNS speichern¦Save DNS
 DNS testen¦Test DNS
 Keine Antwort von {0}¦No answer from {0}
 OK: example.com → {0}¦OK: example.com → {0}
+VPN¦VPN
+Verbindet das Gerät über WireGuard mit dem Server deines VPN-Anbieters, auch für den Videostream. Lade bei deinem Anbieter eine WireGuard-Konfigurationsdatei (.conf) herunter und wähle sie hier aus. Der Schlüssel wird verschlüsselt gespeichert und nie angezeigt. Es gibt keinen Kill-Switch: bricht die Verbindung ab, läuft der Verkehr ohne VPN weiter. Ob das VPN auf deinem Gerät läuft, ist nicht geprüft.¦Connects the device through WireGuard to the server of your VPN provider, also for the video stream. Download a WireGuard configuration file (.conf) from your provider and choose it here. The key is stored encrypted and never shown. There is no kill switch: if the connection drops, traffic continues without the VPN. Whether the VPN works on your device has not been verified.
+WireGuard-Datei auswählen¦Choose WireGuard file
+Andere Datei auswählen¦Choose another file
+VPN verbunden¦VPN connected
+Verbinde …¦Connecting …
+VPN aus¦VPN off
+VPN trennen¦Disconnect VPN
+VPN verbinden¦Connect VPN
+VPN-Konfiguration löschen¦Delete VPN configuration
+Konfiguration gespeichert.¦Configuration saved.
+Die VPN-Berechtigung wurde nicht erteilt.¦The VPN permission was not granted.
+Verbindung fehlgeschlagen¦Connection failed
+Keine Konfiguration gespeichert.¦No configuration stored.
+Die Datei ist leer.¦The file is empty.
+Die Datei ist zu groß für eine WireGuard-Konfiguration.¦The file is too large for a WireGuard configuration.
+Das ist keine WireGuard-Konfiguration: Abschnitt [Interface] fehlt.¦This is not a WireGuard configuration: the [Interface] section is missing.
+Das ist keine WireGuard-Konfiguration: Abschnitt [Peer] fehlt.¦This is not a WireGuard configuration: the [Peer] section is missing.
+Der PrivateKey fehlt in der Konfiguration.¦The PrivateKey is missing in the configuration.
+Der Endpoint (Server) fehlt in der Konfiguration.¦The Endpoint (server) is missing in the configuration.
+Die WireGuard-Konfiguration ist ungültig.¦The WireGuard configuration is invalid.
+Dieses Gerät hat keinen sicheren Schlüsselspeicher. Die Konfiguration wird nicht gespeichert.¦This device has no secure key store. The configuration is not stored.
 """

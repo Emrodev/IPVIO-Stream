@@ -17,3 +17,6 @@
 -dontrepackage
 
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
+
+# T-049e: WireGuard tunnel library (native Go backend called through JNI, VpnService created by the system)
+-keep class com.wireguard.** { *; }
