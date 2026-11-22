@@ -10,6 +10,18 @@ Status: report. Option C is done (T-040): documentation translated, except the 7
 - The classes UI, MSG and CODE are heuristics. Most CODE hits checked by sampling are user-visible German text. A line-by-line review is not done.
 - This report contains no German text, by CLAUDE.md section 4. To see the lines, run the script in the repository (see "Reproduce").
 
+## Correction (T-041): what is really missing
+
+The totals above count every German-looking line. Most of them already work: `Text(...)` in `Lang.kt` translates the German literal through the dictionary (`I18nCore.translate`), and the German text is the key. A literal with a dictionary row is translated, so it is not a problem.
+
+Measured on the code (German-looking string literals in `app/src/main/java/com/ipvio/stream/*.kt`, outside `Dict*.kt`):
+
+- 1254 literals, of which 1051 have a dictionary row (translated).
+- 203 occurrences, 184 unique texts, have no row. For these, the English UI and all other languages show German, because `I18nCore.translate` falls back to the German text.
+- Of the 184 unique texts: 77 contain variables or placeholders (need code changes, not only a row), 33 are fragments that are joined at run time, about 75 are plain sentences. The split is a rough heuristic.
+
+So the real work for option A is about 75 plain texts plus 77 templated texts that need a `{0}`-style key, not 670 lines. Earlier wording "do not follow the language setting" was too broad: it applies only to the 184 texts above.
+
 ## Totals (whole tree, 116 files)
 
 | Class   | Lines | Meaning                                               |
