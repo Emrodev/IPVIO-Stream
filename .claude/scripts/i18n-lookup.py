@@ -13,10 +13,20 @@ PH=re.compile(r'\{(#?)(\d)\}')
 DECO=re.compile(r'^([‹›\s]*)(.*?)([\s‹›]*)$', re.S)
 DOT=re.compile(r'\s*·\s*')
 exact={}; pats=[]
-files=sorted(glob.glob(REPO+'app/src/main/java/com/ipvio/stream/Dict[A-P].kt')+glob.glob(REPO+'app/src/main/java/com/ipvio/stream/DictEn*.kt'))
-for f in files:
-    for l in open(f,encoding='utf-8'):
-        p=l.rstrip('\n').split('¦')
+import os
+exact={}; pats=[]
+def _sources():
+    base=REPO+'app/src/main/java/com/ipvio/stream/'
+    srcs=[]
+    if not os.environ.get('DICT_W_OFF'):
+        # DictW main block only: the Polish block DictPlW is a separate string in the same file
+        srcs.append(open(base+'DictW.kt',encoding='utf-8').read().split('"""')[1].splitlines())
+    for f in sorted(glob.glob(base+'Dict[A-P].kt'))+sorted(glob.glob(base+'DictEn*.kt')):
+        srcs.append(open(f,encoding='utf-8').read().splitlines())
+    return srcs
+for lines in _sources():          # same order as I18nCore.load
+    for l in lines:
+        p=l.split('¦')
         if len(p)<2 or not p[0].strip(): continue
         k=p[0].strip(); en=p[1].strip() or k
         if PH.search(k):
@@ -26,7 +36,7 @@ for f in files:
             out.append(re.escape(k[last:])); out.append('$')
             pats.append((len(''.join(out)), re.compile(''.join(out),re.S), en, num))
         else:
-            exact.setdefault(k, en)
+            exact[k] = en   # later blocks win, as in I18nCore.fill
 pats.sort(key=lambda x:-x[0])
 def lookup(s, depth=0):
     if depth>4: return None

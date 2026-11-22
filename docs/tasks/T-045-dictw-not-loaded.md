@@ -17,10 +17,17 @@
 ## Decision needed
 Should `DictW` and `DictPlW` be registered (activating about 122 rows for all languages)? Recommended: yes, after a review of the `DictW` texts in English and Polish on the device. Until then the affected texts stay German in English and other languages.
 
-## Maintainer test steps (after the decision)
+## Maintainer test steps
 1. Register the two files, build, run `DictConsistencyTest` and `DictEn1Test` to `DictEn3Test`.
 2. Open "What's new" (Settings > About) in English, then in Polish: the entries are translated.
 3. Check the player hints (subtitle delay, Back closes the menu) and the adult content hint on the settings page.
 
+## Decision (maintainer, 22 Nov 2026: "Ja")
+- `DictW` and `DictPlW` are registered in `Lang.kt`: `DictW` first, `DictPlW` first in the Polish column, so the existing rows of `DictA`–`DictP` and `DictPl1`–`DictPl8` keep priority.
+- Checked with the lookup port (before/after, all keys): no existing English value changes; 46 English keys are new.
+- The four keys that exist in both (`Version`, `Später`, `Aktuell`, `Zurücksetzen`) keep their current English values.
+- CHANGELOG entry added under Unreleased.
+- Not built, no JVM test run, not device tested. The maintainer tests the steps below.
+
 ## Status
-Found and documented. Waiting for the maintainer's decision.
+Registered in the branch. Not built, not device tested.

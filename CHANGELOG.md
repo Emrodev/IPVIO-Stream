@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Stalker portal messages about a portal that does not respond (with the address and MAC check hint) now show in English. For German they are unchanged. Not device tested yet
+- The "What's new" list and some player and settings hints (wishbox round 2) were not loaded before: they showed German in English and other languages. They are translated now. German and the existing translations are unchanged. Not device tested yet
 - Some status and error lines with numbers or names (for example "OpenSubtitles: error 500", "Loading categories (2/9) …", "Search „…“ · Movies") now show in English. For German they are unchanged. Not device tested yet
 - Some messages and hints that had no translation before (for example the portal, provider list and subtitle search messages, the first-start hints of the playlist import) now show in English. For German they are unchanged. For the other languages they used to show German and now show English. Not device tested yet
 
