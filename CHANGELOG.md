@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Faster start: the texts of the chosen language (English and all other languages except German) are prepared in the background while the first screen is built, and the silent playlist refresh and the catch-up request wait a few seconds after the stored list is shown. Nothing changes in what you see. Not measured, not device tested yet
 - Stalker portal messages about a portal that does not respond (with the address and MAC check hint) now show in English. For German they are unchanged. Not device tested yet
 - The new English texts of the last changes (search, portal, Live TV and player messages) are translated into Turkish, Bosnian, Croatian, Serbian, Spanish, French, Italian, Dutch, Arabic and Polish. German is unchanged. Not device tested yet
 - The "What's new" list and some player and settings hints (wishbox round 2) were not loaded before: they showed German in English and other languages. They are translated now. German and the existing translations are unchanged. Not device tested yet

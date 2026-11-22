@@ -1433,7 +1433,7 @@ object PlaylistStore {
                     PlaylistDiag.log("cache", PlaylistDiag.summary(cached.items) + " hidden=${hidden.sorted()}")
                     show(c, u, cached.items, cached.epg, cached.order, cached.counts, cached.bytes, hidden)
                     // Start-up timing for Settings > Diagnostics: reading the stored list, then building it for the screens
-                    Diag.note("Start: stored list ${cached.items.size} items read in ${t1 - t0} ms, shown in ${android.os.SystemClock.elapsedRealtime() - t1} ms, translations ${Lang.loadMs} ms")
+                    Diag.note("Start: stored list ${cached.items.size} items read in ${t1 - t0} ms, shown in ${android.os.SystemClock.elapsedRealtime() - t1} ms, translations ${Lang.loadMs} ms registered, ${Lang.prewarmMs} ms parsed in the background")
                     return Local.OK
                 }
             }
@@ -1518,6 +1518,9 @@ object PlaylistStore {
             if (save) finishSave(c, u)
             return true
         }
+        // T-047: the stored list is on screen: start the silent refresh a few seconds later, so the first screens are not slowed down
+        val wait = StartupLogic.refreshDelayMs(usedCache, save)
+        if (wait > 0) kotlinx.coroutines.delay(wait)
         error = null
         val before = sig(primaryItems)
         heavy = true
