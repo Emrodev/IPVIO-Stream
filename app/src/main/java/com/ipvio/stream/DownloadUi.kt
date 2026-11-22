@@ -137,17 +137,23 @@ fun DownloadsSettings(ctx: Context) {
     }
     Text("Gesamt: " + SettingsLogic.fmtBytes(rows.sumOf { it.bytes }), color = Accent2, fontSize = 15.sp)
     rows.forEach { r ->
-        val st = DownloadStore.progress[r.id] ?: if (r.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED) DownloadStore.DONE else 0
-        val status = when (st) {
-            DownloadStore.DONE -> "Fertig"
-            DownloadStore.FAILED -> "Fehlgeschlagen"
-            else -> Lang.tr("Lädt {0} %").replace("{0}", st.toString())
+        val dl = androidx.media3.exoplayer.offline.Download
+        val status = when (r.state) {
+            dl.STATE_COMPLETED -> "Fertig"
+            dl.STATE_FAILED -> "Fehlgeschlagen"
+            dl.STATE_STOPPED -> "Pausiert"
+            dl.STATE_QUEUED -> "Wartet"
+            else -> Lang.tr("Lädt {0} %").replace("{0}", (DownloadStore.progress[r.id] ?: 0).toString())
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(Modifier.width(420.dp)) {
                 Text(raw = true, text = r.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 Text(status + "  ·  " + SettingsLogic.fmtBytes(r.bytes), color = Muted, fontSize = 13.sp)
             }
+            // Queue actions: pause or continue, retry after a failure, delete
+            if (r.state == dl.STATE_STOPPED) PillButton("Fortsetzen", light = true) { DownloadStore.resume(ctx, r.id) }
+            else if (r.state == dl.STATE_DOWNLOADING || r.state == dl.STATE_QUEUED) PillButton("Pausieren", light = true) { DownloadStore.pause(ctx, r.id) }
+            if (r.state == dl.STATE_FAILED) PillButton("Wiederholen", light = true) { DownloadStore.retry(ctx, r.id) }
             ConfirmPill("Löschen") { DownloadStore.removeId(ctx, r.id) }
         }
     }

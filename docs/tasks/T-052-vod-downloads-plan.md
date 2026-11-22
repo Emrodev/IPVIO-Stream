@@ -106,3 +106,7 @@ Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (Ult
 - Per profile: folder `downloads` for profile 0, `downloads_p<ID>` otherwise (same rule as the other profile files).
 - Automatic deletion: off by default; 14, 30 or 90 days. "Used" = the day of the last playback (written at most once per hour); a download that was never played counts from its first check.
 - Still open: size estimate per quality (needs the playlist duration), HLS offline playback is untested and the riskiest part.
+
+## Queue (based on the review of another open-source app, ideas only, no code copied)
+- Pause, resume, retry and delete per download; "Download season" on the series page.
+- Open: a Downloads entry in the main menu (navigation, needs approval), the retry after removal relies on a 500 ms delay (unverified), season downloads start one toast per refused episode.

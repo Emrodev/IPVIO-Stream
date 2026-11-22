@@ -169,6 +169,26 @@ object DownloadStore {
         Entry(d.request.id, runCatching { String(d.request.data ?: ByteArray(0), Charsets.UTF_8) }.getOrDefault(d.request.id), d.state, d.bytesDownloaded)
     }
 
+    /** Stop reason used for a paused download (any value other than "none" keeps it stopped). */
+    private const val PAUSE_REASON = 1
+
+    /** Pauses a download; the file stays and the download can continue later (T-052a queue). */
+    fun pause(c: Context, id: String) =
+        DownloadService.sendSetStopReason(c, VodDownloadService::class.java, id, PAUSE_REASON, false)
+
+    /** Continues a paused download. */
+    fun resume(c: Context, id: String) =
+        DownloadService.sendSetStopReason(c, VodDownloadService::class.java, id, Download.STOP_REASON_NONE, false)
+
+    /** Starts a failed download again: removes it, then adds the same request again (after the removal has been processed). */
+    fun retry(c: Context, id: String) {
+        val request = manager(c).currentDownloads.firstOrNull { it.request.id == id }?.request ?: return
+        DownloadService.sendRemoveDownload(c, VodDownloadService::class.java, id, false)
+        Handler(Looper.getMainLooper()).postDelayed({
+            DownloadService.sendAddDownload(c, VodDownloadService::class.java, request, true)
+        }, 500L)
+    }
+
     /** Removes a download by id and its file (and its use record). */
     fun removeId(c: Context, id: String) {
         runCatching { prefs(c).edit().remove("used_$id").apply() }

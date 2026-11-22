@@ -42,4 +42,10 @@ Aus¦Off
 30 Tage¦30 days
 90 Tage¦90 days
 Menütaste = herunterladen¦Menu key = download
+Pausieren¦Pause
+Fortsetzen¦Resume
+Wiederholen¦Retry
+Pausiert¦Paused
+Wartet¦Waiting
+Staffel laden¦Download season
 """
