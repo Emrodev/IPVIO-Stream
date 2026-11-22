@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Settings > Storage > Downloads: new switch "Download only on Wi-Fi" (off by default). When it is on, downloads wait until an unmetered network is available. Not device tested yet
 - Movies: HLS streams (.m3u8) can be downloaded too. The download button first lists the qualities of the stream (for example 1080p or 720p with the bitrate) and downloads the chosen one. Finished downloads play offline. Not device tested yet
 - Settings > Storage > Downloads (new tab): all movie downloads with title, status, size and total, and a delete button per download. Not device tested yet
 - Downloaded movies play from the download when the same address is played, also without a network connection. Every other stream is played as before. Not device tested yet

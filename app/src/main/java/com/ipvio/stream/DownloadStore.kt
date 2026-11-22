@@ -20,6 +20,7 @@ import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
+import androidx.media3.exoplayer.scheduler.Requirements
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -43,6 +44,20 @@ object DownloadStore {
     /** Folder of the downloads (app-specific, no permission needed). */
     fun folder(c: Context): File = File(c.getExternalFilesDir(null) ?: c.filesDir, "downloads")
 
+    /** Setting "download only on Wi-Fi" (default off: the user decides). Stored in the download preferences. */
+    fun wifiOnly(c: Context): Boolean =
+        runCatching { c.applicationContext.getSharedPreferences("ipvio_vod", Context.MODE_PRIVATE).getBoolean("wifi_only", false) }.getOrDefault(false)
+
+    /** Changes the setting; running downloads pause or continue at once. */
+    fun setWifiOnly(c: Context, on: Boolean) {
+        runCatching { c.applicationContext.getSharedPreferences("ipvio_vod", Context.MODE_PRIVATE).edit().putBoolean("wifi_only", on).apply() }
+        manager(c).setRequirements(requirementsFor(on))
+    }
+
+    /** Only unmetered networks (Wi-Fi, Ethernet) when [wifi] is set, otherwise any network. */
+    private fun requirementsFor(wifi: Boolean): Requirements =
+        Requirements(if (wifi) Requirements.NETWORK_UNMETERED else Requirements.NETWORK)
+
     /** Free bytes on the download storage. */
     fun freeBytes(c: Context): Long = runCatching { folder(c).apply { mkdirs() }.usableSpace }.getOrDefault(0L)
 
@@ -61,6 +76,7 @@ object DownloadStore {
         val m = DownloadManager(app, db, cache, DefaultDataSource.Factory(app, http), Executors.newFixedThreadPool(2))
         // One movie at a time: a slow connection gets the full bandwidth and the progress stays readable
         m.setMaxParallelDownloads(1)
+        m.setRequirements(requirementsFor(wifiOnly(app)))
         m.addListener(object : DownloadManager.Listener {
             override fun onDownloadChanged(manager: DownloadManager, download: Download, finalException: Exception?) = update(download)
             override fun onDownloadRemoved(manager: DownloadManager, download: Download) {

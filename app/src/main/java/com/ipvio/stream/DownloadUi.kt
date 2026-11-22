@@ -116,6 +116,11 @@ fun VodDownloadButton(item: Item, url: String, h: Int) {
 /** T-052a: list of the downloads in Settings > Storage, with delete and the space they take. */
 @Composable
 fun DownloadsSettings(ctx: Context) {
+    var wifi by remember { mutableStateOf(DownloadStore.wifiOnly(ctx)) }
+    ToggleRow("Nur im WLAN laden", "Downloads warten, wenn kein ungemessenes Netz (WLAN oder Ethernet) da ist.", wifi) {
+        wifi = it
+        DownloadStore.setWifiOnly(ctx, it)
+    }
     // Reading the progress map makes the list update while a download runs
     val rows = run { DownloadStore.progress.size; DownloadStore.entries(ctx) }
     if (rows.isEmpty()) {

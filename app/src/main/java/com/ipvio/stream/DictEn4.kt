@@ -29,4 +29,6 @@ Qualität wählen¦Choose quality
 Abbrechen¦Cancel
 Qualitäten werden geladen …¦Loading qualities …
 Die Playlist konnte nicht geladen werden.¦The playlist could not be loaded.
+Nur im WLAN laden¦Download only on Wi-Fi
+Downloads warten, wenn kein ungemessenes Netz (WLAN oder Ethernet) da ist.¦Downloads wait when no unmetered network (Wi-Fi or Ethernet) is available.
 """
