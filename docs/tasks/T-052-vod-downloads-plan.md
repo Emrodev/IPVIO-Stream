@@ -1,6 +1,6 @@
 # T-052 – Downloads for movies and series (plan, not started)
 
-Status: **planned. Waiting for the maintainer's approval (CLAUDE.md section 6: new feature, storage and network).**
+Status: **planned, decisions taken 22 Nov 2026, waiting for the go to start step T-052a (CLAUDE.md section 6).**
 Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (UltraTV). Goal: download VOD (movies and series episodes) to the device, so that 4K titles play smoothly later, with weak internet or a slow device.
 
 ## Why
@@ -67,3 +67,12 @@ Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (Ult
 
 ## Documentation (when implemented)
 `CHANGELOG.md`, `docs/FEATURES.md`, `docs/PLAYER.md` (playback from a file), `docs/SECURITY.md` (where the files are stored, no secrets in file names).
+
+## Decisions (maintainer, 22 Nov 2026)
+- Option B (Media3 offline). Movies and series together.
+- Quality chosen per download when the provider offers several HLS variants (4K, 1080p, 720p). Re-encoding on the device is not planned: too slow and too heavy for a Fire TV stick, and it loses quality.
+- Storage location and Wi-Fi-only: the user decides (no default set by us beyond what is needed for safety).
+- Downloads belong to the profile (`_p<ID>`).
+- No backup of downloads.
+- First download shows a notice about the provider terms; the user confirms it once.
+- Optional automatic deletion after X days without watching; off by default, the user sets it on and chooses the days.
