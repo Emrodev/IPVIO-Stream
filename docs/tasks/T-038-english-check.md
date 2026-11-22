@@ -35,7 +35,7 @@ CLAUDE.md section 4 forbids German in everything in the repository outside the G
 ## Test results
 - `bash -n` syntax check of the script: **passed**.
 - Base `09fcc2a` (start of the T-036 work): TEXT 7, all in the archive file. **Passed as expected.**
-- Base `1835e93~20`: TEXT 25, CODE+COMMENT 125, KEY 33. The CODE lines shown include hard-coded German labels such as `"Hinzufügen"` and `"Mit Hoch/Runter verschieben"` in `AddPlaylistScreen.kt` and `CategoriesScreen.kt`. **Passed as expected** (no review of all 125 lines done).
+- Base `1835e93~20`: TEXT 25, CODE+COMMENT 125, KEY 33. The CODE lines include hard-coded German labels in `AddPlaylistScreen.kt` and `CategoriesScreen.kt` (quoted texts omitted, see the German-strings report). **Passed as expected** (no review of all 125 lines done).
 - Whole `app/src/main`, outside `Dict*.kt`: 859 lines match the word list, 187 of them are `t()` keys. **Estimate, not verified line by line.**
 - Slash command loading in a Claude Code session: **not run**.
 - Gradle, unit tests, device: not applicable.
