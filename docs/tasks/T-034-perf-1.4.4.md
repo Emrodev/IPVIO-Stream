@@ -11,7 +11,7 @@ Found in the code, ordered by the expected effect. Effects are **unverified** (n
 3. **Stream check on every detail page** (`MediaProbe.kt`, T-033): opened a second provider connection as soon as the page showed, also for a quick look or an immediate Play.
 4. **All dictionary columns parsed at start** (`Lang.kt`): Arabic and Polish added about 2,700 rows that were parsed on the main thread at every start, whatever the language.
 
-Checked without finding a cost on the hot path: private categories (`PrivateCats.filter` returns the same list when nothing is private), "Neu hinzugefügt" sort (runs on `Dispatchers.Default`), guide/Live TV wrap-around (focus index only read in key handlers), category folders (#96, remembered), RTL layout direction, `Diag.history`.
+Checked without finding a cost on the hot path: private categories (`PrivateCats.filter` returns the same list when nothing is private), "Recently added" sort (runs on `Dispatchers.Default`), guide/Live TV wrap-around (focus index only read in key handlers), category folders (#96, remembered), RTL layout direction, `Diag.history`.
 
 ## Changes
 - `MetaFreshLogic.kt` (new, pure): when stored details can be used. `Meta.kt`: `extended(…, needAge)` and `providerMeta(…, needAge)`; only `needAge = true` asks for the age rating at all (TMDB `release_dates`/`content_ratings`, OMDb `Rated`), also for new titles (maintainer decision 21 Nov: only when the title is opened). OMDb keeps its own "tried" entry for the age check. `DetailScreen.kt`: `needAge` only for the real detail page (not embedded, or embedded with actions open).
@@ -35,7 +35,7 @@ Checked without finding a cost on the hot path: private categories (`PrivateCats
 1. Install over 1.4.4 (data stays). Large playlist with TMDB key.
 2. Home: move through slideshow and rows for a minute, then Movies grid with the list preview. Compare with 1.4.4: no stutter; `adb logcat` should not show a stream of TMDB requests.
 3. Open a movie detail page: age rating appears. Before opening, rows and billboard show no age rating for titles not opened yet (intended).
-4. Settings > Playlists > "Playlist komplett neu laden" on an Xtream account: time it against 1.4.4; check counts of channels, movies, series.
+4. Settings > Playlists > "Reload playlist from scratch" on an Xtream account: time it against 1.4.4; check counts of channels, movies, series.
 5. If available: the provider that answered 884/885 to parallel requests (PR #117) must still load completely.
 6. Open a detail page and press Play at once: playback starts normally (no second connection).
 7. Switch the language to Polish, Arabic and Dutch: texts are translated.

@@ -11,7 +11,7 @@ Status: merged into `main` through #37 (branch `feature/xtream-backup-servers`, 
 
 ## Behaviour
 
-- Login screen (Add playlist > Xtream login) and Settings > Playlists > "Backup-Server": any number of backup addresses, same username and password. Empty fields are ignored; filled fields must be a valid address.
+- Login screen (Add playlist > Xtream login) and Settings > Playlists > "Backup server": any number of backup addresses, same username and password. Empty fields are ignored; filled fields must be a valid address.
 - On a connection error, timeout or 5xx the request is retried on the next server. 4xx counts as "server is alive".
 - The last working server is remembered until the app restarts.
 - Each server shows "Reachable" / "Not reachable since …"; the playlist row lists servers that are down.
@@ -64,9 +64,9 @@ Found while rebasing: the status texts contained the symbols ✓/✗, which `I18
 
 ## Test steps (maintainer, TV or Fire TV)
 
-1. Add an Xtream playlist with a broken main address (e.g. an unused port) and a working backup. The playlist loads; Settings > Playlists > Backup-Server shows a cross under the main server and a check under the backup.
+1. Add an Xtream playlist with a broken main address (e.g. an unused port) and a working backup. The playlist loads; Settings > Playlists > Backup server shows a cross under the main server and a check under the backup.
 2. Play a live channel, a movie and a catch-up show from that playlist.
-3. Remote: Up/Down move between the backup fields and the "+ Backup-Server" button; OK opens the keyboard.
+3. Remote: Up/Down move between the backup fields and the "+ Backup server" button; OK opens the keyboard.
 4. Playlist B without backups whose server is also entered as a backup of playlist A: B never contacts A's main server (provider log or proxy).
 5. Zap quickly between channels while A's main server is down: no server changes to "not reachable" because of zapping alone.
 6. Add a playlist, enter backups, press Cancel: the backups have no effect.

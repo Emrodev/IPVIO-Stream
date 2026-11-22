@@ -87,14 +87,14 @@ SHA-256 of the APK, so the app can reject a damaged download before the installe
 | `versionName` | Shown to the user; use the same as the tag without `v`. |
 | `apk` | Name of the APK asset in the same release (a full `https://` address also works). |
 | `sha256` | Hash from step 2. **Required** for the built-in source. |
-| `minSupportedCode` | Installed apps with a lower `versionCode` get a required update (no "Später" button). `0` = off. |
+| `minSupportedCode` | Installed apps with a lower `versionCode` get a required update (no "Later" button). `0` = off. |
 | `mandatory` | `true` = this update is required for everybody. Back still closes the dialog, so nobody is locked out. |
 | `notes` | Optional text under the version in the update dialog (max 300 characters). |
 
 4. Attach `update.json` to the release together with the APK (step 5 of section 2).
 
 Rules:
-- **Every time you rebuild the APK, calculate the hash again** and update `versionCode` and `sha256`. A wrong hash makes every user see "Prüfsumme stimmt nicht".
+- **Every time you rebuild the APK, calculate the hash again** and update `versionCode` and `sha256`. A wrong hash makes every user see "Checksum mismatch".
 - Use `"mandatory": true` or `minSupportedCode` only for real emergencies (a broken release). Both are visible to all users.
 - If `update.json` is missing or broken, the app falls back to the GitHub API. That path has **no hash**; the signature check still applies.
 - A custom update address (Settings > App update) may point to an `update.json` without `sha256`; if present it is checked.

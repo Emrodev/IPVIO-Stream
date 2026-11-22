@@ -1,6 +1,6 @@
 # German text outside the dictionaries – 2026-11-22
 
-Status: report, no code changed. Decision needed from the maintainer (CLAUDE.md sections 4 and 5).
+Status: report. Option C is done (T-040): documentation translated, except the 7 CHANGELOG lines in released sections. No code changed. Decision on option A still needed from the maintainer (CLAUDE.md sections 4 and 5).
 
 ## Method
 
@@ -47,16 +47,16 @@ The remaining 104 files have fewer than 19 lines each.
 1. **The dictionary system is the existing path.** `t("German", "English")` and `tr(li, "German", "English")` already carry most UI text (261 lines). The hard-coded German in the table is outside that path, so it does not follow the language setting.
 2. **`WhatsNew.kt` (26 CODE lines)** holds German text that is shown to users. Its texts are release information; check how this file is used before changing it.
 3. **Hint texts.** WORK_STATE says hint texts are English on purpose (maintainer request), but German hint texts exist in `AddPlaylistScreen.kt`, `DriveUi.kt` and `FitCalibration.kt`. Check whether these are old or whether the rule changed.
-4. **`TEXT` (57 lines)** is spread over about 20 files: task files (for example T-015 with 9 lines, T-025 with 5), `CHANGELOG.md` (7), `docs/tasks/WORK_STATE-history.md` (7, archive), `docs/RELEASE.md` and `docs/SECURITY.md` (1 each). These are errors under section 4. Task files from before the rule are the bulk.
+4. **`TEXT` (57 lines)** was spread over about 20 documentation files. Translated in T-040, now only 7 lines remain, all in `CHANGELOG.md` released sections (1.2 to 1.4.3). They are left unchanged because CLAUDE.md section 18 says not to rewrite older CHANGELOG sections. Maintainer decision needed.
 5. **False positives.** Example: the ISO code for an undetermined audio language in `MediaProbeLogic.kt` matches the word list. Expect a few per file.
 
 ## Options for the maintainer
 
 - **A. Move the German UI and message texts to dictionary rows** (`t(de, en)` or `tr(li, de, en)`), file by file, starting with the smallest files. Visible change for users in English and other languages; no change for German users. Needs approval (section 5 and 6). Recommended, in stages of one or two files per pull request, each with a device test.
 - **B. Keep the hard-coded German and record it as an exception** in `docs/REFACTORING-PROGRESS.md`. Smallest work now, but the section 4 rule is then not met.
-- **C. Translate the archive and the old CHANGELOG/task lines (TEXT).** Documentation only; no user effect. Needs a decision on history rewriting first.
+- **C. Translate the archive and the old CHANGELOG/task lines (TEXT).** Done in T-040 for docs and archive. Open: the 7 CHANGELOG lines in released sections (section 18 conflict).
 
-Recommendation: C now (no user effect, cleans the English-only rule), then A starting with `WhatsNew.kt` and `MediaProbeLogic.kt` (check false positives first), after the maintainer decides the staging.
+Recommendation: A in stages, starting with `WhatsNew.kt`. The `MediaProbeLogic.kt` hit is a false positive (ISO code) and needs no change.
 
 ## Reproduce
 
