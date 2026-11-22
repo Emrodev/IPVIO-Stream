@@ -1351,7 +1351,7 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
             SmallPill(PlaylistMode.labels[mode]) {
                 PlaylistMode.set(ctx, pl.url, (mode + 1) % PlaylistMode.labels.size)
                 // Parsed again from the stored list without network (the mode is applied while loading, saves memory)
-                scope.launch { if (!PlaylistStore.reapplyLanguages(ctx)) PlaylistStore.applyMode(ctx) }
+                scope.launch { PlaylistStore.modeChanged(ctx) }
             }
             SmallPill("Umbenennen") { editing = i; name = pl.name }
             if (XtreamLogic.fromUrl(pl.url) != null) SmallPill("Backup-Server") {

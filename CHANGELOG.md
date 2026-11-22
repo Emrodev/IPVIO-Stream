@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Settings > Playlists: changing the content mode ("Live TV + Movies & series", "Live TV only", "Movies & series only") is applied as soon as the change is made. If a load was running at that moment (start-up, refresh), the change was dropped and the old content stayed until the next reload; it now waits for that load and is applied afterwards. Not device tested yet
 
 ## 1.4.7 (versionCode 13)
 - Live TV: playback over a connection without encryption (certificate does not match the address, you agreed) is repaired. The agreed host now goes straight to http instead of failing over https first before every request and every video segment, and addresses with characters such as "%", "|" or spaces are no longer re-encoded or rejected when switching to http. Reload the channel once if it still shows "connection stalled". Not device tested yet

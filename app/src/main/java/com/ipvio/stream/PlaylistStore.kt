@@ -1251,6 +1251,19 @@ object PlaylistStore {
         persist(c)
     }
 
+    /**
+     * Content mode of a playlist was changed: parse the stored list again with the new mode (no download).
+     * A running load (e.g. start-up or refresh) holds the load lock; then this waits and tries again, instead of
+     * dropping the change (the same retry as LangFilter.setAndApply). Rebuilding alone cannot bring back titles
+     * that were left out when the list was parsed, so [applyMode] is not enough here.
+     */
+    suspend fun modeChanged(c: Context) {
+        repeat(60) {
+            if (reapplyLanguages(c)) return
+            kotlinx.coroutines.delay(500)
+        }
+    }
+
     /** Content mode of a playlist was changed: rebuild the shown list (no new download). */
     suspend fun applyMode(c: Context) {
         // While a load runs, it rebuilds at its end anyway and then picks up the new mode
