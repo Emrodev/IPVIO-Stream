@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">IPVIO Stream</string>
+    <string name="vod_download_channel">Downloads</string>
 </resources>

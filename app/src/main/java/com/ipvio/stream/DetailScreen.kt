@@ -531,6 +531,8 @@ private fun DetailScreenFull(
                                     openTrailer(ctx, meta?.trailerKey, item.title)
                                 }
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
+                                // T-052a: download of a movie file (step 1)
+                                playUrl?.let { VodDownloadButton(item, it, bh) }
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)
                             Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {

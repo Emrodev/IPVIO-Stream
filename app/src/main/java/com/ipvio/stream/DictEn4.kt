@@ -1,7 +1,8 @@
 package com.ipvio.stream
 
-// Round 2 of T-051 and T-053: English rows for the new search screen, the VPN import text and the four-tile multi view
-// (German key¦English). Placeholders {0}, {1} match any text. Other languages fall back to English (I18nCore.fill), as for DictEn1 to DictEn3.
+// Round 2 of T-051, T-053 and T-052a: English rows for the new search screen, the VPN import text, the four-tile multi view
+// and the movie downloads (German key¦English). Placeholders {0}, {1} match any text.
+// Other languages fall back to English (I18nCore.fill), as for DictEn1 to DictEn3.
 val DictEn4 = """
 Vorschläge¦Suggestions
 Letzte Suchen¦Last searches
@@ -14,4 +15,10 @@ Treffer gibt es in {0}.¦Hits are in {0}.
 Am Handy „WireGuard-Konfiguration (VPN)“ wählen, den Code eingeben und die .conf-Datei hochladen.¦On the phone, choose “WireGuard configuration (VPN)”, enter the code and upload the .conf file.
 Oder die Datei vom Handy über das WLAN senden.¦Or send the file from your phone over Wi-Fi.
 Vier im Raster¦Four in a grid
+Herunterladen¦Download
+Lädt {0} %¦Downloading {0} %
+Download entfernen¦Remove download
+Verstanden¦Got it
+Downloads sind nur für Inhalte gedacht, die du rechtmäßig nutzen darfst. Die Bedingungen deines Anbieters gelten. Die Dateien bleiben auf diesem Gerät.¦Downloads are only meant for content you are allowed to use. Your provider's terms apply. The files stay on this device.
+Nicht genug freier Speicher für einen Download.¦Not enough free storage for a download.
 """

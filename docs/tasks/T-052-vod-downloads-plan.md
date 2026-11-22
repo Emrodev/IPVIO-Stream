@@ -1,6 +1,6 @@
 # T-052 – Downloads for movies and series (plan, not started)
 
-Status: **planned, decisions taken 22 Nov 2026, waiting for the go to start step T-052a (CLAUDE.md section 6).**
+Status: **T-052a started (22 Nov 2026): engine, service, manifest entry, detail button for movies, rules and JVM test. Not built, not device tested. Playback from the download and the download list are open (step T-052a, second part, needs approval: player core).**
 Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (UltraTV). Goal: download VOD (movies and series episodes) to the device, so that 4K titles play smoothly later, with weak internet or a slow device.
 
 ## Why
@@ -76,3 +76,8 @@ Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (Ult
 - No backup of downloads.
 - First download shows a notice about the provider terms; the user confirms it once.
 - Optional automatic deletion after X days without watching; off by default, the user sets it on and chooses the days.
+
+## T-052a status
+- Done (code, not built): `DownloadLogic.kt` (rules, test `DownloadLogicTest`), `DownloadStore.kt` (Media3 DownloadManager, SimpleCache in the app folder on external storage, max one download at a time), `VodDownloadService.kt` (foreground service, manifest entry `dataSync`), `DownloadUi.kt` (button and one-time notice), hook in `DetailScreen.kt`, English rows in `DictEn4.kt`.
+- Open: playback of a finished download (the player must read the cache: `CacheDataSource` in front of the stream source, player core, approval needed); download list with delete and storage view; series episodes; Wi-Fi-only option; quality choice; auto-delete; per-profile folders.
+- Media3 API used: `DownloadManager`, `DownloadRequest`, `DownloadService.sendAddDownload`, `DownloadNotificationHelper`, `StandaloneDatabaseProvider`, `SimpleCache`, `NoOpCacheEvictor`. **Compile check pending** (no Gradle here).
