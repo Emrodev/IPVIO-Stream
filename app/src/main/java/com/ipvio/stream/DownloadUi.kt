@@ -2,6 +2,9 @@ package com.ipvio.stream
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -129,6 +132,12 @@ fun DownloadsSettings(ctx: Context) {
         wifi = it
         DownloadStore.setWifiOnly(ctx, it)
     }
+    DownloadList(ctx)
+}
+
+/** The list of all downloads with queue actions (used by the settings page and by the Downloads tab). */
+@Composable
+fun DownloadList(ctx: Context) {
     // Reading the progress map makes the list update while a download runs
     val rows = run { DownloadStore.progress.size; DownloadStore.entries(ctx) }
     if (rows.isEmpty()) {
@@ -177,4 +186,21 @@ fun startEpisodeDownload(c: Context, item: Item, ep: Episode, url: String) {
         return
     }
     DownloadStore.startBest(c, episodeDownloadItem(item, ep), url)
+}
+
+/** Downloads tab in the sidebar (T-052a): the list with queue actions, with the sidebar beside it. */
+@Composable
+fun DownloadsTab(tab: Int, onTab: (Int) -> Unit) {
+    val ctx = LocalContext.current
+    val sideFocus = remember { FocusRequester() }
+    Box(Modifier.fillMaxSize().sidebarPad()) {
+        Column(
+            Modifier.fillMaxSize().padding(start = DS.PageX, end = DS.PageX, top = 28.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("Downloads", color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold)
+            DownloadList(ctx)
+        }
+        Sidebar(tab, onTab, Modifier.align(SidebarPrefs.align()), sideFocus) { }
+    }
 }

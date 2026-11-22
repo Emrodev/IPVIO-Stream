@@ -110,3 +110,8 @@ Source: user request, 22 Nov 2026. Reference the user saw: another IPTV app (Ult
 ## Queue (based on the review of another open-source app, ideas only, no code copied)
 - Pause, resume, retry and delete per download; "Download season" on the series page.
 - Open: a Downloads entry in the main menu (navigation, needs approval), the retry after removal relies on a 500 ms delay (unverified), season downloads start one toast per refused episode.
+
+## Downloads tab in the sidebar
+- Menu id 11 (`MenuLogic.DOWNLOADS`), label "Downloads", icon drawn in `Sidebar.kt`, page `DownloadsTab` in `DownloadUi.kt`, routing in `MainActivity.kt`.
+- The list is shared by the settings page and the tab (`DownloadList`).
+- Open: playing a download from the tab (the tab only manages), the sidebar order for users who already changed it.

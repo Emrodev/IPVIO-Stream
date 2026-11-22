@@ -48,4 +48,5 @@ Wiederholen¦Retry
 Pausiert¦Paused
 Wartet¦Waiting
 Staffel laden¦Download season
+Downloads¦Downloads
 """

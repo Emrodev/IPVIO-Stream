@@ -523,6 +523,7 @@ private fun AppContent() {
                 onBrowse = { browse = BrowseState(it) },
                 onTab = { goTab(it) }
             ) }
+            tab == MenuLogic.DOWNLOADS -> Box(Modifier.fillMaxSize().screenEnter(tab)) { DownloadsTab(tab = tab, onTab = { goTab(it) }) }
             else -> Box(Modifier.fillMaxSize().screenEnter(tab)) { HomeScreen(
                 tab = tab, onTab = { goTab(it) }, states = states,
                 onOpen = open,

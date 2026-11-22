@@ -130,6 +130,14 @@ fun MenuIcon(id: Int, color: Color, modifier: Modifier = Modifier) {
                 drawArc(color, 200f, 140f, false, topLeft = Offset(.14f * s, .02f * s), size = Size(.72f * s, .5f * s), style = sw)
                 drawArc(color, 20f, 140f, false, topLeft = Offset(.14f * s, .48f * s), size = Size(.72f * s, .5f * s), style = sw)
             }
+            11 -> { // Downloads: arrow down into a tray
+                line(.5f, .12f, .5f, .6f)
+                line(.3f, .42f, .5f, .62f); line(.7f, .42f, .5f, .62f)
+                val p = Path().apply {
+                    moveTo(.14f * s, .6f * s); lineTo(.14f * s, .86f * s); lineTo(.86f * s, .86f * s); lineTo(.86f * s, .6f * s)
+                }
+                drawPath(p, color, style = sw)
+            }
             else -> {
                 for (y in listOf(.26f, .5f, .74f)) line(.12f, y, .88f, y)
             }
