@@ -11,6 +11,7 @@ Auf der Merkliste¦On your watchlist
 Merkliste¦Watchlist
 Alles löschen¦Clear all
 Alle Inhalte zeigen¦Show all content
+Keine Playlist¦No playlist
 Details¦Details
 Keine {0} zu „{1}“¦No {0} for “{1}”
 {0} Treffer in {1} Kategorien¦{0} hits in {1} categories

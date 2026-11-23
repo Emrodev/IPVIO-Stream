@@ -8,7 +8,6 @@ import com.ipvio.stream.SectionSourceLogic.SECTION_MOVIES
 import com.ipvio.stream.SectionSourceLogic.SECTION_SERIES
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -91,9 +90,36 @@ class SectionSourceLogicTest {
         assertEquals(SectionSourceLogic.Click(setOf(1), load = false), SectionSourceLogic.click(emptySet(), setOf(1, 3), key = 3, shown = true))
     }
 
-    @Test fun lastTickedPlaylistCannotBeUnticked() {
-        assertNull(SectionSourceLogic.click(emptySet(), setOf(1), key = 1, shown = true))
-        assertNull(SectionSourceLogic.click(setOf(3), setOf(1, 3), key = 3, shown = true))
+    @Test fun lastTickedPlaylistCanBeUntickedToNone() {
+        val none = setOf(SectionSourceLogic.NONE)
+        assertEquals(SectionSourceLogic.Click(none, load = false), SectionSourceLogic.click(emptySet(), setOf(1), key = 1, shown = true))
+        assertEquals(SectionSourceLogic.Click(none, load = false), SectionSourceLogic.click(setOf(3), setOf(1, 3), key = 3, shown = true))
+        assertTrue(SectionSourceLogic.isNone(none))
+        assertFalse(SectionSourceLogic.isNone(emptySet()))
+    }
+
+    @Test fun fromNoneTickingOneLoadedPlaylistSelectsOnlyIt() {
+        val none = setOf(SectionSourceLogic.NONE)
+        assertEquals(SectionSourceLogic.Click(setOf(3), load = false), SectionSourceLogic.click(none, setOf(1, 3), key = 3, shown = true))
+    }
+
+    @Test fun fromNoneTickingAPlaylistNotLoadedSelectsOnlyItAndLoadsIt() {
+        val none = setOf(SectionSourceLogic.NONE)
+        assertEquals(SectionSourceLogic.Click(setOf(2), load = true), SectionSourceLogic.click(none, setOf(1), key = 2, shown = false))
+    }
+
+    @Test fun noneTicksNothing() {
+        assertFalse(SectionSourceLogic.checked(shown = true, eligible = true, key = 1, selected = setOf(SectionSourceLogic.NONE)))
+    }
+
+    @Test fun allButtonTogglesBetweenAllAndNone() {
+        assertEquals(setOf(SectionSourceLogic.NONE), SectionSourceLogic.clickAll(allTicked = true))
+        assertEquals(emptySet<Int>(), SectionSourceLogic.clickAll(allTicked = false))
+    }
+
+    @Test fun noneIsIgnoredWhenResolvingIndices() {
+        // effective() never sees NONE as a playlist; AreaSource turns NONE into "no source" before
+        assertEquals(setOf(0, 1, 4), SectionSourceLogic.effective(modes, SECTION_LIVE, setOf(SectionSourceLogic.NONE)))
     }
 
     @Test fun tickingTheLastMissingPlaylistBecomesAll() {

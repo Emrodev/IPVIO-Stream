@@ -19,6 +19,8 @@ object AreaSource {
         private set
 
     private const val PREFS = "ipvio_section"
+    /** Result of [sources] when every playlist is unticked: no title belongs to source -1. */
+    val NO_SOURCE: Set<Int> = setOf(-1)
     private val keys = HashMap<Int, Set<Int>>()
     private var loaded = false
 
@@ -59,8 +61,10 @@ object AreaSource {
      * Only call it when the shown playlists or the selection change (the screens keep the result in remember).
      */
     fun sources(c: Context, tab: Int): Set<Int> {
-        if (PlaylistStore.sourceNames.size < 2) return emptySet()
         val selected = selectedKeys(c, tab)
+        // Every playlist unticked: a source index that no title has, so the section shows nothing (as the menu says)
+        if (SectionSourceLogic.isNone(selected)) return NO_SOURCE
+        if (PlaylistStore.sourceNames.size < 2) return emptySet()
         if (selected.isEmpty()) return emptySet()
         val urls = PlaylistStore.shownUrls(c)
         if (urls.size != PlaylistStore.sourceNames.size) return emptySet()

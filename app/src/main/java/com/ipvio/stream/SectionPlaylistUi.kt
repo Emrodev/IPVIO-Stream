@@ -43,7 +43,7 @@ fun SectionPlaylistPill(tab: Int) {
     Box {
         FilterPill(
             Lang.tr("Playlist") + ": " + sectionPlaylistValue(ctx, tab, sel),
-            active = PlaylistStore.sourceNames.size > 1 && sel.isNotEmpty(),
+            active = (PlaylistStore.sourceNames.size > 1 && sel.isNotEmpty()) || SectionSourceLogic.isNone(sel),
             icon = FIcon.Grid, caret = true, raw = true
         ) { open = true }
         if (open) SectionPlaylistPopup(tab) { open = false }
@@ -52,6 +52,7 @@ fun SectionPlaylistPill(tab: Int) {
 
 /** Text of the pill: the selected playlist names, or "All playlists". Single playlist: its name. */
 fun sectionPlaylistValue(c: Context, tab: Int, sel: Set<Int>): String {
+    if (SectionSourceLogic.isNone(sel)) return Lang.tr("Keine Playlist")
     val lists = PlaylistStore.lists.toList()
     if (PlaylistStore.sourceNames.size < 2) return lists.getOrNull(PlaylistStore.active)?.name ?: ""
     val names = lists.filter { PlaylistStore.key(it.url) in sel }.map { it.name }
@@ -81,10 +82,12 @@ fun SectionPlaylistPopup(tab: Int, onChanged: () -> Unit = {}, onDismiss: () -> 
             LazyColumn(Modifier.weight(1f, fill = false)) {
                 item {
                     // "All playlists": every playlist that fits the section is ticked and loaded (maintainer decision, 23 Nov 2026)
+                    // Second press while all are ticked: untick all, then tick only the wanted ones (maintainer, 23 Nov 2026)
                     val all = sel.isEmpty() && eligible.all { PlaylistStore.key(lists[it].url) in shownKeys }
                     OptionRow(Lang.tr("Alle Playlists"), all, Modifier.focusRequester(first)) {
-                        AreaSource.setKeys(ctx, tab, emptySet())
-                        PlaylistStore.showAsync(ctx, eligible)
+                        val next = SectionSourceLogic.clickAll(all)
+                        AreaSource.setKeys(ctx, tab, next)
+                        if (next.isEmpty()) PlaylistStore.showAsync(ctx, eligible)
                         onChanged()
                     }
                 }
@@ -96,7 +99,7 @@ fun SectionPlaylistPopup(tab: Int, onChanged: () -> Unit = {}, onDismiss: () -> 
                     else {
                         val shown = key in shownKeys
                         OptionRow(pl.name, SectionSourceLogic.checked(shown, true, key, sel)) {
-                            val click = SectionSourceLogic.click(sel, eligibleShown, key, shown) ?: return@OptionRow
+                            val click = SectionSourceLogic.click(sel, eligibleShown, key, shown)
                             if (click.selection != sel) AreaSource.setKeys(ctx, tab, click.selection)
                             if (click.load) PlaylistStore.showAsync(ctx, listOf(PlaylistStore.lists.indexOfFirst { it.url == pl.url }))
                             onChanged()
