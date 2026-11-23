@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Sports Hub, tidier: the schedule has one row for date and sport instead of two (previous day, the chosen day as text, next day, "Today" only on other days), the sport filter shows only sports with games, and "Score overlay" moved from the front of the tab row to its end. Not device tested yet
 - Sports Hub: OK on a running game with a matching channel starts the channel (Live, Schedule and the live cards of the Overview); every other game opens its Match Center. Before, every game opened the Match Center. Not device tested yet
 - Settings > Genres & categories > "Reset this page" now switches everything on again: ignored groups, categories hidden in the categories view and every content language (the playlist is read again). Before, only the ignored groups were cleared. Private categories stay private. Not device tested yet
 - Header (Movies, Series, home): Left on the search field goes into the sidebar (before, the focus jumped to the profile circle on the right). A long playlist name no longer squeezes the profile circle: the playlist button is at most 280 design pixels wide, and the tabs on the left give way first. Not device tested yet

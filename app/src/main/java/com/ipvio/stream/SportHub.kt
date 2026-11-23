@@ -3,6 +3,8 @@ package com.ipvio.stream
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -176,7 +178,6 @@ fun SportHub(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
             contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(10)),
             horizontalArrangement = Arrangement.spacedBy(dpx(10))
         ) {
-            item(key = "scoreov") { FilterPill("Score-Overlay", SportAlerts.miniOn, aicon = AIcon.Live) { scoreDlg = true } }
             itemsIndexed(HUB_TABS) { i, t ->
                 if (i !in SportHubLogic.visible(SportHubPrefs.hidden())) return@itemsIndexed
                 // The chosen tab is where the focus lands when coming from the sidebar (the channel tab has its own target)
@@ -186,6 +187,8 @@ fun SportHub(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
                     tab = i; HubMemory.tab = i
                 }
             }
+            // A setting, not a tab: at the end of the row (before, it was the first pill and looked like a tab)
+            item(key = "scoreov") { FilterPill("Score-Overlay", SportAlerts.miniOn, aicon = AIcon.Live) { scoreDlg = true } }
         }
         if (!General.sportLive && tab != 6) {
             HubEmpty(AIcon.Live, "Live-Ergebnisse sind aus", "Ergebnisse, Tabellen und Spielpläne kommen von ESPN (inoffizielle Quelle). Schalte sie ein, um den Sports Hub zu nutzen.",
@@ -432,9 +435,12 @@ private fun HubSchedule(hub: HubCtx, sport: String?, onSport: (String?) -> Unit)
     val counts = list.groupingBy { SportData.sportOf(it) }.eachCount()
     val shown = list.filter { sportMatch(it, sport) }.sortedWith(compareBy({ popularity(it) }, { it.groupName }, { it.start }))
     Column(Modifier.fillMaxSize()) {
-        DateSelector(day, -7..14) { day = it; HubMemory.day = it }
-        Spacer(Modifier.height(dpx(6)))
-        SportFilter(sport, counts) { onSport(it) }
+        // One row instead of two (maintainer, 23 Nov 2026): date stepper on the left, the sports with games on the right
+        Row(Modifier.fillMaxWidth().padding(start = DS.PageX), verticalAlignment = Alignment.CenterVertically) {
+            DateStepper(day, -7..14) { day = it; HubMemory.day = it }
+            Box(Modifier.padding(horizontal = dpx(14)).width(1.dp).height(dpx(28)).background(DS.Hairline))
+            SportFilter(sport, counts, modifier = Modifier.weight(1f), startPad = 0.dp) { onSport(it) }
+        }
         LazyColumn(contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(8)), verticalArrangement = Arrangement.spacedBy(dpx(4))) {
             when {
                 games == null -> item(key = "load") { HubLoading("Lade Spiele …") }
