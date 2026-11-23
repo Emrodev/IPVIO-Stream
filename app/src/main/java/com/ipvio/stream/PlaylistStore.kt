@@ -802,9 +802,14 @@ object PlaylistStore {
             return f to Charsets.UTF_8
         }
         StalkerLogic.parse(u)?.let { return downloadStalker(c, u, it) }
-        val acct = XtreamLogic.fromUrl(u) ?: return downloadList(c, u)
+        val acct = XtreamLogic.fromUrl(u)
+        if (acct == null) {
+            // Shown on the Diagnostics page: a plain M3U address has movies and series only if the list itself has them
+            Diag.note(hostOf(u) + ": M3U address (not an Xtream login), movies and series come only from the list")
+            return downloadList(c, u)
+        }
         // If get.php has already failed once for this login, use the API right away
-        if (useApi(c, u)) return apiOrList(c, u, acct)
+        if (useApi(c, u)) { Diag.note(hostOf(u) + ": Xtream, loaded through the provider's API"); return apiOrList(c, u, acct) }
         val got = try {
             downloadList(c, u)
         } catch (e: PlaylistError) {
@@ -832,10 +837,15 @@ object PlaylistStore {
      * login, like [apiInstead]). If the API fails, the get.php list is kept, so the live channels never get lost.
      */
     private fun vodViaApi(c: Context, u: String, acct: XtreamLogic.Acct, got: Pair<File, Charset>): Pair<File, Charset> {
+        val host = hostOf(u)
         val hasVod = runCatching { got.first.bufferedReader(got.second).useLines { LoadLogic.hasVod(it) } }.getOrDefault(true)
-        if (hasVod) return got
+        if (hasVod) { Diag.note("$host: Xtream list (get.php) with movies or series"); return got }
         if (cancelled()) throw CancellationException("abgebrochen")
-        if (!runCatching { XtreamApi(client, uaFor(c, u)).hasVodCategories(acct) }.getOrDefault(false)) return got
+        if (!runCatching { XtreamApi(client, uaFor(c, u)).hasVodCategories(acct) }.getOrDefault(false)) {
+            Diag.note("$host: Xtream list (get.php) without movies or series; the provider's API lists no movie or series categories either")
+            return got
+        }
+        Diag.note("$host: Xtream list (get.php) without movies or series, the provider's API has them: loading through the API")
         PlaylistDiag.log("vod", "get.php has no movies or series, the provider lists them: API")
         // downloadApi writes the same raw file: keep the get.php list aside until the API list is complete
         val keep = File(got.first.path + ".liveonly")
@@ -846,12 +856,14 @@ object PlaylistStore {
             downloadApi(c, u, acct).also {
                 prefs(c).edit().putBoolean(apiKey(u), true).apply()
                 keep.delete()
+                Diag.note("$host: loaded through the API")
             }
         } catch (e: CancellationException) {
             keep.delete()
             throw e
         } catch (e: Exception) {
             PlaylistDiag.log("vod", "API failed, keeping the get.php list: " + e.javaClass.simpleName)
+            Diag.note("$host: API failed (" + e.javaClass.simpleName + "), the live channels of get.php are kept")
             got.first.delete()
             if (keep.renameTo(got.first)) got else throw e
         }

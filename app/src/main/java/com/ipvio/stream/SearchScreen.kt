@@ -9,6 +9,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.rememberScrollState
@@ -279,7 +281,7 @@ fun SearchScreen(
             Column(
                 Modifier.width(sk(601)).fillMaxHeight().background(Bg.copy(alpha = 0.94f))
                     .drawBehind { drawLine(DS.Hairline, Offset(size.width - 1f, 0f), Offset(size.width - 1f, size.height), 2f) }
-                    .padding(start = sk(37), end = sk(37), top = sk(44))
+                    .padding(start = sk(37), end = sk(37), top = sk(44), bottom = sk(40))
             ) {
                 Text(Lang.tr("Suche"), color = Color.White, fontSize = skf(36), fontWeight = FontWeight.ExtraBold, raw = true)
                 Spacer(Modifier.height(sk(22)))
@@ -369,7 +371,8 @@ fun SearchScreen(
                         }
                     }
                 }
-                Spacer(Modifier.height(sk(24)))
+                // Keyboard at the bottom of the panel (maintainer, 23 Nov 2026: no empty space below it)
+                Spacer(Modifier.weight(1f))
                 if (!AppSettings.systemKeyboard) {
                 // Own on-screen keyboard (instead of the TV's keyboard): hits appear while typing
                 SketchKeyboard(
@@ -673,7 +676,12 @@ private fun SearchRow(
     val headerReq = remember { FocusRequester() }
     val firstCard = firstReq ?: remember { FocusRequester() }
     val report = LocalSearchFocus.current
-    Column {
+    // A focused card brings its whole row into view, heading included: before, the list scrolled just enough for the card
+    // and the heading with "Show all" slid under the category tiles
+    val bring = remember { BringIntoViewRequester() }
+    val rowScope = rememberCoroutineScope()
+    val showRow: () -> Unit = { rowScope.launch { runCatching { bring.bringIntoView() } } }
+    Column(Modifier.bringIntoViewRequester(bring)) {
         SearchRowHeader(title, list.size, headerReq, firstCard, rowState, onAll)
         Box(
             Modifier.onPreviewKeyEvent { e ->
@@ -688,7 +696,7 @@ private fun SearchRow(
                 horizontalArrangement = Arrangement.spacedBy(sk(22))
             ) {
                 itemsIndexed(list.take(60)) { i, x ->
-                    val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) report(x) }
+                    val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) { report(x); showRow() } }
                     if (x.kind == Kind.LIVE) LiveCard(x, { onOpen(x) }, Modifier.width(sk(300)).then(fr))
                     else PosterCard(x, { onOpen(x) }, Modifier.width(sk(168)).restoreFocus(x.id).then(fr))
                 }
@@ -707,7 +715,12 @@ private fun HitRow(
     val headerReq = remember { FocusRequester() }
     val firstCard = firstReq ?: remember { FocusRequester() }
     val report = LocalSearchFocus.current
-    Column {
+    // A focused card brings its whole row into view, heading included: before, the list scrolled just enough for the card
+    // and the heading with "Show all" slid under the category tiles
+    val bring = remember { BringIntoViewRequester() }
+    val rowScope = rememberCoroutineScope()
+    val showRow: () -> Unit = { rowScope.launch { runCatching { bring.bringIntoView() } } }
+    Column(Modifier.bringIntoViewRequester(bring)) {
         SearchRowHeader(title, list.size, headerReq, firstCard, rowState, onAll)
         Box(
             Modifier.onPreviewKeyEvent { e ->
@@ -722,7 +735,7 @@ private fun HitRow(
                 horizontalArrangement = Arrangement.spacedBy(sk(22))
             ) {
                 itemsIndexed(list.take(60)) { i, c ->
-                    val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) report(c.item) }
+                    val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) { report(c.item); showRow() } }
                     val w = Modifier.width(sk(300)).then(fr)
                     if (sport) SportCard(c, { onOpen(c.item) }, w)
                     else LiveCard(c.item, { onOpen(c.item) }, w, nowTitle = c.program?.title, progress = c.program?.let { progressOf(it) })

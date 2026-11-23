@@ -79,3 +79,21 @@ Checks run here: the pure-logic files were compiled with the Kotlin 2.0.21 compi
 6. Fire TV Stick with large playlists: when memory is short, a notice appears in the menu, the app does not crash.
 7. Settings > Playlists > Edit: the name field has the focus; scroll down with the D-pad: the window follows at once. "Shown additionally" can be set to On.
 8. Search: compare with the maintainer's sketch (typing, empty field, empty category). The tiles show full names, the result cards are fully visible, the button reads "Watchlist" in English. The TV guide search and the Live TV channel search keep their old keyboard.
+
+## Stage 4: second test build (23 Nov 2026)
+
+Maintainer report on the APK of run 45170319820:
+
+- Movies and series still missing on `iptv.watchhd.to` (not the main list; counts Live TV 1138, movies 0, series 0, all filters off).
+- The playlist menu does not open in Movies/Series and in Live TV; "Edit" in Settings > Playlists does not open the window ("Reload" works).
+- Search: the keyboard should sit at the bottom; the row heading with "Show all" is hidden under the category tiles.
+- TMDB: "Secure connection failed" (from the key check in `Config.kt`, any `SSLException`).
+
+Changes:
+- Search: keyboard at the bottom of the panel; `SearchRow` and `HitRow` bring the whole row (heading included) into view when a card gets the focus.
+- Diagnostics: the download path writes to `Diag.note` (Settings > Diagnostics > Log): M3U address (not Xtream), Xtream list with or without movies/series, API used, API failed. Host name only, no credentials.
+- Settings > Playlists: type (Xtream, M3U, Stalker) and content mode on each row; "Show all content" when the mode is not "all" (a "Live TV only" mode removes movies and series while loading, which gives exactly "movies 0, series 0").
+
+Not solved, cause unknown: the menu and the edit window. Read again: no exception path found (`PlaylistMode`, `PlaylistRefresh` decoding, backup types), no window focus handling, no loading gate. The other header dropdowns use the same pill and `OptionPopup`. Needed from the device: Settings > Diagnostics, "Last crash" and "Log" right after trying to open the menu and the window.
+
+TMDB: no network code changed on this branch. Possible causes to check on the device: the device date and time (the emulator clock), own DNS or the VPN in Settings > General.
