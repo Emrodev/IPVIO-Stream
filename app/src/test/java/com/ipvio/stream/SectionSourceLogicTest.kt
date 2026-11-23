@@ -8,6 +8,7 @@ import com.ipvio.stream.SectionSourceLogic.SECTION_MOVIES
 import com.ipvio.stream.SectionSourceLogic.SECTION_SERIES
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -67,5 +68,35 @@ class SectionSourceLogicTest {
         val text = SectionSourceLogic.encode(listOf(42, -7, 1000))
         assertEquals(setOf(42, -7, 1000), SectionSourceLogic.decode(text))
         assertEquals(emptySet<Int>(), SectionSourceLogic.decode(null))
+    }
+
+    // Menu clicks (maintainer decision 23 Nov 2026: ticking a playlist that is not loaded loads it in addition)
+
+    @Test fun allSelectedTicksEveryLoadedFittingPlaylist() {
+        assertTrue(SectionSourceLogic.checked(shown = true, eligible = true, key = 5, selected = emptySet()))
+        assertFalse(SectionSourceLogic.checked(shown = false, eligible = true, key = 5, selected = emptySet()))
+        assertFalse(SectionSourceLogic.checked(shown = true, eligible = false, key = 5, selected = emptySet()))
+        assertFalse(SectionSourceLogic.checked(shown = true, eligible = true, key = 5, selected = setOf(6)))
+    }
+
+    @Test fun clickOnPlaylistNotLoadedLoadsItAndKeepsAll() {
+        assertEquals(SectionSourceLogic.Click(emptySet(), load = true), SectionSourceLogic.click(emptySet(), setOf(1), key = 2, shown = false))
+    }
+
+    @Test fun clickOnPlaylistNotLoadedAddsItToAPartialSelection() {
+        assertEquals(SectionSourceLogic.Click(setOf(1, 2), load = true), SectionSourceLogic.click(setOf(1), setOf(1, 3), key = 2, shown = false))
+    }
+
+    @Test fun untickFromAllKeepsTheOthers() {
+        assertEquals(SectionSourceLogic.Click(setOf(1), load = false), SectionSourceLogic.click(emptySet(), setOf(1, 3), key = 3, shown = true))
+    }
+
+    @Test fun lastTickedPlaylistCannotBeUnticked() {
+        assertNull(SectionSourceLogic.click(emptySet(), setOf(1), key = 1, shown = true))
+        assertNull(SectionSourceLogic.click(setOf(3), setOf(1, 3), key = 3, shown = true))
+    }
+
+    @Test fun tickingTheLastMissingPlaylistBecomesAll() {
+        assertEquals(SectionSourceLogic.Click(emptySet(), load = false), SectionSourceLogic.click(setOf(1), setOf(1, 3), key = 3, shown = true))
     }
 }

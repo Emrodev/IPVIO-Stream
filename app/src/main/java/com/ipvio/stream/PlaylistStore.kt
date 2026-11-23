@@ -815,7 +815,7 @@ object PlaylistStore {
         }
         val head = runCatching { got.first.inputStream().use { s -> val b = ByteArray(512); val k = s.read(b); if (k > 0) String(b, 0, k, got.second) else "" } }.getOrDefault("")
         if (XtreamLogic.looksLikeM3u(head)) {
-            if (!lastUnsized || !missesCategories(acct, got.first, got.second)) return got
+            if (!lastUnsized || !missesCategories(acct, got.first, got.second)) return vodViaApi(c, u, acct, got)
             // Most of the provider's live categories are missing: the list arrived only in part
             got.first.delete(); infoFile(c, u).delete()
             return apiInstead(c, u, acct, PlaylistError(MSG_INCOMPLETE))
@@ -823,6 +823,38 @@ object PlaylistStore {
         // 200, but no list (error page, empty response): try the API
         got.first.delete(); infoFile(c, u).delete()
         return apiInstead(c, u, acct, PlaylistError("Der Server hat keine gültige Playlist geliefert."))
+    }
+
+    /**
+     * Some providers deliver only live channels through get.php (for example "type=m3u" or a live-only output setting),
+     * while their API has movies and series. The list then loaded without any movie or series. If the list has none and
+     * the provider lists movie or series categories, the whole list is loaded through the API instead (remembered for this
+     * login, like [apiInstead]). If the API fails, the get.php list is kept, so the live channels never get lost.
+     */
+    private fun vodViaApi(c: Context, u: String, acct: XtreamLogic.Acct, got: Pair<File, Charset>): Pair<File, Charset> {
+        val hasVod = runCatching { got.first.bufferedReader(got.second).useLines { LoadLogic.hasVod(it) } }.getOrDefault(true)
+        if (hasVod) return got
+        if (cancelled()) throw CancellationException("abgebrochen")
+        if (!runCatching { XtreamApi(client, uaFor(c, u)).hasVodCategories(acct) }.getOrDefault(false)) return got
+        PlaylistDiag.log("vod", "get.php has no movies or series, the provider lists them: API")
+        // downloadApi writes the same raw file: keep the get.php list aside until the API list is complete
+        val keep = File(got.first.path + ".liveonly")
+        keep.delete()
+        if (!got.first.renameTo(keep)) return got
+        infoFile(c, u).delete()
+        return try {
+            downloadApi(c, u, acct).also {
+                prefs(c).edit().putBoolean(apiKey(u), true).apply()
+                keep.delete()
+            }
+        } catch (e: CancellationException) {
+            keep.delete()
+            throw e
+        } catch (e: Exception) {
+            PlaylistDiag.log("vod", "API failed, keeping the get.php list: " + e.javaClass.simpleName)
+            got.first.delete()
+            if (keep.renameTo(got.first)) got else throw e
+        }
     }
 
     private fun apiKey(u: String) = "xt_api_" + key(u)
@@ -1351,6 +1383,26 @@ object PlaylistStore {
         val k = key(lists[i].url)
         multi = if (on) multi + k else multi - k
         persist(c)
+    }
+
+    /**
+     * T-051: show the playlists [indices] in addition to the main list and load them (stored copy first, otherwise the
+     * server). Runs in [switchScope], so closing the menu does not stop it. A load that is running blocks [applyMulti]:
+     * then it is tried again for up to 30 s (a load that ends later picks up the new selection on the next start anyway).
+     * Memory: [loadExtras] stops with a notice ([extraError]) before the device runs out of memory.
+     */
+    fun showAsync(c: Context, indices: Collection<Int>) {
+        ensure(c)
+        val add = indices.filter { it in lists.indices && it != active && !isShown(it) }
+        if (add.isEmpty()) return
+        for (i in add) setShown(c, i, true)
+        val app = c.applicationContext
+        switchScope.launch {
+            repeat(30) {
+                if (applyMulti(app)) return@launch
+                delay(1000)
+            }
+        }
     }
 
     /** Content mode of a playlist was changed: rebuild the shown list (no new download). */

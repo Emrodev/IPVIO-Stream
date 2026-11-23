@@ -17,6 +17,15 @@ object LoadLogic {
      */
     const val FACTOR = 0.65
 
+    /**
+     * Address line of a movie or a series episode in an Xtream M3U (get.php): its path contains /movie/ or /series/.
+     * Some providers deliver live channels only through get.php; [hasVod] finds such a list.
+     */
+    fun isVodLine(line: String): Boolean = !line.startsWith("#") && (line.contains("/movie/") || line.contains("/series/"))
+
+    /** Does the list contain at least one movie or series? Stops at the first one. */
+    fun hasVod(lines: Sequence<String>): Boolean = lines.any { isVodLine(it) }
+
     /** How many bytes of playlist fit in memory (memory share [SHARE] divided by [FACTOR]). */
     fun budget(maxHeap: Long): Long = (maxHeap * SHARE / FACTOR).toLong()
 

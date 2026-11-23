@@ -8,6 +8,7 @@ Vorschläge¦Suggestions
 Letzte Suchen¦Last searches
 Alle Treffer zeigen¦Show all hits
 Auf der Merkliste¦On your watchlist
+Merkliste¦Watchlist
 Details¦Details
 Keine {0} zu „{1}“¦No {0} for “{1}”
 {0} Treffer in {1} Kategorien¦{0} hits in {1} categories

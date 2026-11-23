@@ -43,6 +43,31 @@ object SectionSourceLogic {
     /** Selection after a click on one playlist: add it when missing, remove it when present. */
     fun toggle(selected: Set<Int>, index: Int): Set<Int> = if (index in selected) selected - index else selected + index
 
+    /**
+     * Is a playlist ticked in the menu? Only a loaded (shown) playlist that fits the section can be ticked;
+     * with "All playlists" (nothing selected) every one of them is ticked.
+     */
+    fun checked(shown: Boolean, eligible: Boolean, key: Int, selected: Set<Int>): Boolean =
+        shown && eligible && (selected.isEmpty() || key in selected)
+
+    /** Result of a click on a playlist: the new selection, and whether the playlist must be loaded first. */
+    data class Click(val selection: Set<Int>, val load: Boolean)
+
+    /**
+     * Click on the playlist [key] in the menu of a section (maintainer decision, 23 Nov 2026: ticking loads it).
+     * - Not loaded yet: it is loaded in addition and ticked ("All" stays "All", which then includes it).
+     * - Loaded: ticked or unticked. The last ticked playlist cannot be unticked (null = no change);
+     *   all loaded playlists ticked is stored as "All" (empty selection).
+     * @param eligibleShown keys of the loaded playlists that fit the section
+     */
+    fun click(selected: Set<Int>, eligibleShown: Set<Int>, key: Int, shown: Boolean): Click? {
+        if (!shown) return Click(if (selected.isEmpty()) selected else selected + key, load = true)
+        val base = if (selected.isEmpty()) eligibleShown else selected
+        val next = toggle(base, key)
+        if (next.isEmpty()) return null
+        return Click(if (next.containsAll(eligibleShown)) emptySet() else next, load = false)
+    }
+
     /** True when the section shows all eligible playlists (nothing selected). */
     fun isAll(selected: Set<Int>): Boolean = selected.isEmpty()
 

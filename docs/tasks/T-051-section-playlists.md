@@ -48,3 +48,34 @@ Per section (Live TV, Movies, Series) choose which shown playlists it uses, with
 4. Choose "All playlists" again: all eligible playlists appear.
 5. Restart the app: the selection is kept.
 6. Startpage and search show the same playlists as before.
+
+## Stage 3: fixes after the test build of 23 Nov 2026
+
+Reported by the maintainer on the test APK (run 45151240125, branch `test/combined-2026-11-23`):
+
+1. A playlist with movies and series showed none (main list, counts 0 movies and 0 series in Settings > Playlists).
+2. The playlist buttons at the top did not work; with "All" not every playlist was ticked; the menu could not be opened.
+3. Playlists could not be edited in the settings.
+4. Search layout not as expected (screenshot: squeezed tiles "Se", "Liv", hero empty, cards cut off, "Merkliste" in German).
+5. The playlist edit window scrolled slowly and trailed behind.
+
+Causes and changes:
+
+- (2) Since 1.4.2 a playlist could not be switched on as "shown additionally", so only the main list was loaded. The menu listed the other playlists unticked, and a click replaced the main list. The popup also requested no focus, so the remote could not reach it. **Decision (maintainer, 23 Nov 2026): ticking a playlist loads it in addition; "All playlists" loads every playlist that fits the section.** `SectionSourceLogic.checked` and `click` (pure logic, tested), `PlaylistStore.showAsync` (shows and loads in `switchScope`, retries up to 30 s while a load runs; memory guard of `loadExtras` unchanged), `SectionPlaylistUi.kt` (focus on open, Box around the header pill, loading line and `extraError` in the menu). The playlists stay loaded when they are unticked later; "Shown additionally: Off" in the edit window unloads one.
+- (1) Probable cause (not confirmed on the device): Xtream `get.php` with live channels only. `missesCategories` only compares live categories, so such a list was accepted. New `PlaylistStore.vodViaApi`: when the list has no `/movie/` or `/series/` address (`LoadLogic.hasVod`) and the provider lists movie or series categories (`XtreamApi.hasVodCategories`), the list is loaded through the API and the login is marked for the API. If the API fails, the `get.php` list is kept. Needs "Reload" once. If the playlist is not Xtream (plain M3U or Stalker), this change does not help; then the diagnostic log is needed.
+- (3) No logic change found in the settings page on this branch. The edit window requested no focus; it now focuses the name field when it opens. If editing still fails, more detail is needed (what happens on OK).
+- (5) The window used the app-wide soft scrolling (`SmoothSpec`); it now uses `InstantSpec`, as the add screen does.
+- (4) The search column was a fixed 600 dp (half of a 960 dp TV screen); now 36 % of the screen width (330 to 600 dp). Hero 300 dp to 190 dp, title sizes smaller, tiles with less padding. New row `Merkliste¦Watchlist` in `DictEn4.kt`. **Open: the maintainer's sketch is still not in the repository**; the layout is checked against it once it is uploaded.
+
+Checks run here: the pure-logic files were compiled with the Kotlin 2.0.21 compiler bundled with Gradle (all 111 source files without Android imports), and `SectionSourceLogicTest`, `LoadLogicTest`, `DictEn4Test` were run with JUnit 4: 34/34 passed. Not run: the Gradle build, Android files (`SectionPlaylistUi.kt`, `PlaylistEditDialog.kt`, `PlaylistStore.kt`, `XtreamApi.kt`, `SearchScreen.kt` were not compiled), device tests.
+
+### Test steps for the maintainer (stage 3)
+
+1. Settings > Playlists: "Reload" on the playlist without movies. Afterwards the line under it shows movies and series (if it is an Xtream login).
+2. Movies: open the "Playlist" menu with OK. The first row has the focus. Tick a second playlist: it loads (line "Loading …"), then its movies appear.
+3. Choose "All playlists": every playlist that fits Movies is ticked after loading.
+4. Untick one: it disappears from Movies, not from Live TV.
+5. Live TV: same menu in the "Playlist" row.
+6. Fire TV Stick with large playlists: when memory is short, a notice appears in the menu, the app does not crash.
+7. Settings > Playlists > Edit: the name field has the focus; scroll down with the D-pad: the window follows at once. "Shown additionally" can be set to On.
+8. Search: type "dead". The tiles show full names, the result cards are fully visible, the button reads "Watchlist" in English.

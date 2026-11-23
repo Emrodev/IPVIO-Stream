@@ -1,8 +1,11 @@
-Last update: 2026-11-22 (T-047, faster start). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-23 (T-051 stage 3, fixes after the test build). Read `CLAUDE.md` first, then this file.
 
 The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not add new entries there.
 
 ## Current task
+
+T-051 stage 3 (branch `claude/adoring-noether-pf4asf`, based on `test/combined-2026-11-23`): fixes for the maintainer's test build of 23 Nov 2026 (missing movies on Xtream, playlist menu, edit window focus and scrolling, search layout). Details and test steps in `docs/tasks/T-051-section-playlists.md`, section "Stage 3". JVM tests 34/34 (run here with the compiler bundled in Gradle). Not built with Gradle, not device tested. **Open:** the maintainer uploads the search sketch, then the layout is compared with it; confirm on the device whether the missing movies were the Xtream `get.php` case.
+
 
 T-036 (done, committed `dd4c17a`): this file, the archive, `/start`, `/new-task`. Task file `docs/tasks/T-036-workflow-state-and-commands.md`.
 

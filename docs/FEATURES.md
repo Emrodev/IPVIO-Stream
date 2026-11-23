@@ -19,7 +19,7 @@ This file is the contract for what the app must keep doing. A feature is removed
 | Xtream backup servers with failover | `HostFailover.kt` | yes | no | T-009. See `docs/tasks/T-009-xtream-backup-servers.md` |
 | M3U playlists (URL and file) | `Models.kt`, `CatchupLogic.kt` | yes | unknown | |
 | Stalker/Ministra portals | `StalkerApi.kt`, `StalkerLogic.kt`, `StalkerMore.kt` | yes | unknown | Series load on open |
-| Several playlists at once (multi view, "All playlists") | `MultiLogic.kt`, `AreaSource.kt`, `SectionPlaylistUi.kt`, `MultiView.kt`, `Header.kt`, `LiveTab.kt` | yes | no | Per section (T-051): Live TV, Movies and Series each pick any number of shown playlists, "All playlists" on top. Start page and search still use the shown set. The earlier "All playlists" entry depended on two or more shown playlists, see Known issues |
+| Several playlists at once (multi view, "All playlists") | `MultiLogic.kt`, `AreaSource.kt`, `SectionPlaylistUi.kt`, `MultiView.kt`, `Header.kt`, `LiveTab.kt` | yes | no | Per section (T-051): Live TV, Movies and Series each pick any number of playlists, "All playlists" on top; ticking a playlist that is not loaded loads it next to the main list. Start page and search still use the shown set. The earlier "All playlists" entry depended on two or more shown playlists, see Known issues |
 | Playlist edit window and per-playlist refresh plan | `PlaylistStore.kt`, `PlaylistRefresh.kt`, `PlaylistRefreshLogic.kt` | yes | no | 1.4.8 |
 | Sublist filter | `SublistStore.kt`, `SublistLogic.kt` | yes | unknown | Settings page "Sublists" removed in T-035. Saved filters stay on the device |
 | Live TV and TV guide (XMLTV) | `Epg.kt`, `EpgFull.kt` | yes | unknown | |

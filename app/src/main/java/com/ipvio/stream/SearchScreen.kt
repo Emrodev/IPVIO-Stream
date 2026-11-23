@@ -276,9 +276,12 @@ fun SearchScreen(
         BillboardBackdrop(preview, Modifier.fillMaxSize(), dim = 0.5f)
         Column(Modifier.fillMaxSize().sidebarPad()) {
         Row(Modifier.weight(1f).fillMaxWidth()) {
-            // Left: heading, input, hit count, suggestions or last searches; the on-screen keyboard at the bottom
+            // Left: heading, input, hit count, suggestions or last searches; the on-screen keyboard at the bottom.
+            // Width: about a third of the screen (the sketch has 600 of 1920 pixels). A fixed 600 dp took half of a TV
+            // screen (about 960 dp wide) and squeezed the category tiles and result rows on the right.
+            val colW = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.36f).dp.coerceIn(330.dp, 600.dp)
             Column(
-                Modifier.width(600.dp).fillMaxHeight().padding(start = DS.PageX, top = 22.dp, bottom = 12.dp),
+                Modifier.width(colW).fillMaxHeight().padding(start = DS.PageX, top = 22.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(Lang.tr("Suche"), color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold, raw = true)
@@ -380,7 +383,8 @@ fun SearchScreen(
             }
             // Right: hero, category tiles, result rows
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                SearchHeroInfo(preview, Modifier.fillMaxWidth().height(300.dp).padding(start = DS.PageX, end = DS.PageX, top = 22.dp))
+                // Hero height: 300 dp left only about 100 dp for the result rows on a TV, the cards were cut off
+                SearchHeroInfo(preview, Modifier.fillMaxWidth().height(190.dp).padding(start = DS.PageX, end = DS.PageX, top = 22.dp))
                 // Detail page: a marked title is opened with OK (no own "Watch" button)
                 if (preview != null) Row(Modifier.padding(start = DS.PageX, top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     val watched = Library.isWatch(preview.id)
@@ -397,7 +401,7 @@ fun SearchScreen(
                             else -> false
                         }
                     },
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     tileCounts.forEachIndexed { i, (filter, icon, count) ->
                         CategoryTile(
@@ -511,14 +515,14 @@ private fun CategoryTile(icon: AIcon, count: Int, label: String, selected: Boole
             .border(if (f) DS.FocusBorder else DS.Border, if (f) Accent2 else if (selected) Accent2 else DS.Hairline, shape)
             .onFocusChanged { f = it.isFocused }
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            AppIcon(icon, Color.White, size = 22.dp)
-            Text(count.toString(), color = Color.White, fontSize = spx(30), fontWeight = FontWeight.ExtraBold, raw = true)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppIcon(icon, Color.White, size = 20.dp)
+            Text(count.toString(), color = Color.White, fontSize = spx(24), fontWeight = FontWeight.ExtraBold, maxLines = 1, raw = true)
         }
-        Text(label, color = Muted, fontSize = 15.sp, maxLines = 1)
+        Text(label, color = Muted, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 
@@ -821,7 +825,7 @@ private fun SearchHeroInfo(item: Item?, modifier: Modifier) {
             Kicker(Lang.tr(kindLabel(item.kind)) + (qualityOf(item)?.let { q -> "  ·  " + q.uppercase() } ?: ""))
             Text(
                 raw = true, text = item.title, color = Tok.TextHi,
-                fontSize = spx(if (item.title.length <= 24) 60 else if (item.title.length <= 36) 48 else 40), lineHeight = spx(62),
+                fontSize = spx(if (item.title.length <= 24) 48 else if (item.title.length <= 36) 40 else 36), lineHeight = spx(52),
                 fontWeight = FontWeight.ExtraBold, letterSpacing = (-1).sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
             if (item.kind != Kind.LIVE) HeroMetaLine(item, m, dots = false)
