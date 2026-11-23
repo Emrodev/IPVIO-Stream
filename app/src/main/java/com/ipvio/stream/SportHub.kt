@@ -3,6 +3,8 @@ package com.ipvio.stream
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -88,6 +90,15 @@ class HubCtx(val nav: HubNav, val live: List<Item>, private val onPlay: (Item, L
         if (c.isNotEmpty()) play(c[0], c) else nav.open(HubPage.Watch(g))
     }
     fun open(g: SportData.Game) = nav.open(HubPage.Match(g))
+
+    /**
+     * OK on a game in a list (maintainer, 23 Nov 2026): a running game with a matching channel starts that channel,
+     * every other game opens its Match Center with the details.
+     */
+    fun select(g: SportData.Game) {
+        val c = if (g.state == 1) chans(g) else emptyList()
+        if (c.isNotEmpty()) play(c[0], c) else open(g)
+    }
 }
 
 /** Tab and filters survive leaving the hub (e.g. after Watch Live and back from the player). */
@@ -100,6 +111,8 @@ private object HubMemory {
 }
 
 private val HUB_TABS = listOf("Übersicht", "Live", "Spielplan", "Ligen", "Teams", "Favoriten", "Sender")
+/** One icon per tab (same order as [HUB_TABS]), so the tabs are told apart at a glance. */
+private val HUB_ICONS = listOf(AIcon.Grid, AIcon.Live, AIcon.Catchup, AIcon.Lists, AIcon.Person, AIcon.Star, AIcon.Play)
 
 /**
  * Sports Hub: Overview, Live, Schedule, Leagues, Teams, Favorites and the channel area (previous sports page).
@@ -167,16 +180,18 @@ fun SportHub(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
             contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(10)),
             horizontalArrangement = Arrangement.spacedBy(dpx(10))
         ) {
-            item(key = "scoreov") { FilterPill("Score-Overlay", SportAlerts.miniOn, aicon = AIcon.Live) { scoreDlg = true } }
             itemsIndexed(HUB_TABS) { i, t ->
                 if (i !in SportHubLogic.visible(SportHubPrefs.hidden())) return@itemsIndexed
                 // The chosen tab is where the focus lands when coming from the sidebar (the channel tab has its own target)
                 val base = if (i == tab && tab != 6) Modifier.focusRequester(ContentFocus.req) else Modifier.trackFocus()
                 // Live tab: Down goes to the sport filter first (not to the competition row below it)
-                FilterPill(t, tab == i, if (tab == 1) base.focusProperties { down = sportReq } else base) {
+                FilterPill(t, tab == i, if (tab == 1) base.focusProperties { down = sportReq } else base, aicon = HUB_ICONS.getOrNull(i)) {
                     tab = i; HubMemory.tab = i
                 }
             }
+            // A setting, not a tab: at the end of the row (before, it was the first pill and looked like a tab)
+            // Only an icon (it opens the score overlay settings); lit when the overlay is on
+            item(key = "scoreov") { FilterPill("", SportAlerts.miniOn, aicon = AIcon.Pulse) { scoreDlg = true } }
         }
         if (!General.sportLive && tab != 6) {
             HubEmpty(AIcon.Live, "Live-Ergebnisse sind aus", "Ergebnisse, Tabellen und Spielpläne kommen von ESPN (inoffizielle Quelle). Schalte sie ein, um den Sports Hub zu nutzen.",
@@ -282,7 +297,7 @@ private fun HubOverview(feed: SportFeed.State, hub: HubCtx, onRetry: () -> Unit)
             HubSectionTitle("Jetzt live", action = "Alle zeigen") { hub.goTab(1, null) }
             Spacer(Modifier.height(dpx(8)))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(dpx(14)), contentPadding = PaddingValues(vertical = dpx(8))) {
-                items(liveMine.take(30), key = { it.key }) { g -> MatchCard(g, true) { hub.open(g) } }
+                items(liveMine.take(30), key = { it.key }) { g -> MatchCard(g, true) { hub.select(g) } }
             }
         }
         if (upcoming.isNotEmpty()) item(key = "up") {
@@ -358,7 +373,7 @@ private fun LazyListScope.groupedGames(games: List<SportData.Game>, hub: HubCtx,
     games.groupBy { it.groupName }.forEach { (name, list) ->
         val l = SportData.leagueOf(list.first())
         item(key = "h$name") { CompetitionHeader(name, l?.let { SportData.leagueLogos[it.path] }, list.count { it.state == 1 }, list.size) }
-        items(list, key = { "g" + it.key }) { g -> MatchRow(g, hub.chans(g).isNotEmpty(), timeFirst) { hub.open(g) } }
+        items(list, key = { "g" + it.key }) { g -> MatchRow(g, hub.chans(g).isNotEmpty(), timeFirst) { hub.select(g) } }
     }
 }
 
@@ -377,11 +392,15 @@ private fun HubLive(feed: SportFeed.State, hub: HubCtx, sport: String?, sportReq
     val shown = inSport.filter { (c == null || it.groupName == c) && (!favOnly || SportHubFavs.isFavGame(it)) }
         .sortedWith(compareBy({ if (SportHubFavs.isFavGame(it)) 0 else 1 }, { popularity(it) }, { it.groupName }, { it.start }))
     Column(Modifier.fillMaxSize()) {
-        SportFilter(sport, counts, sportReq, compReq) { onSport(it); comp = null }
-        LazyRow(contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(4)), horizontalArrangement = Arrangement.spacedBy(dpx(10))) {
-            item(key = "all") { FilterPill("Alle Wettbewerbe", c == null, Modifier.trackFocus(compReq).focusProperties { up = sportReq }) { comp = null } }
-            item(key = "fav") { FilterPill("Nur Favoriten", favOnly, Modifier.trackFocus().focusProperties { up = sportReq }, aicon = if (favOnly) AIcon.Star else AIcon.StarOutline) { favOnly = !favOnly } }
-            items(comps, key = { it }) { n -> FilterPill(n, c == n, Modifier.trackFocus().focusProperties { up = sportReq }, raw = true) { comp = if (c == n) null else n } }
+        // One row of three buttons instead of two rows of pills (maintainer, 23 Nov 2026): sport, competition, favorites only
+        Row(Modifier.fillMaxWidth().padding(horizontal = DS.PageX, vertical = dpx(4)), horizontalArrangement = Arrangement.spacedBy(dpx(10)), verticalAlignment = Alignment.CenterVertically) {
+            SportDropdown(sport, counts, Modifier.focusRequester(sportReq)) { onSport(it); comp = null }
+            val compLabels = listOf(Lang.tr("Alle Wettbewerbe")) + comps
+            val ci = if (c == null) 0 else comps.indexOf(c) + 1
+            DropdownPill("Wettbewerb", compLabels[ci], compLabels, ci, active = c != null, modifier = Modifier.focusRequester(compReq), icon = FIcon.Grid) { i ->
+                comp = if (i == 0) null else comps[i - 1]
+            }
+            FilterPill("", favOnly, Modifier.trackFocus(), aicon = if (favOnly) AIcon.Star else AIcon.StarOutline) { favOnly = !favOnly }
         }
         LazyColumn(contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(8)), verticalArrangement = Arrangement.spacedBy(dpx(4))) {
             when {
@@ -395,7 +414,7 @@ private fun HubLive(feed: SportFeed.State, hub: HubCtx, sport: String?, sportReq
                     val next = games.filter { it.state == 0 && statusKind(it) == 0 && sportMatch(it, sport) }.sortedBy { it.start }.take(10)
                     if (next.isNotEmpty()) {
                         item(key = "nt") { HubSectionTitle("Als Nächstes") }
-                        items(next, key = { "n" + it.key }) { g -> MatchRow(g, hub.chans(g).isNotEmpty(), timeFirst = true) { hub.open(g) } }
+                        items(next, key = { "n" + it.key }) { g -> MatchRow(g, hub.chans(g).isNotEmpty(), timeFirst = true) { hub.select(g) } }
                     }
                 }
                 else -> groupedGames(shown, hub, false)
@@ -423,9 +442,12 @@ private fun HubSchedule(hub: HubCtx, sport: String?, onSport: (String?) -> Unit)
     val counts = list.groupingBy { SportData.sportOf(it) }.eachCount()
     val shown = list.filter { sportMatch(it, sport) }.sortedWith(compareBy({ popularity(it) }, { it.groupName }, { it.start }))
     Column(Modifier.fillMaxSize()) {
-        DateSelector(day, -7..14) { day = it; HubMemory.day = it }
-        Spacer(Modifier.height(dpx(6)))
-        SportFilter(sport, counts) { onSport(it) }
+        // One row instead of two (maintainer, 23 Nov 2026): date stepper on the left, the sports with games on the right
+        Row(Modifier.fillMaxWidth().padding(start = DS.PageX), verticalAlignment = Alignment.CenterVertically) {
+            DateStepper(day, -7..14) { day = it; HubMemory.day = it }
+            Box(Modifier.padding(horizontal = dpx(14)).width(1.dp).height(dpx(28)).background(DS.Hairline))
+            SportDropdown(sport, counts) { onSport(it) }
+        }
         LazyColumn(contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(8)), verticalArrangement = Arrangement.spacedBy(dpx(4))) {
             when {
                 games == null -> item(key = "load") { HubLoading("Lade Spiele …") }

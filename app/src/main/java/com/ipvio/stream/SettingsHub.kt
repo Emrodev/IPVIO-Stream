@@ -113,13 +113,14 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 Text("Einstellungen", color = Color.White, fontSize = spx(38), fontWeight = FontWeight.ExtraBold)
                 Text("Alles rund um Aussehen, Wiedergabe und Konto", color = Tok.TextLow, fontSize = spx(16))
             }
-            CATS.chunked(3).forEachIndexed { r, row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(dpx(16))) {
+            // T-050b: 4 columns and smaller tiles, so more settings areas are visible at once
+            CATS.chunked(4).forEachIndexed { r, row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
                     row.forEachIndexed { c, cat ->
-                        val idx = r * 3 + c
+                        val idx = r * 4 + c
                         SettingsCard(cat, idx, Modifier.weight(1f).focusRequester(cardFocus[idx])) { last = idx; page = idx }
                     }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         } else {
@@ -193,7 +194,7 @@ private fun SettingsCard(cat: Cat, idx: Int, modifier: Modifier, onClick: () -> 
     val shape = RoundedCornerShape(dpx(14))
     val (c1, c2, ink) = catColors(idx)
     Row(
-        modifier.height(dpx(96)).graphicsLayer { scaleX = s; scaleY = s }.clip(shape)
+        modifier.height(dpx(84)).graphicsLayer { scaleX = s; scaleY = s }.clip(shape)
             .background(Brush.horizontalGradient(listOf(c1, c2)))
             .border(if (f) 3.dp else 1.dp, if (f) Color.White else ink.copy(alpha = .22f), shape)
             .onFocusChanged { f = it.isFocused }
@@ -208,7 +209,7 @@ private fun SettingsCard(cat: Cat, idx: Int, modifier: Modifier, onClick: () -> 
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(dpx(3))) {
             Text(cat.title, color = Color.White, fontSize = spx(20), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(cat.sub, color = Tok.TextMid, fontSize = spx(13), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(cat.sub, color = Tok.TextMid, fontSize = spx(13), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         AppIcon(AIcon.Right, Color.White, size = dpx(18))
     }
@@ -563,7 +564,7 @@ private fun StoragePage(ctx: Context) {
     // Sizes and deleting run in the background: the metadata folder can contain tens of thousands of files
     var sizes by remember { mutableStateOf(List(General.AREAS.size) { 0L }) }
     LaunchedEffect(tick) { sizes = withContext(Dispatchers.IO) { General.AREAS.map { General.areaSize(ctx, it) } } }
-    SettingsTabs(listOf("Zwischenspeicher", "Verlauf", "Sicherung"), "storage") { tab ->
+    SettingsTabs(listOf("Zwischenspeicher", "Verlauf", "Sicherung", "Downloads"), "storage") { tab ->
     if (tab == 0) {
     General.AREAS.forEachIndexed { i, a ->
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -585,6 +586,7 @@ private fun StoragePage(ctx: Context) {
     }
     Hint("Meine Liste und Favoriten bleiben immer erhalten.")
     }
+    if (tab == 3) DownloadsSettings(ctx)
     if (tab == 2) {
     var backupMsg by remember { mutableStateOf<String?>(null) }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1329,7 +1331,11 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
         ) {
             Column(Modifier.weight(1f)) {
                 Text(pl.name + if (isActive) "  ·  " + Lang.tr("Hauptliste") else if (shown) "  ·  " + Lang.tr("zusätzlich angezeigt") else "", color = if (isActive || shown) Accent2 else Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, raw = true)
-                Text(PlaylistStore.hostOf(pl.url), color = Muted, fontSize = 13.sp, maxLines = 1)
+                // Source type and content mode, visible without opening the edit window (a "Live TV only" list has no movies)
+                val srcType = when { StalkerLogic.parse(pl.url) != null -> "Stalker"; XtreamLogic.fromUrl(pl.url) != null -> "Xtream"; else -> "M3U" }
+                val plMode = PlaylistMode.version.let { PlaylistMode.get(ctx, pl.url) }   // version: redraw after a change
+                Text(PlaylistStore.hostOf(pl.url) + "  ·  " + srcType + (if (plMode != PlaylistMode.ALL) "  ·  " + Lang.tr(PlaylistMode.labels[plMode]) else ""),
+                    color = if (plMode != PlaylistMode.ALL) Accent2 else Muted, fontSize = 13.sp, maxLines = 1, raw = true)
                 // #111: channels, movies and series of this playlist as last loaded (nothing until it is loaded once)
                 PlaylistStore.typeCounts(ctx, pl.url)?.let { t ->
                     Text(PlaylistCountLogic.summary(t, Lang.tr("Live TV"), Lang.tr("Filme"), Lang.tr("Serien")), color = Muted, fontSize = 13.sp, maxLines = 1)
@@ -1342,6 +1348,12 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
             // Reload and Edit; everything else is in the edit window (T-048)
             if (PlaylistStore.reloadingOther == pl.url) Text("Wird neu geladen …", color = Accent2, fontSize = 14.sp)
             // Download this playlist again (the main list is reloaded where it is; another one is refreshed in the background)
+            // Content mode not "all": one press loads movies and series again (same steps as "Apply" in the edit window)
+            if (PlaylistMode.version.let { PlaylistMode.get(ctx, pl.url) } != PlaylistMode.ALL) SmallPill("Alle Inhalte zeigen") {
+                PlaylistMode.set(ctx, pl.url, PlaylistMode.ALL)
+                if (isActive) scope.launch { if (!PlaylistStore.reapplyLanguages(ctx)) PlaylistStore.applyMode(ctx) }
+                else PlaylistStore.reloadOtherAsync(ctx, i)
+            }
             SmallPill("Neu laden", icon = AIcon.Refresh) { if (isActive) reload() else PlaylistStore.reloadOtherAsync(ctx, i) }
             SmallPill("Bearbeiten") { editing = i }
         }

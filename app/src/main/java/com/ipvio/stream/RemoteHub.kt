@@ -10,6 +10,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -98,6 +102,27 @@ object RemoteHub {
                     "\"m\":" + RemoteLogic.arr(m.take(LIMIT).map(::itemJson)) +
                     ",\"s\":" + RemoteLogic.arr(s.take(LIMIT).map(::itemJson)) +
                     ",\"l\":" + RemoteLogic.arr(l.take(LIMIT).map(::liveJson)) + "}"
+            }
+            "prog" -> {
+                // Programme search (T-051a): the loaded guide of the visible live channels; "t" = live or up (upcoming)
+                val mode = if (q["t"] == "up") ProgSearchLogic.Mode.UPCOMING else ProgSearchLogic.Mode.LIVE
+                val text = q["q"].orEmpty().take(80)
+                val hits = ArrayList<ProgSearchLogic.Hit>()
+                val live = PrivateCats.visible(all).filter { it.kind == Kind.LIVE }
+                // Channels whose guide is in the loaded XMLTV
+                for (c in live) {
+                    if (!Xmltv.has(c.tvgId)) continue
+                    for (e in Xmltv.forChannel(c.tvgId)) if (ProgSearchLogic.matches(e.title, text)) hits.add(ProgSearchLogic.Hit(c.id, c.title, e.title, e.start, e.end))
+                }
+                // Xtream channels without XMLTV guide: short guide per channel (Epg.now caches it for 2 minutes).
+                // At most XTREAM_FETCH_PER_REQUEST channels are fetched per request, so the first search can be partial.
+                val xt = live.filter { !Xmltv.has(it.tvgId) && Epg.supported(it) }
+                val need = xt.filter { Epg.peek(it) == null }.take(ProgSearchLogic.XTREAM_FETCH_PER_REQUEST)
+                if (need.isNotEmpty()) runCatching {
+                    runBlocking { withTimeoutOrNull(9_000) { need.map { async { Epg.now(it) } }.awaitAll() } }
+                }
+                for (c in xt) for (e in Epg.peek(c).orEmpty()) if (ProgSearchLogic.matches(e.title, text)) hits.add(ProgSearchLogic.Hit(c.id, c.title, e.title, e.start, e.end))
+                RemoteLogic.arr(ProgSearchLogic.select(hits, System.currentTimeMillis() / 1000, mode).map { RemoteLogic.prog(it.channelId, it.channel, it.title, it.start, it.end) })
             }
             "resume" -> {
                 val byId = all.associateBy { it.id }

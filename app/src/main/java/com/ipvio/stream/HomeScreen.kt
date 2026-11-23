@@ -169,10 +169,10 @@ private fun sameItems(a: List<Item>, b: List<Item>?): Boolean {
 /** Filtered lists per area, so the same list object comes back and [HomeCache] can recognize it (no full recompute on every tab switch). */
 private object AreaCache {
     private val m = HashMap<String, Pair<List<Item>, List<Item>>>()
-    @Synchronized fun get(all: List<Item>, tab: Int, k: Int): List<Item> {
-        val key = "$tab|$k"
+    @Synchronized fun get(all: List<Item>, tab: Int, ks: Set<Int>): List<Item> {
+        val key = "$tab|" + ks.sorted().joinToString(",")
         m[key]?.let { if (it.first === all) return it.second }
-        return AreaSource.filter(all, tab, k).also { m[key] = all to it }
+        return AreaSource.filter(all, tab, ks).also { m[key] = all to it }
     }
 }
 
@@ -221,8 +221,12 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val allRaw = PlaylistStore.channels
     // Movies/series: playlist selection at the top (with several shown playlists) – only titles of this playlist
-    val areaK = if (tab in 1..2) AreaSource.get(tab) else -1
-    val all = remember(allRaw, areaK, tab) { if (areaK < 0) allRaw else AreaCache.get(allRaw, tab, areaK) }
+    // Selection changes or shown playlists change: recompute the source set, not on every recomposition
+    val areaVer = AreaSource.version
+    val areaK = remember(tab, areaVer, PlaylistStore.sourceNames, PlaylistMode.version) {
+        if (tab in 1..2) AreaSource.sources(ctx, tab) else emptySet()
+    }
+    val all = remember(allRaw, areaK, tab) { if (areaK.isEmpty()) allRaw else AreaCache.get(allRaw, tab, areaK) }
     val order = PlaylistStore.catOrder
     // Adopt genre progress at most every 45 s: every adoption recomputes rows and top lists
     var ver by remember { mutableIntStateOf(HomeVer.value.takeIf { it >= 0 } ?: Classifier.version) }
@@ -376,10 +380,13 @@ fun HomeScreen(
         HeaderTab("Alle $vodNoun", AIcon.Grid, "tb:all$tab") { onBrowse(BrowseReq("Alle $vodNoun", vodBase, SORT_NEW)) }
     ) + importedTabs.map { (src, l, id) -> HeaderTab(src, AIcon.Download, id) { onBrowse(BrowseReq("$src · $vodNoun", l, SORT_NEW)) } }
     var inHeader by remember { mutableStateOf(false) }
+    // Declared before the header: Left from the search pill goes into the sidebar (see HeaderBar onLeftEdge)
+    val sideFocus = remember { FocusRequester() }
     val header: @Composable (Modifier) -> Unit = { m ->
         HeaderBar(
             m.onFocusChanged { inHeader = it.hasFocus },
             onSearch = { onTab(4) },
+            onLeftEdge = { runCatching { sideFocus.requestFocus() }.getOrDefault(false) },
             onReminder = { r -> byId[r.chId]?.let(onOpen) },
             onNewEpisode = { id -> byId[id]?.let(onOpen) },
             // Only one profile: go directly to the profile page of settings (before: general settings)
@@ -474,7 +481,6 @@ fun HomeScreen(
     }
 
     var inSidebar by remember { mutableStateOf(false) }
-    val sideFocus = remember { FocusRequester() }
     // App start: focus on "Watch now" instead of the sidebar. The top picture appears only once playlist and info are loaded
     // (can take a few seconds); so it retries for up to 15 s, and the marker is set only on success.
     // After 3 s only while focus is still in the sidebar (if the user has already chosen, nothing is stolen).

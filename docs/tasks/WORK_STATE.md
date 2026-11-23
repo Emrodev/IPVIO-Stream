@@ -1,4 +1,5 @@
 Last update: 2026-11-23 (T-051 to T-054, analysis and plans for four user issues). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-23 (T-051 stage 3, fixes after the test build). Read `CLAUDE.md` first, then this file.
 
 The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not add new entries there.
 
@@ -12,6 +13,8 @@ Last update: 2026-11-23. Four user issues (Fire TV) analysed, no app code change
 - T-054 Fire TV freeze while zapping: highest priority. Suspect is the per-channel 512 MB live buffer when zapping fast (unverified). Test steps for the maintainer in the file (`docs/tasks/T-054-freeze-when-zapping-history.md`).
 
 Next: maintainer runs the T-054 test steps and answers the questions in T-051 and T-053. Then approve plans for the code changes (protected player core, CLAUDE.md section 5). Not built, not device tested.
+T-051 stage 3 (branch `claude/adoring-noether-pf4asf`, based on `test/combined-2026-11-23`): fixes for the maintainer's test build of 23 Nov 2026 (missing movies on Xtream, playlist menu, edit window focus and scrolling, search layout). Details and test steps in `docs/tasks/T-051-section-playlists.md`, section "Stage 3". JVM tests 34/34 (run here with the compiler bundled in Gradle). Not built with Gradle, not device tested. Search screen rebuilt from the sketch uploaded in the chat (see `docs/tasks/T-051-search-handoff.md`, third round). **Open:** compare the search screen with the sketch on the device; confirm on the device whether the missing movies were the Xtream `get.php` case.
+
 
 T-036 (done, committed `dd4c17a`): this file, the archive, `/start`, `/new-task`. Task file `docs/tasks/T-036-workflow-state-and-commands.md`.
 
