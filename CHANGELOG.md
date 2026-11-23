@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Sports Hub: Back from a channel started in the hub returns to the hub (same tab and page), not to the Live TV channel list. Not device tested yet
+- Sports Hub, "Channels" tab, tidier: date stepper and one "Settings" button (notifications, delay, live results) instead of eleven buttons; the mini score settings are settings rows (window, position, size, display, game clock); leagues and teams show a check or star icon instead of a text symbol. Not device tested yet
 - Sports Hub, fewer buttons: the tabs have icons; "Live" has one row with a "Sport" button, a "Competition" button (each opens a list) and a star for favorites only, instead of two rows of pills; the schedule shows the date and the "Sport" button; the score overlay is a small icon at the end of the tab row. Not device tested yet
 - Playlist menu (Live TV, Movies, Series): every playlist can be unticked, also the last one. "All playlists" pressed while all are ticked unticks all, so you can then tick only the one you want. With no playlist ticked the section shows nothing and the button reads "No playlist". Not device tested yet
 - Sports Hub, tidier: the schedule has one row for date and sport instead of two (previous day, the chosen day as text, next day, "Today" only on other days), the sport filter shows only sports with games, and "Score overlay" moved from the front of the tab row to its end. Not device tested yet

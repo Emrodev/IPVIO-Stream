@@ -467,7 +467,9 @@ private fun AppContent() {
                     PlayerScreen(p, zap, liveAll, seriesItem) {
                         // Live: back in Live TV on the last watched channel (also after switching in the player)
                         // Live TV tab is 3 (see LiveTab: ContentFocus.tab = 3). Without this, a stream started from Home returns to Home.
-                        if (p.live || p.archive != null) {
+                        // Exception: a stream started in the Sports Hub returns to the hub (maintainer, 23 Nov 2026); the hub restores
+                        // its open pages and tab itself (HubMemory)
+                        if ((p.live || p.archive != null) && tab != MenuLogic.SPORT) {
                             LastFocus.pending = History.ids.firstOrNull { id -> liveAll.any { it.id == id } }
                             tab = 3
                         }
