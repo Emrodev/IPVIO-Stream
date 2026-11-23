@@ -300,7 +300,7 @@ fun HomeScreen(
         val l = withContext(Dispatchers.Default) {
             homeSafe(LibMatch.matches(PlaylistStore.channels, c.similar, 40).filter { it.id != src.id && it.id !in seen && it.kind != Kind.LIVE }, noAdult)
         }
-        if (l.size >= 4) value = src to l.take(20)
+        if (BecauseLogic.show(l.size)) value = src to l.take(20)
     }
 
     // Check new episodes of favorite series (bell)

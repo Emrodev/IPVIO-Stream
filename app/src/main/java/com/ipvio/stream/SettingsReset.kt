@@ -45,6 +45,7 @@ object SettingsReset {
                 LiveSettings.setBufferMb(ctx, 512)
                 LiveSettings.setRecDir(ctx, 0)
                 LiveSettings.setRecPad(ctx, 3)
+                LiveSettings.setUpIsNext(ctx, false)
                 Reminders.setLead(ctx, DEFAULT_REMINDER_LEAD_MIN)
             }
         }

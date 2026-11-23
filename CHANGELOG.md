@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Live TV: new setting "Up goes to the next channel" (Settings > Live TV, Channel keys). Off by default: Up = previous channel, Down = next channel, as before. Not device tested yet
+- Live TV: the player now stops the sound when it closes or the second picture is closed, before it releases the player (T-051, analysis only, cause not confirmed). Not device tested yet
+- Live TV: when zapping, only one channel buffer is filled at a time, and the cache folder is no longer deleted on the UI thread for every channel change (T-054; freeze not reproduced, cause not confirmed). Not device tested yet
+- Home: "Because you watched" shows once 2 similar titles are in your playlist (was 4) (T-053). Not device tested yet
 - Docs: README gets an install troubleshooting pointer, a "Privacy and security" section (API keys, backup servers, phone remote over plain HTTP, VPN without kill switch, own DNS), a "Known limitations" section and a link to the test documentation. No app change
 
 ## 1.4.8 (versionCode 14)

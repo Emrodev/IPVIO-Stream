@@ -1,6 +1,6 @@
 # T-052: Setting for Up / Down on the remote in Live TV
 
-Status: plan written, **no code change** (waits for the maintainer's decision on the default and approval, CLAUDE.md sections 5 and 6).
+Status: implemented in the branch (23 Nov 2026), not built, not device tested. Default: current behaviour.
 Source: user wish. "All other players: Up goes to the next channel on live TV. Here you have to press Down. Please add a setting in the Live TV guide tab to choose: Up = next channel or previous channel."
 
 ## Goal

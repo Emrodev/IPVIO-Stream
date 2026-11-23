@@ -1,6 +1,6 @@
 # T-051: Sound of the previous channel keeps playing
 
-Status: analysis done, **no code change** (waits for the maintainer's approval of a plan, CLAUDE.md section 5).
+Status: implemented in the branch (23 Nov 2026), not built, not device tested. Cause not confirmed. Test steps below.
 Source: user issue, Fire TV, Live TV.
 
 ## Goal

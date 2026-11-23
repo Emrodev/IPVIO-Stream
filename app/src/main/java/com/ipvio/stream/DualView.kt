@@ -81,7 +81,8 @@ internal fun SecondStream(item: Item, split: Boolean, audioOn: Boolean, modifier
                 }
         }.getOrNull()
     }
-    DisposableEffect(Unit) { onDispose { runCatching { p?.release() } } }
+    // Stop first: the second picture's sound ends at once when it leaves (T-051)
+    DisposableEffect(Unit) { onDispose { runCatching { p?.stop() }; runCatching { p?.release() } } }
     // Limit resolution: SD is enough in the small window, split at most 720p
     // Multi view (small): the tile with sound gets a bit more, the muted one stays light (less load, less lag)
     LaunchedEffect(split, small, audioOn) {

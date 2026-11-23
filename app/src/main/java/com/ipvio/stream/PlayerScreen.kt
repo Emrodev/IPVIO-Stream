@@ -794,6 +794,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             saveProgress()
             h.removeCallbacksAndMessages(null)
             player.removeListener(l)
+            // Stop first: the sound ends at once, even if the release takes a moment (T-051)
+            runCatching { player.stop() }
             player.release()
             // Release the buffer (a running recording keeps holding it)
             LiveTimeshift.stop()
@@ -1117,8 +1119,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                                 true
                             }
                         }
-                        Key.DirectionUp -> { if (cur.live) zap(-1) else { focusSeek = true; controls = true }; true }
-                        Key.DirectionDown -> { if (cur.live) zap(1) else { focusSeek = false; controls = true }; true }
+                        Key.DirectionUp -> { if (cur.live) zap(LiveKeyLogic.zapStep(up = true, upIsNext = LiveSettings.upIsNext)) else { focusSeek = true; controls = true }; true }
+                        Key.DirectionDown -> { if (cur.live) zap(LiveKeyLogic.zapStep(up = false, upIsNext = LiveSettings.upIsNext)) else { focusSeek = false; controls = true }; true }
                         Key.Menu -> { focusSeek = false; controls = true; true }
                         else -> false
                     }

@@ -1,6 +1,6 @@
 # T-053: "Because you watched" row shows nothing
 
-Status: analysis done, **no code change**. Needs data from the user before a fix.
+Status: implemented in the branch (23 Nov 2026), not built, not device tested. Threshold 2 is a decision, see below.
 Source: user issue. "The widget that offers movies in relation to what I watched doesn't seem to work. I'm on my 4th movie and still no proposal."
 
 ## Goal

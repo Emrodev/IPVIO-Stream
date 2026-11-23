@@ -1,6 +1,6 @@
 # T-054: Fire TV froze while cycling through channel history
 
-Status: analysis done, **no code change**. Plan and test steps below. Highest priority (device unusable, needed power cycle).
+Status: implemented in the branch (23 Nov 2026), not built, not device tested. Cause not confirmed on a device.
 Source: user report. "While cycling through my channel history channels, the app froze my entire Fire TV. I couldn't even force reboot. I had to power cycle it. That's never happened before."
 
 ## Goal
