@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Header (Movies, Series, home): Left on the search field goes into the sidebar (before, the focus jumped to the profile circle on the right). A long playlist name no longer squeezes the profile circle: the playlist button is at most 280 design pixels wide, and the tabs on the left give way first. Not device tested yet
 - Settings > Playlists: each playlist shows its type (Xtream, M3U or Stalker) and its content mode when it is not "Live TV + movies & series". A playlist set to "Live TV only" or "Movies & series only" gets a "Show all content" button that sets it back and reloads it. Settings > Diagnostics > Log now says how movies and series were loaded (list with or without them, provider's API used or failed). Not device tested yet
 - Search: the keyboard sits at the bottom of the left panel; a focused card brings its whole row into view, so the row heading with "Show all" is no longer hidden under the category tiles. Not device tested yet
 - Fix (test build 23 Nov): Movies and Series missing on an Xtream playlist. Some providers send only live channels through their M3U link, while their API has movies and series. When the downloaded list has no movie or series but the provider lists movie or series categories, the app now loads the whole list through the API. If that fails, the live channels are kept. Press "Reload" on the playlist once to get the movies and series. Not device tested yet
