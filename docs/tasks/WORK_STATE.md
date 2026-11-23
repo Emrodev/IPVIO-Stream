@@ -1,8 +1,17 @@
-Last update: 2026-11-22 (T-047, faster start). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-23 (T-051 to T-054, analysis and plans for four user issues). Read `CLAUDE.md` first, then this file.
 
 The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not add new entries there.
 
 ## Current task
+
+Last update: 2026-11-23. Four user issues (Fire TV) analysed, no app code changed, plans only:
+
+- T-051 sound of the previous channel keeps playing: not reproduced, candidates listed (`docs/tasks/T-051-audio-after-channel-change.md`).
+- T-052 setting for Up/Down in Live TV: plan, default proposed = current behaviour, maintainer decides (`docs/tasks/T-052-live-up-down-setting.md`).
+- T-053 "Because you watched" row empty: needs playlist size and TMDB check from the user (`docs/tasks/T-053-because-you-watched.md`).
+- T-054 Fire TV freeze while zapping: highest priority. Suspect is the per-channel 512 MB live buffer when zapping fast (unverified). Test steps for the maintainer in the file (`docs/tasks/T-054-freeze-when-zapping-history.md`).
+
+Next: maintainer runs the T-054 test steps and answers the questions in T-051 and T-053. Then approve plans for the code changes (protected player core, CLAUDE.md section 5). Not built, not device tested.
 
 T-036 (done, committed `dd4c17a`): this file, the archive, `/start`, `/new-task`. Task file `docs/tasks/T-036-workflow-state-and-commands.md`.
 
