@@ -118,7 +118,7 @@ Text is written in English. The German labels of the maintainer's sketch are rep
 - The maintainer found the second-round screen "not as expected" (test build: squeezed tiles, empty hero, cut cards). The sketch was uploaded and the layout rebuilt from it.
 - Sizes are taken from the sketch in sketch pixels: `sk(px)` = `dpx(px * 1658 / 1920)` (the app's design scale is based on a 1658 px design), so the proportions match on every screen width. Left panel 601 px with 37 px margins; field 79 px; suggestion rows 53 px; keyboard keys 57 px; right side 64 px margins; hero buttons 64 px; tiles 91 px; posters 168 px, live cards 300 px, 22 px apart.
 - Kept from the second round (maintainer, asked again on 23 Nov 2026): no "Watch" button, no "Best match" label, no magnifier icon. "People" stays as a sixth tile (not in the sketch).
-- The keyboard of the sketch (QWERTZ in German, backspace in the "a" row, "-" key, "Clear all") is a separate `SketchKeyboard`; `SearchKeyboard` of the TV guide and channel searches is unchanged.
+- The keyboard of the sketch (QWERTY in every language, as the maintainer decided on 23 Nov 2026, not the QWERTZ of the sketch; backspace in the "a" row, "-" key, "Clear all") is a separate `SketchKeyboard`; `SearchKeyboard` of the TV guide and channel searches is unchanged.
 - Suggestions: up to four rows, titles of the hits first, then completions of the typed word (badge "All"). The word chips are gone.
 - The "Show all" tile at the end of each row is gone; "Show all ›" sits in the row heading as in the sketch.
 - Not compiled (no Android SDK here; a syntax check with the Kotlin compiler passed), not device tested. A side-by-side check with the sketch on the device is open.

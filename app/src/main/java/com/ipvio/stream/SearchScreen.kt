@@ -843,9 +843,6 @@ private fun KbKey(label: String, modifier: Modifier, onFocusChange: (Boolean) ->
     }
 }
 
-/** German layout of the sketch (QWERTZ); other languages keep QWERTY. */
-private val KB_LETTERS_DE = listOf("qwertzuiop", "asdfghjkl", "yxcvbnm")
-
 /**
  * On-screen keyboard (sketch: keys 57 px high, 9 px apart, 5 rows): numbers, three letter rows with backspace at the end of
  * the second one and "-" at the end of the third one, then special letters, space, phone input and "Clear all".
@@ -860,7 +857,8 @@ private fun SketchKeyboard(
 ) {
     var symbols by remember { mutableStateOf(false) }
     var special by remember { mutableStateOf(false) }
-    val rows = if (symbols) KB_SYMBOLS else if (special) KB_SPECIAL else if (Lang.code() == "de") KB_LETTERS_DE else KB_LETTERS
+    // QWERTY in every language (maintainer, 23 Nov 2026), not the German QWERTZ of the sketch
+    val rows = if (symbols) KB_SYMBOLS else if (special) KB_SPECIAL else KB_LETTERS
     val gap = sk(9)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(sk(10))) {
         // Number row (always visible)
