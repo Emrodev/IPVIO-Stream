@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Sports Hub: OK on a running game with a matching channel starts the channel (Live, Schedule and the live cards of the Overview); every other game opens its Match Center. Before, every game opened the Match Center. Not device tested yet
+- Settings > Genres & categories > "Reset this page" now switches everything on again: ignored groups, categories hidden in the categories view and every content language (the playlist is read again). Before, only the ignored groups were cleared. Private categories stay private. Not device tested yet
 - Header (Movies, Series, home): Left on the search field goes into the sidebar (before, the focus jumped to the profile circle on the right). A long playlist name no longer squeezes the profile circle: the playlist button is at most 280 design pixels wide, and the tabs on the left give way first. Not device tested yet
 - Settings > Playlists: each playlist shows its type (Xtream, M3U or Stalker) and its content mode when it is not "Live TV + movies & series". A playlist set to "Live TV only" or "Movies & series only" gets a "Show all content" button that sets it back and reloads it. Settings > Diagnostics > Log now says how movies and series were loaded (list with or without them, provider's API used or failed). Not device tested yet
 - Search: the keyboard sits at the bottom of the left panel; a focused card brings its whole row into view, so the row heading with "Show all" is no longer hidden under the category tiles. Not device tested yet

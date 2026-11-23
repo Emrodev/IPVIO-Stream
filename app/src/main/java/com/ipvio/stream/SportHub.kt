@@ -88,6 +88,15 @@ class HubCtx(val nav: HubNav, val live: List<Item>, private val onPlay: (Item, L
         if (c.isNotEmpty()) play(c[0], c) else nav.open(HubPage.Watch(g))
     }
     fun open(g: SportData.Game) = nav.open(HubPage.Match(g))
+
+    /**
+     * OK on a game in a list (maintainer, 23 Nov 2026): a running game with a matching channel starts that channel,
+     * every other game opens its Match Center with the details.
+     */
+    fun select(g: SportData.Game) {
+        val c = if (g.state == 1) chans(g) else emptyList()
+        if (c.isNotEmpty()) play(c[0], c) else open(g)
+    }
 }
 
 /** Tab and filters survive leaving the hub (e.g. after Watch Live and back from the player). */
@@ -282,7 +291,7 @@ private fun HubOverview(feed: SportFeed.State, hub: HubCtx, onRetry: () -> Unit)
             HubSectionTitle("Jetzt live", action = "Alle zeigen") { hub.goTab(1, null) }
             Spacer(Modifier.height(dpx(8)))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(dpx(14)), contentPadding = PaddingValues(vertical = dpx(8))) {
-                items(liveMine.take(30), key = { it.key }) { g -> MatchCard(g, true) { hub.open(g) } }
+                items(liveMine.take(30), key = { it.key }) { g -> MatchCard(g, true) { hub.select(g) } }
             }
         }
         if (upcoming.isNotEmpty()) item(key = "up") {
@@ -358,7 +367,7 @@ private fun LazyListScope.groupedGames(games: List<SportData.Game>, hub: HubCtx,
     games.groupBy { it.groupName }.forEach { (name, list) ->
         val l = SportData.leagueOf(list.first())
         item(key = "h$name") { CompetitionHeader(name, l?.let { SportData.leagueLogos[it.path] }, list.count { it.state == 1 }, list.size) }
-        items(list, key = { "g" + it.key }) { g -> MatchRow(g, hub.chans(g).isNotEmpty(), timeFirst) { hub.open(g) } }
+        items(list, key = { "g" + it.key }) { g -> MatchRow(g, hub.chans(g).isNotEmpty(), timeFirst) { hub.select(g) } }
     }
 }
 
@@ -395,7 +404,7 @@ private fun HubLive(feed: SportFeed.State, hub: HubCtx, sport: String?, sportReq
                     val next = games.filter { it.state == 0 && statusKind(it) == 0 && sportMatch(it, sport) }.sortedBy { it.start }.take(10)
                     if (next.isNotEmpty()) {
                         item(key = "nt") { HubSectionTitle("Als Nächstes") }
-                        items(next, key = { "n" + it.key }) { g -> MatchRow(g, hub.chans(g).isNotEmpty(), timeFirst = true) { hub.open(g) } }
+                        items(next, key = { "n" + it.key }) { g -> MatchRow(g, hub.chans(g).isNotEmpty(), timeFirst = true) { hub.select(g) } }
                     }
                 }
                 else -> groupedGames(shown, hub, false)
