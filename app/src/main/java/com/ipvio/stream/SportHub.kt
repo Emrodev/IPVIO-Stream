@@ -111,6 +111,8 @@ private object HubMemory {
 }
 
 private val HUB_TABS = listOf("Übersicht", "Live", "Spielplan", "Ligen", "Teams", "Favoriten", "Sender")
+/** One icon per tab (same order as [HUB_TABS]), so the tabs are told apart at a glance. */
+private val HUB_ICONS = listOf(AIcon.Grid, AIcon.Live, AIcon.Catchup, AIcon.Lists, AIcon.Person, AIcon.Star, AIcon.Play)
 
 /**
  * Sports Hub: Overview, Live, Schedule, Leagues, Teams, Favorites and the channel area (previous sports page).
@@ -183,12 +185,13 @@ fun SportHub(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
                 // The chosen tab is where the focus lands when coming from the sidebar (the channel tab has its own target)
                 val base = if (i == tab && tab != 6) Modifier.focusRequester(ContentFocus.req) else Modifier.trackFocus()
                 // Live tab: Down goes to the sport filter first (not to the competition row below it)
-                FilterPill(t, tab == i, if (tab == 1) base.focusProperties { down = sportReq } else base) {
+                FilterPill(t, tab == i, if (tab == 1) base.focusProperties { down = sportReq } else base, aicon = HUB_ICONS.getOrNull(i)) {
                     tab = i; HubMemory.tab = i
                 }
             }
             // A setting, not a tab: at the end of the row (before, it was the first pill and looked like a tab)
-            item(key = "scoreov") { FilterPill("Score-Overlay", SportAlerts.miniOn, aicon = AIcon.Live) { scoreDlg = true } }
+            // Only an icon (it opens the score overlay settings); lit when the overlay is on
+            item(key = "scoreov") { FilterPill("", SportAlerts.miniOn, aicon = AIcon.Pulse) { scoreDlg = true } }
         }
         if (!General.sportLive && tab != 6) {
             HubEmpty(AIcon.Live, "Live-Ergebnisse sind aus", "Ergebnisse, Tabellen und Spielpläne kommen von ESPN (inoffizielle Quelle). Schalte sie ein, um den Sports Hub zu nutzen.",
@@ -389,11 +392,15 @@ private fun HubLive(feed: SportFeed.State, hub: HubCtx, sport: String?, sportReq
     val shown = inSport.filter { (c == null || it.groupName == c) && (!favOnly || SportHubFavs.isFavGame(it)) }
         .sortedWith(compareBy({ if (SportHubFavs.isFavGame(it)) 0 else 1 }, { popularity(it) }, { it.groupName }, { it.start }))
     Column(Modifier.fillMaxSize()) {
-        SportFilter(sport, counts, sportReq, compReq) { onSport(it); comp = null }
-        LazyRow(contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(4)), horizontalArrangement = Arrangement.spacedBy(dpx(10))) {
-            item(key = "all") { FilterPill("Alle Wettbewerbe", c == null, Modifier.trackFocus(compReq).focusProperties { up = sportReq }) { comp = null } }
-            item(key = "fav") { FilterPill("Nur Favoriten", favOnly, Modifier.trackFocus().focusProperties { up = sportReq }, aicon = if (favOnly) AIcon.Star else AIcon.StarOutline) { favOnly = !favOnly } }
-            items(comps, key = { it }) { n -> FilterPill(n, c == n, Modifier.trackFocus().focusProperties { up = sportReq }, raw = true) { comp = if (c == n) null else n } }
+        // One row of three buttons instead of two rows of pills (maintainer, 23 Nov 2026): sport, competition, favorites only
+        Row(Modifier.fillMaxWidth().padding(horizontal = DS.PageX, vertical = dpx(4)), horizontalArrangement = Arrangement.spacedBy(dpx(10)), verticalAlignment = Alignment.CenterVertically) {
+            SportDropdown(sport, counts, Modifier.focusRequester(sportReq)) { onSport(it); comp = null }
+            val compLabels = listOf(Lang.tr("Alle Wettbewerbe")) + comps
+            val ci = if (c == null) 0 else comps.indexOf(c) + 1
+            DropdownPill("Wettbewerb", compLabels[ci], compLabels, ci, active = c != null, modifier = Modifier.focusRequester(compReq), icon = FIcon.Grid) { i ->
+                comp = if (i == 0) null else comps[i - 1]
+            }
+            FilterPill("", favOnly, Modifier.trackFocus(), aicon = if (favOnly) AIcon.Star else AIcon.StarOutline) { favOnly = !favOnly }
         }
         LazyColumn(contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(8)), verticalArrangement = Arrangement.spacedBy(dpx(4))) {
             when {
@@ -439,7 +446,7 @@ private fun HubSchedule(hub: HubCtx, sport: String?, onSport: (String?) -> Unit)
         Row(Modifier.fillMaxWidth().padding(start = DS.PageX), verticalAlignment = Alignment.CenterVertically) {
             DateStepper(day, -7..14) { day = it; HubMemory.day = it }
             Box(Modifier.padding(horizontal = dpx(14)).width(1.dp).height(dpx(28)).background(DS.Hairline))
-            SportFilter(sport, counts, modifier = Modifier.weight(1f), startPad = 0.dp) { onSport(it) }
+            SportDropdown(sport, counts) { onSport(it) }
         }
         LazyColumn(contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(8)), verticalArrangement = Arrangement.spacedBy(dpx(4))) {
             when {

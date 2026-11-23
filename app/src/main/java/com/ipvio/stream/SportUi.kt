@@ -393,6 +393,22 @@ internal fun SportFilter(
 }
 
 /**
+ * Sport choice as ONE button with a list (maintainer, 23 Nov 2026: the rows of filter pills looked too busy).
+ * The list has "All sports" and the sports with games, each with its number of games ([counts] null = all sports, no numbers).
+ */
+@Composable
+internal fun SportDropdown(sel: String?, counts: Map<String, Int>?, modifier: Modifier = Modifier, onSel: (String?) -> Unit) {
+    val sports = SportData.SPORTS.filter { counts == null || (counts[it.key] ?: 0) > 0 || it.key == sel }
+    val labels = listOf(Lang.tr("Alle Sportarten")) + sports.map { s ->
+        Lang.tr(s.label) + (counts?.get(s.key)?.takeIf { it > 0 }?.let { "  ·  $it" } ?: "")
+    }
+    val cur = sports.indexOfFirst { it.key == sel }.let { if (it < 0) 0 else it + 1 }
+    DropdownPill("Sport", labels[cur], labels, cur, active = sel != null, modifier = modifier, icon = FIcon.Genre) { i ->
+        onSel(if (i == 0) null else sports[i - 1].key)
+    }
+}
+
+/**
  * Compact date choice (maintainer, 23 Nov 2026: the hub was too cluttered): previous day, the chosen day as text
  * ("Today · Mon 23.11."), next day, and "Today" only when another day is shown. Replaces the bar of nine pills.
  */
