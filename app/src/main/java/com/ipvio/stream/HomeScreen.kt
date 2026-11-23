@@ -169,10 +169,10 @@ private fun sameItems(a: List<Item>, b: List<Item>?): Boolean {
 /** Filtered lists per area, so the same list object comes back and [HomeCache] can recognize it (no full recompute on every tab switch). */
 private object AreaCache {
     private val m = HashMap<String, Pair<List<Item>, List<Item>>>()
-    @Synchronized fun get(all: List<Item>, tab: Int, k: Int): List<Item> {
-        val key = "$tab|$k"
+    @Synchronized fun get(all: List<Item>, tab: Int, ks: Set<Int>): List<Item> {
+        val key = "$tab|" + ks.sorted().joinToString(",")
         m[key]?.let { if (it.first === all) return it.second }
-        return AreaSource.filter(all, tab, k).also { m[key] = all to it }
+        return AreaSource.filter(all, tab, ks).also { m[key] = all to it }
     }
 }
 
@@ -221,8 +221,12 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val allRaw = PlaylistStore.channels
     // Movies/series: playlist selection at the top (with several shown playlists) – only titles of this playlist
-    val areaK = if (tab in 1..2) AreaSource.get(tab) else -1
-    val all = remember(allRaw, areaK, tab) { if (areaK < 0) allRaw else AreaCache.get(allRaw, tab, areaK) }
+    // Selection changes or shown playlists change: recompute the source set, not on every recomposition
+    val areaVer = AreaSource.version
+    val areaK = remember(tab, areaVer, PlaylistStore.sourceNames, PlaylistMode.version) {
+        if (tab in 1..2) AreaSource.sources(ctx, tab) else emptySet()
+    }
+    val all = remember(allRaw, areaK, tab) { if (areaK.isEmpty()) allRaw else AreaCache.get(allRaw, tab, areaK) }
     val order = PlaylistStore.catOrder
     // Adopt genre progress at most every 45 s: every adoption recomputes rows and top lists
     var ver by remember { mutableIntStateOf(HomeVer.value.takeIf { it >= 0 } ?: Classifier.version) }

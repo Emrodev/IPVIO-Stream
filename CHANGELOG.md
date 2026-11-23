@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Playlists per section (T-051): the playlist choice of Live TV, Movies and Series is a list of checkboxes now, with "All playlists" at the top. Pick any number of the shown playlists for each section. A playlist that does not fit the section (Live TV only, or movies and series only) is greyed out with the reason. Start page and search are unchanged. The choice is kept after a restart. Only playlists that are already shown are filtered, nothing is loaded extra. Not device tested yet
 - Docs: README gets an install troubleshooting pointer, a "Privacy and security" section (API keys, backup servers, phone remote over plain HTTP, VPN without kill switch, own DNS), a "Known limitations" section and a link to the test documentation. No app change
 
 ## 1.4.8 (versionCode 14)

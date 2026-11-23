@@ -324,27 +324,7 @@ private fun ClockPill() {
  * A playlist that is not shown is activated and loaded (as in Live TV).
  */
 @Composable
-private fun AreaPlaylistPill(tab: Int) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val pls = PlaylistStore.lists.toList()
-    val multiView = PlaylistStore.sourceNames.size > 1
-    val k = if (multiView) AreaSource.get(tab) else -1
-    val opts = (if (multiView) listOf(Lang.tr("Alle Playlists")) else emptyList()) + pls.map { it.name }
-    val off = if (multiView) 1 else 0
-    val cur = if (multiView && k < 0) 0 else {
-        val si = if (multiView) k else 0
-        (pls.indices.firstOrNull { PlaylistStore.shownIndex(it) == si } ?: PlaylistStore.active) + off
-    }
-    DropdownPill("Playlist", opts.getOrElse(cur) { "" }, opts, cur, active = multiView && k >= 0, icon = FIcon.Grid) { pick ->
-        if (multiView && pick == 0) AreaSource.set(tab, -1)
-        else {
-            val pi = pick - off
-            val si = PlaylistStore.shownIndex(pi)
-            if (si >= 0) { if (multiView) AreaSource.set(tab, si) }
-            else { AreaSource.set(tab, -1); PlaylistStore.switchAsync(ctx, pi) }
-        }
-    }
-}
+private fun AreaPlaylistPill(tab: Int) = SectionPlaylistPill(tab)
 
 /** Switch playlist (only with several playlists): applies to movies, series, Live TV and the home screen. */
 @Composable

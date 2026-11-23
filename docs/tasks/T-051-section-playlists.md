@@ -1,6 +1,6 @@
 # T-051: Playlist selection per section
 
-Status: **stage 1 done (logic and tests), stage 2 open (wiring and dropdown). Not compiled, not device tested.**
+Status: **stage 1 and stage 2 implemented. Not compiled (no Kotlin compiler or Android SDK here), not device tested. Performance not measured.**
 
 ## Goal
 
@@ -18,17 +18,27 @@ Per section (Live TV, Movies, Series) choose which shown playlists it uses, with
 - `SectionSourceLogic.kt`: eligibility per content mode and section, effective selection, toggle, storage by playlist key. Pure logic, no Android imports.
 - `SectionSourceLogicTest.kt`: 9 JVM tests. **Not run** (no Kotlin compiler or Gradle here).
 
-## Stage 2 (open)
+## Stage 2 (implemented)
 
-- `AreaSource.kt` and `LiveSource` hold a set of indices instead of one index. Call sites: `Header.kt`, `LiveTab.kt`, `HomeScreen.kt`, `BrowseScreen.kt`, `AreaSource.filter`.
-- New storage with its own preference keys (not `multi` or `active`, see CLAUDE.md section 5).
-- Dropdown with checkboxes and greyed entries in `LiveTab.kt` (Live TV) and `Header.kt` (Movies, Series).
-- Startpage and search stay on `multi`.
+- `AreaSource.kt`: one selection per section, stored as playlist keys in the preference file `ipvio_section` (keys `sec_1`, `sec_2`, `sec_3`). `sources()` turns it into source indices once per change; `filter()` takes a set of sources. Empty selection = all.
+- `SectionPlaylistUi.kt` (new): pill and popup with checkboxes, "All playlists" on top, greyed rows for playlists that do not fit the section (with the reason from `PlaylistMode.labels`). A playlist that is not shown yet is activated as before.
+- `Header.kt`: the movies/series pill uses the new popup. `HomeScreen.kt`: the filter runs on the set and is kept in `remember`. `LiveTab.kt`: the "Playlist" row uses the popup, the "Quelle" row cycles through the sources as before (All, then each shown playlist).
+- `PlaylistStore.shownUrls` gives the addresses in source order. `Dropdown.kt`: `belowAnchor` is now internal.
+- Not changed: loading (`multi`, `active`), the Browse page's own "Quelle" filter, startpage and search.
+
+## Performance
+
+- The selection only filters playlists that are already loaded. It never loads an extra playlist.
+- The source set is computed in `remember`, not for each item or each recomposition.
+- Filtering is skipped when the selection covers every shown playlist.
+- Membership checks use `Set<Int>` lookups.
+- Not measured on a device. Memory and start time with five large playlists are still open.
 
 ## Risks
 
-- Changes the IPTV core (CLAUDE.md section 6). Needs the maintainer's approval for stage 2.
-- Memory and start time with five large playlists: not measured.
+- Changes the IPTV core (CLAUDE.md section 6). Approved by the maintainer on 23 Nov 2026 with the note that performance must not suffer.
+- Compile not checked. Most likely problems: small signature mismatches in the Compose helpers (`FilterPill`, `OptionRow`, `Text`).
+- Browse page "Quelle" still filters on its own, not on the section selection.
 
 ## Test steps for the maintainer (after stage 2)
 

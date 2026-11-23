@@ -1191,6 +1191,9 @@ object PlaylistStore {
         return lists.filterIndexed { i, pl -> i != active && key(pl.url) in multi }.map { it.url }
     }
 
+    /** Addresses of the shown sources in source order (0 = active, then the others in list order), as [sourceNames]. */
+    fun shownUrls(c: Context): List<String> = listOfNotNull(shownUrl) + extraUrls(c)
+
     fun isShown(i: Int): Boolean = i == active || (i in lists.indices && key(lists[i].url) in multi)
 
     /** Position of playlist [i] among the shown sources (0 = active, then the others in list order), -1 = not shown. */
