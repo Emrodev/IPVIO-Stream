@@ -142,6 +142,28 @@ object CreditsRepo {
         }
     }
 
+    /** People for the search (T-053c): TMDB person search in the app language. Empty without a TMDB key or for short texts. */
+    suspend fun searchPeople(query: String): List<PersonRef> {
+        val q = query.trim()
+        if (q.length < 2 || !MetaRepo.enabled()) return emptyList()
+        return withContext(Dispatchers.IO) {
+            val url = "https://api.themoviedb.org/3/search/person?api_key=${Config.TMDB_KEY}&language=${Lang.tmdb()}" +
+                "&include_adult=false&query=" + java.net.URLEncoder.encode(q, "UTF-8")
+            val body = httpGet(url) ?: return@withContext emptyList<PersonRef>()
+            try {
+                val arr = JSONObject(body).optJSONArray("results") ?: return@withContext emptyList<PersonRef>()
+                (0 until minOf(arr.length(), 20)).mapNotNull { n ->
+                    val o = arr.getJSONObject(n)
+                    val id = o.optInt("id", 0)
+                    val name = o.s("name") ?: return@mapNotNull null
+                    if (id <= 0) null else PersonRef(id, name, o.s("profile_path")?.let { IMG + "w185" + it }, null)
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
+
     suspend fun person(id: Int): PersonInfo? {
         val pk = id.toString() + Lang.code()
         persons[pk]?.let { return it }

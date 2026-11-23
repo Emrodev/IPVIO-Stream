@@ -26,6 +26,9 @@ object AppVpn {
         private set
     var message by mutableStateOf<String?>(null)
         private set
+    /** Counts every stored configuration, so the settings page refreshes after an import from the phone. */
+    var configVersion by mutableStateOf(0)
+        private set
 
     private var backend: GoBackend? = null
     private val tunnel = object : Tunnel {
@@ -53,12 +56,14 @@ object AppVpn {
         val enc = Secrets.encrypt(conf) ?: return "Dieses Gerät hat keinen sicheren Schlüsselspeicher. Die Konfiguration wird nicht gespeichert."
         prefs(c).edit().putString("cfg", enc).apply()
         message = null
+        configVersion++
         return null
     }
 
     fun remove(c: Context) {
         prefs(c).edit().remove("cfg").apply()
         state = St.OFF; message = null
+        configVersion++
     }
 
     /** null = the app may connect; otherwise the system asks the user once (start it with startActivityForResult). */

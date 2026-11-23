@@ -218,7 +218,7 @@ fun PosterCard(
 }
 
 @Composable
-fun LiveCard(item: Item, onClick: () -> Unit, modifier: Modifier = Modifier, onLong: (() -> Unit)? = null) {
+fun LiveCard(item: Item, onClick: () -> Unit, modifier: Modifier = Modifier, onLong: (() -> Unit)? = null, nowTitle: String? = null, progress: Float? = null) {
     val ctx = LocalContext.current
     var f by remember { mutableStateOf(false) }
     val s by animateFloatAsState(if (f) focusScale(1.08f) else 1f, label = "live")
@@ -250,7 +250,12 @@ fun LiveCard(item: Item, onClick: () -> Unit, modifier: Modifier = Modifier, onL
         }
         Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
             Text(raw = true, text = item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(raw = true, text = item.group, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // Search (T-051b): the running show and a progress bar; otherwise the channel group
+            if (nowTitle != null) Text(raw = true, text = nowTitle, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            else Text(raw = true, text = item.group, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (progress != null) Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(Surf2)) {
+                Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxHeight().background(Accent2))
+            }
         }
     }
 }

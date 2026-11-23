@@ -66,7 +66,7 @@ object PhoneImportLogic {
     fun message(de: Boolean, kind: String): String = message(if (de) 0 else 1, kind)
 
     /** What the page additionally offers (round 20). */
-    class Features(val upload: Boolean = false, val transfer: Boolean = false, val crash: Boolean = false, val epg: Boolean = false, val list: Boolean = false, val keys: Boolean = false)
+    class Features(val upload: Boolean = false, val transfer: Boolean = false, val crash: Boolean = false, val epg: Boolean = false, val list: Boolean = false, val keys: Boolean = false, val vpn: Boolean = false)
 
     private const val CSS = """body{font-family:system-ui,sans-serif;background:#0B0F19;color:#fff;margin:0;padding:20px;max-width:560px}
 h1{font-size:22px}h2{font-size:16px;color:#9aa;margin-top:28px}a{color:#86EFAC}pre{white-space:pre-wrap;background:#171a26;padding:12px;border-radius:10px;font-size:13px}
@@ -115,6 +115,11 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
 <input id="lc" inputmode="numeric" maxlength="4" placeholder="${t("Code vom Fernseher", "Code from the TV")}">
 <input id="lf" type="file">
 <button onclick="lu()">${t("Liste hochladen", "Upload list")}</button><p id="ls"></p>""" + sendFileJs("lu", "/listimport", "lc", "lf", "ls") else "") +
+            (if (feats.vpn) """<h2>${t("WireGuard-Konfiguration (VPN)", "WireGuard configuration (VPN)")}</h2>
+<p>${t("Wähle die .conf-Datei deines VPN-Anbieters. Sie enthält einen privaten Schlüssel: sende sie nur über dein eigenes WLAN.", "Choose the .conf file of your VPN provider. It contains a private key: only send it over your own Wi-Fi.")}</p>
+<input id="vc" inputmode="numeric" maxlength="4" placeholder="${t("Code vom Fernseher", "Code from the TV")}">
+<input id="vf" type="file" accept=".conf,text/plain">
+<button onclick="vp()">${t("Datei hochladen", "Upload file")}</button><p id="vs"></p>""" + sendFileJs("vp", "/vpn", "vc", "vf", "vs") else "") +
             (if (feats.keys) """<h2><a href="/keys">${t("API-Schlüssel eingeben (TMDB, OMDb, Untertitel)", "Enter API keys (TMDB, OMDb, subtitles)")}</a></h2>""" else "") +
             (if (feats.transfer) """<h2><a href="/transfer">${t("Einstellungen auf ein anderes Gerät übertragen", "Transfer settings to another device")}</a></h2>""" else "") +
             (if (feats.crash) """<h2><a href="/crash">${t("Letzten Absturzbericht anzeigen", "Show the last crash report")}</a></h2>""" else "") +
@@ -221,6 +226,8 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
     var api: ((String, Map<String, String>) -> String?)? = null
     /** Import of an exported list file (file name, content); runs on the server thread, so the callback must post to the main thread itself. */
     var onList: ((String, ByteArray) -> Unit)? = null
+    /** WireGuard configuration sent from the phone (text, checked by [VpnLogic.check] before the callback); set = the section appears on the page. Runs on the server thread, so the callback must post to the main thread itself. */
+    var onVpn: ((String) -> Unit)? = null
 
     fun start(): Boolean {
         if (server != null) return true
@@ -325,7 +332,7 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
         val ins = s.getInputStream()
         val h = readHead(ins) ?: return
         val li = PhoneImportLogic.langIndex(h.lang)
-        val feats = PhoneImportLogic.Features(saveUpload != null, backup != null, crash != null, onEpg != null, onList != null, onKeys != null)
+        val feats = PhoneImportLogic.Features(saveUpload != null, backup != null, crash != null, onEpg != null, onList != null, onKeys != null, onVpn != null)
         val r: Reply = when (h.method + " " + h.path) {
             "GET /" -> html(200, PhoneImportLogic.page(li, feats))
             "POST /send" -> {
@@ -397,6 +404,19 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
                     tmp.delete()
                     if (url == null) html(400, PhoneImportLogic.message(li, "file"))
                     else { onReceive(PhoneInput(url, "", "", "")); html(200, PhoneImportLogic.message(li, "ok")) }
+                }
+            }
+            // WireGuard configuration (body = the .conf file); checked here, so the phone shows an error at once
+            "POST /vpn" -> {
+                val cb = onVpn
+                val c = codeOk(h.query["code"])
+                if (cb == null) html(404, PhoneImportLogic.message(li, "bad"))
+                else if (c != 200) html(c, PhoneImportLogic.message(li, if (c == 403) "code" else "lock"))
+                else if (h.len <= 0 || h.len > VpnLogic.MAX_BYTES) html(400, PhoneImportLogic.message(li, "file"))
+                else {
+                    val text = String(readBody(ins, h.len), Charsets.UTF_8)
+                    if (VpnLogic.check(text) != null) html(400, PhoneImportLogic.message(li, "file"))
+                    else { cb(text); html(200, PhoneImportLogic.message(li, "ok")) }
                 }
             }
             "GET /transfer" -> if (backup != null) html(200, PhoneImportLogic.transferPage(li)) else html(404, PhoneImportLogic.message(li, "bad"))

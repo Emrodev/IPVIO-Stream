@@ -42,6 +42,10 @@ object RemoteLogic {
         "{\"k\":" + q(key) + ",\"lg\":" + q(league) + ",\"ti\":" + q(title) + ",\"h\":" + q(home) + ",\"a\":" + q(away) +
             ",\"hs\":" + q(hs) + ",\"as\":" + q(aws) + ",\"st\":$state,\"d\":" + q(detail) + ",\"t\":$start,\"w\":$watch,\"f\":$fav,\"p\":$pinned}"
 
+    /** A programme hit (T-051a): channel id and name, programme title, start and end in seconds. */
+    fun prog(id: String, channel: String, title: String, start: Long, end: Long): String =
+        "{\"id\":" + q(id) + ",\"c\":" + q(channel) + ",\"t\":" + q(title) + ",\"s\":" + start + ",\"e\":" + end + "}"
+
     fun arr(items: List<String>): String = items.joinToString(",", "[", "]")
 
     /** An episode: season, number, title. */
@@ -122,7 +126,7 @@ main{padding:6px 14px}
 </style></head><body>
 <header><div class="top"><input id="q" type="search" placeholder="${h(t("Filme, Serien, Sender suchen …", "Search movies, series, channels …"))}" autocomplete="off" autocapitalize="off" enterkeyhint="search">
 <button id="gear" aria-label="${h(t("Einstellungen", "Settings"))}">&#9881;</button></div>
-<div id="tabs"><button data-k="m" class="on">${h(t("Filme", "Movies"))}</button><button data-k="s">${h(t("Serien", "Series"))}</button><button data-k="l">Live TV</button><button data-k="sp">Sport</button></div></header>
+<div id="tabs"><button data-k="m" class="on">${h(t("Filme", "Movies"))}</button><button data-k="s">${h(t("Serien", "Series"))}</button><button data-k="l">Live TV</button><button data-k="sp">Sport</button><button data-k="p">${h(t("TV-Programm", "TV guide"))}</button></div></header>
 <main id="list"></main>
 <div id="ctl"><div id="now"></div><div id="btns">
 <button data-c="skip" data-v="-30">-30 s</button><button data-c="skip" data-v="-10">-10 s</button><button class="go" data-c="pause">${h(t("Pause / Weiter", "Pause / Play"))}</button>
@@ -149,7 +153,8 @@ watch:'${js(t("Ansehen", "Watch"))}',pin:'${js(t("Merken", "Keep"))}',pinned:'${
 noGames:'${js(t("Keine Spiele gefunden.", "No games found."))}',noFav:'${js(t("Noch keine Lieblingsteams. Wähle sie unter „Lieblingsteams“.", "No favorite teams yet. Choose them under “Favorite teams”."))}',
 noMine:'${js(t("Noch keine Spiele gemerkt. Tippe bei einem Spiel auf „Merken“; es erscheint dann auch am Fernseher im Mini-Ergebnis.", "No games kept yet. Tap “Keep” on a game; it then also shows in the mini score on the TV."))}',
 sOff:'${js(t("Live-Ergebnisse sind am Fernseher ausgeschaltet (Sports Hub).", "Live scores are switched off on the TV (Sports Hub)."))}',noCh:'${js(t("Kein passender Sender gefunden.", "No matching channel found."))}',
-league:'${js(t("Liga wählen", "Choose a league"))}',cont:'${js(t("Weiterschauen", "Continue watching"))}',idle:'${js(t("Es läuft nichts.", "Nothing is playing."))}',wait:'${js(t("Die Playlist wird noch geladen.", "The playlist is still loading."))}'};
+league:'${js(t("Liga wählen", "Choose a league"))}',cont:'${js(t("Weiterschauen", "Continue watching"))}',idle:'${js(t("Es läuft nichts.", "Nothing is playing."))}',wait:'${js(t("Die Playlist wird noch geladen.", "The playlist is still loading."))}',
+progLive:'${js(t("Läuft jetzt", "Live now"))}',progUp:'${js(t("Demnächst", "Upcoming"))}',progHint:'${js(t("Tippe einen Sendungstitel ein, z. B. Formula 1.", "Type a programme title, e.g. Formula 1."))}'};
 var code='';try{code=new URLSearchParams(location.search).get('code')||sessionStorage.getItem('ipvio_code')||''}catch(e){}
 var kind='m',data={m:[],s:[],l:[]},cat=null,tm=null,seq=0;
 var qEl=document.getElementById('q'),list=document.getElementById('list'),toastEl=document.getElementById('toast');
@@ -275,11 +280,20 @@ function resumeView(){var go=function(){list.innerHTML='';var a=(rdata||[]).filt
   list.appendChild(row(x.t,sub,null,function(){if(x.k=='s'&&x.s)play(x.id,x.s,x.e);else play(x.id)}))})};
  if(rdata&&Date.now()-rt<30000){go();return}
  api('resume').then(function(d){rdata=d;rt=Date.now();if(!qEl.value.trim())go()}).catch(function(e){if(e!==0)msg(L.hint)})}
+var pSub='live',pSeq=0;
+function progView(){var q=qEl.value.trim(),me=++pSeq;list.innerHTML='';
+ var sb=el('div','sub');[['live',L.progLive],['up',L.progUp]].forEach(function(s){var b=el('button',null,s[1]);if(s[0]==pSub)b.className='on';b.onclick=function(){pSub=s[0];progView()};sb.appendChild(b)});list.appendChild(sb);
+ if(!q){list.appendChild(el('div','msg',L.progHint));return}
+ api('prog',{q:q,t:pSub}).then(function(a){if(me!=pSeq||kind!='p')return;
+  if(!a.length){list.appendChild(el('div','msg',L.none));return}
+  a.forEach(function(x){var tm=function(s){return new Date(s*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
+   list.appendChild(row(x.t,x.c+'  ·  '+tm(x.s)+' – '+tm(x.e),null,function(){play(x.id)}))})}).catch(function(e){if(e!==0)msg(L.err)})}
 function show(){var q=qEl.value.trim();
+ if(kind=='p'){progView();return}
  if(kind=='sp'){sportView();return}
  if(!q){if(kind=='l')cats();else resumeView();return}
  items(data[kind])}
-function search(){var q=qEl.value.trim(),me=++seq;if(!q||kind=='sp'){show();return}
+function search(){var q=qEl.value.trim(),me=++seq;if(!q||kind=='sp'||kind=='p'){show();return}
  api('search',{q:q}).then(function(d){if(me!=seq)return;if(d.loading){msg(L.wait);return}data=d;
   var bs=document.querySelectorAll('#tabs button');bs[0].textContent=d.nm?'${js(t("Filme", "Movies"))} '+d.nm:'${js(t("Filme", "Movies"))}';
   bs[1].textContent=d.ns?'${js(t("Serien", "Series"))} '+d.ns:'${js(t("Serien", "Series"))}';bs[2].textContent=d.nl?'Live TV '+d.nl:'Live TV';show()}).catch(function(e){if(e!==0)msg(L.err)})}
