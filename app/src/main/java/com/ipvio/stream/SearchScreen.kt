@@ -29,6 +29,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -156,8 +158,6 @@ fun SearchScreen(
             out.filterNotNull()
         }
     }
-    // Smaller cards than elsewhere so more hits are visible next to the keyboard
-    val cardW = (AppSettings.cardW * 0.8f).toInt().coerceAtLeast(110)
     val firstRes = remember { FocusRequester() }
     val firstHistory = remember { FocusRequester() }
     val sideFocus = remember { FocusRequester() }
@@ -271,20 +271,18 @@ fun SearchScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
-        // Cinema view: the scene image of the highlighted title fills the screen, the info sits big on top of it
-        // Darkened (dim 0.5) so white text stays readable on bright scene images
+        // Backdrop of the focused title; the left panel covers its part. Darkened (dim 0.5) so white text stays readable
         BillboardBackdrop(preview, Modifier.fillMaxSize(), dim = 0.5f)
-        Column(Modifier.fillMaxSize().sidebarPad()) {
-        Row(Modifier.weight(1f).fillMaxWidth()) {
-            // Left: heading, input, hit count, suggestions or last searches; the on-screen keyboard at the bottom.
-            // Width: about a third of the screen (the sketch has 600 of 1920 pixels). A fixed 600 dp took half of a TV
-            // screen (about 960 dp wide) and squeezed the category tiles and result rows on the right.
-            val colW = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.36f).dp.coerceIn(330.dp, 600.dp)
+        Row(Modifier.fillMaxSize().sidebarPad()) {
+            // Left panel (sketch: 601 px wide, 37 px side margins, own background, thin line on the right):
+            // heading, field, hit count, fixed area (suggestions or last searches), on-screen keyboard
             Column(
-                Modifier.width(colW).fillMaxHeight().padding(start = DS.PageX, top = 22.dp, bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                Modifier.width(sk(601)).fillMaxHeight().background(Bg.copy(alpha = 0.94f))
+                    .drawBehind { drawLine(DS.Hairline, Offset(size.width - 1f, 0f), Offset(size.width - 1f, size.height), 2f) }
+                    .padding(start = sk(37), end = sk(37), top = sk(44))
             ) {
-                Text(Lang.tr("Suche"), color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold, raw = true)
+                Text(Lang.tr("Suche"), color = Color.White, fontSize = skf(36), fontWeight = FontWeight.ExtraBold, raw = true)
+                Spacer(Modifier.height(sk(22)))
                 Box(Modifier.fillMaxWidth()) {
                     if (AppSettings.systemKeyboard) {
                         // The device's own keyboard (e.g. Gboard) in a normal text field: OK or a tap opens it
@@ -293,7 +291,7 @@ fun SearchScreen(
                             Modifier.fillMaxWidth(),
                             inner = Modifier.focusRequester(ContentFocus.req).onFocusChanged { fieldFocused = it.isFocused || it.hasFocus },
                             onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
-                            height = 48.dp
+                            height = sk(79)
                         )
                     } else {
                         // Tappable: OK or a tap opens the device keyboard for typing (the app keyboard below stays available).
@@ -302,53 +300,60 @@ fun SearchScreen(
                             SearchState.query, { SearchState.query = it.take(60) }, "Filme, Serien oder Sender suchen…",
                             Modifier.fillMaxWidth(),
                             onDone = { SearchState.query.trim().takeIf { it.length >= 2 }?.let { AppSettings.addSearch(ctx, it) } },
-                            height = 48.dp
+                            height = sk(79)
                         )
                     }
                     // Clear button (X) at the right end of the field
                     if (SearchState.query.isNotEmpty()) Box(
-                        Modifier.align(Alignment.CenterEnd).padding(end = 10.dp).size(36.dp).clip(RoundedCornerShape(50))
+                        Modifier.align(Alignment.CenterEnd).padding(end = sk(14)).size(sk(48)).clip(RoundedCornerShape(sk(10)))
                             .background(Surf2).clickable { SearchState.query = "" },
                         contentAlignment = Alignment.Center
-                    ) { AppIcon(AIcon.Close, Color.White, size = 18.dp) }
+                    ) { AppIcon(AIcon.Close, Color.White, size = sk(20)) }
                 }
+                Spacer(Modifier.height(sk(12)))
                 Text(Lang.tr("{0} Treffer in {1} Kategorien").replace("{0}", countAll.toString())
                     .replace("{1}", listOf(rm0.size, rs0.size, liveAll.size, sportAll.size).count { it > 0 }.toString()),
-                    color = Muted, fontSize = 15.sp, raw = true)
+                    color = Muted, fontSize = skf(19), modifier = Modifier.padding(start = sk(4)), raw = true)
+                Spacer(Modifier.height(sk(24)))
                 // Fixed area: the same height in both states, so the keyboard below never moves
-                Column(Modifier.fillMaxWidth().height(250.dp).clipToBounds(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.fillMaxWidth().height(sk(290)).clipToBounds(), verticalArrangement = Arrangement.spacedBy(sk(9))) {
                     if (SearchState.query.isNotBlank()) {
-                        Text(Lang.tr("Vorschläge"), color = Muted, fontSize = 16.sp, fontWeight = FontWeight.Bold, raw = true)
-                        suggItems.forEach { item ->
-                            SuggestionRow(item, q) {
+                        Text(Lang.tr("Vorschläge"), color = Muted, fontSize = skf(20), fontWeight = FontWeight.Bold, raw = true)
+                        // Up to 4 rows: titles of the hits first, then completions of the word being typed
+                        val titleRows = suggItems.take(4)
+                        val wordRows = sugg.map { WordSuggest.apply(SearchState.query, it) }
+                            .filter { w -> titleRows.none { it.title.equals(w.trim(), ignoreCase = true) } }
+                            .distinct().take(4 - titleRows.size)
+                        titleRows.forEachIndexed { i, item ->
+                            SuggestionRow(item.title, suggestLabel(item), q, if (i == 0) Modifier.focusRequester(firstSugg) else Modifier) {
                                 SearchState.query = item.title.take(60)
                                 runCatching { ContentFocus.req.requestFocus() }
                             }
                         }
-                        if (sugg.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            sugg.forEachIndexed { i, w ->
-                                MiniChip(w.replaceFirstChar { it.uppercase() }, false, if (i == 0) Modifier.focusRequester(firstSugg) else Modifier, raw = true) {
-                                    SearchState.query = WordSuggest.apply(SearchState.query, w)
-                                    // #101: the chip list changes after a pick and the focused chip disappears, so focus would fall
-                                    // to the sidebar. Keep it in the search screen: back to the input (same target as Back).
-                                    runCatching { ContentFocus.req.requestFocus() }
-                                }
+                        wordRows.forEachIndexed { i, w ->
+                            SuggestionRow(w.trim(), "Alle", q, if (i == 0 && titleRows.isEmpty()) Modifier.focusRequester(firstSugg) else Modifier) {
+                                SearchState.query = w.take(60)
+                                // #101: the list changes after a pick and the focused row disappears, so focus would fall
+                                // to the sidebar. Keep it in the search screen: back to the input (same target as Back).
+                                runCatching { ContentFocus.req.requestFocus() }
                             }
                         }
                     } else {
-                        // Field empty: last searches as chips and "Clear history"
+                        // Field empty: last searches as chips, "Clear history" on the right of the heading
                         val allRecent = AppSettings.searchHistory.toList()
                         val recent = allRecent.take(3)
                         var showAllHistory by remember { mutableStateOf(false) }
-                        Text(Lang.tr("Letzte Suchen"), color = Muted, fontSize = 16.sp, fontWeight = FontWeight.Bold, raw = true)
-                        if (allRecent.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(Lang.tr("Letzte Suchen"), color = Muted, fontSize = skf(20), fontWeight = FontWeight.Bold, raw = true, modifier = Modifier.weight(1f))
+                            if (allRecent.isNotEmpty()) SearchLink("Verlauf löschen") { AppSettings.clearSearch(ctx) }
+                        }
+                        if (allRecent.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(sk(10)), verticalAlignment = Alignment.CenterVertically) {
                             recent.forEachIndexed { i, term ->
                                 // OK searches again, long OK / menu key removes just this entry
                                 MiniChip(term, false, (if (i == 0) Modifier.focusRequester(firstHistory) else Modifier)
-                                    .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true) { SearchState.query = term }
+                                    .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true, icon = AIcon.History) { SearchState.query = term }
                             }
                             if (allRecent.size > 3) MiniChip("Alle anzeigen", false) { showAllHistory = true }
-                            MiniChip("Verlauf löschen", false) { AppSettings.clearSearch(ctx) }
                         }
                         if (showAllHistory) Dialog(onDismissRequest = { showAllHistory = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                             Column(Modifier.width(620.dp).heightIn(max = 640.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -364,10 +369,10 @@ fun SearchScreen(
                         }
                     }
                 }
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(sk(24)))
                 if (!AppSettings.systemKeyboard) {
                 // Own on-screen keyboard (instead of the TV's keyboard): hits appear while typing
-                SearchKeyboard(
+                SketchKeyboard(
                     Modifier.fillMaxWidth(),
                     onKey = { SearchState.query = (SearchState.query + it).take(60) },
                     onSpace = { if (SearchState.query.isNotEmpty() && !SearchState.query.endsWith(" ")) SearchState.query += " " },
@@ -381,19 +386,20 @@ fun SearchScreen(
                 )
                 }
             }
-            // Right: hero, category tiles, result rows
+            // Right side (sketch: 64 px margins): hero of the focused hit, its buttons, category tiles, result rows
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                // Hero height: 300 dp left only about 100 dp for the result rows on a TV, the cards were cut off
-                SearchHeroInfo(preview, Modifier.fillMaxWidth().height(190.dp).padding(start = DS.PageX, end = DS.PageX, top = 22.dp))
-                // Detail page: a marked title is opened with OK (no own "Watch" button)
-                if (preview != null) Row(Modifier.padding(start = DS.PageX, top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Fixed height, so the tiles below do not jump when the focused hit changes
+                SearchHeroInfo(preview, Modifier.fillMaxWidth().height(sk(337)).padding(start = sk(64), end = sk(64), top = sk(56)))
+                Spacer(Modifier.height(sk(20)))
+                // Detail page: a marked title is opened with OK (no own "Watch" button, maintainer decision 22 and 23 Nov 2026)
+                if (preview != null) Row(Modifier.padding(start = sk(64)), horizontalArrangement = Arrangement.spacedBy(sk(14)), verticalAlignment = Alignment.CenterVertically) {
                     val watched = Library.isWatch(preview.id)
-                    PillButton("Details", Modifier.focusRequester(heroFirst), light = true, icon = AIcon.Info) { onOpen(preview) }
-                    PillButton(if (watched) "Auf der Merkliste" else "Merkliste", icon = if (watched) AIcon.Check else AIcon.Plus) { Library.toggleWatch(ctx, preview.id) }
-                }
+                    HeroButton("Details", AIcon.Info, Modifier.focusRequester(heroFirst)) { onOpen(preview) }
+                    HeroButton(if (watched) "Auf der Merkliste" else "Merkliste", if (watched) AIcon.Check else AIcon.Plus) { Library.toggleWatch(ctx, preview.id) }
+                } else Spacer(Modifier.height(sk(64)))
                 // Category tiles: the selected one filters the rows below; tiles with 0 hits are dimmed but still focusable
                 Row(
-                    Modifier.fillMaxWidth().padding(start = DS.PageX, end = DS.PageX, top = 16.dp).onPreviewKeyEvent { e ->
+                    Modifier.fillMaxWidth().padding(start = sk(64), end = sk(64), top = sk(36)).onPreviewKeyEvent { e ->
                         if (e.type != KeyEventType.KeyDown) false
                         else when (e.key) {
                             Key.DirectionUp -> runCatching { heroFirst.requestFocus() }.isSuccess
@@ -401,7 +407,7 @@ fun SearchScreen(
                             else -> false
                         }
                     },
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(sk(15))
                 ) {
                     tileCounts.forEachIndexed { i, (filter, icon, count) ->
                         CategoryTile(
@@ -413,9 +419,9 @@ fun SearchScreen(
                 // Result rows (scroll below the tiles)
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                 CompositionLocalProvider(LocalSearchFocus provides { focusItem = it }) {
-                    LazyColumn(Modifier.fillMaxWidth(), state = state, contentPadding = PaddingValues(bottom = 48.dp)) {
+                    LazyColumn(Modifier.fillMaxWidth(), state = state, contentPadding = PaddingValues(bottom = sk(48))) {
                 if (fl == 4) item(key = "hubbtn") {
-                    Row(Modifier.padding(horizontal = DS.PageX, vertical = 6.dp)) {
+                    Row(Modifier.padding(start = sk(64), end = sk(64), top = sk(24))) {
                         PillButton("Sports Hub öffnen", icon = AIcon.Live) { onTab(MenuLogic.SPORT) }
                     }
                 }
@@ -424,42 +430,54 @@ fun SearchScreen(
                     val hs = hist.filter { it.kind == Kind.SERIES }
                     val hl = hist.filter { it.kind == Kind.LIVE }
                     if (hm.isNotEmpty()) item(key = "hm") {
-                        SearchRow("Zuletzt geschaut · Filme", hm.take(30), cardW, onOpen) {
+                        SearchRow("Zuletzt geschaut · Filme", hm.take(30), onOpen) {
                             onBrowse(BrowseReq("Zuletzt geschaut · Filme", hm, S_SORT_PLAYLIST))
                         }
                     }
                     if (hs.isNotEmpty()) item(key = "hs") {
-                        SearchRow("Zuletzt geschaut · Serien", hs.take(30), cardW, onOpen) {
+                        SearchRow("Zuletzt geschaut · Serien", hs.take(30), onOpen) {
                             onBrowse(BrowseReq("Zuletzt geschaut · Serien", hs, S_SORT_PLAYLIST))
                         }
                     }
                     if (hl.isNotEmpty()) item(key = "hl") {
-                        SearchRow("Zuletzt geschaut · Live TV", hl.take(30), cardW, onOpen) {
+                        SearchRow("Zuletzt geschaut · Live TV", hl.take(30), onOpen) {
                             onBrowse(BrowseReq("Zuletzt geschaut · Live TV", hl, S_SORT_PLAYLIST))
                         }
                     }
                 } else {
                     val openS: (Item) -> Unit = { i -> AppSettings.addSearch(ctx, q); onOpen(i) }
                     if (searching) item {
-                        Text("Suche …", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(horizontal = DS.PageX, vertical = 16.dp))
+                        Text("Suche …", color = Muted, fontSize = skf(20), modifier = Modifier.padding(horizontal = sk(64), vertical = sk(32)))
                     } else if (selectedEmpty) {
                         if (fl == 0) item {
                             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                                 EmptyState(AIcon.Info, "Keine Treffer", "Prüfe die Schreibweise oder suche nach einem Teil des Titels. Kleine Tippfehler findet die Suche trotzdem.")
                             }
                         } else item(key = "nohits") {
-                            // Selected category has no hits: say so, name the categories that do have hits, offer all hits
+                            // Selected category has no hits (sketch: dashed box): say so, name the categories that do have hits, offer all hits
                             val others = listOf("Filme" to rm0.size, "Serien" to rs0.size, "Live TV" to liveAll.size, "Sport" to sportAll.size, "Personen" to people.size)
                                 .filter { it.second > 0 }.joinToString(", ") { Lang.tr(it.first) }
-                            Column(
-                                Modifier.padding(horizontal = DS.PageX, vertical = 16.dp).fillMaxWidth()
-                                    .clip(RoundedCornerShape(DS.RadiusM)).background(Surf).padding(20.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            val shape = RoundedCornerShape(sk(18))
+                            Row(
+                                Modifier.padding(start = sk(64), end = sk(64), top = sk(32)).fillMaxWidth()
+                                    .drawBehind {
+                                        drawRoundRect(
+                                            DS.Overlay4, cornerRadius = androidx.compose.ui.geometry.CornerRadius(sk(18).toPx()),
+                                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f,
+                                                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(12f, 8f)))
+                                        )
+                                    }
+                                    .clip(shape).padding(horizontal = sk(36), vertical = sk(30)),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(Lang.tr("Keine {0} zu „{1}“").replace("{0}", Lang.tr(SEARCH_FILTERS[fl])).replace("{1}", q),
-                                    color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, raw = true)
-                                if (others.isNotEmpty()) Text(Lang.tr("Treffer gibt es in {0}.").replace("{0}", others), color = Muted, fontSize = 15.sp, raw = true)
-                                if (fl == 5 && !MetaRepo.enabled()) Text(Lang.tr("Personen-Suche braucht einen TMDB-Schlüssel."), color = Muted, fontSize = 15.sp, raw = true)
+                                AppIcon(tileCounts.firstOrNull { it.first == fl }?.second ?: AIcon.Info, Muted, size = sk(40))
+                                Spacer(Modifier.width(sk(28)))
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(sk(6))) {
+                                    Text(Lang.tr("Keine {0} zu „{1}“").replace("{0}", Lang.tr(SEARCH_FILTERS[fl])).replace("{1}", q),
+                                        color = Color.White, fontSize = skf(24), fontWeight = FontWeight.Bold, raw = true)
+                                    if (others.isNotEmpty()) Text(Lang.tr("Treffer gibt es in {0}.").replace("{0}", others), color = Muted, fontSize = skf(19), raw = true)
+                                    if (fl == 5 && !MetaRepo.enabled()) Text(Lang.tr("Personen-Suche braucht einen TMDB-Schlüssel."), color = Muted, fontSize = skf(19), raw = true)
+                                }
                                 PillButton("Alle Treffer zeigen", light = true) { SearchState.filter = 0 }
                             }
                         }
@@ -467,23 +485,23 @@ fun SearchScreen(
                     rowOrder.forEach { key ->
                         when (key) {
                             "rm" -> if (rm.isNotEmpty()) item(key = "rm") {
-                                SearchRow("Filme", rm, cardW, openS, if (firstKey == "rm") firstRes else null) {
+                                SearchRow("Filme", rm, openS, if (firstKey == "rm") firstRes else null) {
                                     AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Filme", rm, S_SORT_AZ))
                                 }
                             }
                             "rs" -> if (rs.isNotEmpty()) item(key = "rs") {
-                                SearchRow("Serien", rs, cardW, openS, if (firstKey == "rs") firstRes else null) {
+                                SearchRow("Serien", rs, openS, if (firstKey == "rs") firstRes else null) {
                                     AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Serien", rs, S_SORT_AZ))
                                 }
                             }
                             "rl" -> if (liveCards.isNotEmpty()) item(key = "rl") {
-                                HitRow("Live TV", liveCards, cardW, false, openS, if (firstKey == "rl") firstRes else null) {
+                                HitRow("Live TV", liveCards, false, openS, if (firstKey == "rl") firstRes else null) {
                                     AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Live TV", liveCards.map { it.item }, S_SORT_AZ))
                                 }
                             }
                             "pe" -> if (pe.isNotEmpty()) item(key = "pe") { PeopleRow(pe, onPerson) }
                             "sp" -> if (sportCards.isNotEmpty()) item(key = "sp") {
-                                HitRow("Sport", sportCards, cardW, true, openS, if (firstKey == "sp") firstRes else null) {
+                                HitRow("Sport", sportCards, true, openS, if (firstKey == "sp") firstRes else null) {
                                     AppSettings.addSearch(ctx, q); onBrowse(BrowseReq("Suche „$q“ · Sport", sportCards.map { it.item }, S_SORT_AZ))
                                 }
                             }
@@ -495,7 +513,6 @@ fun SearchScreen(
                 }
             }
         }
-        }
         Sidebar(
             tab,
             { id -> if (id == tab) scope.launch { state.scrollToItem(0) }; onTab(id) },
@@ -504,50 +521,115 @@ fun SearchScreen(
     }
 }
 
-/** Category tile: icon, big hit count, name. The selected tile has a lighter fill; a tile with 0 hits is dimmed. */
+/**
+ * Sizes of the maintainer's search sketch (1920 x 1080 px) in sketch pixels. The app's design scale ([dpx], [spx]) is based on
+ * a 1658 px wide design, so sketch pixels are converted with 1658 / 1920: the screen then has the proportions of the sketch
+ * on every TV width.
+ */
+private const val SKETCH = 1658f / 1920f
+private fun sk(px: Number): Dp = dpx(px.toFloat() * SKETCH)
+private fun skf(px: Number): androidx.compose.ui.unit.TextUnit = spx(px.toFloat() * SKETCH)
+
+/** Category label of a suggested title (sketch: "Serie", "Live TV", "Sport", "Film"). */
+private fun suggestLabel(i: Item): String = when (i.kind) {
+    Kind.MOVIE -> "Film"
+    Kind.SERIES -> "Serie"
+    Kind.LIVE -> if (SearchSport.isSport(i)) "Sport" else "Live TV"
+}
+
+/**
+ * Category tile (sketch: 91 px high): icon in a small square, big hit count, name below. The selected tile is filled light
+ * with dark text; a tile with 0 hits is dimmed but stays focusable.
+ */
 @Composable
 private fun CategoryTile(icon: AIcon, count: Int, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(DS.RadiusM)
-    Column(
-        modifier.graphicsLayer { alpha = if (count == 0) 0.45f else 1f }.clip(shape)
-            .background(if (selected) Surf2 else Surf)
-            .border(if (f) DS.FocusBorder else DS.Border, if (f) Accent2 else if (selected) Accent2 else DS.Hairline, shape)
+    val shape = RoundedCornerShape(sk(14))
+    val ink = if (selected) DS.FocusInk else Color.White
+    Row(
+        modifier.height(sk(91)).graphicsLayer { alpha = if (count == 0) 0.45f else 1f }.clip(shape)
+            .background(if (selected) DS.FocusFill else Color.Transparent)
+            .border(if (f) DS.FocusBorder else DS.Border, if (f) Accent2 else if (selected) DS.FocusFill else DS.Overlay3, shape)
             .onFocusChanged { f = it.isFocused }
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+            .padding(horizontal = sk(18)),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AppIcon(icon, Color.White, size = 20.dp)
-            Text(count.toString(), color = Color.White, fontSize = spx(24), fontWeight = FontWeight.ExtraBold, maxLines = 1, raw = true)
+        Box(
+            Modifier.size(sk(48)).clip(RoundedCornerShape(sk(10))).background(if (selected) DS.FocusInk else Surf2),
+            contentAlignment = Alignment.Center
+        ) { AppIcon(icon, Color.White, size = sk(22)) }
+        Spacer(Modifier.width(sk(14)))
+        Column {
+            Text(count.toString(), color = ink, fontSize = skf(30), fontWeight = FontWeight.ExtraBold, maxLines = 1, raw = true)
+            Text(label, color = if (selected) Muted else Tok.TextMid, fontSize = skf(18), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
-        Text(label, color = Muted, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 
-/** Suggestion row: the typed part in bold, the rest normal, the category of the hit on the right. Picking it fills the field. */
+/** Suggestion row (sketch: 53 px high): the typed part in bold, the rest normal, the category on the right in a small badge. */
 @Composable
-private fun SuggestionRow(item: Item, typed: String, onPick: () -> Unit) {
+private fun SuggestionRow(text: String, label: String, typed: String, modifier: Modifier = Modifier, onPick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(12.dp)
-    val starts = item.title.startsWith(typed, ignoreCase = true) && typed.isNotEmpty()
+    val shape = RoundedCornerShape(sk(10))
+    val starts = typed.isNotEmpty() && text.startsWith(typed, ignoreCase = true)
+    val ink = if (f) DS.FocusInk else Color.White
     Row(
-        Modifier.fillMaxWidth().height(44.dp).clip(shape).background(if (f) DS.FocusFill else Surf)
-            .border(DS.Border, if (f) DS.FocusFill else DS.Hairline, shape)
+        modifier.fillMaxWidth().height(sk(53)).clip(shape).background(if (f) DS.FocusFill else Surf)
             .onFocusChanged { f = it.isFocused }
             .clickable(onClick = onPick)
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = sk(16)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(Modifier.weight(1f)) {
-            if (starts) Text(item.title.take(typed.length), color = if (f) DS.FocusInk else Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, raw = true)
-            Text(if (starts) item.title.drop(typed.length) else item.title, color = if (f) DS.FocusInk else Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, raw = true)
+            if (starts) Text(text.take(typed.length), color = ink, fontSize = skf(20), fontWeight = FontWeight.Bold, maxLines = 1, raw = true)
+            Text(if (starts) text.drop(typed.length) else text, color = ink, fontSize = skf(20), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, raw = true)
         }
-        Text(Lang.tr(kindLabel(item.kind)), color = if (f) DS.FocusInk else Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, raw = true)
+        Spacer(Modifier.width(sk(10)))
+        Box(Modifier.clip(RoundedCornerShape(sk(6))).background(if (f) DS.Overlay2 else DS.Overlay2).padding(horizontal = sk(8), vertical = sk(3))) {
+            Text(label, color = if (f) DS.FocusInk else Tok.TextMid, fontSize = skf(14), fontWeight = FontWeight.Bold, maxLines = 1)
+        }
     }
 }
 
+/** Small text button (sketch: "Clear history" next to "Last searches"). */
+@Composable
+private fun SearchLink(label: String, modifier: Modifier = Modifier, trailing: AIcon? = null, onClick: () -> Unit) {
+    var f by remember { mutableStateOf(false) }
+    val ink = if (f) DS.FocusInk else Muted
+    Row(
+        modifier.clip(RoundedCornerShape(sk(8))).background(if (f) DS.FocusFill else Color.Transparent)
+            .onFocusChanged { f = it.isFocused }
+            .clickable(onClick = onClick)
+            .padding(horizontal = sk(10), vertical = sk(4)),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(sk(6))
+    ) {
+        Text(label, color = ink, fontSize = skf(19), maxLines = 1)
+        if (trailing != null) AppIcon(trailing, ink, size = sk(18))
+    }
+}
+
+/** Button of the hero (sketch: 64 px high, rounded corners, icon and text). */
+@Composable
+private fun HeroButton(label: String, icon: AIcon, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    var f by remember { mutableStateOf(false) }
+    val s by animateFloatAsState(if (f) focusScale(1.05f) else 1f, label = "herobtn")
+    val shape = RoundedCornerShape(sk(12))
+    val ink = if (f) DS.FocusInk else Color.White
+    Row(
+        modifier.height(sk(64)).graphicsLayer { scaleX = s; scaleY = s }.clip(shape)
+            .background(if (f) DS.FocusFill else Surf2)
+            .onFocusChanged { f = it.isFocused }
+            .clickable(onClick = onClick)
+            .padding(horizontal = sk(30)),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(sk(12))
+    ) {
+        AppIcon(icon, ink, size = sk(22))
+        Text(label, color = ink, fontSize = skf(22), fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+/** Row heading (sketch): title and count badge on the left, "Show all ›" on the right (focus target above the cards). */
 @Composable
 private fun SearchRowHeader(title: String, count: Int, headerReq: FocusRequester, firstCard: FocusRequester, rowState: androidx.compose.foundation.lazy.LazyListState, onAll: () -> Unit) {
     val sc = rememberCoroutineScope()
@@ -559,8 +641,14 @@ private fun SearchRowHeader(title: String, count: Int, headerReq: FocusRequester
             PillMemory.key = null
         }
     }
-    Row(Modifier.padding(start = DS.PageX, top = 22.dp), verticalAlignment = Alignment.CenterVertically) {
-        SmallPill("Alle $count", Modifier.focusRequester(headerReq).onPreviewKeyEvent { ev ->
+    Row(Modifier.fillMaxWidth().padding(start = sk(64), end = sk(64), top = sk(32)), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = Color.White, fontSize = skf(26), fontWeight = FontWeight.Bold, maxLines = 1)
+        Spacer(Modifier.width(sk(12)))
+        Box(Modifier.clip(RoundedCornerShape(50)).background(DS.Overlay2).padding(horizontal = sk(10), vertical = sk(2))) {
+            Text(count.toString(), color = Tok.TextMid, fontSize = skf(16), fontWeight = FontWeight.SemiBold, raw = true)
+        }
+        Spacer(Modifier.weight(1f))
+        SearchLink("Alle anzeigen", Modifier.focusRequester(headerReq).onPreviewKeyEvent { ev ->
             if (ev.type == KeyEventType.KeyDown && ev.key == Key.DirectionDown) {
                 // First card not in view (row shifted sideways) or not yet composed: first to the start, then highlight.
                 // Before, the focus got stuck here because the failure was swallowed.
@@ -572,60 +660,16 @@ private fun SearchRowHeader(title: String, count: Int, headerReq: FocusRequester
                 true
             } else false
         }, trailing = AIcon.Right) { PillMemory.key = key; onAll() }
-        Spacer(Modifier.width(16.dp))
-        Box(Modifier.width(4.dp).height(22.dp).clip(RoundedCornerShape(2.dp)).background(Accent1))
-        Spacer(Modifier.width(10.dp))
-        Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
 }
 
-@Composable
-private fun SearchAllTile(live: Boolean, w: Dp, onClick: () -> Unit) {
-    var f by remember { mutableStateOf(false) }
-    val s by animateFloatAsState(if (f) focusScale(1.08f) else 1f, label = "searchalltile")
-    if (live) {
-        val shape = RoundedCornerShape(DS.RadiusM)
-        Column(
-            Modifier.width(w).graphicsLayer { scaleX = s; scaleY = s }.focusGlow(f, shape).clip(shape).background(Surf)
-                .border(DS.FocusBorder, if (f) Accent2 else Surf2, shape)
-                .onFocusChanged { f = it.isFocused }
-                .clickable(onClick = onClick)
-        ) {
-            Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
-                IconLabel(null, "Alle anzeigen", Color.White, 17.sp, FontWeight.Bold, trailing = AIcon.Right)
-            }
-            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                Text(" ", fontSize = 15.sp, maxLines = 1)
-                Text(" ", fontSize = 13.sp, maxLines = 1)
-            }
-        }
-    } else {
-        val shape = RoundedCornerShape(DS.RadiusM)
-        Column(
-            Modifier.width(w).graphicsLayer { scaleX = s; scaleY = s }
-                .onFocusChanged { f = it.isFocused }
-                .clickable(onClick = onClick)
-        ) {
-            Box(
-                Modifier.fillMaxWidth().aspectRatio(2f / 3f).focusGlow(f, shape).clip(shape).background(Surf)
-                    .border(DS.FocusBorder, if (f) Accent2 else Surf2, shape),
-                contentAlignment = Alignment.Center
-            ) {
-                IconLabel(null, "Alle anzeigen", Color.White, 18.sp, FontWeight.Bold, trailing = AIcon.Right)
-            }
-            Text(" ", fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(top = 8.dp))
-            Text(" ", fontSize = 13.sp, maxLines = 1)
-        }
-    }
-}
-
+/** Row of movies or series (sketch: posters 168 px wide, 22 px apart). */
 @Composable
 private fun SearchRow(
-    title: String, list: List<Item>, cardW: Int, onOpen: (Item) -> Unit,
+    title: String, list: List<Item>, onOpen: (Item) -> Unit,
     firstReq: FocusRequester? = null, onAll: () -> Unit
 ) {
     val rowState = RowStates.get("${NavState.tab}|$title")
-    val liveRow = list.firstOrNull()?.kind == Kind.LIVE
     val headerReq = remember { FocusRequester() }
     val firstCard = firstReq ?: remember { FocusRequester() }
     val report = LocalSearchFocus.current
@@ -640,15 +684,14 @@ private fun SearchRow(
         ) {
             LazyRow(
                 state = rowState,
-                contentPadding = PaddingValues(horizontal = DS.PageX, vertical = 18.dp),
-                horizontalArrangement = Arrangement.spacedBy(18.dp)
+                contentPadding = PaddingValues(horizontal = sk(64), vertical = sk(16)),
+                horizontalArrangement = Arrangement.spacedBy(sk(22))
             ) {
                 itemsIndexed(list.take(60)) { i, x ->
                     val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) report(x) }
-                    if (x.kind == Kind.LIVE) LiveCard(x, { onOpen(x) }, Modifier.width((cardW * 4 / 3).dp).then(fr))
-                    else PosterCard(x, { onOpen(x) }, Modifier.width(cardW.dp).restoreFocus(x.id).then(fr))
+                    if (x.kind == Kind.LIVE) LiveCard(x, { onOpen(x) }, Modifier.width(sk(300)).then(fr))
+                    else PosterCard(x, { onOpen(x) }, Modifier.width(sk(168)).restoreFocus(x.id).then(fr))
                 }
-                item { SearchAllTile(liveRow, if (liveRow) (cardW * 4 / 3).dp else cardW.dp, onAll) }
             }
         }
     }
@@ -657,7 +700,7 @@ private fun SearchRow(
 /** Row of live channels or sport shows (T-051b): a live card shows the running show and its progress, a sport card the event, time and channel. */
 @Composable
 private fun HitRow(
-    title: String, list: List<HitCard>, cardW: Int, sport: Boolean, onOpen: (Item) -> Unit,
+    title: String, list: List<HitCard>, sport: Boolean, onOpen: (Item) -> Unit,
     firstReq: FocusRequester? = null, onAll: () -> Unit
 ) {
     val rowState = RowStates.get("${NavState.tab}|$title")
@@ -675,16 +718,15 @@ private fun HitRow(
         ) {
             LazyRow(
                 state = rowState,
-                contentPadding = PaddingValues(horizontal = DS.PageX, vertical = 18.dp),
-                horizontalArrangement = Arrangement.spacedBy(18.dp)
+                contentPadding = PaddingValues(horizontal = sk(64), vertical = sk(16)),
+                horizontalArrangement = Arrangement.spacedBy(sk(22))
             ) {
                 itemsIndexed(list.take(60)) { i, c ->
                     val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) report(c.item) }
-                    val w = Modifier.width((cardW * 4 / 3).dp).then(fr)
+                    val w = Modifier.width(sk(300)).then(fr)
                     if (sport) SportCard(c, { onOpen(c.item) }, w)
                     else LiveCard(c.item, { onOpen(c.item) }, w, nowTitle = c.program?.title, progress = c.program?.let { progressOf(it) })
                 }
-                item { SearchAllTile(true, (cardW * 4 / 3).dp, onAll) }
             }
         }
     }
@@ -801,6 +843,76 @@ private fun KbKey(label: String, modifier: Modifier, onFocusChange: (Boolean) ->
     }
 }
 
+/** German layout of the sketch (QWERTZ); other languages keep QWERTY. */
+private val KB_LETTERS_DE = listOf("qwertzuiop", "asdfghjkl", "yxcvbnm")
+
+/**
+ * On-screen keyboard (sketch: keys 57 px high, 9 px apart, 5 rows): numbers, three letter rows with backspace at the end of
+ * the second one and "-" at the end of the third one, then special letters, space, phone input and "Clear all".
+ * The voice key appears only on devices with speech input (it is not in the sketch). Used by the search screen only;
+ * the TV guide and channel searches keep [SearchKeyboard].
+ */
+@Composable
+private fun SketchKeyboard(
+    modifier: Modifier, onKey: (String) -> Unit, onSpace: () -> Unit, onDelete: () -> Unit, onClear: () -> Unit,
+    onPhone: (() -> Unit)?, onVoice: (() -> Unit)?,
+    firstKey: FocusRequester, onFocusChange: (Boolean) -> Unit, onRight: () -> Boolean
+) {
+    var symbols by remember { mutableStateOf(false) }
+    var special by remember { mutableStateOf(false) }
+    val rows = if (symbols) KB_SYMBOLS else if (special) KB_SPECIAL else if (Lang.code() == "de") KB_LETTERS_DE else KB_LETTERS
+    val gap = sk(9)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(sk(10))) {
+        // Number row (always visible)
+        Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
+            KB_DIGITS.forEachIndexed { c, k ->
+                SketchKey(k.toString(), Modifier.weight(1f).then(if (c == 0) Modifier.focusRequester(firstKey) else Modifier), onFocusChange, if (c == KB_DIGITS.lastIndex) onRight else null) { onKey(k.toString()) }
+            }
+        }
+        rows.forEachIndexed { r, row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
+                if (r == 2) SketchKey(if (symbols) "ABC" else "#+=", Modifier.weight(1.5f), onFocusChange, null) { symbols = !symbols; special = false }
+                row.forEachIndexed { c, k ->
+                    val last = c == row.lastIndex && r == 0
+                    SketchKey(k.toString(), Modifier.weight(1f), onFocusChange, if (last) onRight else null) { onKey(k.toString()) }
+                }
+                if (r == 1) SketchKey("⌫", Modifier.weight(1f), onFocusChange, onRight) { onDelete() }
+                if (r == 2) SketchKey("-", Modifier.weight(1f), onFocusChange, onRight) { onKey("-") }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
+            SketchKey(if (special) "abc" else "äöü", Modifier.weight(103f), onFocusChange, null) { special = !special; symbols = false }
+            SketchKey("Leer", Modifier.weight(147f), onFocusChange, null, big = true) { onSpace() }
+            if (onPhone != null) SketchKey("Handy", Modifier.weight(102f), onFocusChange, null) { onPhone() }
+            if (onVoice != null) SketchKey("", Modifier.weight(55f), onFocusChange, null, icon = AIcon.Mic) { onVoice() }
+            SketchKey("Alles löschen", Modifier.weight(148f), onFocusChange, onRight) { onClear() }
+        }
+    }
+}
+
+@Composable
+private fun SketchKey(label: String, modifier: Modifier, onFocusChange: (Boolean) -> Unit, onRight: (() -> Boolean)?, icon: AIcon? = null, big: Boolean = false, onClick: () -> Unit) {
+    var f by remember { mutableStateOf(false) }
+    val sc by animateFloatAsState(if (f) focusScale(1.08f) else 1f, label = "kbkey")
+    val shape = RoundedCornerShape(sk(10))
+    Box(
+        modifier.height(sk(57)).graphicsLayer { scaleX = sc; scaleY = sc }.clip(shape)
+            .background(if (f) DS.FocusFill else Surf2)
+            .onPreviewKeyEvent { e ->
+                if (onRight != null && e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight) onRight() else false
+            }
+            .onFocusChanged { if (f != it.isFocused) { f = it.isFocused; onFocusChange(it.isFocused) } }
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        val ink = if (f) DS.FocusInk else if (label.length > 1 && !big) Tok.TextMid else Color.White
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(sk(6))) {
+            if (icon != null) AppIcon(icon, ink, size = sk(22))
+            if (label.isNotEmpty()) Text(label, color = ink, fontSize = if (label.length > 1 && !big) skf(20) else skf(24), fontWeight = if (big) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
+        }
+    }
+}
+
 private val LocalSearchFocus = compositionLocalOf<(Item) -> Unit> { {} }
 
 /** Cinema-style info of the highlighted title on top of the scene image: kind, big title, year | genre | length | rating, description. */
@@ -821,11 +933,17 @@ private fun SearchHeroInfo(item: Item?, modifier: Modifier) {
             value = kotlinx.coroutines.withContext(Dispatchers.Default) { Epg.now(item) }
         }
         val nowE = Epg.current(epg)
-        Column(Modifier.widthIn(max = 900.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Kicker(Lang.tr(kindLabel(item.kind)) + (qualityOf(item)?.let { q -> "  ·  " + q.uppercase() } ?: ""))
+        Column(verticalArrangement = Arrangement.spacedBy(sk(14))) {
+            // Sketch: gold badge with the kind (no "Best match" label, maintainer decision 22 and 23 Nov 2026); the picture quality next to it
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(sk(12))) {
+                Box(Modifier.clip(RoundedCornerShape(sk(6))).background(DS.Gold).padding(horizontal = sk(10), vertical = sk(3))) {
+                    Text(Lang.tr(kindLabel(item.kind)).uppercase(), color = DS.FocusInk, fontSize = skf(18), fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp, maxLines = 1, raw = true)
+                }
+                qualityOf(item)?.let { Text(it.uppercase(), color = Tok.TextMid, fontSize = skf(20), maxLines = 1, raw = true) }
+            }
             Text(
                 raw = true, text = item.title, color = Tok.TextHi,
-                fontSize = spx(if (item.title.length <= 24) 48 else if (item.title.length <= 36) 40 else 36), lineHeight = spx(52),
+                fontSize = skf(if (item.title.length <= 28) 72 else if (item.title.length <= 40) 60 else 50), lineHeight = skf(80),
                 fontWeight = FontWeight.ExtraBold, letterSpacing = (-1).sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
             if (item.kind != Kind.LIVE) HeroMetaLine(item, m, dots = false)
@@ -834,38 +952,41 @@ private fun SearchHeroInfo(item: Item?, modifier: Modifier) {
                 item.kind == Kind.LIVE -> item.group
                 else -> m?.overview.orEmpty()
             }
-            if (body.isNotBlank()) Text(raw = true, text = TitleText.short(body, 200), color = Tok.TextMid, fontSize = 17.sp, lineHeight = 24.sp,
-                maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if (body.isNotBlank()) Text(raw = true, text = TitleText.short(body, 220), color = Tok.TextMid, fontSize = skf(22), lineHeight = skf(33),
+                maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = sk(780)))
         }
     }
 }
 
 /** Compact chip for the quick filters, suggestions and last searches above the keyboard (no check mark). */
 @Composable
-private fun MiniChip(label: String, selected: Boolean, modifier: Modifier = Modifier, raw: Boolean = false, onClick: () -> Unit) {
+private fun MiniChip(label: String, selected: Boolean, modifier: Modifier = Modifier, raw: Boolean = false, icon: AIcon? = null, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(50)
-    Box(
-        modifier.height(32.dp).clip(shape)
+    val ink = if (f) DS.FocusInk else Color.White
+    // Sketch: last searches as chips 44 px high with a clock icon
+    Row(
+        modifier.height(sk(44)).clip(shape)
             .background(if (f) DS.FocusFill else if (selected) DS.Overlay3 else Surf)
             .border(DS.Border, if (f) DS.FocusFill else if (selected) Color(0x99FFFFFF) else DS.Hairline, shape)
             .onFocusChanged { f = it.isFocused }
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = sk(16)),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(sk(8))
     ) {
-        Text(label, color = if (f) DS.FocusInk else Color.White, fontSize = 14.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1, raw = raw)
+        if (icon != null) AppIcon(icon, ink, size = sk(18))
+        Text(label, color = ink, fontSize = skf(19), fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1, raw = raw)
     }
 }
 
 /** Row of people found by the search (T-053c): round photo and name; a tap opens the person page. */
 @Composable
 private fun PeopleRow(list: List<PersonRef>, onPerson: (PersonRef) -> Unit) {
-    Column(Modifier.padding(top = 22.dp)) {
-        Text(Lang.tr("Personen"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = DS.PageX))
+    Column(Modifier.padding(top = sk(32))) {
+        Text(Lang.tr("Personen"), color = Color.White, fontSize = skf(26), fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = sk(64)))
         LazyRow(
-            contentPadding = PaddingValues(horizontal = DS.PageX, vertical = 18.dp),
-            horizontalArrangement = Arrangement.spacedBy(18.dp)
+            contentPadding = PaddingValues(horizontal = sk(64), vertical = sk(16)),
+            horizontalArrangement = Arrangement.spacedBy(sk(22))
         ) {
             itemsIndexed(list.take(40)) { _, p -> PersonCard(p, 130.dp) { onPerson(p) } }
         }

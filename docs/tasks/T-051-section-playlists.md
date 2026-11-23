@@ -65,7 +65,7 @@ Causes and changes:
 - (1) Probable cause (not confirmed on the device): Xtream `get.php` with live channels only. `missesCategories` only compares live categories, so such a list was accepted. New `PlaylistStore.vodViaApi`: when the list has no `/movie/` or `/series/` address (`LoadLogic.hasVod`) and the provider lists movie or series categories (`XtreamApi.hasVodCategories`), the list is loaded through the API and the login is marked for the API. If the API fails, the `get.php` list is kept. Needs "Reload" once. If the playlist is not Xtream (plain M3U or Stalker), this change does not help; then the diagnostic log is needed.
 - (3) No logic change found in the settings page on this branch. The edit window requested no focus; it now focuses the name field when it opens. If editing still fails, more detail is needed (what happens on OK).
 - (5) The window used the app-wide soft scrolling (`SmoothSpec`); it now uses `InstantSpec`, as the add screen does.
-- (4) The search column was a fixed 600 dp (half of a 960 dp TV screen); now 36 % of the screen width (330 to 600 dp). Hero 300 dp to 190 dp, title sizes smaller, tiles with less padding. New row `Merkliste¦Watchlist` in `DictEn4.kt`. **Open: the maintainer's sketch is still not in the repository**; the layout is checked against it once it is uploaded.
+- (4) The search column was a fixed 600 dp (half of a 960 dp TV screen); now 36 % of the screen width (330 to 600 dp). Hero 300 dp to 190 dp, title sizes smaller, tiles with less padding. New row `Merkliste¦Watchlist` in `DictEn4.kt`. The sketch arrived later the same day; the search screen was then rebuilt from it (see `T-051-search-handoff.md`, third round).
 
 Checks run here: the pure-logic files were compiled with the Kotlin 2.0.21 compiler bundled with Gradle (all 111 source files without Android imports), and `SectionSourceLogicTest`, `LoadLogicTest`, `DictEn4Test` were run with JUnit 4: 34/34 passed. Not run: the Gradle build, Android files (`SectionPlaylistUi.kt`, `PlaylistEditDialog.kt`, `PlaylistStore.kt`, `XtreamApi.kt`, `SearchScreen.kt` were not compiled), device tests.
 
@@ -78,4 +78,4 @@ Checks run here: the pure-logic files were compiled with the Kotlin 2.0.21 compi
 5. Live TV: same menu in the "Playlist" row.
 6. Fire TV Stick with large playlists: when memory is short, a notice appears in the menu, the app does not crash.
 7. Settings > Playlists > Edit: the name field has the focus; scroll down with the D-pad: the window follows at once. "Shown additionally" can be set to On.
-8. Search: type "dead". The tiles show full names, the result cards are fully visible, the button reads "Watchlist" in English.
+8. Search: compare with the maintainer's sketch (typing, empty field, empty category). The tiles show full names, the result cards are fully visible, the button reads "Watchlist" in English. The TV guide search and the Live TV channel search keep their old keyboard.

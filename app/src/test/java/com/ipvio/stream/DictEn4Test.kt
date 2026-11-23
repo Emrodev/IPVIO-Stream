@@ -13,4 +13,6 @@ class DictEn4Test {
     @Test fun watchlistButton() = assertEquals("Watchlist", en("Merkliste"))
 
     @Test fun onWatchlistButton() = assertEquals("On your watchlist", en("Auf der Merkliste"))
+
+    @Test fun clearAllKey() = assertEquals("Clear all", en("Alles löschen"))
 }

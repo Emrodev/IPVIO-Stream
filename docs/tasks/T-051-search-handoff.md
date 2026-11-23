@@ -4,7 +4,7 @@ Status: **not started. Handoff for a follow-up session (Sonnet).** Two parts:
 - **T-051a** Phone search: find a live programme (e.g. "Formula 1") and see which channel shows it now, with tabs "Live" and "Upcoming".
 - **T-051b** TV search screen: new layout from the maintainer's sketch (see "Layout" below).
 
-**Blocker for T-051b:** the maintainer mentioned a screenshot named `suche_tippen.png`. It is **not in the repository, not in `docs/screenshots/`, and not on the machine**. The layout below is written from the text description only. Ask the maintainer to upload the image before the layout is built; a pixel check needs it.
+The maintainer's sketch (three states, 1920 x 1080: typing, empty field, empty category) was uploaded in the chat on 23 Nov 2026. It is not in the repository because it has German labels (CLAUDE.md section 4); the measurements are recorded in "third round" below.
 
 ## Rules (from `CLAUDE.md`, read it first)
 - Repository text in **English** (comments, names, docs, commit text). The maintainer writes in German; do not put German into the repository. UI labels: use the English column of the `Dict*.kt` dictionaries.
@@ -113,3 +113,12 @@ Text is written in English. The German labels of the maintainer's sketch are rep
 - Sport row: sport channels whose show matches, running now or in the next 24 hours (league = channel group, event, time, channel).
 - Counts: Live TV tile counts channel and show hits; Sport tile counts sport channel and sport show hits. Shows on sport channels are not counted as live.
 - TV programme search uses the XMLTV guide, and the cached short guide of Xtream channels (at most 40 fetched per search, 9 s). Not built, not device tested.
+
+### T-051b third round (23 Nov 2026, from the uploaded sketch)
+- The maintainer found the second-round screen "not as expected" (test build: squeezed tiles, empty hero, cut cards). The sketch was uploaded and the layout rebuilt from it.
+- Sizes are taken from the sketch in sketch pixels: `sk(px)` = `dpx(px * 1658 / 1920)` (the app's design scale is based on a 1658 px design), so the proportions match on every screen width. Left panel 601 px with 37 px margins; field 79 px; suggestion rows 53 px; keyboard keys 57 px; right side 64 px margins; hero buttons 64 px; tiles 91 px; posters 168 px, live cards 300 px, 22 px apart.
+- Kept from the second round (maintainer, asked again on 23 Nov 2026): no "Watch" button, no "Best match" label, no magnifier icon. "People" stays as a sixth tile (not in the sketch).
+- The keyboard of the sketch (QWERTZ in German, backspace in the "a" row, "-" key, "Clear all") is a separate `SketchKeyboard`; `SearchKeyboard` of the TV guide and channel searches is unchanged.
+- Suggestions: up to four rows, titles of the hits first, then completions of the typed word (badge "All"). The word chips are gone.
+- The "Show all" tile at the end of each row is gone; "Show all ›" sits in the row heading as in the sketch.
+- Not compiled (no Android SDK here; a syntax check with the Kotlin compiler passed), not device tested. A side-by-side check with the sketch on the device is open.
