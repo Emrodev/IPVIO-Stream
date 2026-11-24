@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 2.0
+## 1.4.9
 - Series: "Download season" is shown on every series, also before the first play (before, it was only shown after a series had been started). Not device tested yet
 - Series: "Pick episodes" opens the episode list of the shown season with a check box per episode. The checked episodes are queued together, with one notice about the provider terms before the first download. Not device tested yet
 - Series with several seasons: one "Watched" button opens a choice, "this season" or "whole series". Series with one season keep the single season button. Not device tested yet
