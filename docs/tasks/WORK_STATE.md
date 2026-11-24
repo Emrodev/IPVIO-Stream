@@ -16,6 +16,8 @@ Last update: 2026-11-24 (issue review, branch `claude/exciting-johnson-9gi5zn`).
   - T-058 (#125): the home row "Recently added" uses the added date like the page (`RecentSortLogic.newestN`, 6/6).
   - T-059 (#27): the Genre pill shows the opened genre category. Switching category through the pill is not done.
   - Syntax check of the changed Kotlin files with the compiler bundled in Gradle: no syntax errors (no Android classes here, so no type check).
+  - T-060 (#10, #25): ported from the closed PR #40: MKV seeking without Cues (`CuelessMkvExtractor`, `MkvSeekLogic`) and tap-to-seek on the timeline (`TapSeekLogic`); 10/10 JVM tests. Touches `PlayerScreen.kt`: needs a review. Only these two parts of #40 were taken over.
+  - #131: no code change. On Live TV Left opens the channel list by design; Left/Right seeking is for movies and episodes. Decision for the maintainer.
 - Open: #118 can be answered (the per-playlist reload button exists since 1.4.5); #131 not analysed; #130, #67, #109 can be closed after a device check.
 - Next: maintainer decides on the PR #40 port (#10, #25) and tests T-055 to T-059 on the device.
 

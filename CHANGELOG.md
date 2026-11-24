@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Player: MKV files without a seek index can be skipped and resumed again; before, skip, number-key jump and "Resume" restarted the movie at 0:00. Files with an index and other formats are not touched (#10, T-060, taken over from the closed pull request #40). Not device tested yet
+- Player on phones and tablets: tapping or dragging on the timeline jumps to that position (#25, T-060). Not device tested yet
 - Movies and Series: when you open an automatic genre category, the Genre filter now shows that genre instead of "All". Picking another genre in the filter still narrows the opened list. Switching to another category through the filter is not done yet (#27, T-059). Not device tested yet
 - Movies and Series start view: the row "Recently added" now shows the same titles in the same order as the "Recently added" page. Before, it took the last entries of the playlist, which differs when the provider does not list titles by date (#125, T-058). Not device tested yet
 - Sports alerts: the delay can be set up to 120 s (before: 60 s), so an alert does not spoil a goal on a stream that runs behind (#130, T-057). The switch to turn alerts off is Settings > Sports Hub. Not device tested yet
