@@ -242,6 +242,12 @@ private fun AppContent() {
 
     // W-004: "What's new" once after an update to a new version
     LaunchedEffect(Unit) { runCatching { WhatsNew.check(ctx) } }
+    // T-056: the search index is built in the background as soon as the list is there (and again after every list change),
+    // so opening the search does not wait for it. Same list object as the search screen uses, so the cache is hit.
+    val searchList = PlaylistStore.channels
+    LaunchedEffect(searchList) {
+        withContext(Dispatchers.Default) { runCatching { SearchCache.build(PrivateCats.visible(searchList)) } }
+    }
     // New app version on GitHub? Check silently once a day; a find appears in the bell at the top right.
     LaunchedEffect(Unit) {
         delay(3_000)   // only after the start, the playlist takes priority
