@@ -78,7 +78,7 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
     private fun sendFileJs(fn: String, path: String, codeId: String, fileId: String, statusId: String): String =
         """<script>function $fn(){var f=document.getElementById('$fileId').files[0];var c=document.getElementById('$codeId').value;if(!f){return}
 document.getElementById('$statusId').textContent='…';fetch('$path?code='+encodeURIComponent(c)+'&name='+encodeURIComponent(f.name),{method:'POST',body:f})
-.then(function(r){return r.text()}).then(function(t){document.open();document.write(t);document.close()}).catch(function(){document.getElementById('$statusId').textContent='Error'})</script>"""
+.then(function(r){return r.text()}).then(function(t){document.open();document.write(t);document.close()}).catch(function(e){document.getElementById('$statusId').textContent='Error: '+((e&&e.message)||e)})}</script>"""
 
     fun page(li: Int): String = page(li, Features())
 
@@ -323,14 +323,38 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
         else -> { fails.set(0); 200 }
     }
 
+    /** Input stream that counts the bytes read, so [handle] knows how much of the body is still unread. */
+    private class CountingInput(private val inner: InputStream) : InputStream() {
+        var count = 0L
+            private set
+        override fun read(): Int = inner.read().also { if (it >= 0) count++ }
+        override fun read(b: ByteArray, off: Int, len: Int): Int = inner.read(b, off, len).also { if (it > 0) count += it }
+        override fun available(): Int = inner.available()
+    }
+
+    /** Skips up to [left] bytes (at most [MAX_DRAIN]); stops quietly on the end of the stream or a timeout. */
+    private fun drain(ins: InputStream, left: Long) {
+        if (left <= 0 || left > MAX_DRAIN) return
+        runCatching {
+            val buf = ByteArray(64 * 1024)
+            var rest = left
+            while (rest > 0) {
+                val r = ins.read(buf, 0, minOf(buf.size.toLong(), rest).toInt())
+                if (r < 0) break
+                rest -= r
+            }
+        }
+    }
+
     private class Reply(val status: Int, val body: ByteArray, val type: String = "text/html; charset=utf-8", val extra: String = "")
 
     private fun html(status: Int, s: String) = Reply(status, s.toByteArray(Charsets.UTF_8))
 
     private fun handle(s: Socket) {
         s.soTimeout = 15000
-        val ins = s.getInputStream()
+        val ins = CountingInput(s.getInputStream())
         val h = readHead(ins) ?: return
+        val afterHead = ins.count
         val li = PhoneImportLogic.langIndex(h.lang)
         val feats = PhoneImportLogic.Features(saveUpload != null, backup != null, crash != null, onEpg != null, onList != null, onKeys != null, onVpn != null)
         val r: Reply = when (h.method + " " + h.path) {
@@ -470,6 +494,9 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
                 } else html(404, PhoneImportLogic.message(li, "bad"))
             }
         }
+        // Read the rest of an unread body (e.g. a file sent with a wrong code): if the socket closes while the phone is
+        // still sending, the connection is reset and the browser shows only "Error" instead of the message.
+        drain(ins, h.len - (ins.count - afterHead))
         val out = s.getOutputStream()
         val reason = when (r.status) { 200 -> "OK"; 400 -> "Bad Request"; 403 -> "Forbidden"; 404 -> "Not Found"; 413 -> "Payload Too Large"; 429 -> "Too Many Requests"; else -> "Error" }
         out.write(("HTTP/1.1 ${r.status} $reason\r\nContent-Type: ${r.type}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n" +
@@ -485,6 +512,8 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
 
         /** Largest uploadable list export (Letterboxd, MyAnimeList, Trakt); same limit as the file picker on the TV (ListImportUi). */
         const val MAX_LIST_UPLOAD = 16L * 1024 * 1024
+        /** Largest unread body that is still read to the end before an error reply (larger ones: connection just closes). */
+        const val MAX_DRAIN = 64L * 1024 * 1024
 
         /** Local IPv4 address of the device in the Wi-Fi/LAN (or null). */
         fun localIp(): String? = runCatching {
