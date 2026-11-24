@@ -916,15 +916,15 @@ private fun DesignPage(ctx: Context) {
     }
 }
 
-@Composable
-private fun DiagPage(ctx: Context, reload: () -> Unit) {
-    val cfg = LocalConfiguration.current
+/** Diagnostics report as label and value pairs (T-055). The TV page and the phone page both show it. */
+internal fun diagReportLines(ctx: Context): List<Pair<String, String>> {
+    val cfg = ctx.resources.configuration
     val items = PlaylistStore.channels
-    val counts = remember(items) { Triple(items.count { it.kind == Kind.LIVE }, items.count { it.kind == Kind.MOVIE }, items.count { it.kind == Kind.SERIES }) }
-    val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?" }
+    val counts = Triple(items.count { it.kind == Kind.LIVE }, items.count { it.kind == Kind.MOVIE }, items.count { it.kind == Kind.SERIES })
+    val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?"
     val dens = ctx.resources.displayMetrics.density
     val err = Diag.lastError?.let { it + "  (" + DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(Diag.lastErrorAt)) + ")" } ?: "keiner seit dem Start"
-    val lines = listOf(
+    return listOf(
         "Version" to version,
         "Installiert" to runCatching { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(ctx.packageManager.getPackageInfo(ctx.packageName, 0).lastUpdateTime)) }.getOrDefault("?"),
         "Sprache" to (Lang.code() + " · Index " + Lang.index),
@@ -946,6 +946,11 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
         "Weiterschauen" to (ResumeLog.also { it.init(ctx) }.lines.take(12).joinToString("\n") { ResumeLog.display(it) }.ifBlank { "noch nichts gemerkt" }),
         "Letzter Absturz" to (CrashLog.last(ctx)?.let { it.first + "  (" + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.second)) + ")" } ?: "keiner")
     )
+}
+
+@Composable
+private fun DiagPage(ctx: Context, reload: () -> Unit) {
+    val lines = diagReportLines(ctx)
     // T-055: the buttons sit at the top. Below a long list the remote used to jump past every entry to the last button.
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton("Bericht kopieren") {
@@ -970,6 +975,12 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
             }
         }
     }
+}
+
+/** Text for the phone page (T-055): the last crash report if there is one, then the whole diagnostics report. */
+internal fun phoneDiagReport(ctx: Context): String {
+    val crash = ImportFiles.crashText(ctx)?.takeIf { it.isNotBlank() }?.let { "Last crash\n$it\n\n" } ?: ""
+    return crash + diagReportLines(ctx).filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { it.first + ": " + it.second }
 }
 
 @Composable
