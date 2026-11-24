@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Live TV on phones: tapping a category or "Search channels" now opens it. Before, a tap did nothing without a remote (#152, T-055). Not device tested yet
 
 ## 1.4.9
 - Series: "Download season" is shown on every series, also before the first play (before, it was only shown after a series had been started). Not device tested yet

@@ -315,7 +315,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             onFocus = { hot = "SEARCH"; sel = "SEARCH" },
                             onRight = { runCatching { kbFirst.requestFocus() } },
                             onFav = {}, icon = AIcon.Edit, raw = true
-                        ) { runCatching { kbFirst.requestFocus() } }
+                        ) { hot = "SEARCH"; sel = "SEARCH"; runCatching { kbFirst.requestFocus() } }   // touch: no focus change on tap
                         return@itemsIndexed
                     }
                     if (n == "PL") {
@@ -410,7 +410,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null,
                             floating = plainCat && floatingCat == n
-                        ) { if (floatingCat == null) enterChannels() }
+                        ) { if (floatingCat == null) { hot = n; enterChannels() } }   // touch: a tap does not move focus, so set the category here
                         // Menu of a provider category: favorite on/off, hide, move, sorting of all categories
                         var sortMenu by remember { mutableStateOf(false) }
                         // Menu of a genre category (Sports, Movies, ...): hide
