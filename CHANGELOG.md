@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Movies and Series: when you open an automatic genre category, the Genre filter now shows that genre instead of "All". Picking another genre in the filter still narrows the opened list. Switching to another category through the filter is not done yet (#27, T-059). Not device tested yet
 - Movies and Series start view: the row "Recently added" now shows the same titles in the same order as the "Recently added" page. Before, it took the last entries of the playlist, which differs when the provider does not list titles by date (#125, T-058). Not device tested yet
 - Sports alerts: the delay can be set up to 120 s (before: 60 s), so an alert does not spoil a goal on a stream that runs behind (#130, T-057). The switch to turn alerts off is Settings > Sports Hub. Not device tested yet
 - Playlists: the app no longer creates a new secure key when the old one cannot be read for a moment (seen on some boxes after a restart). Before, this could make saved logins unreadable for good, so a playlist seemed to vanish (#112, T-056). Cause not confirmed on a device. If a saved playlist still cannot be read, the empty home screen now says so and asks you to add it again. Not device tested yet
