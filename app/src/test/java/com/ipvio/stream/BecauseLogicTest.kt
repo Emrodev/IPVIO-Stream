@@ -12,6 +12,10 @@ class BecauseLogicTest {
         assertFalse(BecauseLogic.show(1))
     }
 
+    @Test fun row_is_built_from_the_last_three_titles() {
+        assertEquals(3, BecauseLogic.SOURCES)
+    }
+
     @Test fun twoOrMore_showsRow() {
         assertEquals(2, BecauseLogic.MIN_MATCHES)
         assertTrue(BecauseLogic.show(2))

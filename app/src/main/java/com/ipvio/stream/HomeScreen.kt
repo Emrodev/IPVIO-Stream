@@ -293,18 +293,26 @@ fun HomeScreen(
             runCatching { SportWatch.prewarm(live) }
         }
     }
-    // "Because you watched X": similar titles (TMDB) of the last started movie/series, matched against the own playlist
-    val becauseSrc = histHome.firstOrNull { it.kind != Kind.LIVE }
-    val because by produceState<Pair<Item, List<Item>>?>(null, becauseSrc?.id, byId.size) {
-        val src = becauseSrc ?: return@produceState
-        val m = MetaRepo.extended(ctx, src) ?: return@produceState
-        if (m.tmdbId <= 0) return@produceState
-        val c = CreditsRepo.credits(ctx, m) ?: return@produceState
+    // "Because you watched X": similar titles (TMDB) of the last 3 started movies/series, matched against the own playlist.
+    // The titles of all sources are merged; the row is named after the most recent source that has matches.
+    val becauseSrcs = histHome.filter { it.kind != Kind.LIVE }.take(BecauseLogic.SOURCES)
+    val because by produceState<Pair<Item, List<Item>>?>(null, becauseSrcs.map { it.id }, byId.size) {
+        if (becauseSrcs.isEmpty()) return@produceState
         val seen = History.ids.toSet()
-        val l = withContext(Dispatchers.Default) {
-            homeSafe(LibMatch.matches(PlaylistStore.channels, c.similar, 40).filter { it.id != src.id && it.id !in seen && it.kind != Kind.LIVE }, noAdult)
+        var label: Item? = null
+        val found = LinkedHashMap<String, Item>()
+        for (src in becauseSrcs) {
+            val m = MetaRepo.extended(ctx, src) ?: continue
+            if (m.tmdbId <= 0) continue
+            val c = CreditsRepo.credits(ctx, m) ?: continue
+            val l = withContext(Dispatchers.Default) {
+                homeSafe(LibMatch.matches(PlaylistStore.channels, c.similar, 40).filter { it.id != src.id && it.id !in seen && it.kind != Kind.LIVE }, noAdult)
+            }
+            if (l.isNotEmpty() && label == null) label = src
+            for (x in l) found.putIfAbsent(x.id, x)
         }
-        if (BecauseLogic.show(l.size)) value = src to l.take(20)
+        val src = label
+        if (src != null && BecauseLogic.show(found.size)) value = src to found.values.take(20)
     }
 
     // Check new episodes of favorite series (bell)
