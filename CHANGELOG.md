@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+
+## 2.0
+- Series: "Download season" is shown on every series, also before the first play (before, it was only shown after a series had been started). Not device tested yet
+- Series: "Pick episodes" opens the episode list of the shown season with a check box per episode. The checked episodes are queued together, with one notice about the provider terms before the first download. Not device tested yet
+- Series with several seasons: one "Watched" button opens a choice, "this season" or "whole series". Series with one season keep the single season button. Not device tested yet
+- Downloads: one short message when episodes are queued (not one pop-up per episode); a single episode started with the menu key shows its own short message. Not device tested yet
+- Downloads tab: the content keeps a distance from the sidebar. Not device tested yet
+- Known limit: a provider whose stream server presents a certificate for another host name makes the download fail at once. The app does not skip the certificate check.
 - Live TV: new setting "Up goes to the next channel" (Settings > Live TV, Channel keys). Off by default: Up = previous channel, Down = next channel, as before. Not device tested yet
 - Live TV: the player now stops the sound when it closes or the second picture is closed, before it releases the player (T-051, analysis only, cause not confirmed). Not device tested yet
 - Live TV: when zapping, only one channel buffer is filled at a time, and the cache folder is no longer deleted on the UI thread for every channel change (T-054; freeze not reproduced, cause not confirmed). Not device tested yet
