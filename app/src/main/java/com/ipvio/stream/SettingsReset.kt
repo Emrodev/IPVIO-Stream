@@ -53,6 +53,7 @@ object SettingsReset {
                 LiveSettings.setRecPad(ctx, 3)
                 LiveSettings.setUpIsNext(ctx, false)
                 Reminders.setLead(ctx, DEFAULT_REMINDER_LEAD_MIN)
+                PlayerButtonPrefs.reset(ctx)
             }
         }
     }

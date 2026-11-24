@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Live TV player: fewer buttons. "Channel list" and "TV guide" are no longer buttons (Left opens the channel list, Right opens the TV guide, as before). Aspect ratio, second picture and "Open externally" are not shown by default; they stay in the player menu "Settings" (T-062). Not device tested yet
+- Live TV player: on channels with an archive (catch-up) there is a rewind button that goes back by the seek step from Settings; with the local buffer there are rewind and forward buttons (T-062). Not device tested yet
+- Settings > Live TV > Player buttons: choose which buttons the Live TV player shows and in which order (T-062). Not device tested yet
 - Search: with the filter "Persons" (or when only people match), Down now reaches the people results. Before, the focus got stuck and you had to switch to "All" first (T-061). Not device tested yet
 - Player: MKV files without a seek index can be skipped and resumed again; before, skip, number-key jump and "Resume" restarted the movie at 0:00. Files with an index and other formats are not touched (#10, T-060, taken over from the closed pull request #40). Not device tested yet
 - Player on phones and tablets: tapping or dragging on the timeline jumps to that position (#25, T-060). Not device tested yet

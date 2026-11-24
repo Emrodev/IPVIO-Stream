@@ -19,7 +19,7 @@ Last update: 2026-11-24 (issue review, branch `claude/exciting-johnson-9gi5zn`).
   - T-060 (#10, #25): ported from the closed PR #40: MKV seeking without Cues (`CuelessMkvExtractor`, `MkvSeekLogic`) and tap-to-seek on the timeline (`TapSeekLogic`); 10/10 JVM tests. Touches `PlayerScreen.kt`: needs a review. Only these two parts of #40 were taken over.
   - #131: no code change. On Live TV Left opens the channel list by design; Left/Right seeking is for movies and episodes. Decision for the maintainer.
   - T-061: search with the filter "Persons": Down reaches the people results (`firstKey` fallback "pe"). Not device tested.
-  - T-062: PLAN only (not approved): fewer Live TV player buttons, rewind/forward on catch-up channels, own button layout. Decisions listed in the file.
+  - T-062: implemented after the maintainer's decisions (24 Nov): fewer Live TV player buttons, rewind/forward buttons (seek step; archive for catch-up channels, buffer otherwise), own button list in Settings > Live TV (`ipvio_playerbtns`, in the backup). 11/11 JVM tests. Touches `PlayerScreen.kt`: needs a review. Several points are unverified on a device (see the file).
   - Comments posted on #131 and #118 (24 Nov 2026) as dictated by the maintainer.
 - Open: #118 can be answered (the per-playlist reload button exists since 1.4.5); #131 not analysed; #130, #67, #109 can be closed after a device check.
 - Next: maintainer decides on the PR #40 port (#10, #25) and tests T-055 to T-059 on the device.

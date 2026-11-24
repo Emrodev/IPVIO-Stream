@@ -1329,6 +1329,7 @@ private fun LivePage(ctx: Context) {
     ChannelListsSection(ctx)
     CatchupSection()
     LiveBufferSection(ctx)
+    PlayerButtonsSection(ctx)   // T-062
     ReminderSettingsSection(ctx)
 }
 
