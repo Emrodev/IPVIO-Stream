@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
@@ -945,22 +946,27 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
         "Weiterschauen" to (ResumeLog.also { it.init(ctx) }.lines.take(12).joinToString("\n") { ResumeLog.display(it) }.ifBlank { "noch nichts gemerkt" }),
         "Letzter Absturz" to (CrashLog.last(ctx)?.let { it.first + "  (" + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.second)) + ")" } ?: "keiner")
     )
-    lines.filter { it.first != "Log" || it.second.isNotEmpty() }.forEach { (k, v) ->
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
-            Text(v, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp))
-        }
-    }
-    // Hint before the buttons: text below the last button never scrolls the list into view (nothing below is selectable)
-    Hint("Der Bericht enthält keine Adressen, Benutzernamen oder Passwörter. Er wird nur in die Zwischenablage kopiert und nirgendwohin gesendet.")
-    Hint("Auf dem Fernseher lässt sich die Zwischenablage oft nicht nutzen: Unter Einstellungen > Speicher > „Übertragung im WLAN starten“ kannst du den Bericht am Handy öffnen (Seite „Letzten Absturzbericht anzeigen“) und dort kopieren.")
+    // T-055: the buttons sit at the top. Below a long list the remote used to jump past every entry to the last button.
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PillButton("Playlist neu laden", light = true, icon = AIcon.Refresh) { reload() }
         PillButton("Bericht kopieren") {
             val text = lines.filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { it.first + ": " + it.second }
             runCatching {
                 val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
                 cm?.setPrimaryClip(android.content.ClipData.newPlainText("IPVIO Diagnose", text))
+            }
+        }
+        PillButton("Playlist neu laden", light = true, icon = AIcon.Refresh) { reload() }
+    }
+    Hint("Der Bericht enthält keine Adressen, Benutzernamen oder Passwörter. Er wird nur in die Zwischenablage kopiert und nirgendwohin gesendet.")
+    Hint("Auf dem Fernseher lässt sich die Zwischenablage oft nicht nutzen: Unter Einstellungen > Speicher > „Übertragung im WLAN starten“ kannst du den Bericht am Handy öffnen (Seite „Letzten Absturzbericht anzeigen“) und dort kopieren.")
+    // T-055: every line of every entry is its own focusable row, so the remote steps through the log one entry at a time
+    lines.filter { it.first != "Log" || it.second.isNotEmpty() }.forEach { (k, v) ->
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                v.split("\n").forEach { line ->
+                    Text(line, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp).focusable())
+                }
             }
         }
     }

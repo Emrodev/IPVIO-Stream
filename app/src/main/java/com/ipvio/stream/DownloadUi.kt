@@ -116,6 +116,34 @@ fun VodDownloadButton(item: Item, url: String, h: Int) {
     }
 }
 
+/**
+ * T-055: "Staffel laden" on a series. The one-time notice of the provider terms is asked here too, because a series
+ * never shows the movie button that asks it (before, the episodes were refused with a message about a movie).
+ */
+@Composable
+fun SeasonDownloadButton(item: Item, eps: List<Episode>, urlOf: (Episode) -> String, h: Int) {
+    val ctx = LocalContext.current
+    var askNotice by remember { mutableStateOf(false) }
+    fun start() { eps.forEach { ep -> startEpisodeDownload(ctx, item, ep, urlOf(ep)) } }
+    HeroButton("Staffel laden", AIcon.Download, false, Modifier, h) {
+        if (noticeAccepted(ctx)) start() else askNotice = true
+    }
+    if (askNotice) Dialog(onDismissRequest = { askNotice = false }) {
+        Column(
+            Modifier.width(560.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Downloads sind nur für Inhalte gedacht, die du rechtmäßig nutzen darfst. Die Bedingungen deines Anbieters gelten. Die Dateien bleiben auf diesem Gerät.",
+                color = Color.White, fontSize = 17.sp)
+            PillButton("Verstanden", light = true) {
+                acceptNotice(ctx)
+                askNotice = false
+                start()
+            }
+        }
+    }
+}
+
 /** T-052a: list of the downloads in Settings > Storage, with delete and the space they take. */
 @Composable
 fun DownloadsSettings(ctx: Context) {

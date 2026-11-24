@@ -513,9 +513,7 @@ private fun DetailScreenFull(
                                     }
                                     HeroButton("Von vorn", AIcon.Rewind, false, Modifier, bh) { playUrl?.let { onPlay(it, item.title + (if (item.kind == Kind.SERIES) " S" + season + "E" + (eps.firstOrNull()?.num ?: 1) else ""), 0L) } }
                                     // T-052a: every episode of the shown season goes into the download queue (best quality each)
-                                    if (item.kind == Kind.SERIES && eps.isNotEmpty()) HeroButton("Staffel laden", AIcon.Download, false, Modifier, bh) {
-                                        eps.forEach { ep -> startEpisodeDownload(ctx, item, ep, pick(ep).url) }
-                                    }
+                                    if (item.kind == Kind.SERIES && eps.isNotEmpty()) SeasonDownloadButton(item, eps, { ep -> pick(ep).url }, bh)
                                 } else {
                                     // Watched movie: "Play again" instead of "Play"
                                     val seenMovie = item.kind == Kind.MOVIE && progress[ResumeLogic.key(0, 0)]?.done == true
