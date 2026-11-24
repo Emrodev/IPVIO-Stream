@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Phone page: "Upload" for a playlist file, a list or a VPN configuration did nothing. The page script missed a closing brace, so the upload function was never defined. A rejected upload (wrong code) now shows the reply instead of a bare "Error"
+- Playlists: the "Edit" window never gets taller than the screen; "Apply" and "Cancel" stay visible on a phone in landscape and on a 1080p TV. Not device tested on a TV yet
+- Load errors: an unexpected error names the place in the app (file and line), so a screenshot is enough for a bug report
 
 ## 1.4.9
 - Series: "Download season" is shown on every series, also before the first play (before, it was only shown after a series had been started). Not device tested yet
