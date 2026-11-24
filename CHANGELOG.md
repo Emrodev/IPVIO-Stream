@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Playlists: the app no longer creates a new secure key when the old one cannot be read for a moment (seen on some boxes after a restart). Before, this could make saved logins unreadable for good, so a playlist seemed to vanish (#112, T-056). Cause not confirmed on a device. Not device tested yet
 - Live TV on phones: tapping a category or "Search channels" now opens it. Before, a tap did nothing without a remote (#152, T-055). Not device tested yet
 
 ## 1.4.9
