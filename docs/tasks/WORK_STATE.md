@@ -10,7 +10,14 @@ Last update: 2026-11-24 (issue review, branch `claude/exciting-johnson-9gi5zn`).
 - #109 is already fixed in the code (`HomeScreen.kt`, commits `fc824dc`, `494f00d`); close after a device check.
 - #112 (playlist vanishes): `Secrets.key()` swallows every exception, so a short keystore failure at start looks like an empty list. T-027 only stops overwriting the unreadable list. Needs logcat from the Fire TV and approval for a storage change.
 - No code yet for #125, #27, #23, #145, #131, #130, #151, #84, #146, #118 (a reply is enough).
-- Next: maintainer decides on the PR #40 port (#10, #25), the `Secrets` change (#112) and the Live TV test of T-055.
+- Done after that (branch `claude/exciting-johnson-9gi5zn`, all not built, not device tested):
+  - T-056 (#112): `Secrets.key()` never replaces an existing key alias (`SecretsLogic`, 3/3 JVM tests); the empty home screen says when the saved playlist cannot be read (`PlaylistStore.unreadable`, row in `DictEn1`, 5/5).
+  - T-057 (#130): alert delay options up to 120 s. The switch and delay already existed (Settings > Sports Hub). Per-team switch not done.
+  - T-058 (#125): the home row "Recently added" uses the added date like the page (`RecentSortLogic.newestN`, 6/6).
+  - T-059 (#27): the Genre pill shows the opened genre category. Switching category through the pill is not done.
+  - Syntax check of the changed Kotlin files with the compiler bundled in Gradle: no syntax errors (no Android classes here, so no type check).
+- Open: #118 can be answered (the per-playlist reload button exists since 1.4.5); #131 not analysed; #130, #67, #109 can be closed after a device check.
+- Next: maintainer decides on the PR #40 port (#10, #25) and tests T-055 to T-059 on the device.
 
 Earlier entry, 2026-11-23. Four user issues (Fire TV) analysed, no app code changed, plans only:
 
