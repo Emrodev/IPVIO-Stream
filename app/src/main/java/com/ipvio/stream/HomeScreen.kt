@@ -277,8 +277,8 @@ fun HomeScreen(
     val rowMovies = data.rowMovies
     val rowSeries = data.rowSeries
     // Row lists that were built anew inside the rows on every recomposition
-    val newMovies = remember(rowMovies) { rowMovies.takeLast(40).reversed() }
-    val newSeries = remember(rowSeries) { rowSeries.takeLast(40).reversed() }
+    val newMovies = remember(rowMovies) { RecentSortLogic.newestN(rowMovies, 40) { it.added } }   // #125: same order as the "Neu hinzugefügt" page
+    val newSeries = remember(rowSeries) { RecentSortLogic.newestN(rowSeries, 40) { it.added } }
     val histTop = remember(histHome) { histHome.take(30) }
     val trendItems = data.trendItems
     val trendTop = remember(trendItems) { trendItems.take(10) }
