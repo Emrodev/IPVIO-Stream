@@ -2,6 +2,11 @@ package com.ipvio.stream
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.focus.FocusRequester
@@ -19,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -124,7 +130,10 @@ fun VodDownloadButton(item: Item, url: String, h: Int) {
 fun SeasonDownloadButton(item: Item, eps: List<Episode>, urlOf: (Episode) -> String, h: Int) {
     val ctx = LocalContext.current
     var askNotice by remember { mutableStateOf(false) }
-    fun start() { eps.forEach { ep -> startEpisodeDownload(ctx, item, ep, urlOf(ep)) } }
+    fun start() {
+        eps.forEach { ep -> startEpisodeDownload(ctx, item, ep, urlOf(ep), announce = false) }
+        announceQueued(ctx, eps.size)
+    }
     HeroButton("Staffel laden", AIcon.Download, false, Modifier, h) {
         if (noticeAccepted(ctx)) start() else askNotice = true
     }
@@ -139,6 +148,89 @@ fun SeasonDownloadButton(item: Item, eps: List<Episode>, urlOf: (Episode) -> Str
                 acceptNotice(ctx)
                 askNotice = false
                 start()
+            }
+        }
+    }
+}
+
+/** Button "Pick episodes" on a series: opens [EpisodePickDialog] with the episodes of the shown season. */
+@Composable
+fun EpisodePickButton(item: Item, eps: List<Episode>, urlOf: (Episode) -> String, h: Int) {
+    val ctx = LocalContext.current
+    var open by remember { mutableStateOf(false) }
+    HeroButton("Folgen wählen", AIcon.Download, false, Modifier, h) { open = true }
+    if (open) EpisodePickDialog(ctx, item, eps, urlOf) { open = false }
+}
+
+/**
+ * Episode list with check boxes: the checked episodes are queued together (one notice, the same rules as "Season download").
+ * Nothing else on the detail page changes; this dialog is only opened by its own button.
+ */
+@Composable
+private fun EpisodePickDialog(ctx: Context, item: Item, eps: List<Episode>, urlOf: (Episode) -> String, onClose: () -> Unit) {
+    val picked = remember { mutableStateOf(setOf<Int>()) }
+    var askNotice by remember { mutableStateOf(false) }
+
+    fun startPicked() {
+        val chosen = eps.filterIndexed { i, _ -> i in picked.value }
+        chosen.forEach { ep -> startEpisodeDownload(ctx, item, ep, urlOf(ep), announce = false) }
+        announceQueued(ctx, chosen.size)
+        onClose()
+    }
+
+    Dialog(onDismissRequest = onClose) {
+        // Fixed height: the list takes the space between title and buttons, so the buttons always stay visible
+        Column(
+            Modifier.width(720.dp).fillMaxHeight(0.9f).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            if (askNotice) {
+                Text("Downloads sind nur für Inhalte gedacht, die du rechtmäßig nutzen darfst. Die Bedingungen deines Anbieters gelten. Die Dateien bleiben auf diesem Gerät.",
+                    color = Color.White, fontSize = 17.sp)
+                PillButton("Verstanden", light = true) {
+                    acceptNotice(ctx)
+                    startPicked()
+                }
+            } else {
+                Text("Folgen auswählen", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                // Lazy list: the focused episode is scrolled into view automatically, and the remote scrolls it item by item
+                LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    itemsIndexed(eps) { i, ep ->
+                        val on = i in picked.value
+                        // Focus = white frame and lighter background; selected = green box with a check mark and green text.
+                        // Both at once are easy to tell apart on the TV.
+                        var focused by remember { mutableStateOf(false) }
+                        val rowShape = RoundedCornerShape(12.dp)
+                        Row(
+                            Modifier.fillMaxWidth().clip(rowShape)
+                                .background(if (focused) Color(0x40FFFFFF) else if (on) Color(0x1F6BD39A) else Color(0x08FFFFFF))
+                                .border(if (focused) 3.dp else 0.dp, if (focused) Color.White else Color.Transparent, rowShape)
+                                .onFocusChanged { focused = it.isFocused }
+                                .clickable { picked.value = if (on) picked.value - i else picked.value + i }
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier.size(30.dp).clip(RoundedCornerShape(6.dp))
+                                    .background(if (on) Color(0xFF6BD39A) else Color(0x33FFFFFF)),
+                                contentAlignment = Alignment.Center
+                            ) { if (on) AppIcon(AIcon.Check, Color(0xFF05070D), size = 20.dp) }
+                            Text(raw = true, text = "S${ep.season}E${ep.num}  ${ep.title}",
+                                color = if (on) Color(0xFF6BD39A) else Color.White,
+                                fontSize = 18.sp, fontWeight = if (focused) FontWeight.Bold else FontWeight.Normal,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val n = picked.value.size
+                    PillButton(if (n == 0) "Laden" else "Laden · $n", light = true) {
+                        if (n == 0) return@PillButton
+                        if (noticeAccepted(ctx)) startPicked() else askNotice = true
+                    }
+                    PillButton("Abbrechen") { onClose() }
+                }
             }
         }
     }
@@ -202,7 +294,7 @@ fun episodeDownloadItem(item: Item, ep: Episode): Item =
     DownloadLogic.episodeItem(item, ep.season, ep.num, item.title + " S" + ep.season + "E" + ep.num)
 
 /** Menu key on an episode (T-052a): starts its download in the best quality, after the one-time notice. */
-fun startEpisodeDownload(c: Context, item: Item, ep: Episode, url: String) {
+fun startEpisodeDownload(c: Context, item: Item, ep: Episode, url: String, announce: Boolean = true) {
     val msg = when {
         !noticeAccepted(c) -> "Bestätige erst den Hinweis bei einem Film."
         !DownloadLogic.supported(url) -> "Dieser Stream lässt sich nicht herunterladen."
@@ -214,6 +306,16 @@ fun startEpisodeDownload(c: Context, item: Item, ep: Episode, url: String) {
         return
     }
     DownloadStore.startBest(c, episodeDownloadItem(item, ep), url)
+    // Short confirmation for a single episode; batches show one message for all (see announceQueued)
+    if (announce) {
+        val title = episodeDownloadItem(item, ep).title
+        android.widget.Toast.makeText(c, Lang.tr("Download gestartet: {0}").replace("{0}", title), android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
+
+/** One short message for a whole batch, so many queued episodes do not stack up as separate pop-ups. */
+fun announceQueued(c: Context, count: Int) {
+    android.widget.Toast.makeText(c, Lang.tr("{0} Folgen in der Warteschlange").replace("{0}", count.toString()), android.widget.Toast.LENGTH_SHORT).show()
 }
 
 /** Downloads tab in the sidebar (T-052a): the list with queue actions, with the sidebar beside it. */
@@ -221,9 +323,10 @@ fun startEpisodeDownload(c: Context, item: Item, ep: Episode, url: String) {
 fun DownloadsTab(tab: Int, onTab: (Int) -> Unit, onPlay: (DownloadStore.Entry) -> Unit) {
     val ctx = LocalContext.current
     val sideFocus = remember { FocusRequester() }
-    Box(Modifier.fillMaxSize().sidebarPad()) {
+    // The sidebar padding goes on the content only; on the box it would also push the sidebar to the right.
+    Box(Modifier.fillMaxSize()) {
         Column(
-            Modifier.fillMaxSize().padding(start = DS.PageX, end = DS.PageX, top = 28.dp).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().sidebarPad().padding(start = 48.dp, end = DS.PageX, top = 28.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text("Downloads", color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold)

@@ -512,8 +512,6 @@ private fun DetailScreenFull(
                                         onPlay(t.second, t.first, resume.pos)
                                     }
                                     HeroButton("Von vorn", AIcon.Rewind, false, Modifier, bh) { playUrl?.let { onPlay(it, item.title + (if (item.kind == Kind.SERIES) " S" + season + "E" + (eps.firstOrNull()?.num ?: 1) else ""), 0L) } }
-                                    // T-052a: every episode of the shown season goes into the download queue (best quality each)
-                                    if (item.kind == Kind.SERIES && eps.isNotEmpty()) SeasonDownloadButton(item, eps, { ep -> pick(ep).url }, bh)
                                 } else {
                                     // Watched movie: "Play again" instead of "Play"
                                     val seenMovie = item.kind == Kind.MOVIE && progress[ResumeLogic.key(0, 0)]?.done == true
@@ -535,9 +533,14 @@ private fun DetailScreenFull(
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
                                 // T-052a: download of a movie file (step 1)
                                 playUrl?.let { VodDownloadButton(item, it, bh) }
+                                // T-052a / T-055: every episode of the shown season goes into the download queue (best quality each).
+                                // Shown for every series, also before the first play (it was only inside the resume branch).
+                                if (item.kind == Kind.SERIES && eps.isNotEmpty()) SeasonDownloadButton(item, eps, { ep -> pick(ep).url }, bh)
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)
                             Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
+                                // Own row for the episode picker: the top row is already full and cut off the button
+                                if (item.kind == Kind.SERIES && eps.isNotEmpty()) EpisodePickButton(item, eps, { ep -> pick(ep).url }, bh)
                                 // A finished resume point would otherwise keep offering "Continue"
                                 fun dropResume(keys: Collection<Long>) {
                                     if (resume == null) return
@@ -547,19 +550,31 @@ private fun DetailScreenFull(
                                 if (item.kind == Kind.SERIES) {
                                     val seasonKeys = eps.map { ResumeLogic.key(it.season, it.num) }
                                     val seasonSeen = seasonKeys.isNotEmpty() && seasonKeys.all { progress[it]?.done == true }
-                                    HeroButton(if (seasonSeen) "Staffel zurücksetzen" else "Staffel gesehen", if (seasonSeen) AIcon.Rewind else AIcon.Check, false, Modifier, bh) {
+                                    val allKeys = item.episodes.map { ResumeLogic.key(it.season, it.num) }
+                                    val allSeen = allKeys.isNotEmpty() && allKeys.all { progress[it]?.done == true }
+                                    fun toggleSeason() {
                                         EpProgress.mark(ctx, item.id, seasonKeys, !seasonSeen)
                                         if (!seasonSeen) dropResume(seasonKeys)
                                         progVer++
                                     }
+                                    fun toggleAll() {
+                                        EpProgress.mark(ctx, item.id, allKeys, !allSeen)
+                                        if (!allSeen) dropResume(allKeys)
+                                        progVer++
+                                    }
                                     if (seasons.size > 1) {
-                                        val allKeys = item.episodes.map { ResumeLogic.key(it.season, it.num) }
-                                        val allSeen = allKeys.isNotEmpty() && allKeys.all { progress[it]?.done == true }
-                                        HeroButton(if (allSeen) "Serie zurücksetzen" else "Serie gesehen", if (allSeen) AIcon.Rewind else AIcon.Check, false, Modifier, bh) {
-                                            EpProgress.mark(ctx, item.id, allKeys, !allSeen)
-                                            if (!allSeen) dropResume(allKeys)
-                                            progVer++
-                                        }
+                                        // One button for both cases: it opens a small choice (this season or the whole series)
+                                        var watchedOpen by remember { mutableStateOf(false) }
+                                        HeroButton("Gesehen", AIcon.Check, false, Modifier, bh) { watchedOpen = true }
+                                        if (watchedOpen) WatchedChoiceDialog(
+                                            seasonLabel = if (seasonSeen) "Staffel zurücksetzen" else "Staffel gesehen",
+                                            allLabel = if (allSeen) "Serie zurücksetzen" else "Serie gesehen",
+                                            onSeason = { toggleSeason(); watchedOpen = false },
+                                            onAll = { toggleAll(); watchedOpen = false },
+                                            onClose = { watchedOpen = false }
+                                        )
+                                    } else {
+                                        HeroButton(if (seasonSeen) "Staffel zurücksetzen" else "Staffel gesehen", if (seasonSeen) AIcon.Rewind else AIcon.Check, false, Modifier, bh) { toggleSeason() }
                                     }
                                 } else if (item.kind == Kind.MOVIE) {
                                     val k = ResumeLogic.key(0, 0)
@@ -747,6 +762,21 @@ private fun DetailScreenFull(
                 Text("Dieses Produkt verwendet die TMDB-API, wird aber nicht von TMDB unterstützt oder zertifiziert.",
                     color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 32.dp))
             }
+        }
+    }
+}
+
+/** "Watched" choice of a series with several seasons: this season or the whole series. Each toggles its own state. */
+@Composable
+private fun WatchedChoiceDialog(seasonLabel: String, allLabel: String, onSeason: () -> Unit, onAll: () -> Unit, onClose: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
+        Column(
+            Modifier.width(560.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PillButton(seasonLabel, light = true) { onSeason() }
+            PillButton(allLabel, light = true) { onAll() }
+            PillButton("Abbrechen") { onClose() }
         }
     }
 }

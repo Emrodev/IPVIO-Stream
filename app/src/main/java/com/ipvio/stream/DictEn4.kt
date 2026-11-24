@@ -64,4 +64,11 @@ Nicht in der Playlist¦Not in your playlist
 In deiner Playlist: {0} von {1}¦In your playlist: {0} of {1}
 Personen¦People
 Personen-Suche braucht einen TMDB-Schlüssel.¦Person search needs a TMDB key.
+Folgen wählen¦Pick episodes
+Folgen auswählen¦Choose episodes
+Laden¦Download
+Laden · {0}¦Download · {0}
+Gesehen¦Watched
+Download gestartet: {0}¦Download started: {0}
+{0} Folgen in der Warteschlange¦{0} episodes queued
 """
