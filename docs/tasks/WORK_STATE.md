@@ -5,7 +5,14 @@ The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not a
 
 ## Current task
 
-Last update: 2026-11-23. Four user issues (Fire TV) analysed, no app code changed, plans only:
+Last update: 2026-11-24 (issue review, branch `claude/exciting-johnson-9gi5zn`). Done: T-055 (#152, same cause as #67): a tap on a Live TV category or on "Search channels" now sets the category (`LiveTab.kt`, 2 lines). Not built, not device tested. Findings, no code change:
+- **PR #40 and #70 (fork `browanoncoder`) were closed on 16 Nov without a merge.** Their issue comments say "fixed" for #67, #10, #25, #28, but `CuelessMkvExtractor`, `TapSeekLogic` and `MkvSeekLogic` do not exist in the code. #10 (MKV without Cues) and #25 (tap-to-seek) are therefore still open in the code. Porting touches the player core: needs approval (CLAUDE.md section 6).
+- #109 is already fixed in the code (`HomeScreen.kt`, commits `fc824dc`, `494f00d`); close after a device check.
+- #112 (playlist vanishes): `Secrets.key()` swallows every exception, so a short keystore failure at start looks like an empty list. T-027 only stops overwriting the unreadable list. Needs logcat from the Fire TV and approval for a storage change.
+- No code yet for #125, #27, #23, #145, #131, #130, #151, #84, #146, #118 (a reply is enough).
+- Next: maintainer decides on the PR #40 port (#10, #25), the `Secrets` change (#112) and the Live TV test of T-055.
+
+Earlier entry, 2026-11-23. Four user issues (Fire TV) analysed, no app code changed, plans only:
 
 - T-051 sound of the previous channel keeps playing: not reproduced, candidates listed (`docs/tasks/T-051-audio-after-channel-change.md`).
 - T-052 setting for Up/Down in Live TV: plan, default proposed = current behaviour, maintainer decides (`docs/tasks/T-052-live-up-down-setting.md`).
