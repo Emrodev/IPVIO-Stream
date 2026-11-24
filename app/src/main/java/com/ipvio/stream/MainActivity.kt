@@ -449,6 +449,19 @@ private fun AppContent() {
         val d = detail
         val b = browse
         val c = cats
+        // T-056: name of the shown screen, for the opening time in the diagnostics log
+        val shownName = when {
+            p != null -> "Player"
+            personTop != null -> "Person"
+            d != null -> "Detail"
+            b != null -> "Browse"
+            c != null -> "Categories"
+            adding -> "Add playlist"
+            tab == 4 && all.isNotEmpty() -> "Search"
+            tab == MenuLogic.DOWNLOADS -> "Downloads"
+            else -> "Tab $tab"
+        }
+        ScreenTimer(shownName)
         when {
             p != null -> {
                 val zap = if (p.live || p.archive != null) {
