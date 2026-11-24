@@ -621,6 +621,7 @@ fun HomeScreen(
                             when { err != null -> "Die Playlist konnte nicht geladen werden"; allHidden -> "Alle Sprachen dieser Playlist sind ausgeblendet"; else -> "Noch keine Sender" },
                             color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold
                         )
+                        if (err == null && PlaylistStore.unreadable) Text("Die gespeicherten Zugangsdaten konnten nicht gelesen werden. Bitte füge die Playlist erneut hinzu.", color = Muted, fontSize = 16.sp)
                         if (err != null) {
                             Text(err, color = Muted, fontSize = 16.sp)
                             Text("Prüfe die Internetverbindung, die Adresse und die Zugangsdaten.", color = Muted, fontSize = 16.sp)

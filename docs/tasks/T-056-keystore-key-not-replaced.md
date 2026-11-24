@@ -19,13 +19,15 @@ This matches that the reports come from Fire TV and not from Google TV. It is a 
 - `SecretsLogic.kt` (new, pure): `keyAction(keyReadable, aliasExists)` returns USE, GENERATE (only when the alias does not exist) or UNAVAILABLE.
 - `Secrets.key()` uses it. With UNAVAILABLE it returns `null`, so `encrypt` and `decrypt` behave as before for a box without keystore (no crash, the existing plain-text fallback and the T-027 protection of the unreadable copy stay).
 
+- Notice: when a saved list exists but cannot be decrypted, `PlaylistStore.unreadable` is set and the empty home screen shows "The saved login data could not be read. Please add the playlist again." (English row in `DictEn1.kt`, `HomeScreen.kt`). Before, the user saw an empty app without a reason.
+
 No preference name, stored format or backup key changes.
 
 ## Not solved
 
 - A key that is really gone (alias missing after an OS reset) still cannot be recovered. The list has to be added again (or restored from a backup).
 - While the alias exists but the key is unreadable, new values are stored as plain text (the fallback for boxes without a keystore). This is the same weaker protection as on those boxes. Not changed here, needs a decision.
-- The user sees an empty list without an explanation. A notice is a separate task.
+- A key that is really gone still cannot be recovered; the notice below only tells the user what to do.
 
 ## Risks
 
@@ -33,7 +35,7 @@ Low to medium: secrets handling (CLAUDE.md section 6). The change only avoids cr
 
 ## Tests
 
-- JVM: `SecretsLogicTest` 3/3 run here with the Kotlin compiler bundled in Gradle.
+- JVM: `SecretsLogicTest` 3/3 and `DictEn1Test` 5/5 run here with the Kotlin compiler bundled in Gradle.
 - Not run: Gradle build, device test (no Android SDK here).
 
 ### Manual test steps (maintainer)

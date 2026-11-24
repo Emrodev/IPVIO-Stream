@@ -145,6 +145,8 @@ object PlaylistStore {
 
     var loading by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
+    /** #112: a saved playlist list exists but could not be decrypted, so the app starts empty. Shown on the empty home screen. */
+    var unreadable by mutableStateOf(false)
     /**
      * Updating failed while the old list is still shown (the old list stays). Before, this stayed silent, so it looked as if
      * the playlist simply did not update. Shown in the playlist settings; cleared by the next successful load.
@@ -351,7 +353,7 @@ object PlaylistStore {
         val enc = p.getString("lists_enc", null)
         val dec = if (enc != null) Secrets.decrypt(enc) else null
         // #112: the saved list exists but cannot be decrypted (e.g. the key was lost). It is kept, see persist()
-        if (enc != null && dec == null) Diag.report("The saved playlist list could not be decrypted")
+        if (enc != null && dec == null) { unreadable = true; Diag.report("The saved playlist list could not be decrypted") }
         val json = dec ?: p.getString("lists", "[]")
         try {
             val a = JSONArray(json)
