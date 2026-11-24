@@ -31,6 +31,9 @@ object LiveSettings {
     /** Minutes of overrun after the end of the show according to the TV guide. */
     var recPad by mutableIntStateOf(3)
         private set
+    /** Up = next channel and Down = previous channel in Live TV (T-052). false = default: Up = previous. */
+    var upIsNext by mutableStateOf(false)
+        private set
     private var inited = false
 
     fun init(c: Context) {
@@ -41,11 +44,14 @@ object LiveSettings {
         bufferMb = p.getInt("mb", 512).takeIf { it in BUFFER_MB } ?: 512
         recDir = p.getInt("dir", 0).coerceAtLeast(0)
         recPad = p.getInt("pad", 3).coerceIn(0, 30)
+        upIsNext = p.getBoolean("up_next", false)
     }
 
     private fun save(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-        .putBoolean("ts", timeshift).putInt("mb", bufferMb).putInt("dir", recDir).putInt("pad", recPad).apply()
+        .putBoolean("ts", timeshift).putInt("mb", bufferMb).putInt("dir", recDir).putInt("pad", recPad)
+        .putBoolean("up_next", upIsNext).apply()
 
+    fun setUpIsNext(c: Context, v: Boolean) { upIsNext = v; save(c) }
     fun setTimeshift(c: Context, v: Boolean) { timeshift = v; save(c) }
     fun setBufferMb(c: Context, v: Int) { bufferMb = v; save(c) }
     fun setRecDir(c: Context, v: Int) { recDir = v; save(c) }
@@ -170,9 +176,13 @@ object LiveTimeshift {
     fun start(c: Context, player: ExoPlayer, url: String): Boolean {
         val old = tap
         if (old != null && old.url == url && !old.closed) { goLive(player); return true }
-        val t = LiveTaps.open(c, url) ?: return false
-        tap = t
+        // T-054: release the previous channel's buffer before the new one is opened, so only one buffer fills at a time
+        tap = null
         old?.release()
+        version++
+        val t = LiveTaps.open(c, url)
+        if (t == null) { version++; return false }
+        tap = t
         version++
         goLive(player)
         return true

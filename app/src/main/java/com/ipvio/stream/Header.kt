@@ -37,6 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import kotlinx.coroutines.launch
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.foundation.layout.widthIn
 
 /** Targets in the header that other parts address directly (e.g. "Show all" of the first row: Up = profile). */
 object HeaderFocus {
@@ -64,28 +71,37 @@ fun HeaderBar(
     showView: Boolean = false,
     firstIsContent: Boolean = false,
     /** Area for the playlist selection: 1 movies, 2 series, otherwise the general switch. */
-    areaTab: Int = -1
+    areaTab: Int = -1,
+    /** Left on the search pill (the first element): into the sidebar. true = handled. */
+    onLeftEdge: () -> Boolean = { false }
 ) {
     Row(
         modifier.fillMaxWidth().padding(start = dpx(38), end = dpx(36), top = dpx(14)).height(dpx(52)),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SearchPill(if (tabs.isEmpty()) 467 else 330, onSearch)
-        if (tabs.isNotEmpty()) {
-            Spacer(Modifier.width(dpx(22)))
-            Row(horizontalArrangement = Arrangement.spacedBy(dpx(8)), verticalAlignment = Alignment.CenterVertically) {
-                tabs.forEachIndexed { i, t ->
-                    NavTab(t, if (i == 0) (if (firstIsContent) ContentFocus.req else HeaderFocus.firstTab) else null)
+        // Left group with weight: a weighted child is measured after the fixed ones, so playlist, clock, bell and profile
+        // keep their size. Before, a long playlist name squeezed the profile circle until it was almost invisible.
+        Row(Modifier.weight(1f).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
+            SearchPill(if (tabs.isEmpty()) 467 else 330, onSearch, onLeftEdge)
+            if (tabs.isNotEmpty()) {
+                Spacer(Modifier.width(dpx(22)))
+                Row(horizontalArrangement = Arrangement.spacedBy(dpx(8)), verticalAlignment = Alignment.CenterVertically) {
+                    tabs.forEachIndexed { i, t ->
+                        NavTab(t, if (i == 0) (if (firstIsContent) ContentFocus.req else HeaderFocus.firstTab) else null)
+                    }
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(dpx(14)))
         if (showView) {
             ViewButton()
             Spacer(Modifier.width(dpx(14)))
         }
         if (PlaylistStore.lists.size > 1) {
-            if (areaTab in 1..2) AreaPlaylistPill(areaTab) else PlaylistSwitchButton()
+            // At most 280 design pixels wide: a long playlist name is cut instead of pushing the icons out
+            Box(Modifier.widthIn(max = dpx(280))) {
+                if (areaTab in 1..2) AreaPlaylistPill(areaTab) else PlaylistSwitchButton()
+            }
             Spacer(Modifier.width(dpx(14)))
         }
         // Time and date right next to the notification bell (the only clock on screen)
@@ -100,11 +116,15 @@ fun HeaderBar(
 }
 
 @Composable
-private fun SearchPill(w: Int, onClick: () -> Unit) {
+private fun SearchPill(w: Int, onClick: () -> Unit, onLeft: () -> Boolean) {
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(50)
     Row(
-        Modifier.width(dpx(w)).height(dpx(50)).clip(shape)
+        // Left: into the sidebar. Without it Compose found nothing to the left and Android entered the screen again
+        // from the right edge, so the focus jumped to the profile circle.
+        Modifier.onPreviewKeyEvent { e ->
+            e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && SidebarPrefs.pos == SidebarPrefs.LEFT && onLeft()
+        }.width(dpx(w)).height(dpx(50)).clip(shape)
             .background(if (f) DS.FocusFill else Color(0xCC0E0E12))
             .border(1.dp, if (f) DS.FocusFill else Color(0x33FFFFFF), shape)
             .onFocusChanged { f = it.isFocused }
@@ -324,27 +344,7 @@ private fun ClockPill() {
  * A playlist that is not shown is activated and loaded (as in Live TV).
  */
 @Composable
-private fun AreaPlaylistPill(tab: Int) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val pls = PlaylistStore.lists.toList()
-    val multiView = PlaylistStore.sourceNames.size > 1
-    val k = if (multiView) AreaSource.get(tab) else -1
-    val opts = (if (multiView) listOf(Lang.tr("Alle Playlists")) else emptyList()) + pls.map { it.name }
-    val off = if (multiView) 1 else 0
-    val cur = if (multiView && k < 0) 0 else {
-        val si = if (multiView) k else 0
-        (pls.indices.firstOrNull { PlaylistStore.shownIndex(it) == si } ?: PlaylistStore.active) + off
-    }
-    DropdownPill("Playlist", opts.getOrElse(cur) { "" }, opts, cur, active = multiView && k >= 0, icon = FIcon.Grid) { pick ->
-        if (multiView && pick == 0) AreaSource.set(tab, -1)
-        else {
-            val pi = pick - off
-            val si = PlaylistStore.shownIndex(pi)
-            if (si >= 0) { if (multiView) AreaSource.set(tab, si) }
-            else { AreaSource.set(tab, -1); PlaylistStore.switchAsync(ctx, pi) }
-        }
-    }
-}
+private fun AreaPlaylistPill(tab: Int) = SectionPlaylistPill(tab)
 
 /** Switch playlist (only with several playlists): applies to movies, series, Live TV and the home screen. */
 @Composable

@@ -14,10 +14,12 @@ class DiagLogicTest {
 
     @Test
     fun append_keepsOnlyNewestEntries() {
+        // Append more entries than MAX, so the oldest ones must be dropped
+        val total = DiagLogic.MAX + 5
         var l = emptyList<Pair<Long, String>>()
-        for (i in 1..30) l = DiagLogic.append(l, i.toLong(), "m$i")
+        for (i in 1..total) l = DiagLogic.append(l, i.toLong(), "m$i")
         assertEquals(DiagLogic.MAX, l.size)
         assertEquals("m6", l.first().second)
-        assertEquals("m30", l.last().second)
+        assertEquals("m$total", l.last().second)
     }
 }

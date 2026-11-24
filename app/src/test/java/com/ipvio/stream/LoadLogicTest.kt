@@ -176,4 +176,21 @@ http://h/x
         assertFalse(LoadLogic.retriesSequentially(java.util.concurrent.CancellationException("abort")))
         assertFalse(LoadLogic.retriesSequentially(null))
     }
+
+    // Xtream get.php with live channels only (movies and series missing although the provider has them)
+
+    @Test fun vodLineIsAMovieOrSeriesAddress() {
+        assertTrue(LoadLogic.isVodLine("http://h:8080/movie/u/p/3.mkv"))
+        assertTrue(LoadLogic.isVodLine("http://h:8080/series/u/p/9.mp4"))
+        assertFalse(LoadLogic.isVodLine("http://h:8080/live/u/p/1.ts"))
+        assertFalse(LoadLogic.isVodLine("http://h:8080/u/p/1"))
+        assertFalse(LoadLogic.isVodLine("#EXTINF:-1 group-title=\"/movie/\",X"))
+    }
+
+    @Test fun listWithAMovieHasVod() = assertTrue(LoadLogic.hasVod(m3u.lineSequence()))
+
+    @Test fun liveOnlyListHasNoVod() {
+        val live = "#EXTM3U\n#EXTINF:-1 group-title=\"News\",A\nhttp://h/live/u/p/1.ts\n#EXTINF:-1,B\nhttp://h/u/p/2\n"
+        assertFalse(LoadLogic.hasVod(live.lineSequence()))
+    }
 }

@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -103,75 +107,168 @@ fun SimilarRow(
     }
 }
 
-/** Page of a person: photo, biography and all their titles that occur in the own playlist. */
+/**
+ * Page of a person (T-053b): profile column on the left (photo, name, facts, biography), tabs on the right.
+ * "Filmography" shows all titles of the person: titles in the own playlist are normal cards, the others are dimmed and marked
+ * "Not in your playlist". Overview lists the titles that are in the playlist.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun PersonScreen(ref: PersonRef, all: List<Item>, onOpen: (Item) -> Unit, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     var info by remember(ref.id) { mutableStateOf<PersonInfo?>(null) }
     var loaded by remember(ref.id) { mutableStateOf(false) }
     LaunchedEffect(ref.id) { info = CreditsRepo.person(ref.id); loaded = true }
-    val owned by produceState(emptyList<Item>(), info, all) {
+    // Every title of the person, with its playlist item when it is in the own playlist
+    val entries by produceState(emptyList<FilmoEntry>(), info, all) {
         val i = info ?: return@produceState
         value = withContext(Dispatchers.Default) {
+            val idx = LibMatch.indexFor(all)
+            val list = i.titles.map { r -> FilmoEntry(r.title, r.year?.toIntOrNull(), r.isTv, r.poster, idx.find(r)) }
             // The title they came from is always included (TMDB does not know every work for some people)
-            val m = LibMatch.matches(all, i.titles, 80)
             val origin = ref.from?.let { id -> all.firstOrNull { it.id == id } }
-            if (origin != null && m.none { it.id == origin.id }) listOf(origin) + m else m
+            if (origin != null && list.none { it.item?.id == origin.id })
+                listOf(FilmoEntry(origin.title, origin.year, origin.kind == Kind.SERIES, origin.logo, origin)) + list
+            else list
         }
     }
+    val owned = entries.mapNotNull { it.item }
     var expanded by remember(ref.id) { mutableStateOf(false) }
     var overflow by remember(ref.id) { mutableStateOf(false) }
+    // Tabs: 0 overview, 1 filmography (opens first, like the design)
+    var tab by remember(ref.id) { mutableIntStateOf(1) }
+    // Filmography filter: 0 all, 1 movies, 2 series
+    var kindFilter by remember(ref.id) { mutableIntStateOf(0) }
     val first = remember { FocusRequester() }
     LaunchedEffect(owned.isNotEmpty()) { if (owned.isNotEmpty()) { delay(150); runCatching { first.requestFocus() } } }
+    val tabNames = listOf("Übersicht", "Filmografie")
 
     Box(Modifier.fillMaxSize().background(Bg)) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = DS.PageX, vertical = 36.dp)) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(30.dp)) {
-                    Box(Modifier.size(190.dp).clip(CircleShape).background(Surf)) {
-                        val ph = info?.photo ?: ref.photo
-                        if (ph != null) AsyncImage(ph, ref.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                        else Text(raw = true, text = ref.name.take(1), color = Color.White, fontSize = 60.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.align(Alignment.Center))
-                    }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(raw = true, text = ref.name, color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        val i = info
-                        val line = listOfNotNull(
-                            i?.dept?.let { when (it) { "Directing" -> "Regie"; "Acting" -> "Schauspiel"; "Writing" -> "Drehbuch"; else -> it } },
-                            i?.born?.let { "geboren $it" }, i?.place
-                        ).joinToString("  ·  ")
-                        if (line.isNotBlank()) Text(line, color = Muted, fontSize = 15.sp)
-                        val bio = i?.bio
-                        if (bio != null) {
-                            Text(raw = true, text = bio, color = DS.TextSoft, fontSize = 15.sp, lineHeight = 22.sp,
-                                maxLines = if (expanded) Int.MAX_VALUE else 5, overflow = TextOverflow.Ellipsis,
-                                onTextLayout = { if (!expanded) overflow = it.hasVisualOverflow })
-                            if (overflow || expanded) SmallPill(if (expanded) "Weniger" else "Mehr lesen", trailing = if (expanded) AIcon.Up else AIcon.Down) { expanded = !expanded }
-                        } else if (loaded && i == null) Text("Infos konnten nicht geladen werden.", color = Muted, fontSize = 15.sp)
+        Row(Modifier.fillMaxSize().padding(horizontal = DS.PageX, vertical = 36.dp), horizontalArrangement = Arrangement.spacedBy(36.dp)) {
+            // Left: profile, facts and biography
+            Column(Modifier.width(380.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Box(Modifier.size(170.dp).clip(CircleShape).background(Surf)) {
+                    val ph = info?.photo ?: ref.photo
+                    if (ph != null) AsyncImage(ph, ref.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    else Text(raw = true, text = ref.name.take(1), color = Color.White, fontSize = 60.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.align(Alignment.Center))
+                }
+                Text(raw = true, text = ref.name, color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                val i = info
+                val dept = i?.dept?.let { when (it) { "Directing" -> "Regie"; "Acting" -> "Schauspiel"; "Writing" -> "Drehbuch"; else -> it } }
+                if (dept != null) Text(dept, color = Muted, fontSize = 15.sp)
+                // Facts card
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(DS.RadiusM)).background(Surf).padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    i?.born?.let { FactRow("Geboren", it) }
+                    i?.place?.let { FactRow("Geburtsort", it) }
+                    if (i != null) FactRow("Titel", i.titles.size.toString())
+                }
+                // Biography card
+                val bio = i?.bio
+                if (bio != null) Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(DS.RadiusM)).background(Surf).padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Biografie", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(raw = true, text = bio, color = DS.TextSoft, fontSize = 15.sp, lineHeight = 22.sp,
+                        maxLines = if (expanded) Int.MAX_VALUE else 6, overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { if (!expanded) overflow = it.hasVisualOverflow })
+                    if (overflow || expanded) SmallPill(if (expanded) "Weniger" else "Mehr lesen", trailing = if (expanded) AIcon.Up else AIcon.Down) { expanded = !expanded }
+                } else if (loaded && i == null) Text("Infos konnten nicht geladen werden.", color = Muted, fontSize = 15.sp)
+            }
+            // Right: tabs and the selected tab
+            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tabNames.forEachIndexed { n, name ->
+                        PillButton(name, light = tab == n, raw = false) { tab = n }
                     }
                 }
-            }
-            item {
-                val i = info
-                if (i != null) {
-                    Text(
-                        if (owned.isEmpty()) "Keine Titel in deiner Playlist" else "In deiner Playlist  ·  ${owned.size}",
-                        color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 34.dp)
-                    )
-                    // Side padding: the enlarged first cover is no longer clipped on the left
-                    if (owned.isNotEmpty()) LazyRow(
-                        Modifier.offset(x = (-14).dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 18.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(owned.size) { n ->
-                            val it = owned[n]
-                            PosterCard(it, { onOpen(it) }, Modifier.width(150.dp).then(if (n == 0) Modifier.focusRequester(first) else Modifier))
-                        }
-                    }
-                    val rest = (i.titles.size - owned.size).coerceAtLeast(0)
-                    if (rest > 0) Text("$rest weitere Titel dieser Person sind nicht in deiner Playlist.", color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
-                } else if (!loaded) Text("Lade …", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(top = 34.dp))
+                when (tab) {
+                    0 -> OverviewTab(owned, onOpen, first)
+                    else -> FilmographyTab(entries, kindFilter, { kindFilter = it }, onOpen, first, loaded && info == null)
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun FactRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(label, color = Muted, fontSize = 14.sp, modifier = Modifier.width(110.dp))
+        Text(raw = true, text = value, color = Color.White, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun OverviewTab(owned: List<Item>, onOpen: (Item) -> Unit, first: FocusRequester) {
+    Text(
+        if (owned.isEmpty()) "Keine Titel in deiner Playlist" else "In deiner Playlist  ·  ${owned.size}",
+        color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold
+    )
+    if (owned.isNotEmpty()) LazyRow(
+        Modifier.offset(x = (-14).dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 18.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(owned.size) { n ->
+            val it = owned[n]
+            PosterCard(it, { onOpen(it) }, Modifier.width(150.dp).then(if (n == 0) Modifier.focusRequester(first) else Modifier))
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun FilmographyTab(
+    entries: List<FilmoEntry>, kindFilter: Int, onFilter: (Int) -> Unit, onOpen: (Item) -> Unit, first: FocusRequester, failed: Boolean
+) {
+    val shown = PersonFilmoLogic.visible(entries, kindFilter)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            Lang.tr("In deiner Playlist: {0} von {1}").replace("{0}", PersonFilmoLogic.inPlaylist(entries).toString()).replace("{1}", entries.size.toString()),
+            color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, raw = true, modifier = Modifier.weight(1f)
+        )
+        listOf("Alle", "Filme", "Serien").forEachIndexed { n, name ->
+            PillButton(name, light = kindFilter == n) { onFilter(n) }
+        }
+    }
+    when {
+        entries.isEmpty() && failed -> Text("Keine Titel in deiner Playlist", color = Muted, fontSize = 16.sp)
+        shown.isEmpty() -> Text("Keine Titel für diesen Filter.", color = Muted, fontSize = 16.sp)
+        else -> LazyVerticalGrid(
+            columns = GridCells.Adaptive(150.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(shown.size) { n ->
+                val e = shown[n]
+                val mod = Modifier.fillMaxWidth().then(if (n == 0) Modifier.focusRequester(first) else Modifier)
+                val item = e.item
+                if (item != null) PosterCard(item, { onOpen(item) }, mod)
+                else MissingCard(e, mod)
+            }
+        }
+    }
+}
+
+/** A title of the person that is NOT in the own playlist: dimmed, marked, not clickable. */
+@Composable
+private fun MissingCard(e: FilmoEntry, modifier: Modifier) {
+    Column(modifier.graphicsLayer { alpha = 0.5f }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(DS.RadiusM)).background(Surf),
+            contentAlignment = Alignment.Center
+        ) {
+            if (e.poster != null) AsyncImage(e.poster, e.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color(0x66000000)), contentAlignment = Alignment.Center) {
+                Text("Nicht in der Playlist", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            }
+        }
+        Text(raw = true, text = e.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        e.year?.let { Text(raw = true, text = it.toString(), color = Muted, fontSize = 13.sp) }
     }
 }

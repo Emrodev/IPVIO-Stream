@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -373,15 +374,54 @@ internal fun SportFilter(
     firstReq: FocusRequester? = null,
     /** Target of Down from every pill (e.g. the competition row below), null = default search. */
     down: FocusRequester? = null,
+    modifier: Modifier = Modifier,
+    /** Space before the first pill (smaller when the filter sits next to the date stepper). */
+    startPad: Dp = DS.PageX,
     onSel: (String?) -> Unit
 ) {
     val dn = if (down != null) Modifier.focusProperties { this.down = down } else Modifier
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(dpx(10)), contentPadding = PaddingValues(horizontal = DS.PageX, vertical = dpx(4))) {
+    // Cleaner (maintainer, 23 Nov 2026): with counts, only the sports that have games are shown (plus the chosen one),
+    // not all ten with many empty ones
+    val sports = SportData.SPORTS.filter { counts == null || (counts[it.key] ?: 0) > 0 || it.key == sel }
+    LazyRow(modifier, horizontalArrangement = Arrangement.spacedBy(dpx(10)), contentPadding = PaddingValues(start = startPad, end = DS.PageX, top = dpx(4), bottom = dpx(4))) {
         item(key = "all") { FilterPill("Alle", sel == null, (if (firstReq != null) Modifier.trackFocus(firstReq) else Modifier.trackFocus()).then(dn)) { onSel(null) } }
-        items(SportData.SPORTS, key = { it.key }) { s ->
+        items(sports, key = { it.key }) { s ->
             val n = counts?.get(s.key)
             FilterPill(Lang.tr(s.label) + (if (n != null && n > 0) "  $n" else ""), sel == s.key, Modifier.trackFocus().then(dn), raw = true) { onSel(if (sel == s.key) null else s.key) }
         }
+    }
+}
+
+/**
+ * Sport choice as ONE button with a list (maintainer, 23 Nov 2026: the rows of filter pills looked too busy).
+ * The list has "All sports" and the sports with games, each with its number of games ([counts] null = all sports, no numbers).
+ */
+@Composable
+internal fun SportDropdown(sel: String?, counts: Map<String, Int>?, modifier: Modifier = Modifier, onSel: (String?) -> Unit) {
+    val sports = SportData.SPORTS.filter { counts == null || (counts[it.key] ?: 0) > 0 || it.key == sel }
+    val labels = listOf(Lang.tr("Alle Sportarten")) + sports.map { s ->
+        Lang.tr(s.label) + (counts?.get(s.key)?.takeIf { it > 0 }?.let { "  ·  $it" } ?: "")
+    }
+    val cur = sports.indexOfFirst { it.key == sel }.let { if (it < 0) 0 else it + 1 }
+    DropdownPill("Sport", labels[cur], labels, cur, active = sel != null, modifier = modifier, icon = FIcon.Genre) { i ->
+        onSel(if (i == 0) null else sports[i - 1].key)
+    }
+}
+
+/**
+ * Compact date choice (maintainer, 23 Nov 2026: the hub was too cluttered): previous day, the chosen day as text
+ * ("Today · Mon 23.11."), next day, and "Today" only when another day is shown. Replaces the bar of nine pills.
+ */
+@Composable
+internal fun DateStepper(day: Int, range: IntRange, onDay: (Int) -> Unit) {
+    val sec = System.currentTimeMillis() / 1000 + day * 86_400L
+    val rel = when (day) { -1 -> Lang.tr("Gestern"); 0 -> Lang.tr("Heute"); 1 -> Lang.tr("Morgen"); else -> null }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(8))) {
+        FilterPill("", false, Modifier.trackFocus(), aicon = AIcon.Left) { onDay((day - 1).coerceIn(range)) }
+        Text(raw = true, text = (if (rel != null) "$rel · " else "") + dayLabel(sec), color = Color.White, fontSize = spx(17),
+            fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.widthIn(min = dpx(150)), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        FilterPill("", false, Modifier.trackFocus(), aicon = AIcon.Right) { onDay((day + 1).coerceIn(range)) }
+        if (day != 0) FilterPill("Heute", false, Modifier.trackFocus(), aicon = AIcon.Catchup) { onDay(0) }
     }
 }
 

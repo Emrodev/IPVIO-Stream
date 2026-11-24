@@ -34,11 +34,11 @@ object Lang {
 
     private fun register() {
         val t0 = android.os.SystemClock.elapsedRealtime()
-        I18nCore.load(DictW, DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO, DictP, DictEn1, DictEn2, DictEn3, DictPm)
+        I18nCore.load(DictW, DictA, DictB, DictC, DictD, DictE, DictF, DictG, DictH, DictI, DictJ, DictK, DictL, DictM, DictN, DictO, DictP, DictEn1, DictEn2, DictEn3, DictEn4, DictPm, DictT051, DictT055)
         // 1.4.5: only registered here; I18nCore parses a language the first time it is used (German: never)
-        I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6, DictEnNl, DictNlW)
-        I18nCore.loadColumn(I18nCore.CODES.indexOf("ar"), DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6, DictEnAr)
-        I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPlW, DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7, DictPl8, DictEnPl)
+        I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNl1, DictNl2, DictNl3, DictNl4, DictNl5, DictNl6, DictEnNl, DictNlW, DictT051Nl, DictT055Nl)
+        I18nCore.loadColumn(I18nCore.CODES.indexOf("ar"), DictAr1, DictAr2, DictAr3, DictAr4, DictAr5, DictAr6, DictEnAr, DictT051Ar, DictT055Ar)
+        I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPlW, DictPl1, DictPl2, DictPl3, DictPl4, DictPl5, DictPl6, DictPl7, DictPl8, DictEnPl, DictT051Pl, DictT055Pl)
         loadMs = android.os.SystemClock.elapsedRealtime() - t0
         loaded = true
     }

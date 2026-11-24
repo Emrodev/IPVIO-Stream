@@ -54,10 +54,6 @@ object LiveMemory {
 /** Entering a name (new channel list, rename). */
 private class NameAsk(val title: String, val initial: String, val onSave: (String) -> Unit)
 
-/** Chosen source in Live TV with several playlists (-1 = all), valid for the running session. */
-object LiveSource {
-    var k by mutableIntStateOf(-1)
-}
 
 /** Held Up/Down key in the channel list: time of the last repeat event (plain field, not state, so writing it never recomposes). */
 object LiveHold {
@@ -105,17 +101,19 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // After closing the selection bring the focus back to the row (otherwise it gets lost)
     LaunchedEffect(plBack) { if (plBack) { plBack = false; runCatching { plFocus.requestFocus() } } }
     val plScope = rememberCoroutineScope()
-    val srcK = if (LiveSource.k in srcNames.indices && srcNames.size > 1) LiveSource.k else -1
+    // Playlists used by Live TV (T-051): source indices, empty = all shown playlists
+    val srcVer = AreaSource.version
+    val srcK = remember(srcVer, srcNames, PlaylistMode.version) { AreaSource.sources(ctx, SectionSourceLogic.SECTION_LIVE) }
     // Private categories (T-028) stay in their own category only: not in "All channels", genres, search, Multi view
-    val live = remember(liveAll, srcK, PrivateCats.version) { PrivateCats.filter(if (srcK < 0) liveAll else liveAll.filter { it.src == srcK }) }
+    val live = remember(liveAll, srcK, PrivateCats.version) { PrivateCats.filter(if (srcK.isEmpty()) liveAll else liveAll.filter { it.src in srcK }) }
     val groups = remember(groupsAll, srcK) {
-        if (srcK < 0) groupsAll else LinkedHashMap<String, List<Item>>().also { m ->
-            for ((g, l) in groupsAll) { val f = l.filter { it.src == srcK }; if (f.isNotEmpty()) m[g] = f }
+        if (srcK.isEmpty()) groupsAll else LinkedHashMap<String, List<Item>>().also { m ->
+            for ((g, l) in groupsAll) { val f = l.filter { it.src in srcK }; if (f.isNotEmpty()) m[g] = f }
         }
     }
     // Genres (sports, movies, documentary, kids, news, music) – detected by category and channel name
     val genres = remember(live) { LiveGenre.split(live) }
-    val favs = remember(favsAll, srcK) { if (srcK < 0) favsAll else favsAll.filter { it.src == srcK } }
+    val favs = remember(favsAll, srcK) { if (srcK.isEmpty()) favsAll else favsAll.filter { it.src in srcK } }
     CatFavs.init(ctx)
     ChannelLists.init(ctx)
     remember { LiveQuality.init(ctx) }
@@ -321,42 +319,26 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "PL") {
-                        // Choose playlist (round 22): "All" (with several shown), filter one of the shown sources
-                        // or activate and load another playlist – without going into the settings.
-                        val pls = PlaylistStore.lists.toList()
-                        val multiView = srcNames.size > 1
-                        val opts = (if (multiView) listOf(Lang.tr("Alle Playlists")) else emptyList()) + pls.map { it.name }
-                        val off = if (multiView) 1 else 0
-                        val curIdx = if (multiView && srcK < 0) 0 else {
-                            val si = if (multiView) srcK else 0
-                            val pi = pls.indices.firstOrNull { PlaylistStore.shownIndex(it) == si } ?: PlaylistStore.active
-                            pi + off
-                        }
-                        val lbl = Lang.tr("Playlist") + ": " + (opts.getOrNull(curIdx) ?: "")
+                        // Choose playlists (T-051): tick several shown playlists, "All", or activate one that is not shown yet
+                        var plChanged by remember { mutableStateOf(false) }
+                        val lbl = Lang.tr("Playlist") + ": " + sectionPlaylistValue(ctx, SectionSourceLogic.SECTION_LIVE, AreaSource.selectedKeys(ctx, SectionSourceLogic.SECTION_LIVE))
                         Box {
-                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Download, raw = true) { plOpen = true }
-                            if (plOpen) OptionPopup(opts, curIdx, { plOpen = false; plBack = true }) { pick ->
+                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Download, raw = true) { plChanged = false; plOpen = true }
+                            if (plOpen) SectionPlaylistPopup(SectionSourceLogic.SECTION_LIVE, onChanged = { plChanged = true }) {
                                 plOpen = false; plBack = true
-                                if (multiView && pick == 0) LiveSource.k = -1
-                                else {
-                                    val pi = pick - off
-                                    val si = PlaylistStore.shownIndex(pi)
-                                    if (si >= 0) { if (multiView) LiveSource.k = si }
-                                    else {
-                                        LiveSource.k = -1
-                                        PlaylistStore.switchAsync(ctx, pi)
-                                    }
-                                }
-                                // The chosen category may not exist in the other playlist: then "All channels"
-                                sel = "ALL"
+                                // The chosen category may not exist in the new selection: then "All channels"
+                                if (plChanged) sel = "ALL"
                             }
                         }
                         return@itemsIndexed
                     }
                     if (n == "SRC") {
-                        val lbl = Lang.tr("Quelle") + ": " + (if (srcK < 0) Lang.tr("Alle") else srcNames[srcK])
+                        val lbl = Lang.tr("Quelle") + ": " + (if (srcK.isEmpty()) Lang.tr("Alle") else srcK.sorted().mapNotNull { srcNames.getOrNull(it) }.joinToString(", ").ifEmpty { Lang.tr("Keine Playlist") })
                         CatRow(lbl, -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Sliders, raw = true) {
-                            LiveSource.k = if (srcK + 1 >= srcNames.size) -1 else srcK + 1
+                            // One press: All -> first shown playlist -> next -> ... -> All (same order as before)
+                            val cur = if (srcK.size == 1) srcK.first() else -1
+                            val next = cur + 1
+                            AreaSource.selectSource(ctx, SectionSourceLogic.SECTION_LIVE, if (next >= srcNames.size) -1 else next)
                             // The chosen category may not exist in the other source: then "All channels"
                             if (sel != FAV_CAT && sel != "ALL" && ChannelLists.byKey(sel) == null) sel = "ALL"
                         }

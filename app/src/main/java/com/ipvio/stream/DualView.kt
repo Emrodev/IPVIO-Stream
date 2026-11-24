@@ -47,7 +47,7 @@ import androidx.media3.ui.PlayerView
  * Note: many providers allow only one connection per login – then the second stream drops and the app reports it.
  */
 @Composable
-internal fun SecondStream(item: Item, split: Boolean, audioOn: Boolean, modifier: Modifier, small: Boolean = false) {
+internal fun SecondStream(item: Item, split: Boolean, audioOn: Boolean, modifier: Modifier, small: Boolean = false, grid: Boolean = false, startDelayMs: Long = 0L) {
     val ctx = LocalContext.current
     var failed by remember { mutableStateOf(false) }
     // Hint for the user: why it failed and what to try (shown below the message)
@@ -81,21 +81,25 @@ internal fun SecondStream(item: Item, split: Boolean, audioOn: Boolean, modifier
                 }
         }.getOrNull()
     }
-    DisposableEffect(Unit) { onDispose { runCatching { p?.release() } } }
+    // Stop first: the second picture's sound ends at once when it leaves (T-051)
+    DisposableEffect(Unit) { onDispose { runCatching { p?.stop() }; runCatching { p?.release() } } }
     // Limit resolution: SD is enough in the small window, split at most 720p
     // Multi view (small): the tile with sound gets a bit more, the muted one stays light (less load, less lag)
-    LaunchedEffect(split, small, audioOn) {
+    // grid (T-053, four tiles): every tile stays light; the tile with sound may be a little larger
+    LaunchedEffect(split, small, audioOn, grid) {
         runCatching {
             if (p != null) p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
                 .setMaxVideoSize(
-                    if (small) (if (audioOn) 960 else 640) else if (split) 1280 else 854,
-                    if (small) (if (audioOn) 540 else 360) else if (split) 720 else 480
+                    if (grid) (if (audioOn) 854 else 640) else if (small) (if (audioOn) 960 else 640) else if (split) 1280 else 854,
+                    if (grid) (if (audioOn) 480 else 360) else if (small) (if (audioOn) 540 else 360) else if (split) 720 else 480
                 )
-                .setMaxVideoBitrate(if (small) (if (audioOn) 3_500_000 else 1_200_000) else Int.MAX_VALUE)
+                .setMaxVideoBitrate(if (grid) (if (audioOn) 2_000_000 else 800_000) else if (small) (if (audioOn) 3_500_000 else 1_200_000) else Int.MAX_VALUE)
                 .build()
         }
     }
     LaunchedEffect(item.url, retryTick) {
+        // Staggered start (T-053): the tiles of a grid do not all open their connections at the same moment
+        if (startDelayMs > 0 && retryTick == 0) kotlinx.coroutines.delay(startDelayMs)
         if (retryTick > 0) kotlinx.coroutines.delay(1_500) else { retries = 0; tip = "" }
         failed = false
         // Stalker portal: fetch the real address from the portal only now
