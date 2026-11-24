@@ -979,8 +979,9 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
 
 /** Text for the phone page (T-055): the last crash report if there is one, then the whole diagnostics report. */
 internal fun phoneDiagReport(ctx: Context): String {
-    val crash = ImportFiles.crashText(ctx)?.takeIf { it.isNotBlank() }?.let { "Last crash\n$it\n\n" } ?: ""
-    return crash + diagReportLines(ctx).filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { it.first + ": " + it.second }
+    // Labels in the language of the TV (T-055); values are the device's own texts
+    val crash = ImportFiles.crashText(ctx)?.takeIf { it.isNotBlank() }?.let { Lang.tr("Letzter Absturz") + "\n" + it + "\n\n" } ?: ""
+    return crash + diagReportLines(ctx).filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { Lang.tr(it.first) + ": " + it.second }
 }
 
 @Composable
