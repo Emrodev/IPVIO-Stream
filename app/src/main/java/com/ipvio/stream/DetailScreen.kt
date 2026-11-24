@@ -198,7 +198,7 @@ private fun DetailScreenFull(
     val qCap = remember { PlaybackPrefs.cap(ctx) }
     fun pick(ep: Episode) = pickVariant(ep, prefQ, prefLang, prefLabel, qCap)
     val playUrl = if (item.kind == Kind.SERIES) eps.firstOrNull()?.let { pick(it).url }
-        else movieVars.firstOrNull { it.label == prefLabel }?.url ?: item.url
+        else DownloadStore.localUrlFor(ctx, item) ?: (movieVars.firstOrNull { it.label == prefLabel }?.url ?: item.url)
 
     val tmdbId = meta?.tmdbId
     val imdbId = meta?.imdbId
@@ -531,9 +531,16 @@ private fun DetailScreenFull(
                                     openTrailer(ctx, meta?.trailerKey, item.title)
                                 }
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
+                                // T-052a: download of a movie file (step 1)
+                                playUrl?.let { VodDownloadButton(item, it, bh) }
+                                // T-052a / T-055: every episode of the shown season goes into the download queue (best quality each).
+                                // Shown for every series, also before the first play (it was only inside the resume branch).
+                                if (item.kind == Kind.SERIES && eps.isNotEmpty()) SeasonDownloadButton(item, eps, { ep -> pick(ep).url }, bh)
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)
                             Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
+                                // Own row for the episode picker: the top row is already full and cut off the button
+                                if (item.kind == Kind.SERIES && eps.isNotEmpty()) EpisodePickButton(item, eps, { ep -> pick(ep).url }, bh)
                                 // A finished resume point would otherwise keep offering "Continue"
                                 fun dropResume(keys: Collection<Long>) {
                                     if (resume == null) return
@@ -543,19 +550,31 @@ private fun DetailScreenFull(
                                 if (item.kind == Kind.SERIES) {
                                     val seasonKeys = eps.map { ResumeLogic.key(it.season, it.num) }
                                     val seasonSeen = seasonKeys.isNotEmpty() && seasonKeys.all { progress[it]?.done == true }
-                                    HeroButton(if (seasonSeen) "Staffel zurücksetzen" else "Staffel gesehen", if (seasonSeen) AIcon.Rewind else AIcon.Check, false, Modifier, bh) {
+                                    val allKeys = item.episodes.map { ResumeLogic.key(it.season, it.num) }
+                                    val allSeen = allKeys.isNotEmpty() && allKeys.all { progress[it]?.done == true }
+                                    fun toggleSeason() {
                                         EpProgress.mark(ctx, item.id, seasonKeys, !seasonSeen)
                                         if (!seasonSeen) dropResume(seasonKeys)
                                         progVer++
                                     }
+                                    fun toggleAll() {
+                                        EpProgress.mark(ctx, item.id, allKeys, !allSeen)
+                                        if (!allSeen) dropResume(allKeys)
+                                        progVer++
+                                    }
                                     if (seasons.size > 1) {
-                                        val allKeys = item.episodes.map { ResumeLogic.key(it.season, it.num) }
-                                        val allSeen = allKeys.isNotEmpty() && allKeys.all { progress[it]?.done == true }
-                                        HeroButton(if (allSeen) "Serie zurücksetzen" else "Serie gesehen", if (allSeen) AIcon.Rewind else AIcon.Check, false, Modifier, bh) {
-                                            EpProgress.mark(ctx, item.id, allKeys, !allSeen)
-                                            if (!allSeen) dropResume(allKeys)
-                                            progVer++
-                                        }
+                                        // One button for both cases: it opens a small choice (this season or the whole series)
+                                        var watchedOpen by remember { mutableStateOf(false) }
+                                        HeroButton("Gesehen", AIcon.Check, false, Modifier, bh) { watchedOpen = true }
+                                        if (watchedOpen) WatchedChoiceDialog(
+                                            seasonLabel = if (seasonSeen) "Staffel zurücksetzen" else "Staffel gesehen",
+                                            allLabel = if (allSeen) "Serie zurücksetzen" else "Serie gesehen",
+                                            onSeason = { toggleSeason(); watchedOpen = false },
+                                            onAll = { toggleAll(); watchedOpen = false },
+                                            onClose = { watchedOpen = false }
+                                        )
+                                    } else {
+                                        HeroButton(if (seasonSeen) "Staffel zurücksetzen" else "Staffel gesehen", if (seasonSeen) AIcon.Rewind else AIcon.Check, false, Modifier, bh) { toggleSeason() }
                                     }
                                 } else if (item.kind == Kind.MOVIE) {
                                     val k = ResumeLogic.key(0, 0)
@@ -720,7 +739,13 @@ private fun DetailScreenFull(
                                         if (!seen && resumeSE?.let { ResumeLogic.key(it.first, it.second) } == k) WatchStore.remove(ctx, item.id)
                                         progVer++
                                     }
-                                ) { onPlay(v.url, item.title + " S" + ep.season + "E" + ep.num, 0L) }
+                                    , dlState = DownloadStore.progress[DownloadLogic.keyFor(episodeDownloadItem(item, ep))],
+                                    onMenu = { startEpisodeDownload(ctx, item, ep, v.url) }
+                                ) {
+                                    // a finished download plays from the device, otherwise the stream as before
+                                    val local = DownloadStore.localUrlFor(ctx, episodeDownloadItem(item, ep))
+                                    onPlay(local ?: v.url, item.title + " S" + ep.season + "E" + ep.num, 0L)
+                                }
                             }
                         }
                     }
@@ -741,8 +766,23 @@ private fun DetailScreenFull(
     }
 }
 
+/** "Watched" choice of a series with several seasons: this season or the whole series. Each toggles its own state. */
 @Composable
-private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.EpPos?, modifier: Modifier, onFocus: () -> Unit, onToggleSeen: () -> Unit, onClick: () -> Unit) {
+private fun WatchedChoiceDialog(seasonLabel: String, allLabel: String, onSeason: () -> Unit, onAll: () -> Unit, onClose: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
+        Column(
+            Modifier.width(560.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PillButton(seasonLabel, light = true) { onSeason() }
+            PillButton(allLabel, light = true) { onAll() }
+            PillButton("Abbrechen") { onClose() }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.EpPos?, modifier: Modifier, onFocus: () -> Unit, onToggleSeen: () -> Unit, dlState: Int? = null, onMenu: (() -> Unit)? = null, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(dpx(16))
     // Round 17b: the selected episode floats forward (glass, shadow, slightly larger) instead of a white frame; the others stay calm
@@ -755,6 +795,8 @@ private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.E
             .border(1.dp, if (f) Color(0x33FFFFFF) else Color.Transparent, shape)
             .onFocusChanged { f = it.isFocused; if (it.isFocused) onFocus() }
             .favKeys(onToggleSeen)
+            // T-052a: menu key starts the download of this episode
+            .then(if (onMenu != null) Modifier.onPreviewKeyEvent { ev -> if (ev.type == KeyEventType.KeyDown && ev.key == Key.Menu) { onMenu(); true } else false } else Modifier)
             .clickable(onClick = onClick)
             .padding(dpx(14)),
         horizontalArrangement = Arrangement.spacedBy(dpx(22)), verticalAlignment = Alignment.CenterVertically
@@ -784,6 +826,9 @@ private fun EpisodeRow(ep: Episode, em: EpMeta?, v: Variant, prog: ResumeLogic.E
                 em?.imdb?.let { Badge("IMDb $it", Color(0xFFF5C518), Color.Black) }
                 if (em?.imdb == null) em?.rating?.let { RatingBadge(it, Color(0x26FFFFFF)) }
                 em?.runtime?.let { Badge("$it Min") }
+                // T-052a: download state of the episode
+                if (dlState == DownloadStore.DONE) Badge("Heruntergeladen", DS.Scrim, Accent2)
+                else if (dlState != null && dlState >= 0) Badge(Lang.tr("Lädt {0} %").replace("{0}", dlState.toString()), DS.Scrim, Accent2)
             }
             em?.air?.let { Text(raw = true, text = it, color = Muted, fontSize = spx(16)) }
             em?.overview?.let { Text(raw = true, text = it, color = if (f) Tok.TextMid else Tok.TextLow, fontSize = spx(18), lineHeight = spx(25), maxLines = 3, overflow = TextOverflow.Ellipsis) }

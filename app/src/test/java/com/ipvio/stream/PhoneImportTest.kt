@@ -128,4 +128,12 @@ class PhoneImportTest {
         assertTrue(PhoneImportLogic.page(1).contains("Send to TV"))
         assertTrue(PhoneImportLogic.message(7, "ok").contains("Envoyé"))
     }
+
+    @Test fun vpnSectionOnlyWhenTheTvOffersIt() {
+        assertFalse(PhoneImportLogic.page(1).contains("id=\"vf\""))
+        val withVpn = PhoneImportLogic.page(1, PhoneImportLogic.Features(vpn = true))
+        assertTrue(withVpn.contains("id=\"vf\""))
+        assertTrue(withVpn.contains("fetch('/vpn?code="))
+        assertTrue(withVpn.contains("WireGuard configuration (VPN)"))
+    }
 }

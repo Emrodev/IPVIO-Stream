@@ -54,7 +54,7 @@ internal fun TransferSection(ctx: Context) {
                 if (ok) Handler(Looper.getMainLooper()).postDelayed({ Profiles.restart(ctx) }, 1500)
                 ok
             }
-            crash = { ImportFiles.crashText(ctx) }
+            crash = { phoneDiagReport(ctx) }
         }
     }
     DisposableEffect(Unit) { onDispose { server.stop() } }

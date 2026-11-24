@@ -64,7 +64,7 @@ fun FilterPill(text: String, active: Boolean, modifier: Modifier = Modifier, ico
     }
 }
 
-private val belowAnchor = object : PopupPositionProvider {
+internal val belowAnchor = object : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize
     ): IntOffset {

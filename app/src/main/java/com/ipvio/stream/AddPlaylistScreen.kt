@@ -83,7 +83,7 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
         // Round 20: upload a playlist file from the phone, read the crash report on the phone
         receiver.uploadDir = ImportFiles.tmpDir(ctx)
         receiver.saveUpload = { name, f -> ImportFiles.save(ctx, name, f) }
-        receiver.crash = { ImportFiles.crashText(ctx) }
+        receiver.crash = { phoneDiagReport(ctx) }
         // Full transfer from another device (settings, history, playlists with logins): also possible from the phone page
         receiver.restore = { t ->
             val ok = Backup.restoreText(ctx, t) >= 0

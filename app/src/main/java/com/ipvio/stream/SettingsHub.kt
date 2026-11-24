@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
@@ -113,13 +114,14 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 Text("Einstellungen", color = Color.White, fontSize = spx(38), fontWeight = FontWeight.ExtraBold)
                 Text("Alles rund um Aussehen, Wiedergabe und Konto", color = Tok.TextLow, fontSize = spx(16))
             }
-            CATS.chunked(3).forEachIndexed { r, row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(dpx(16))) {
+            // T-050b: 4 columns and smaller tiles, so more settings areas are visible at once
+            CATS.chunked(4).forEachIndexed { r, row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
                     row.forEachIndexed { c, cat ->
-                        val idx = r * 3 + c
+                        val idx = r * 4 + c
                         SettingsCard(cat, idx, Modifier.weight(1f).focusRequester(cardFocus[idx])) { last = idx; page = idx }
                     }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         } else {
@@ -193,7 +195,7 @@ private fun SettingsCard(cat: Cat, idx: Int, modifier: Modifier, onClick: () -> 
     val shape = RoundedCornerShape(dpx(14))
     val (c1, c2, ink) = catColors(idx)
     Row(
-        modifier.height(dpx(96)).graphicsLayer { scaleX = s; scaleY = s }.clip(shape)
+        modifier.height(dpx(84)).graphicsLayer { scaleX = s; scaleY = s }.clip(shape)
             .background(Brush.horizontalGradient(listOf(c1, c2)))
             .border(if (f) 3.dp else 1.dp, if (f) Color.White else ink.copy(alpha = .22f), shape)
             .onFocusChanged { f = it.isFocused }
@@ -208,7 +210,7 @@ private fun SettingsCard(cat: Cat, idx: Int, modifier: Modifier, onClick: () -> 
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(dpx(3))) {
             Text(cat.title, color = Color.White, fontSize = spx(20), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(cat.sub, color = Tok.TextMid, fontSize = spx(13), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(cat.sub, color = Tok.TextMid, fontSize = spx(13), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         AppIcon(AIcon.Right, Color.White, size = dpx(18))
     }
@@ -563,7 +565,7 @@ private fun StoragePage(ctx: Context) {
     // Sizes and deleting run in the background: the metadata folder can contain tens of thousands of files
     var sizes by remember { mutableStateOf(List(General.AREAS.size) { 0L }) }
     LaunchedEffect(tick) { sizes = withContext(Dispatchers.IO) { General.AREAS.map { General.areaSize(ctx, it) } } }
-    SettingsTabs(listOf("Zwischenspeicher", "Verlauf", "Sicherung"), "storage") { tab ->
+    SettingsTabs(listOf("Zwischenspeicher", "Verlauf", "Sicherung", "Downloads"), "storage") { tab ->
     if (tab == 0) {
     General.AREAS.forEachIndexed { i, a ->
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -585,6 +587,7 @@ private fun StoragePage(ctx: Context) {
     }
     Hint("Meine Liste und Favoriten bleiben immer erhalten.")
     }
+    if (tab == 3) DownloadsSettings(ctx)
     if (tab == 2) {
     var backupMsg by remember { mutableStateOf<String?>(null) }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -913,15 +916,15 @@ private fun DesignPage(ctx: Context) {
     }
 }
 
-@Composable
-private fun DiagPage(ctx: Context, reload: () -> Unit) {
-    val cfg = LocalConfiguration.current
+/** Diagnostics report as label and value pairs (T-055). The TV page and the phone page both show it. */
+internal fun diagReportLines(ctx: Context): List<Pair<String, String>> {
+    val cfg = ctx.resources.configuration
     val items = PlaylistStore.channels
-    val counts = remember(items) { Triple(items.count { it.kind == Kind.LIVE }, items.count { it.kind == Kind.MOVIE }, items.count { it.kind == Kind.SERIES }) }
-    val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?" }
+    val counts = Triple(items.count { it.kind == Kind.LIVE }, items.count { it.kind == Kind.MOVIE }, items.count { it.kind == Kind.SERIES })
+    val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?"
     val dens = ctx.resources.displayMetrics.density
     val err = Diag.lastError?.let { it + "  (" + DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(Diag.lastErrorAt)) + ")" } ?: "keiner seit dem Start"
-    val lines = listOf(
+    return listOf(
         "Version" to version,
         "Installiert" to runCatching { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(ctx.packageManager.getPackageInfo(ctx.packageName, 0).lastUpdateTime)) }.getOrDefault("?"),
         "Sprache" to (Lang.code() + " · Index " + Lang.index),
@@ -943,17 +946,13 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
         "Weiterschauen" to (ResumeLog.also { it.init(ctx) }.lines.take(12).joinToString("\n") { ResumeLog.display(it) }.ifBlank { "noch nichts gemerkt" }),
         "Letzter Absturz" to (CrashLog.last(ctx)?.let { it.first + "  (" + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.second)) + ")" } ?: "keiner")
     )
-    lines.filter { it.first != "Log" || it.second.isNotEmpty() }.forEach { (k, v) ->
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
-            Text(v, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp))
-        }
-    }
-    // Hint before the buttons: text below the last button never scrolls the list into view (nothing below is selectable)
-    Hint("Der Bericht enthält keine Adressen, Benutzernamen oder Passwörter. Er wird nur in die Zwischenablage kopiert und nirgendwohin gesendet.")
-    Hint("Auf dem Fernseher lässt sich die Zwischenablage oft nicht nutzen: Unter Einstellungen > Speicher > „Übertragung im WLAN starten“ kannst du den Bericht am Handy öffnen (Seite „Letzten Absturzbericht anzeigen“) und dort kopieren.")
+}
+
+@Composable
+private fun DiagPage(ctx: Context, reload: () -> Unit) {
+    val lines = diagReportLines(ctx)
+    // T-055: the buttons sit at the top. Below a long list the remote used to jump past every entry to the last button.
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PillButton("Playlist neu laden", light = true, icon = AIcon.Refresh) { reload() }
         PillButton("Bericht kopieren") {
             val text = lines.filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { it.first + ": " + it.second }
             runCatching {
@@ -961,7 +960,28 @@ private fun DiagPage(ctx: Context, reload: () -> Unit) {
                 cm?.setPrimaryClip(android.content.ClipData.newPlainText("IPVIO Diagnose", text))
             }
         }
+        PillButton("Playlist neu laden", light = true, icon = AIcon.Refresh) { reload() }
     }
+    Hint("Der Bericht enthält keine Adressen, Benutzernamen oder Passwörter. Er wird nur in die Zwischenablage kopiert und nirgendwohin gesendet.")
+    Hint("Auf dem Fernseher lässt sich die Zwischenablage oft nicht nutzen: Unter Einstellungen > Speicher > „Übertragung im WLAN starten“ kannst du den Bericht am Handy öffnen (Seite „Letzten Absturzbericht anzeigen“) und dort kopieren.")
+    // T-055: every line of every entry is its own focusable row, so the remote steps through the log one entry at a time
+    lines.filter { it.first != "Log" || it.second.isNotEmpty() }.forEach { (k, v) ->
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                v.split("\n").forEach { line ->
+                    Text(line, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp).focusable())
+                }
+            }
+        }
+    }
+}
+
+/** Text for the phone page (T-055): the last crash report if there is one, then the whole diagnostics report. */
+internal fun phoneDiagReport(ctx: Context): String {
+    // Labels in the language of the TV (T-055); values are the device's own texts
+    val crash = ImportFiles.crashText(ctx)?.takeIf { it.isNotBlank() }?.let { Lang.tr("Letzter Absturz") + "\n" + it + "\n\n" } ?: ""
+    return crash + diagReportLines(ctx).filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { Lang.tr(it.first) + ": " + it.second }
 }
 
 @Composable
@@ -1329,7 +1349,11 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
         ) {
             Column(Modifier.weight(1f)) {
                 Text(pl.name + if (isActive) "  ·  " + Lang.tr("Hauptliste") else if (shown) "  ·  " + Lang.tr("zusätzlich angezeigt") else "", color = if (isActive || shown) Accent2 else Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, raw = true)
-                Text(PlaylistStore.hostOf(pl.url), color = Muted, fontSize = 13.sp, maxLines = 1)
+                // Source type and content mode, visible without opening the edit window (a "Live TV only" list has no movies)
+                val srcType = when { StalkerLogic.parse(pl.url) != null -> "Stalker"; XtreamLogic.fromUrl(pl.url) != null -> "Xtream"; else -> "M3U" }
+                val plMode = PlaylistMode.version.let { PlaylistMode.get(ctx, pl.url) }   // version: redraw after a change
+                Text(PlaylistStore.hostOf(pl.url) + "  ·  " + srcType + (if (plMode != PlaylistMode.ALL) "  ·  " + Lang.tr(PlaylistMode.labels[plMode]) else ""),
+                    color = if (plMode != PlaylistMode.ALL) Accent2 else Muted, fontSize = 13.sp, maxLines = 1, raw = true)
                 // #111: channels, movies and series of this playlist as last loaded (nothing until it is loaded once)
                 PlaylistStore.typeCounts(ctx, pl.url)?.let { t ->
                     Text(PlaylistCountLogic.summary(t, Lang.tr("Live TV"), Lang.tr("Filme"), Lang.tr("Serien")), color = Muted, fontSize = 13.sp, maxLines = 1)
@@ -1342,6 +1366,12 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
             // Reload and Edit; everything else is in the edit window (T-048)
             if (PlaylistStore.reloadingOther == pl.url) Text("Wird neu geladen …", color = Accent2, fontSize = 14.sp)
             // Download this playlist again (the main list is reloaded where it is; another one is refreshed in the background)
+            // Content mode not "all": one press loads movies and series again (same steps as "Apply" in the edit window)
+            if (PlaylistMode.version.let { PlaylistMode.get(ctx, pl.url) } != PlaylistMode.ALL) SmallPill("Alle Inhalte zeigen") {
+                PlaylistMode.set(ctx, pl.url, PlaylistMode.ALL)
+                if (isActive) scope.launch { if (!PlaylistStore.reapplyLanguages(ctx)) PlaylistStore.applyMode(ctx) }
+                else PlaylistStore.reloadOtherAsync(ctx, i)
+            }
             SmallPill("Neu laden", icon = AIcon.Refresh) { if (isActive) reload() else PlaylistStore.reloadOtherAsync(ctx, i) }
             SmallPill("Bearbeiten") { editing = i }
         }

@@ -59,6 +59,11 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
         <receiver android:name=".ReminderReceiver" android:exported="false" />
+        <!-- T-052a: movie downloads (Media3 offline), foreground while downloading -->
+        <service
+            android:name=".VodDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <service
             android:name=".RecordService"
             android:exported="false"

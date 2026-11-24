@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -203,27 +204,28 @@ fun SportTab(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
                 contentPadding = PaddingValues(top = dpx(30), bottom = dpx(60)),
                 verticalArrangement = Arrangement.spacedBy(dpx(24))
             ) {
+                // Makeover (maintainer, 23 Nov 2026): date stepper and one settings button instead of eleven pills
                 item(key = "filters") {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(dpx(10)), contentPadding = PaddingValues(vertical = dpx(4), horizontal = dpx(4))) {
-                        item(key = "dm1") { FilterPill("Gestern", day == -1) { day = -1 } }
-                        item(key = "d0") { FilterPill("Heute", day == 0) { day = 0 } }
-                        item(key = "d1") { FilterPill("Morgen", day == 1) { day = 1 } }
-                        // Other days of the week: only results and schedule of the leagues
-                        items(5, key = { "dx$it" }) { k ->
-                            val d = k + 2
-                            val f = java.text.SimpleDateFormat("EEE d.M.", java.util.Locale.getDefault()).apply { timeZone = zone }
-                            FilterPill(f.format(java.util.Date(System.currentTimeMillis() + d * 86_400_000L)), day == d, raw = true) { day = d }
-                        }
-                        item(key = "sep") { Box(Modifier.width(2.dp).height(dpx(28)).background(DS.Overlay3)) }
-                        item(key = "alert") {
-                            SportAlerts.init(ctx)
-                            FilterPill(if (SportAlerts.enabled) "Hinweise: An" else "Hinweise: Aus", false) { SportAlerts.setEnabled(ctx, !SportAlerts.enabled) }
-                        }
-                        item(key = "adelay") {
-                            FilterPill(Lang.tr("Verzögerung") + ": " + SportAlerts.delaySec + " s", false) { SportAlerts.cycleDelay(ctx) }
-                        }
-                        item(key = "live") {
-                            FilterPill(if (General.sportLive) "Live-Ergebnisse: An" else "Live-Ergebnisse: Aus", false) { General.setSportLive(ctx, !General.sportLive) }
+                    SportAlerts.init(ctx)
+                    var menu by remember { mutableStateOf(false) }
+                    Row(Modifier.padding(horizontal = dpx(4), vertical = dpx(4)), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(10))) {
+                        DateStepper(day, -1..6) { day = it }
+                        Box {
+                            FilterPill("Einstellungen", false, aicon = AIcon.Gear) { menu = true }
+                            if (menu) OptionPopup(
+                                listOf(
+                                    Lang.tr(if (SportAlerts.enabled) "Hinweise: An" else "Hinweise: Aus"),
+                                    Lang.tr("Verzögerung") + ": " + SportAlerts.delaySec + " s",
+                                    Lang.tr(if (General.sportLive) "Live-Ergebnisse: An" else "Live-Ergebnisse: Aus")
+                                ), -1, { menu = false }, listOf(AIcon.Bell, AIcon.Catchup, AIcon.Live)
+                            ) { i ->
+                                menu = false
+                                when (i) {
+                                    0 -> SportAlerts.setEnabled(ctx, !SportAlerts.enabled)
+                                    1 -> SportAlerts.cycleDelay(ctx)
+                                    else -> General.setSportLive(ctx, !General.sportLive)
+                                }
+                            }
                         }
                     }
                 }
@@ -247,14 +249,14 @@ fun SportTab(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
                     Column(verticalArrangement = Arrangement.spacedBy(dpx(10))) {
                         Text("Mini-Spielstand", color = Color.White, fontSize = spx(22), fontWeight = FontWeight.Bold)
                         Text("Ein kleines Fenster in der Ecke zeigt den Stand, solange eines deiner Teams spielt – auch beim Film oder auf einem anderen Sender.", color = Muted, fontSize = spx(15))
-                        Row(horizontalArrangement = Arrangement.spacedBy(dpx(8))) {
-                            FilterPill(if (SportAlerts.miniOn) "Fenster: An" else "Fenster: Aus", SportAlerts.miniOn) { SportAlerts.setMini(ctx, on = !SportAlerts.miniOn) }
-                            FilterPill(Lang.tr("Position") + ": " + Lang.tr(SportAlerts.POS_NAMES[SportAlerts.miniPos]), false) { SportAlerts.setMini(ctx, pos = (SportAlerts.miniPos + 1) % 4) }
-                            FilterPill(Lang.tr("Größe") + ": " + Lang.tr(SportAlerts.SIZE_NAMES[SportAlerts.miniSize]), false) { SportAlerts.setMini(ctx, size = (SportAlerts.miniSize + 1) % 3) }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(dpx(8))) {
-                            FilterPill(if (SportAlerts.miniNames) "Logos und Namen" else "Nur Logos", false) { SportAlerts.setMini(ctx, names = !SportAlerts.miniNames) }
-                            FilterPill(if (SportAlerts.miniTime) "Spielzeit: An" else "Spielzeit: Aus", false) { SportAlerts.setMini(ctx, time = !SportAlerts.miniTime) }
+                        // Settings rows as on the settings pages, instead of five cycling pills
+                        Column(Modifier.widthIn(max = dpx(760)), verticalArrangement = Arrangement.spacedBy(dpx(8))) {
+                            ToggleRow("Fenster", null, SportAlerts.miniOn) { SportAlerts.setMini(ctx, on = it) }
+                            SelectRow("Position", Lang.tr(SportAlerts.POS_NAMES[SportAlerts.miniPos]), SportAlerts.POS_NAMES.map { Lang.tr(it) }, SportAlerts.miniPos) { SportAlerts.setMini(ctx, pos = it) }
+                            SelectRow("Größe", Lang.tr(SportAlerts.SIZE_NAMES[SportAlerts.miniSize]), SportAlerts.SIZE_NAMES.map { Lang.tr(it) }, SportAlerts.miniSize) { SportAlerts.setMini(ctx, size = it) }
+                            SelectRow("Anzeige", Lang.tr(if (SportAlerts.miniNames) "Logos und Namen" else "Nur Logos"),
+                                listOf(Lang.tr("Logos und Namen"), Lang.tr("Nur Logos")), if (SportAlerts.miniNames) 0 else 1) { SportAlerts.setMini(ctx, names = it == 0) }
+                            ToggleRow("Spielzeit", null, SportAlerts.miniTime) { SportAlerts.setMini(ctx, time = it) }
                         }
                     }
                 }
@@ -265,7 +267,7 @@ fun SportTab(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
                         Text("Abgewählte Ligen erscheinen nicht und werden nicht abgefragt.", color = Muted, fontSize = spx(15))
                         SportData.LEAGUES.chunked(3).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(dpx(8))) {
-                                row.forEach { l -> FilterPill((if (SportLeagues.on(l)) "✓ " else "") + l.name, SportLeagues.on(l), raw = true) { SportLeagues.toggle(ctx, l) } }
+                                row.forEach { l -> FilterPill(l.name, SportLeagues.on(l), raw = true, aicon = if (SportLeagues.on(l)) AIcon.Check else null) { SportLeagues.toggle(ctx, l) } }
                             }
                         }
                     }
@@ -304,7 +306,7 @@ fun SportTab(live: List<Item>, onPlay: (Item, List<Item>) -> Unit) {
                         Text("OK auf einem Team merkt es oder entfernt es wieder. Es erscheinen die Teams der Spiele des gewählten Tages.", color = Muted, fontSize = spx(15))
                         teams.chunked(3).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(dpx(8))) {
-                                row.forEach { t -> FilterPill((if (SportFavs.has(t)) "★ " else "") + t.short, SportFavs.has(t)) { SportFavs.toggle(ctx, t) } }
+                                row.forEach { t -> FilterPill(t.short, SportFavs.has(t), raw = true, aicon = if (SportFavs.has(t)) AIcon.Star else AIcon.StarOutline) { SportFavs.toggle(ctx, t) } }
                             }
                         }
                     }

@@ -242,6 +242,12 @@ private fun AppContent() {
 
     // W-004: "What's new" once after an update to a new version
     LaunchedEffect(Unit) { runCatching { WhatsNew.check(ctx) } }
+    // T-056: the search index is built in the background as soon as the list is there (and again after every list change),
+    // so opening the search does not wait for it. Same list object as the search screen uses, so the cache is hit.
+    val searchList = PlaylistStore.channels
+    LaunchedEffect(searchList) {
+        withContext(Dispatchers.Default) { runCatching { SearchCache.build(PrivateCats.visible(searchList)) } }
+    }
     // New app version on GitHub? Check silently once a day; a find appears in the bell at the top right.
     LaunchedEffect(Unit) {
         delay(3_000)   // only after the start, the playlist takes priority
@@ -443,6 +449,19 @@ private fun AppContent() {
         val d = detail
         val b = browse
         val c = cats
+        // T-056: name of the shown screen, for the opening time in the diagnostics log
+        val shownName = when {
+            p != null -> "Player"
+            personTop != null -> "Person"
+            d != null -> "Detail"
+            b != null -> "Browse"
+            c != null -> "Categories"
+            adding -> "Add playlist"
+            tab == 4 && all.isNotEmpty() -> "Search"
+            tab == MenuLogic.DOWNLOADS -> "Downloads"
+            else -> "Tab $tab"
+        }
+        ScreenTimer(shownName)
         when {
             p != null -> {
                 val zap = if (p.live || p.archive != null) {
@@ -467,7 +486,9 @@ private fun AppContent() {
                     PlayerScreen(p, zap, liveAll, seriesItem) {
                         // Live: back in Live TV on the last watched channel (also after switching in the player)
                         // Live TV tab is 3 (see LiveTab: ContentFocus.tab = 3). Without this, a stream started from Home returns to Home.
-                        if (p.live || p.archive != null) {
+                        // Exception: a stream started in the Sports Hub returns to the hub (maintainer, 23 Nov 2026); the hub restores
+                        // its open pages and tab itself (HubMemory)
+                        if ((p.live || p.archive != null) && tab != MenuLogic.SPORT) {
                             LastFocus.pending = History.ids.firstOrNull { id -> liveAll.any { it.id == id } }
                             tab = 3
                         }
@@ -521,8 +542,11 @@ private fun AppContent() {
                 tab = tab, state = states[4],
                 onOpen = open,
                 onBrowse = { browse = BrowseState(it) },
-                onTab = { goTab(it) }
+                onTab = { goTab(it) },
+                onPerson = { pushTop(it) }
             ) }
+            tab == MenuLogic.DOWNLOADS -> Box(Modifier.fillMaxSize().screenEnter(tab)) { DownloadsTab(tab = tab, onTab = { goTab(it) },
+                onPlay = { e -> start(Item(e.id, Kind.MOVIE, e.title, null, e.url, null, "Downloads"), e.title, e.url, 0L) }) }
             else -> Box(Modifier.fillMaxSize().screenEnter(tab)) { HomeScreen(
                 tab = tab, onTab = { goTab(it) }, states = states,
                 onOpen = open,

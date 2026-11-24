@@ -5,7 +5,7 @@ package com.ipvio.stream
  * Guarantees: every area occurs exactly once, "Start" (0) and "Settings" (5) can never be hidden.
  */
 object MenuLogic {
-    const val COUNT = 11
+    const val COUNT = 12
     const val HOME = 0
     const val SEARCH = 4
     const val SETTINGS = 5
@@ -17,8 +17,10 @@ object MenuLogic {
     const val VERLAUF = 9
     /** Round 20: Sports – running and upcoming sports shows, sports channels. */
     const val SPORT = 10
+    /** T-052a: sidebar tab with the downloads (queue, delete). */
+    const val DOWNLOADS = 11
     /** As in the draft: Home, Live TV, movies, series, EPG, favorites, "Meine Liste", (search), settings. */
-    val DEFAULT_ORDER = listOf(0, 3, 1, 2, SPORT, EPG, FAVS, MYLIST, VERLAUF, SEARCH, 5)
+    val DEFAULT_ORDER = listOf(0, 3, 1, 2, SPORT, EPG, FAVS, MYLIST, VERLAUF, SEARCH, DOWNLOADS, 5)
     /**
      * Search sits at the top in the header, not in the sidebar: hidden by default.
      * EPG (round 14, user's wish): also hidden – the TV guide is reachable via Live TV.

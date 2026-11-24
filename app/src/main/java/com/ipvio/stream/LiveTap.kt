@@ -208,6 +208,7 @@ class LiveTap(val id: Int, val url: String, private val dir: File, private val m
 object LiveTaps {
     private val taps = HashMap<Int, LiveTap>()
     private var next = 1
+    private var leftoversCleared = false
     const val UA = "IPVIOStream/1.0"
 
     @Synchronized fun get(id: Int): LiveTap? = taps[id]?.takeIf { !it.closed }
@@ -217,7 +218,9 @@ object LiveTaps {
         taps.values.firstOrNull { it.url == url && !it.closed && it.failure == null }?.let { return it.acquire() }
         taps.entries.removeAll { it.value.closed }
         val root = File(c.cacheDir, "livetap")
-        if (taps.isEmpty()) runCatching { root.deleteRecursively() }   // leftovers after a crash
+        // Leftovers after a crash: only once per app start. Deleting on every open (when no buffer was left) blocked the UI
+        // thread for large folders when zapping fast (T-054); closed buffers delete their own folder in the background.
+        if (!leftoversCleared) { leftoversCleared = true; runCatching { root.deleteRecursively() } }
         root.mkdirs()
         val budget = TapLogic.budget(LiveSettings.bufferMb, root.usableSpace)
         if (budget <= 0) return null

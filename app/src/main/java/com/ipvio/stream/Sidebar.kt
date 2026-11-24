@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -130,6 +131,14 @@ fun MenuIcon(id: Int, color: Color, modifier: Modifier = Modifier) {
                 drawArc(color, 200f, 140f, false, topLeft = Offset(.14f * s, .02f * s), size = Size(.72f * s, .5f * s), style = sw)
                 drawArc(color, 20f, 140f, false, topLeft = Offset(.14f * s, .48f * s), size = Size(.72f * s, .5f * s), style = sw)
             }
+            11 -> { // Downloads: arrow down into a tray
+                line(.5f, .12f, .5f, .6f)
+                line(.3f, .42f, .5f, .62f); line(.7f, .42f, .5f, .62f)
+                val p = Path().apply {
+                    moveTo(.14f * s, .6f * s); lineTo(.14f * s, .86f * s); lineTo(.86f * s, .86f * s); lineTo(.86f * s, .6f * s)
+                }
+                drawPath(p, color, style = sw)
+            }
             else -> {
                 for (y in listOf(.26f, .5f, .74f)) line(.12f, y, .88f, y)
             }
@@ -189,7 +198,9 @@ fun Sidebar(tab: Int, onTab: (Int) -> Unit, modifier: Modifier, activeFocus: Foc
     val expanded = (focusIn && !ViewLive.active) || SidebarPrefs.labels
     val fm = LocalFocusManager.current
     val scope = rememberCoroutineScope()
-    val visible = AppSettings.menuOrder.filter { it !in AppSettings.menuHidden }
+    val ctx = LocalContext.current
+    // T-052a: the Downloads entry is shown only when at least one download exists
+    val visible = AppSettings.menuOrder.filter { it !in AppSettings.menuHidden && (it != MenuLogic.DOWNLOADS || DownloadStore.hasAny(ctx)) }
     val activeVisible = tab in visible
     // Entry that receives the "active" focus requester: the active tab, or the first entry when the active tab is hidden
     // (Search is hidden by default); without it Back from the search results had no sidebar item to go to (T-013)

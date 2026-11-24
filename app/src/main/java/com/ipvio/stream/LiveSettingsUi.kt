@@ -26,6 +26,12 @@ import androidx.compose.ui.unit.sp
 @Composable
 internal fun LiveBufferSection(ctx: Context) {
     LiveSettings.init(ctx)
+    SectionTitle("Kanaltasten")
+    ToggleRow(
+        "Hoch führt zum nächsten Sender",
+        "Aus: Hoch = voriger Sender, Runter = nächster Sender. An: Hoch = nächster Sender, Runter = voriger Sender. Gilt im Live-TV-Player.",
+        LiveSettings.upIsNext
+    ) { LiveSettings.setUpIsNext(ctx, it) }
     SectionTitle("Zurückspulen und Aufnehmen")
     ToggleRow(
         "Live TV zurückspulen",

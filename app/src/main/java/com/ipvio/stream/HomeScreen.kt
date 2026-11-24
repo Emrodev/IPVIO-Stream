@@ -169,10 +169,10 @@ private fun sameItems(a: List<Item>, b: List<Item>?): Boolean {
 /** Filtered lists per area, so the same list object comes back and [HomeCache] can recognize it (no full recompute on every tab switch). */
 private object AreaCache {
     private val m = HashMap<String, Pair<List<Item>, List<Item>>>()
-    @Synchronized fun get(all: List<Item>, tab: Int, k: Int): List<Item> {
-        val key = "$tab|$k"
+    @Synchronized fun get(all: List<Item>, tab: Int, ks: Set<Int>): List<Item> {
+        val key = "$tab|" + ks.sorted().joinToString(",")
         m[key]?.let { if (it.first === all) return it.second }
-        return AreaSource.filter(all, tab, k).also { m[key] = all to it }
+        return AreaSource.filter(all, tab, ks).also { m[key] = all to it }
     }
 }
 
@@ -221,8 +221,12 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val allRaw = PlaylistStore.channels
     // Movies/series: playlist selection at the top (with several shown playlists) – only titles of this playlist
-    val areaK = if (tab in 1..2) AreaSource.get(tab) else -1
-    val all = remember(allRaw, areaK, tab) { if (areaK < 0) allRaw else AreaCache.get(allRaw, tab, areaK) }
+    // Selection changes or shown playlists change: recompute the source set, not on every recomposition
+    val areaVer = AreaSource.version
+    val areaK = remember(tab, areaVer, PlaylistStore.sourceNames, PlaylistMode.version) {
+        if (tab in 1..2) AreaSource.sources(ctx, tab) else emptySet()
+    }
+    val all = remember(allRaw, areaK, tab) { if (areaK.isEmpty()) allRaw else AreaCache.get(allRaw, tab, areaK) }
     val order = PlaylistStore.catOrder
     // Adopt genre progress at most every 45 s: every adoption recomputes rows and top lists
     var ver by remember { mutableIntStateOf(HomeVer.value.takeIf { it >= 0 } ?: Classifier.version) }
@@ -289,18 +293,26 @@ fun HomeScreen(
             runCatching { SportWatch.prewarm(live) }
         }
     }
-    // "Because you watched X": similar titles (TMDB) of the last started movie/series, matched against the own playlist
-    val becauseSrc = histHome.firstOrNull { it.kind != Kind.LIVE }
-    val because by produceState<Pair<Item, List<Item>>?>(null, becauseSrc?.id, byId.size) {
-        val src = becauseSrc ?: return@produceState
-        val m = MetaRepo.extended(ctx, src) ?: return@produceState
-        if (m.tmdbId <= 0) return@produceState
-        val c = CreditsRepo.credits(ctx, m) ?: return@produceState
+    // "Because you watched X": similar titles (TMDB) of the last 3 started movies/series, matched against the own playlist.
+    // The titles of all sources are merged; the row is named after the most recent source that has matches.
+    val becauseSrcs = histHome.filter { it.kind != Kind.LIVE }.take(BecauseLogic.SOURCES)
+    val because by produceState<Pair<Item, List<Item>>?>(null, becauseSrcs.map { it.id }, byId.size) {
+        if (becauseSrcs.isEmpty()) return@produceState
         val seen = History.ids.toSet()
-        val l = withContext(Dispatchers.Default) {
-            homeSafe(LibMatch.matches(PlaylistStore.channels, c.similar, 40).filter { it.id != src.id && it.id !in seen && it.kind != Kind.LIVE }, noAdult)
+        var label: Item? = null
+        val found = LinkedHashMap<String, Item>()
+        for (src in becauseSrcs) {
+            val m = MetaRepo.extended(ctx, src) ?: continue
+            if (m.tmdbId <= 0) continue
+            val c = CreditsRepo.credits(ctx, m) ?: continue
+            val l = withContext(Dispatchers.Default) {
+                homeSafe(LibMatch.matches(PlaylistStore.channels, c.similar, 40).filter { it.id != src.id && it.id !in seen && it.kind != Kind.LIVE }, noAdult)
+            }
+            if (l.isNotEmpty() && label == null) label = src
+            for (x in l) found.putIfAbsent(x.id, x)
         }
-        if (l.size >= 4) value = src to l.take(20)
+        val src = label
+        if (src != null && BecauseLogic.show(found.size)) value = src to found.values.take(20)
     }
 
     // Check new episodes of favorite series (bell)
@@ -376,10 +388,13 @@ fun HomeScreen(
         HeaderTab("Alle $vodNoun", AIcon.Grid, "tb:all$tab") { onBrowse(BrowseReq("Alle $vodNoun", vodBase, SORT_NEW)) }
     ) + importedTabs.map { (src, l, id) -> HeaderTab(src, AIcon.Download, id) { onBrowse(BrowseReq("$src · $vodNoun", l, SORT_NEW)) } }
     var inHeader by remember { mutableStateOf(false) }
+    // Declared before the header: Left from the search pill goes into the sidebar (see HeaderBar onLeftEdge)
+    val sideFocus = remember { FocusRequester() }
     val header: @Composable (Modifier) -> Unit = { m ->
         HeaderBar(
             m.onFocusChanged { inHeader = it.hasFocus },
             onSearch = { onTab(4) },
+            onLeftEdge = { runCatching { sideFocus.requestFocus() }.getOrDefault(false) },
             onReminder = { r -> byId[r.chId]?.let(onOpen) },
             onNewEpisode = { id -> byId[id]?.let(onOpen) },
             // Only one profile: go directly to the profile page of settings (before: general settings)
@@ -474,7 +489,6 @@ fun HomeScreen(
     }
 
     var inSidebar by remember { mutableStateOf(false) }
-    val sideFocus = remember { FocusRequester() }
     // App start: focus on "Watch now" instead of the sidebar. The top picture appears only once playlist and info are loaded
     // (can take a few seconds); so it retries for up to 15 s, and the marker is set only on success.
     // After 3 s only while focus is still in the sidebar (if the user has already chosen, nothing is stolen).
