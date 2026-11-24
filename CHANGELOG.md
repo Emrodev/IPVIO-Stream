@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Sports alerts: the delay can be set up to 120 s (before: 60 s), so an alert does not spoil a goal on a stream that runs behind (#130, T-057). The switch to turn alerts off is Settings > Sports Hub. Not device tested yet
 - Playlists: the app no longer creates a new secure key when the old one cannot be read for a moment (seen on some boxes after a restart). Before, this could make saved logins unreadable for good, so a playlist seemed to vanish (#112, T-056). Cause not confirmed on a device. If a saved playlist still cannot be read, the empty home screen now says so and asks you to add it again. Not device tested yet
 - Live TV on phones: tapping a category or "Search channels" now opens it. Before, a tap did nothing without a remote (#152, T-055). Not device tested yet
 

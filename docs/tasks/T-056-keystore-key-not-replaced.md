@@ -27,7 +27,6 @@ No preference name, stored format or backup key changes.
 
 - A key that is really gone (alias missing after an OS reset) still cannot be recovered. The list has to be added again (or restored from a backup).
 - While the alias exists but the key is unreadable, new values are stored as plain text (the fallback for boxes without a keystore). This is the same weaker protection as on those boxes. Not changed here, needs a decision.
-- A key that is really gone still cannot be recovered; the notice below only tells the user what to do.
 
 ## Risks
 
