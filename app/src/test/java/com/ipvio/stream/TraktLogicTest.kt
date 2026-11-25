@@ -103,4 +103,12 @@ class TraktLogicTest {
         assertFalse(p.accepts("STATE", nowMs = 2_000L))
         assertTrue(p.expired(2_000L))
     }
+
+    @Test fun tokensFromResponseNeedsAllFields() {
+        val t = TraktLogic.tokensFrom("acc", "ref", 3600L, nowMs = 1_000L)
+        assertEquals(TraktLogic.Tokens("acc", "ref", 1_000L + 3_600_000L - 60_000L), t)
+        assertEquals(null, TraktLogic.tokensFrom("", "ref", 3600L, 0L))
+        assertEquals(null, TraktLogic.tokensFrom("acc", " ", 3600L, 0L))
+        assertEquals(null, TraktLogic.tokensFrom("acc", "ref", 0L, 0L))
+    }
 }

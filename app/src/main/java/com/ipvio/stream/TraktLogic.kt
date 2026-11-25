@@ -91,6 +91,15 @@ object TraktLogic {
         return diff == 0
     }
 
+    /** Tokens as the app keeps them. The refresh token is kept so the sign-in does not have to be repeated. */
+    data class Tokens(val access: String, val refresh: String, val expiresAtMs: Long)
+
+    /** Builds tokens from a token response, or null when a field is missing or the lifetime is not positive. */
+    fun tokensFrom(access: String, refresh: String, expiresInSeconds: Long, nowMs: Long): Tokens? {
+        if (access.isBlank() || refresh.isBlank() || expiresInSeconds <= 0L) return null
+        return Tokens(access, refresh, accessExpiresAt(nowMs, expiresInSeconds))
+    }
+
     private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
     /** Standard base64url alphabet without padding (RFC 4648 section 5). Written out because minSdk 24 lacks java.util.Base64. */

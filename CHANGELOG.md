@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Trakt (T-031, step 2): code-to-token exchange (PKCE, no client secret) and encrypted token storage without a plain-text fallback. Not wired to a screen yet. Not device tested
 - Trakt (T-031, step 1): build field for the Trakt API client ID (`secrets.properties` or environment variable), pure login logic (`TraktLogic`) with JVM tests. No login screen and no sync yet. Not device tested
 
 ## 1.4.9
