@@ -309,6 +309,15 @@ private fun ListMode(
             runCatching { firstPreview.requestFocus() }
         }
     }
+    // Left from the first column of the grid goes back to the SAME category (the one whose titles are shown).
+    // Without this, the focus search picks the row at the same height, which can be another category.
+    fun backToCategory() {
+        scope.launch {
+            catState.scrollToItem(maxOf(sel - 3, 0))
+            withFrameNanos { }
+            runCatching { firstFocus.requestFocus() }
+        }
+    }
     Row(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.width(250.dp).fillMaxHeight(), state = catState, verticalArrangement = Arrangement.spacedBy(3.dp)) {
             itemsIndexed(entries, key = { i, e -> rowKeys.getOrElse(i) { e.first + "#" + i } }) { i, e ->
@@ -379,6 +388,8 @@ private fun ListMode(
                             Modifier.onPreviewKeyEvent { ev ->
                                 if (ev.type == KeyEventType.KeyDown && ev.key == Key.DirectionUp && i < cols) {
                                     runCatching { pillFocus.requestFocus() }; true
+                                } else if (ev.type == KeyEventType.KeyDown && ev.key == Key.DirectionLeft && i % cols == 0 && ev.nativeKeyEvent.repeatCount == 0) {
+                                    backToCategory(); true
                                 } else false
                             }.onFocusChanged {
                                 if (it.hasFocus) {

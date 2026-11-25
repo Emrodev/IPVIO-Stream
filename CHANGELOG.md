@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Movies and Series: Left from the titles grid goes back to the category you came from, not to a neighbouring category (regression fixed; same as Live TV). Not device tested yet (B-001)
 - Trakt: new setting "Automatically sync" in the Trakt panel: at every app start, every 6 hours (the default, as before), every 12 hours, daily, weekly, or only when you tap "Sync now". The check runs when the app starts; if the app is not opened, nothing is read (T-071). Not device tested yet
 - Sports Hub settings: "Live results" was listed twice; now once
 - Trakt sign-in on the phone: the Trakt login opens in its own tab, so the code page stays open for the paste (the sign-in no longer fails with "not accepted" when the login ran in the same tab)
