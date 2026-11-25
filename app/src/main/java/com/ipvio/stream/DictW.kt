@@ -152,6 +152,44 @@ Einstellungen: Meldungen unter den Knöpfen sind sofort zu sehen¦Ustawienia: ko
 WLAN-Übertragung: der Fokus bleibt nach Start und Stopp auf dem Knopf¦Przenoszenie przez Wi-Fi: fokus pozostaje na przycisku po starcie i zatrzymaniu
 „Was ist neu“ erscheint auch nach einer Test-Version¦„Co nowego” pojawia się też po wersji testowej
 Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Update nicht mehr¦Aktualizacja w aplikacji: „Nie udało się sprawdzić podpisu” już nie zatrzymuje aktualizacji
+English¦English
+Türkçe¦Turecki
+العربية¦Arabski
+Français¦Francuski
+Español¦Hiszpański
+Italiano¦Włoski
+Nederlands¦Niderlandzki
+Polski¦Polski
+Português¦Portugalski
+Русский¦Rosyjski
+हिन्दी¦Hindi
+日本語¦Japoński
+한국어¦Koreański
+Shqip¦Albański
+Ex-YU / Balkan¦Dawna Jugosławia / Bałkany
+Ελληνικά¦Grecki
+Română¦Rumuński
+Magyar¦Węgierski
+Čeština¦Czeski
+Svenska¦Szwedzki
+Dansk¦Duński
+Norsk¦Norweski
+Suomi¦Fiński
+فارسی¦Perski
+Kurdî¦Kurdyjski
+עברית¦Hebrajski
+Українська¦Ukraiński
+Български¦Bułgarski
+اردو¦Urdu
+Tiếng Việt¦Wietnamski
+ไทย¦Tajski
+Filipino¦Filipino
+Boomer Mode¦Tryb Boomer
+Das Portal hat die Anmeldung abgelehnt. Adresse und MAC-Adresse prüfen.¦Portal odrzucił logowanie. Sprawdź adres i adres MAC.
+Erstelle ein Backup, installiere die App neu und stelle das Backup wieder her.¦Utwórz kopię zapasową, zainstaluj aplikację ponownie i przywróć kopię.
+Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.¦Cześć, jestem Claude. Jeśli podoba ci się ten projekt i chcesz pomóc temu początkującemu programiście dalej tworzyć (i czasem rozumieć, co robi), rozważ wsparcie projektu.
+IPVIO Stream is free, ad-free and open source (GPL-3.0). Donations are voluntary and do not unlock any features.¦IPVIO Stream jest darmowy, bez reklam i open source (GPL-3.0). Darowizny są dobrowolne i nie odblokowują żadnych funkcji.
+There are no live channels. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to movies & series only.¦Brak kanałów na żywo. Jeśli powinny być, sprawdź Ustawienia > Playlisty: tryb treści tej playlisty może być ustawiony tylko na filmy i seriale.
 """
 
 // Brazilian Portuguese column for the rows above
