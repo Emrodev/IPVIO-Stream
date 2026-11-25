@@ -12,7 +12,7 @@
 ## What exists today (read from `PlayerScreen.kt`, lines about 1399 to 1500)
 
 - The live button row already scrolls sideways (`horizontalScroll`).
-- Left opens the channel list and Right opens the TV guide when the controls are hidden (`PlayerScreen.kt` about line 1094). Up and Down change the channel. The hint under the buttons says "Hoch und Runter wechseln den Sender" (English dictionary label: "Up and Down change the channel").
+- Left opens the channel list and Right opens the TV guide when the controls are hidden (`PlayerScreen.kt` about line 1094). Up and Down change the channel. The hint under the buttons says "Up and Down change the channel".
 - Live buttons in order: Channel list, TV guide, Back to live, 30 s back (only with the local buffer `LiveTimeshift`), Record, From the beginning and Archive (only with `Catchup.has`), Favorites, Audio & subtitles, Aspect ratio, Second picture, Quality (several streams), Score overlay (only with the mini score), Settings, Open externally.
 - Catch-up: `Catchup.urlFor(item, entry)` builds the archive address for a show from its start and end (`CatchupLogic.url`). `playArchive` plays it as a non-live item with an `ArchiveRef`, and then the normal movie controls (step back/forward, seek bar, Left/Right) work.
 

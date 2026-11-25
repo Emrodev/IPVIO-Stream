@@ -2,7 +2,7 @@
 
 - **Issue:** #151 "Summarise series and their episodes together" (each season is shown as its own series; the maintainer wrote in the issue that this should be fixed in the next patch)
 - **Status:** implemented as an option (off by default), not built, not device tested
-- **Protected areas touched:** IPTV core (Xtream series loading) and the series id. Done on the maintainer's go-ahead of 25 Nov 2026 ("weiter mit #151"); a review is needed.
+- **Protected areas touched:** IPTV core (Xtream series loading) and the series id. Done on the maintainer's go-ahead of 25 Nov 2026; a review is needed.
 
 ## What is known
 

@@ -53,7 +53,7 @@ class M3uGroupLogicTest {
         assertEquals("Musik", g["Vier HD"])
     }
 
-    @Test fun parser_withoutAnyGroup_staysSonstige() {
+    @Test fun parser_withoutAnyGroup_staysInTheCatchAllCategory() {
         val g = M3uParser.parse("#EXTM3U\n#EXTINF:-1,Eins HD\nhttp://s.tv/live/u/p/1.ts").first().group
         assertEquals("Sonstige", g)
     }

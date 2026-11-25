@@ -10,7 +10,7 @@ Movies > Categories > OK on an IPVIO genre category opens a list that is already
 ## Change
 
 - `BrowseReq` has a new optional field `genre` (default null). Existing callers are unchanged.
-- `CategoriesScreen`: when an IPVIO genre category is opened (not "Sonstige", not a provider category), its name is passed as `genre` (`onPick` has a fourth argument; the only caller is `MainActivity`).
+- `CategoriesScreen`: when an IPVIO genre category is opened (not "Other", not a provider category), its name is passed as `genre` (`onPick` has a fourth argument; the only caller is `MainActivity`).
 - `BrowseScreen`: once the genre choices of the list are known, `state.genre` is set to that genre, only if it is one of the real genres of the list. The list does not change, because `ipvioGroups` and the Genre pill both use `Genres.categoriesOf`. It runs once per view (`genreInit`), so "Reset" and a later choice are not overridden.
 
 ## Not done
@@ -33,5 +33,5 @@ Low. Display only: `state.genre` is set to a value that every title in the list 
 2. Open the Genre pill, pick "Comedy": the list shows titles that are both Action and Comedy. The pill shows "Comedy".
 3. Pill > "All" shows the whole opened category again.
 4. Provider categories (the other tab of the categories): OK on a category. The Genre pill shows "All", as before.
-5. "Sonstige": the Genre pill shows "All".
+5. "Other": the Genre pill shows "All".
 6. Open a category, press Back from a detail page: the pill still shows the same genre.

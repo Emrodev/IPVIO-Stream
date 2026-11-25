@@ -25,6 +25,7 @@ Last update: 2026-11-24 (issue review, branch `claude/exciting-johnson-9gi5zn`).
   - T-065 (#151): option "Combine seasons" (Settings > Playlists > Series, default off): Xtream series that a provider lists season by season become one series (`SeasonMergeLogic`, pseudo code `~merge` in the hidden set, `lazyParts`, `LazySeries`). Changes the series id while on. 26 JVM tests. Touches the IPTV core: needs a review. The reporter's provider type is unknown (hypothesis).
   - T-066 (#146): option "Tunneled playback (Live TV)" (Settings > Player > Source & quality, key `tunneling` in `ipvio_playback`, default off; `TunnelingLogic`; `applyTunneling()` in `PlayerScreen.kt`). Media3 API not compiled here. Needs a review and a device test.
   - #84: no code change. One sentence and a screenshot ("can't play series"); the maintainer asked on 22 Nov whether it works now, no answer. Needs the provider type and what is shown.
+  - 25 Nov: comment drafts for 15 issues in `docs/tasks/ISSUE-COMMENTS-2026-11-25.md` (not posted); device test plan in `docs/tasks/DEVICE-TEST-PLAN-2026-11-25.md`. 518 JVM tests ran green (15 test files need Android and were not run). English check: no German text in docs.
   - Comments posted on #131 and #118 (24 Nov 2026) as dictated by the maintainer.
 - Open: #118 can be answered (the per-playlist reload button exists since 1.4.5); #131 not analysed; #130, #67, #109 can be closed after a device check.
 - Next: maintainer decides on the PR #40 port (#10, #25) and tests T-055 to T-059 on the device.

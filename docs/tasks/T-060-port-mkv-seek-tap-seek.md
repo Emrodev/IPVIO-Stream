@@ -3,7 +3,7 @@
 - **Issues:** #10 "Seeking in MKV files without Cues restarts playback from 0", #25 "Multiple touch and interaction issues" (timeline tap)
 - **Status:** ported, not built, not device tested
 - **Source:** closed pull request #40 (branch `integration/2026-11-11` in the fork of `browanoncoder`). The pull request was never merged, although issue comments say "fixed". Only these two parts were taken over; the rest of #40 (Live TV, search, Stalker, translations, test scripts) was not.
-- **Protected area:** touches the player (`PlayerScreen.kt`). Done on the maintainer's go-ahead of 24 Nov 2026 ("Los los"); a review of the player change is still needed.
+- **Protected area:** touches the player (`PlayerScreen.kt`). Done on the maintainer's go-ahead of 24 Nov 2026; a review of the player change is still needed.
 
 ## What was taken over
 
