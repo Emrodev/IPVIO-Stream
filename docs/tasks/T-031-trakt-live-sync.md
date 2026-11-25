@@ -83,3 +83,10 @@ Keep the watch history, watchlist and favorites of a user in step with their Tra
 **Changes needed (each needs approval):** new phone route and page text (protected area, translations per `docs/TESTING.md`), new Trakt screen on the TV, token storage in `Secrets`, new setting.
 
 **Tests:** JVM for `state` check, code length and charset validation, token body; device test for the whole flow with a real Trakt account, wrong code (lock after 5), keystore missing (no token stored), sign-out removes tokens.
+
+## Status (step 3 built, not device tested)
+- `TraktSignIn.kt`: holds the one pending sign-in in memory (verifier, state); starting again replaces it; finishing always consumes it.
+- `PhoneImport.kt`: `GET /trakt` (asks for the 4-digit code, then links to Trakt) and `POST /trakt` (checks the code, parses `code|state`, runs the exchange). Plain HTTP on the LAN as before; the code alone cannot be exchanged without the verifier.
+- `RemoteHub.kt`: wires the two callbacks.
+- Helper page on GitHub Pages now shows `code|state` as one copyable text.
+- Open: no entry point on the TV yet (the phone page is reached by typing `http://<TV-IP>:<port>/trakt`); English-only texts on the phone page; `api.trakt.tv` and the response fields unverified; the Secrets side effect (`plainFallback`) when the keystore is missing; not compiled here.

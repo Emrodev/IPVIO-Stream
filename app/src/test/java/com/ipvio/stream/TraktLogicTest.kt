@@ -111,4 +111,13 @@ class TraktLogicTest {
         assertEquals(null, TraktLogic.tokensFrom("acc", " ", 3600L, 0L))
         assertEquals(null, TraktLogic.tokensFrom("acc", "ref", 0L, 0L))
     }
+
+    @Test fun parseCallbackSplitsCodeAndState() {
+        assertEquals(Pair("abcdefgh12", "STATE22CHARSXXXXXXXXXX"), TraktLogic.parseCallback("abcdefgh12|STATE22CHARSXXXXXXXXXX"))
+        assertEquals(null, TraktLogic.parseCallback("abcdefgh12"))
+        assertEquals(null, TraktLogic.parseCallback("abcdefgh12|"))
+        assertEquals(null, TraktLogic.parseCallback("a|b|c"))
+        assertEquals(null, TraktLogic.parseCallback("abc|STATE22CHARSXXXXXXXXXX"))
+        assertEquals(null, TraktLogic.parseCallback("abcdefgh12|STATE 22CHARS"))
+    }
 }

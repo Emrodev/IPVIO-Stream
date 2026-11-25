@@ -177,6 +177,36 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
 <h1>${t("Absturzbericht", "Crash report")}</h1>$body</body></html>"""
     }
 
+    private fun traktWrap(title: String, body: String): String =
+        """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IPVIO Stream</title><style>$CSS</style></head><body>
+<h1>$title</h1>$body</body></html>"""
+
+    /** Trakt sign-in, step 1 on the phone: asks for the 4-digit code shown on the TV. */
+    fun traktCodePage(): String = traktWrap("Trakt sign-in",
+        """<form method="get" action="/trakt"><input name="code" inputmode="numeric" maxlength="4" placeholder="Code from the TV" required>
+<button type="submit">Continue</button></form>""")
+
+    /** Trakt sign-in, step 2: link to Trakt and a field for the copied "code|state" text. */
+    fun traktPage(authUrl: String, code: String): String {
+        val href = authUrl.replace("&", "&amp;").replace("\"", "&quot;")
+        return traktWrap("Sign in to Trakt",
+            """<p>1. Tap the button and sign in to Trakt.</p>
+<p><a href="$href">Sign in to Trakt</a></p>
+<p>2. Trakt sends you to a page with a code. Copy the whole text shown there (code|state) and paste it below.</p>
+<form method="post" action="/trakt"><input type="hidden" name="code" value="${code.filter { it.isDigit() }}">
+<textarea name="cb" rows="3" style="width:100%" placeholder="code|state" required></textarea>
+<button type="submit">Send to TV</button></form>""")
+    }
+
+    fun traktResult(text: String): String = traktWrap("Trakt", "<p>" + text.replace("&", "&amp;").replace("<", "&lt;") + "</p>")
+
+    fun traktOutcomeText(o: TraktAuth.Outcome): String = when (o) {
+        TraktAuth.Outcome.OK -> "Signed in to Trakt. You can go back to the TV."
+        TraktAuth.Outcome.NO_KEYSTORE -> "This device cannot store the sign-in securely, so nothing was saved."
+        TraktAuth.Outcome.NETWORK -> "Trakt could not be reached. Try again on the TV page."
+        TraktAuth.Outcome.REJECTED -> "The sign-in was not accepted. Start again from the TV page."
+    }
+
     fun message(li: Int, kind: String): String {
         val txt = when (kind) {
             "ok" -> tr(li, "Gesendet. Schau jetzt auf den Fernseher.", "Sent. Now look at the TV.")
@@ -228,6 +258,10 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
     var onList: ((String, ByteArray) -> Unit)? = null
     /** WireGuard configuration sent from the phone (text, checked by [VpnLogic.check] before the callback); set = the section appears on the page. Runs on the server thread, so the callback must post to the main thread itself. */
     var onVpn: ((String) -> Unit)? = null
+    /** Trakt sign-in (T-031): starts a sign-in on the TV and returns its authorize URL (null = not available). */
+    var traktStart: (() -> String?)? = null
+    /** Trakt sign-in (T-031): finishes it with the code and state from the phone. Runs on the server thread (network). */
+    var traktFinish: ((String, String) -> TraktAuth.Outcome)? = null
 
     fun start(): Boolean {
         if (server != null) return true
@@ -452,6 +486,36 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
                 else if (given == null) html(200, PhoneImportLogic.crashPage(li, null))
                 else when (val c = codeOk(given)) {
                     200 -> html(200, PhoneImportLogic.crashPage(li, cr() ?: ""))
+                    403 -> html(403, PhoneImportLogic.message(li, "code"))
+                    else -> html(c, PhoneImportLogic.message(li, "lock"))
+                }
+            }
+            // Trakt sign-in (T-031): the TV starts it; the phone opens Trakt and sends back the "code|state" text
+            "GET /trakt" -> {
+                val start = traktStart
+                val given = h.query["code"]
+                if (start == null) html(404, PhoneImportLogic.message(li, "bad"))
+                else if (given == null) html(200, PhoneImportLogic.traktCodePage())
+                else when (val c = codeOk(given)) {
+                    200 -> {
+                        val url = start()
+                        if (url == null) html(503, PhoneImportLogic.traktResult("Trakt is not set up in this build."))
+                        else html(200, PhoneImportLogic.traktPage(url, given))
+                    }
+                    403 -> html(403, PhoneImportLogic.message(li, "code"))
+                    else -> html(c, PhoneImportLogic.message(li, "lock"))
+                }
+            }
+            "POST /trakt" -> {
+                val fin = traktFinish
+                val f = PhoneImportLogic.parseForm(readSmall(ins, h.len) ?: "")
+                if (fin == null) html(404, PhoneImportLogic.message(li, "bad"))
+                else when (val c = codeOk(f["code"])) {
+                    200 -> {
+                        val parsed = TraktLogic.parseCallback(f["cb"].orEmpty())
+                        if (parsed == null) html(400, PhoneImportLogic.traktResult("Paste the text from the helper page exactly: code|state."))
+                        else html(200, PhoneImportLogic.traktResult(PhoneImportLogic.traktOutcomeText(fin(parsed.first, parsed.second))))
+                    }
                     403 -> html(403, PhoneImportLogic.message(li, "code"))
                     else -> html(c, PhoneImportLogic.message(li, "lock"))
                 }

@@ -100,6 +100,17 @@ object TraktLogic {
         return Tokens(access, refresh, accessExpiresAt(nowMs, expiresInSeconds))
     }
 
+    /** Splits the "code|state" text copied from the helper page. Null when a part is missing or has unexpected characters. */
+    fun parseCallback(text: String): Pair<String, String>? {
+        val parts = text.trim().split('|')
+        if (parts.size != 2) return null
+        val code = parts[0]
+        val state = parts[1]
+        if (code.length !in 8..512 || state.length !in 8..128) return null
+        if (code.any { it.isWhitespace() } || state.any { it.isWhitespace() }) return null
+        return code to state
+    }
+
     private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
     /** Standard base64url alphabet without padding (RFC 4648 section 5). Written out because minSdk 24 lacks java.util.Base64. */
