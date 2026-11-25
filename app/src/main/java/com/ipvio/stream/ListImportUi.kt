@@ -49,8 +49,12 @@ internal fun ListImportPage(ctx: Context) {
         PhoneImport { }.apply {
             uploadDir = ImportFiles.tmpDir(ctx)
             onList = { name, bytes -> Handler(Looper.getMainLooper()).post { ListImportApply.run(ctx, name, bytes) } }
+            // Trakt sign-in (T-031): same server, address /trakt
+            traktStart = { TraktSignIn.start() }
+            traktFinish = { code, state -> TraktSignIn.finish(ctx, code, state) }
         }
     }
+    val traktConnected = remember(serving) { TraktAuth.isConnected(ctx) }
     DisposableEffect(Unit) { onDispose { server.stop() } }
     if (!serving) PillButton("Import im WLAN starten", icon = AIcon.Phone) { serving = server.start() }
     else {
@@ -69,6 +73,12 @@ internal fun ListImportPage(ctx: Context) {
                     Text(server.code, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, raw = true)
                 }
                 Text("Am Handy „Liste importieren“ wählen, den Code eingeben und die Exportdatei hochladen.", color = Muted, fontSize = 14.sp)
+                Text("Trakt", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Sign in to your Trakt account on the phone, with the same code:", color = Muted, fontSize = 15.sp)
+                val traktAddr = "http://$ip:${server.port}/trakt"
+                Text(traktAddr, color = Accent2, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                QrWithLabel(traktAddr)
+                Text(if (traktConnected) "Connected to Trakt." else "Not connected to Trakt.", color = Muted, fontSize = 14.sp)
             }
             PillButton("Import beenden") { server.stop(); serving = false }
         }
