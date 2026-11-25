@@ -30,13 +30,14 @@ differs only in case of country ending or variant ("DasErste.de" against "dasers
 
 ## Changes
 
-- `SeriesKeyLogic.kt` (new, pure): when two entries of the same name are two series: different year or country in brackets
-  ("(2004)", "(UK)"), or two placeholders (one entry per provider series, Xtream `.xtser` / Stalker) in different categories.
-  Missing information on one side merges as before, so episodes of one series spread over season categories and quality
-  variants without a year still merge.
+- `SeriesKeyLogic.kt` (new, pure): when two entries of the same name are two series. **Only placeholders** (one entry per
+  provider series, Xtream `.xtser` / Stalker) are split: in different categories, or with a different year or country in
+  brackets ("(2004)", "(UK)"). Lists with episode lines (plain M3U) merge exactly as before (review 25 Nov 2026: some
+  providers write the season's year into the episode name, which would have split one series).
 - `Models.kt` (`M3uParser.parseLines`): uses it. **The first series of a name keeps its old key**, so its ID (`s_<name>`),
-  resume points and lists stay. The others get `s_<name>~<year/country>` or `s_<name>~g<hash of category>`. Split series get
-  the year in the year field, or the country in the title ("The Office (UK)"). New `ParseReport` (entries, divider lines,
+  resume points and lists stay; its title and year stay too, so its stored TMDB data is used as before. The others get
+  `s_<name>~<year/country>` and/or `~g<hash of category>`; only they get the year in the year field or the country in the title
+  ("The Office (UK)"). New `ParseReport` (entries, divider lines,
   hidden by language, hidden by content mode, series entries).
 - `MatchLogic.searchTitle`: drops a trailing "(US)/(UK)/(AU)/(NZ)/(CA)", so the TMDB search still finds "The Office".
 - `LoadLogic.vodGroups` (pure) + `XtreamApi.vodCategoryNames` / `seriesCategoryNames`: `PlaylistStore.vodViaApi` compares the
@@ -86,6 +87,12 @@ live channels and of the first series of each name, the player.
 `CHANGELOG.md` (Unreleased), `docs/TESTING.md` (test list), `docs/tasks/WORK_STATE.md`.
 
 ## Test results
+
+- Update check (review 25 Nov 2026): the same mixed list (Xtream placeholders in three categories, plain M3U episodes with
+  season years, live, movies) parsed by 1.4.9 (`main` f6270c3) and by this version. Every 1.4.9 ID is still there, no existing
+  item changes its title, year or category, plain M3U gives the same result, and each version reads the other's stored list
+  (update and rollback). XMLTV display names are read without `nextText()` (cannot throw on unusual guides); a failed or
+  cancelled playlist switch sets the previous playlist active again.
 
 - Run here (Kotlin 2.0.21 compiler, JUnit 4.13.2, the 115 main files without Android imports): new `SeriesSplitTest` (9),
   `EpgMatchLogicTest` (5), 2 new tests in `LoadLogicTest`; all 75 JVM-runnable test classes: **491 of 491 passed**.

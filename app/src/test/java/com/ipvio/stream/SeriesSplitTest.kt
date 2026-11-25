@@ -34,8 +34,11 @@ class SeriesSplitTest {
             http://h/series/u/p/4.xtser
         """)
         assertEquals(2, s.size)
+        // the first one stays exactly as before (ID, title, no year); the one split off gets its year
         assertEquals("s_battlestar galactica", s[0].id)
-        assertEquals(setOf(1978, 2004), s.map { it.year }.toSet())
+        assertNull(s[0].year)
+        assertEquals("Battlestar Galactica", s[0].title)
+        assertEquals(2004, s[1].year)
     }
 
     @Test fun differentCountriesStaySeparateWithTheCountryInTheTitle() {
@@ -46,8 +49,8 @@ class SeriesSplitTest {
             #EXTINF:-1 group-title="Serien",The Office (UK) S01E01
             http://h/series/u/p/2.xtser
         """)
-        assertEquals(setOf("The Office (US)", "The Office (UK)"), s.map { it.title }.toSet())
-        assertEquals("s_the office", s.first { it.title.endsWith("(US)") }.id)
+        assertEquals(listOf("The Office", "The Office (UK)"), s.map { it.title })
+        assertEquals("s_the office", s[0].id)
     }
 
     @Test fun episodesOfOneSeriesInSeveralCategoriesStillMerge() {
@@ -77,11 +80,26 @@ class SeriesSplitTest {
         assertEquals(2, s[0].episodes[0].variants.size)
     }
 
-    @Test fun oneSideWithoutYearMerges() {
-        assertFalse(SeriesKeyLogic.differs("G", "2004", false, "G", null, false))
-        assertTrue(SeriesKeyLogic.differs("G", "2004", false, "G", "1978", false))
+    @Test fun onlyPlaceholdersAreSplit() {
+        assertFalse(SeriesKeyLogic.differs("G", "2004", true, "G", null, true))
+        assertTrue(SeriesKeyLogic.differs("G", "2004", true, "G", "1978", true))
         assertTrue(SeriesKeyLogic.differs("A", null, true, "B", null, true))
+        // episode lines (plain M3U): never split, as before
         assertFalse(SeriesKeyLogic.differs("A", null, false, "B", null, false))
+        assertFalse(SeriesKeyLogic.differs("G", "2004", false, "G", "1978", false))
+    }
+
+    @Test fun plainM3uWithTheSeasonYearInTheNameStaysOneSeries() {
+        val s = series("""
+            #EXTM3U
+            #EXTINF:-1 group-title="Serien",The Crown (2016) S01E01
+            http://h/crown/s1e1.mp4
+            #EXTINF:-1 group-title="Serien",The Crown (2017) S02E01
+            http://h/crown/s2e1.mp4
+        """)
+        assertEquals(1, s.size)
+        assertEquals("s_the crown", s[0].id)
+        assertEquals(2, s[0].episodes.size)
     }
 
     @Test fun distinguisherAndPlaceholder() {
