@@ -36,8 +36,10 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 ### B-003 Live TV: Left from the grid returns to the same category
 
 - Expected: same as B-001 for Live TV. Works since 1.4.x; checked on 25 Nov 2026.
+- Expected (wrap, 25 Nov 2026): Up on the first category ("Playlist" or "Home") goes to the last category; Down on the last goes to the first. Same as the channel list and TV guide.
 - Marker: `backToCategory()` in `app/src/main/java/com/ipvio/stream/LiveTab.kt`
-- Test steps: Live TV, category "Sport", Down, Left. Expect "Sport".
+- Marker: `GuideWrapLogic.wrapTarget(catFocusIdx, names.size` in `app/src/main/java/com/ipvio/stream/LiveTab.kt`
+- Test steps: Live TV, category "Sport", Down, Left. Expect "Sport". Wrap: on the first category press Up, expect the last one; on the last press Down, expect the first. Not device tested.
 
 ### B-004 Search: picking a recent search keeps the focus in the search screen
 

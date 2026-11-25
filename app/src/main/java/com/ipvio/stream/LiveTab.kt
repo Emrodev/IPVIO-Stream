@@ -294,18 +294,31 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     Box(Modifier.fillMaxSize()) {
         FocusedBackdrop(focusedState, Modifier.fillMaxSize())
         Row(Modifier.fillMaxSize().padding(top = 20.dp)) {
-            // Up on the first category goes to the last one (like the channel list, #107)
+            // Up on the first category goes to the last one and Down on the last goes to the first (like the channel list, #107).
+            // Same pattern as the channel list: one key handler on the list, the focused row index is tracked.
+            val firstCat = remember { FocusRequester() }
             val lastCat = remember { FocusRequester() }
-            fun wrapCat() {
+            var catFocusIdx by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+            fun wrapCat(target: Int) {
                 plScope.launch {
-                    catState.scrollToItem(names.lastIndex)
+                    catState.scrollToItem(target)
+                    val req = if (target == 0) firstCat else lastCat
+                    // The target row is composed after the scroll; retry briefly until its focus requester is attached
                     repeat(20) {
-                        if (runCatching { lastCat.requestFocus() }.isSuccess) return@launch
+                        if (runCatching { req.requestFocus() }.isSuccess) return@launch
                         kotlinx.coroutines.delay(30)
                     }
                 }
             }
-            LazyColumn(Modifier.width(270.dp).fillMaxHeight().padding(start = 24.dp, end = 8.dp), state = catState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            LazyColumn(
+                Modifier.width(270.dp).fillMaxHeight().padding(start = 24.dp, end = 8.dp).onPreviewKeyEvent { e ->
+                    // Edge wrap only when no category is being moved (a moved category uses Up/Down itself)
+                    if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount == 0 && floatingCat == null &&
+                        GuideWrapLogic.wrapTarget(catFocusIdx, names.size, e.key == Key.DirectionDown)?.let { wrapCat(it) } != null) true
+                    else false
+                },
+                state = catState, verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 // Stable keys: after moving a category, focus and menu state move with the row (duplicates get an index suffix)
                 itemsIndexed(names, key = { i, n -> catKeys.getOrElse(i) { "$n#$i" } }) { i, n ->
                     val ml = ChannelLists.byKey(n)
@@ -410,9 +423,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             (if (n == hot) Modifier.focusRequester(ContentFocus.req) else Modifier).then(
                                 if (i == names.lastIndex) Modifier.focusRequester(lastCat) else Modifier
                             ).then(
-                                if (i == 0) Modifier.onPreviewKeyEvent { k ->
-                                    if (k.type == KeyEventType.KeyDown && k.key == Key.DirectionUp && !(plainCat && floatingCat == n)) { wrapCat(); true } else false
-                                } else Modifier
+                                if (i == 0) Modifier.focusRequester(firstCat) else Modifier
                             ).then(
                                 if (plainCat && floatingCat == n) Modifier.onPreviewKeyEvent { k ->
                                     // While floating every key belongs to the move: Up/Down move, OK puts it down, Left/Right do nothing
@@ -426,7 +437,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                                     }
                                 } else Modifier
                             ),
-                            onFocus = { hot = n; inChannels = false }, onRight = { enterChannels() },
+                            onFocus = { hot = n; inChannels = false; catFocusIdx = i }, onRight = { enterChannels() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null,
                             floating = plainCat && floatingCat == n

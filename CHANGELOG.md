@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Live TV categories: Up on the first category goes to the last one, and Down on the last goes to the first (before, Up did nothing and Down did not wrap). Same as the channel list. Not device tested yet (B-003)
 - Movies and Series: Left from the titles grid goes back to the category you came from, not to a neighbouring category (regression fixed; same as Live TV). Not device tested yet (B-001)
 - Trakt: new setting "Automatically sync" in the Trakt panel: at every app start, every 6 hours (the default, as before), every 12 hours, daily, weekly, or only when you tap "Sync now". The check runs when the app starts; if the app is not opened, nothing is read (T-071). Not device tested yet
 - Sports Hub settings: "Live results" was listed twice; now once
