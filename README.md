@@ -178,7 +178,7 @@ The app ships **without any API keys**. You can add your own free keys under **S
 1. Create an account at https://www.themoviedb.org/signup and confirm the e-mail address.
 2. **Log in.** The API page shows "restricted" as long as you are not logged in.
 3. Open https://www.themoviedb.org/settings/api (or: profile picture > Settings > API) and click **Request an API key**.
-4. Choose **Developer**, accept the terms and fill in the form (application name e.g. "IPVIO Stream", type "Personal use", a short description; the URL can be your GitHub page).
+4. Choose **Developer**, accept the terms and fill in the form (application name e.g. "App Stream", type "Personal use", a short description; the URL can be your GitHub page).
 5. Copy the **API Key** (the 32-character one, not the "API Read Access Token").
 
 ### Get a free OMDb key
