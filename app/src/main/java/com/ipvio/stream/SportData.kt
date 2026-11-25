@@ -60,7 +60,8 @@ object SportData {
     val SPORTS = listOf(
         Sport("soccer", "Fußball"), Sport("basketball", "Basketball"), Sport("nfl", "NFL"), Sport("nhl", "NHL"),
         Sport("tennis", "Tennis"), Sport("f1", "Formel 1"), Sport("mlb", "MLB"), Sport("ufc", "UFC"),
-        Sport("cricket", "Cricket"), Sport("golf", "Golf")
+        Sport("cricket", "Cricket"), Sport("golf", "Golf"),
+        Sport("tabletennis", "Tischtennis"), Sport("rally", "Rallye")
     )
 
     /**
@@ -95,7 +96,10 @@ object SportData {
         League("WNBA", "basketball/wnba", "Basketball", "basketball"),
         League("College Basketball (men)", "basketball/mens-college-basketball", "Basketball", "basketball"),
         League("LPGA Tour", "golf/lpga", "Golf", "golf", KIND_GOLF),
-        League("DP World Tour", "golf/eur", "Golf", "golf", KIND_GOLF)
+        League("DP World Tour", "golf/eur", "Golf", "golf", KIND_GOLF),
+        // Paths are UNVERIFIED (not checked against the live ESPN service): a path that does not answer shows no games.
+        League("ITTF", "table-tennis/itt", "Tischtennis", "tabletennis", KIND_TENNIS),
+        League("WRC", "racing/wrc", "Rallye", "rally", KIND_RACE)
     )
 
     val LEAGUES = listOf(
