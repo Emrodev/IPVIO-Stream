@@ -72,6 +72,7 @@ fun loadWishboxTexts() {
     I18nCore.load(DictW)
     I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNlW)
     I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPlW)
+    I18nCore.loadColumn(I18nCore.CODES.indexOf("pt"), DictPtW)
 }
 
 // Dutch column for the rows above
@@ -151,4 +152,85 @@ Einstellungen: Meldungen unter den Knöpfen sind sofort zu sehen¦Ustawienia: ko
 WLAN-Übertragung: der Fokus bleibt nach Start und Stopp auf dem Knopf¦Przenoszenie przez Wi-Fi: fokus pozostaje na przycisku po starcie i zatrzymaniu
 „Was ist neu“ erscheint auch nach einer Test-Version¦„Co nowego” pojawia się też po wersji testowej
 Update in der App: „Die Signatur konnte nicht geprüft werden“ stoppt das Update nicht mehr¦Aktualizacja w aplikacji: „Nie udało się sprawdzić podpisu” już nie zatrzymuje aktualizacji
+English¦English
+Türkçe¦Turecki
+العربية¦Arabski
+Français¦Francuski
+Español¦Hiszpański
+Italiano¦Włoski
+Nederlands¦Niderlandzki
+Polski¦Polski
+Português¦Portugalski
+Русский¦Rosyjski
+हिन्दी¦Hindi
+日本語¦Japoński
+한국어¦Koreański
+Shqip¦Albański
+Ex-YU / Balkan¦Dawna Jugosławia / Bałkany
+Ελληνικά¦Grecki
+Română¦Rumuński
+Magyar¦Węgierski
+Čeština¦Czeski
+Svenska¦Szwedzki
+Dansk¦Duński
+Norsk¦Norweski
+Suomi¦Fiński
+فارسی¦Perski
+Kurdî¦Kurdyjski
+עברית¦Hebrajski
+Українська¦Ukraiński
+Български¦Bułgarski
+اردو¦Urdu
+Tiếng Việt¦Wietnamski
+ไทย¦Tajski
+Filipino¦Filipino
+Boomer Mode¦Tryb Boomer
+Das Portal hat die Anmeldung abgelehnt. Adresse und MAC-Adresse prüfen.¦Portal odrzucił logowanie. Sprawdź adres i adres MAC.
+Erstelle ein Backup, installiere die App neu und stelle das Backup wieder her.¦Utwórz kopię zapasową, zainstaluj aplikację ponownie i przywróć kopię.
+Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.¦Cześć, jestem Claude. Jeśli podoba ci się ten projekt i chcesz pomóc temu początkującemu programiście dalej tworzyć (i czasem rozumieć, co robi), rozważ wsparcie projektu.
+IPVIO Stream is free, ad-free and open source (GPL-3.0). Donations are voluntary and do not unlock any features.¦IPVIO Stream jest darmowy, bez reklam i open source (GPL-3.0). Darowizny są dobrowolne i nie odblokowują żadnych funkcji.
+There are no live channels. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to movies & series only.¦Brak kanałów na żywo. Jeśli powinny być, sprawdź Ustawienia > Playlisty: tryb treści tej playlisty może być ustawiony tylko na filmy i seriale.
 """
+
+// Brazilian Portuguese column for the rows above
+val DictPtW = """
+Filme und Serien direkt zu den Kategorien¦Filmes e séries direto para as categorias
+„Filme“ und „Serien“ im Menü öffnen sofort die Kategorien statt der Startseite des Bereichs. Zurück führt zur Startseite des Bereichs.¦„Filmes“ e „Séries“ no menu abrem imediatamente as categorias em vez da página inicial da seção. Voltar leva à página inicial da seção.
+Was ist neu¦Novidades
+Version¦Versão
+Filme und Serien: auf Wunsch direkt zu den Kategorien (Einstellungen > Allgemein)¦Filmes e séries: opção de ir direto para as categorias (Configurações > Geral)
+Player: Untertitel- und Ton-Verzögerung im Menü einstellbar¦Player: sincronização de legendas e áudio ajustável no menu
+Player: das Menü schließt sich nur noch mit Zurück¦Player: o menu agora só fecha com Voltar
+Live TV: OK gedrückt halten entfernt einen Sender aus „Zuletzt gesehen“¦TV ao vivo: segurar OK remove um canal de „Assistidos recentemente“
+Jugendschutz: Inhalte für Erwachsene auf Wunsch nie auf den Startseiten¦Controle parental: conteúdo adulto nunca exibido nas páginas iniciais
+Untertitel-Verzögerung¦Atraso de legendas
+Ton-Verzögerung¦Atraso de áudio
+Später¦Mais tarde
+Früher¦Mais cedo
+Aktuell¦Atual
+Zurücksetzen¦Redefinir
+Gilt nur für diesen Titel. Später = der Text erscheint später.¦Válido apenas para este título. Mais tarde = o texto aparece mais tarde.
+Später = der Ton kommt später als das Bild. Gilt für alle Titel auf diesem Gerät.¦Mais tarde = o áudio é reproduzido após a imagem. Válido para todos os títulos neste aparelho.
+Zurück schließt das Menü¦Voltar fecha o menu
+Aus „Zuletzt gesehen“ entfernt¦Removido de „Assistidos recentemente“
+Erwachsenen-Inhalte nie auf den Startseiten¦Conteúdo adulto nunca nas páginas iniciais
+Zeigt Titel und Sender für Erwachsene nie in den Reihen der Startseiten (Start, Filme, Serien), auch nicht unter „Zuletzt geschaut“ oder „Weiter schauen“. In Live TV, in den Kategorien und in der Suche bleiben sie erreichbar.¦Nunca exibe títulos e canais adultos nas fileiras das telas iniciais (Início, Filmes, Séries), nem em „Assistidos recentemente“ ou „Continuar assistindo“. Eles permanecem acessíveis na TV ao vivo, categorias e busca.
+Google Drive: Favoriten, Verlauf, Einstellungen und Playlists zwischen Geräten sichern und wiederherstellen (Einstellungen > Speicher)¦Google Drive: faça backup e restaure favoritos, histórico, configurações e listas entre dispositivos (Configurações > Armazenamento)
+Live TV: Größe der Senderzeilen wählbar (Klein, Normal, Groß)¦TV ao vivo: tamanho das linhas de canais configurável (Pequeno, Normal, Grande)
+Filter: Kategorien suchen, Änderungen mit „Übernehmen“ auf einmal speichern¦Filtro: busque categorias e salve todas as alterações de uma só vez com „Aplicar“
+API-Schlüssel bequem am Handy eingeben (QR-Code oben auf der Seite)¦Insira chaves de API facilmente pelo celular (QR Code no topo da tela)
+Die App startet schneller und ist kleiner¦O aplicativo inicia mais rápido e está mais leve
+Nach jedem Update: dieses Fenster mit allen Neuigkeiten¦Após cada atualização: esta janela com todas as novidades
+Kategorien abhaken ruckelt nicht mehr und bringt die App nicht mehr zum Absturz¦Marcar/desmarcar categorias não trava mais nem fecha o aplicativo
+24/7- und Adult-Kanäle erscheinen wieder, wenn der Filter aus ist¦Canais 24/7 e adultos voltam a aparecer quando o filtro estiver desligado
+Live TV: Genre-Kategorien lassen sich wieder per OK gedrückt halten ausblenden¦TV ao vivo: categorias de gênero podem ser ocultadas segurando OK
+Jugendschutz: die PIN lässt sich nur noch mit der PIN entfernen¦Controle parental: o PIN só pode ser removido digitando o próprio PIN
+Suche am Handy: nur noch „Schließen“, Zurück schließt mit einem Druck¦Busca no celular: apenas „Fechar“, Voltar fecha com um único toque
+Startseite: der Playlist-Knopf zeigt „Playlist“ statt eines Download-Symbols, „Zusätzlich anzeigen“ entfernt¦Início: o botão de lista mostra „Lista“ em vez do ícone de download; „Exibir também“ removido
+Startseite: Reihenfolge und ausgeblendete Kategorien gelten auch für die Reihen¦Início: a ordem e as categorias ocultadas também se aplicam às fileiras
+Untertitel-Suche (SubDL) findet bei Serien wieder Treffer¦Busca de legendas (SubDL) volta a encontrar resultados em séries
+Bildformate heißen so, wie sie wirken („Zuschneiden“)¦Formatos de tela nomeados conforme seu efeito („Cortar bordas“)
+Viele fehlende Übersetzungen ergänzt¦Diversas traduções adicionadas
+Hoch/Runter blättert¦Cima/Baixo navega
+"""
+

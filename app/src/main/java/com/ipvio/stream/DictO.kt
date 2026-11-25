@@ -62,4 +62,45 @@ Beim Markieren einer Auswahl zeigt die Vorschau sofort die Wirkung, OK übernimm
 # Detail page: stream check (T-033)
 Technische Infos auf der Detailseite¦Technical info on the detail page¦Detay sayfasında teknik bilgiler¦Tehnički podaci na stranici s detaljima¦¦Tehnički podaci na stranici sa detaljima¦Información técnica en la página de detalles¦Infos techniques sur la page de détails¦Info tecniche nella pagina dei dettagli
 Liest beim Öffnen eines Titels den Anfang der Datei und zeigt Auflösung, HDR, Tonspuren und Untertitel. Das belegt kurz eine Verbindung zum Anbieter – bei Zugängen mit nur einer Verbindung ausschalten, wenn gleichzeitig etwas anderes läuft.¦Reads the start of the file when you open a title and shows resolution, HDR, audio tracks and subtitles. This briefly uses a connection to the provider – switch it off for accounts with only one connection if something else is playing at the same time.¦Bir başlık açıldığında dosyanın başını okur ve çözünürlüğü, HDR'yi, ses parçalarını ve altyazıları gösterir. Bu, sağlayıcıyla kısa süre bir bağlantı kullanır – tek bağlantılı hesaplarda aynı anda başka bir şey oynatılıyorsa kapatın.¦Pri otvaranju naslova čita početak datoteke i prikazuje rezoluciju, HDR, audio zapise i titlove. To nakratko zauzima jednu vezu s provajderom – kod pristupa sa samo jednom vezom isključi ako istovremeno nešto drugo radi.¦¦¦Al abrir un título lee el inicio del archivo y muestra resolución, HDR, pistas de audio y subtítulos. Esto ocupa brevemente una conexión con el proveedor: desactívalo en cuentas con una sola conexión si se está reproduciendo otra cosa a la vez.¦À l’ouverture d’un titre, lit le début du fichier et affiche la résolution, le HDR, les pistes audio et les sous-titres. Cela occupe brièvement une connexion chez le fournisseur – à désactiver pour les comptes à une seule connexion si autre chose est lu en même temps.¦All’apertura di un titolo legge l’inizio del file e mostra risoluzione, HDR, tracce audio e sottotitoli. Occupa brevemente una connessione con il provider: disattivalo con account a una sola connessione se nel frattempo è in riproduzione altro.
+
+# Still rendered in 1.4.2 without a dictionary row (zh column needs these keys too)
+English¦English¦¦¦¦¦¦¦
+Türkçe¦Türkçe¦¦¦¦¦¦¦
+العربية¦العربية¦¦¦¦¦¦¦
+Français¦Français¦¦¦¦¦¦¦
+Español¦Español¦¦¦¦¦¦¦
+Italiano¦Italiano¦¦¦¦¦¦¦
+Nederlands¦Nederlands¦¦¦¦¦¦¦
+Polski¦Polski¦¦¦¦¦¦¦
+Português¦Português¦¦¦¦¦¦¦
+Русский¦Русский¦¦¦¦¦¦¦
+हिन्दी¦हिन्दी¦¦¦¦¦¦¦
+日本語¦日本語¦¦¦¦¦¦¦
+한국어¦한국어¦¦¦¦¦¦¦
+Shqip¦Shqip¦¦¦¦¦¦¦
+Ex-YU / Balkan¦Ex-YU / Balkan¦¦¦¦¦¦¦
+Ελληνικά¦Ελληνικά¦¦¦¦¦¦¦
+Română¦Română¦¦¦¦¦¦¦
+Magyar¦Magyar¦¦¦¦¦¦¦
+Čeština¦Čeština¦¦¦¦¦¦¦
+Svenska¦Svenska¦¦¦¦¦¦¦
+Dansk¦Dansk¦¦¦¦¦¦¦
+Norsk¦Norsk¦¦¦¦¦¦¦
+Suomi¦Suomi¦¦¦¦¦¦¦
+فارسی¦فارسی¦¦¦¦¦¦¦
+Kurdî¦Kurdî¦¦¦¦¦¦¦
+עברית¦עברית¦¦¦¦¦¦¦
+Українська¦Українська¦¦¦¦¦¦¦
+Български¦Български¦¦¦¦¦¦¦
+اردو¦اردو¦¦¦¦¦¦¦
+Tiếng Việt¦Tiếng Việt¦¦¦¦¦¦¦
+ไทย¦ไทย¦¦¦¦¦¦¦
+Filipino¦Filipino¦¦¦¦¦¦¦
+Boomer Mode¦Boomer Mode¦¦¦¦¦¦¦
+Das Portal hat die Anmeldung abgelehnt. Adresse und MAC-Adresse prüfen.¦The portal rejected the login. Check the address and MAC address.¦¦¦¦¦¦¦
+Erstelle ein Backup, installiere die App neu und stelle das Backup wieder her.¦Create a backup, reinstall the app and restore the backup.¦¦¦¦¦¦¦
+Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.¦Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.¦¦¦¦¦¦¦
+IPVIO Stream is free, ad-free and open source (GPL-3.0). Donations are voluntary and do not unlock any features.¦IPVIO Stream is free, ad-free and open source (GPL-3.0). Donations are voluntary and do not unlock any features.¦¦¦¦¦¦¦
+There are no live channels. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to movies & series only.¦There are no live channels. If there should be some, check Settings > Playlists: the content mode of this playlist may be set to movies & series only.¦¦¦¦¦¦¦
+Alle paar Stunden¦Every few hours¦¦¦¦¦¦¦
 """
