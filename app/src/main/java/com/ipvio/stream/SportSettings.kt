@@ -22,39 +22,54 @@ internal fun SportSettingsPage(ctx: Context) {
     Hint("Wähle, was der Sports Hub zeigt. Ausgeschaltete Sportarten und Wettbewerbe erscheinen nicht und werden nicht abgefragt. Die Ergebnisse kommen von ESPN (inoffizielle Quelle).")
     ToggleRow("Live-Ergebnisse", "Ergebnisse, Tabellen und Spielpläne von ESPN", General.sportLive) { General.setSportLive(ctx, it) }
 
-    SectionTitle("Sportarten")
-    Hint("Du schaust nur Fußball? Schalte die anderen Sportarten aus.")
-    for (s in SportData.SPORTS) {
-        val ls = SportData.LEAGUES.filter { it.sport == s.key }
-        val on = ls.count { SportLeagues.on(it) }
-        ToggleRow(s.label, on.toString() + " / " + ls.size + " " + Lang.tr("Wettbewerbe"), on > 0) { SportLeagues.setSport(ctx, s.key, it) }
-    }
+    Hint("Wähle, was der Sports Hub zeigt. Ausgeschaltete Sportarten und Wettbewerbe erscheinen nicht und werden nicht abgefragt. Die Ergebnisse kommen von ESPN (inoffizielle Quelle).")
+    ToggleRow("Live-Ergebnisse", "Ergebnisse, Tabellen und Spielpläne von ESPN", General.sportLive) { General.setSportLive(ctx, it) }
 
-    SectionTitle("Wettbewerbe")
-    Hint("Später hinzugefügte Wettbewerbe (britische Ligen und Pokale, weitere europäische und Weltwettbewerbe, WNBA, College Basketball, LPGA, DP World Tour) sind zunächst aus. Manche zeigen vielleicht keine Spiele: ihre ESPN-Adressen sind nicht geprüft.")
-    for (s in SportData.SPORTS) {
-        val ls = SportData.LEAGUES.filter { it.sport == s.key }
-        for (l in ls) ToggleRow(l.name + "  ·  " + Lang.tr(s.label), null, SportLeagues.on(l)) { SportLeagues.toggle(ctx, l) }
-    }
+    SettingsTabs(listOf("Sportarten", "Wettbewerbe", "Hinweise", "Bereiche des Sports Hub"), "sportsettings") { tab ->
+        when (tab) {
+            0 -> {
+        SectionTitle("Sportarten")
+        Hint("Du schaust nur Fußball? Schalte die anderen Sportarten aus.")
+        for (s in SportData.SPORTS) {
+            val ls = SportData.LEAGUES.filter { it.sport == s.key }
+            val on = ls.count { SportLeagues.on(it) }
+            ToggleRow(s.label, on.toString() + " / " + ls.size + " " + Lang.tr("Wettbewerbe"), on > 0) { SportLeagues.setSport(ctx, s.key, it) }
+        }
 
-    SectionTitle("Hinweise")
-    ToggleRow("Hinweise bei Spielen deiner Teams", "Hinweise bei Anstoß und Toren", SportAlerts.enabled) { SportAlerts.setEnabled(ctx, it) }
-    ToggleRow("OK springt zum Spiel", "OK auf dem Hinweis bei Anstoß oder Tor öffnet einen Sender, der das Spiel zeigt", SportHubPrefs.jumpOnAlert) { SportHubPrefs.setJump(ctx, it) }
-    val delays = SportAlerts.DELAYS
-    SelectRow("Verzögerung", if (SportAlerts.delaySec == 0) Lang.tr("Sofort") else SportAlerts.delaySec.toString() + " s", delays.map { if (it == 0) Lang.tr("Sofort") else "$it s" }, delays.indexOf(SportAlerts.delaySec).coerceAtLeast(0)) {
-        while (SportAlerts.delaySec != delays[it]) SportAlerts.cycleDelay(ctx)
-    }
-    PillButton("Score-Overlay", light = true) { overlay = true }
+            }
+            1 -> {
+        SectionTitle("Wettbewerbe")
+        Hint("Später hinzugefügte Wettbewerbe (britische Ligen und Pokale, weitere europäische und Weltwettbewerbe, WNBA, College Basketball, LPGA, DP World Tour) sind zunächst aus. Manche zeigen vielleicht keine Spiele: ihre ESPN-Adressen sind nicht geprüft.")
+        for (s in SportData.SPORTS) {
+            val ls = SportData.LEAGUES.filter { it.sport == s.key }
+            for (l in ls) ToggleRow(l.name + "  ·  " + Lang.tr(s.label), null, SportLeagues.on(l)) { SportLeagues.toggle(ctx, l) }
+        }
 
-    SectionTitle("Bereiche des Sports Hub")
-    Hint("Blende Bereiche aus, die du nicht brauchst. Mindestens ein Bereich bleibt immer.")
-    val names = listOf("Übersicht", "Live", "Spielplan", "Ligen", "Teams", "Favoriten", "Sender")
-    names.forEachIndexed { i, n ->
-        val shown = i in SportHubLogic.visible(SportHubPrefs.hidden())
-        ToggleRow(n, null, shown) { SportHubPrefs.toggleTab(ctx, i) }
-    }
-    val vis = SportHubLogic.visible(SportHubPrefs.hidden())
-    SelectRow("Startbereich", names[SportHubLogic.resolve(SportHubPrefs.startTab, SportHubPrefs.hidden())], vis.map { names[it] }, vis.indexOf(SportHubLogic.resolve(SportHubPrefs.startTab, SportHubPrefs.hidden())).coerceAtLeast(0)) {
-        SportHubPrefs.setStart(ctx, vis[it])
+            }
+            2 -> {
+        SectionTitle("Hinweise")
+        ToggleRow("Hinweise bei Spielen deiner Teams", "Hinweise bei Anstoß und Toren", SportAlerts.enabled) { SportAlerts.setEnabled(ctx, it) }
+        ToggleRow("OK springt zum Spiel", "OK auf dem Hinweis bei Anstoß oder Tor öffnet einen Sender, der das Spiel zeigt", SportHubPrefs.jumpOnAlert) { SportHubPrefs.setJump(ctx, it) }
+        val delays = SportAlerts.DELAYS
+        SelectRow("Verzögerung", if (SportAlerts.delaySec == 0) Lang.tr("Sofort") else SportAlerts.delaySec.toString() + " s", delays.map { if (it == 0) Lang.tr("Sofort") else "$it s" }, delays.indexOf(SportAlerts.delaySec).coerceAtLeast(0)) {
+            while (SportAlerts.delaySec != delays[it]) SportAlerts.cycleDelay(ctx)
+        }
+        PillButton("Score-Overlay", light = true) { overlay = true }
+
+            }
+            else -> {
+        SectionTitle("Bereiche des Sports Hub")
+        Hint("Blende Bereiche aus, die du nicht brauchst. Mindestens ein Bereich bleibt immer.")
+        val names = listOf("Übersicht", "Live", "Spielplan", "Ligen", "Teams", "Favoriten", "Sender")
+        names.forEachIndexed { i, n ->
+            val shown = i in SportHubLogic.visible(SportHubPrefs.hidden())
+            ToggleRow(n, null, shown) { SportHubPrefs.toggleTab(ctx, i) }
+        }
+        val vis = SportHubLogic.visible(SportHubPrefs.hidden())
+        SelectRow("Startbereich", names[SportHubLogic.resolve(SportHubPrefs.startTab, SportHubPrefs.hidden())], vis.map { names[it] }, vis.indexOf(SportHubLogic.resolve(SportHubPrefs.startTab, SportHubPrefs.hidden())).coerceAtLeast(0)) {
+            SportHubPrefs.setStart(ctx, vis[it])
+        }
+            }
+        }
     }
 }

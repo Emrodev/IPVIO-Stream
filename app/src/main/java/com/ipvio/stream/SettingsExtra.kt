@@ -158,3 +158,31 @@ fun CatchupSection() {
             "Welche Sender ein Archiv haben und wie viele Tage es reicht, bestimmt dein Anbieter."
     )
 }
+
+/** Sound levelling (T-028): presets plus the three controls of "Custom". Changes apply at once, also during playback. */
+@Composable
+fun AudioLevelSettingsSection(ctx: Context) {
+    val modes = listOf("Aus", "Standard", "Klare Sprache", "Nachtmodus", "Eigene Einstellung")
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SelectRow("Ton angleichen", modes[AudioLevel.mode], modes, AudioLevel.mode, active = AudioLevel.mode != AudioLevelLogic.MODE_OFF) {
+            AudioLevel.setMode(ctx, it)
+        }
+        if (AudioLevel.mode == AudioLevelLogic.MODE_CUSTOM) {
+            val boosts = AudioLevelLogic.BOOST_DB.map { if (it == 0) "Aus" else "+$it dB" }
+            SelectRow("Maximale Anhebung", boosts[AudioLevel.boost], boosts, AudioLevel.boost) { AudioLevel.setCustom(ctx, boostIdx = it) }
+            val levels = listOf("Aus", "Leicht", "Mittel", "Stark")
+            SelectRow("Dynamik angleichen", levels[AudioLevel.level], levels, AudioLevel.level) { AudioLevel.setCustom(ctx, levelIdx = it) }
+            val speech = AudioLevelLogic.SPEECH_DB.map { if (it == 0) "Aus" else "+$it dB" }
+            SelectRow("Dialoge hervorheben", speech[AudioLevel.speech], speech, AudioLevel.speech) { AudioLevel.setCustom(ctx, speechIdx = it) }
+            SmallPill("Zurücksetzen") { AudioLevel.reset(ctx) }
+        }
+    }
+    Hint(
+        "Viele Sender sind leiser gemischt als YouTube oder Netflix (Fernsehnorm −23 LUFS statt etwa −16). „Standard“ hebt leise " +
+            "Sender automatisch an, gleicht laute und leise Stellen an und macht Dialoge etwas deutlicher – ohne Übersteuern."
+    )
+    Hint(
+        "„Klare Sprache“ hebt Stimmen stärker hervor. „Nachtmodus“ dämpft laute Stellen stark – gut zum leisen Hören. Wird der Ton " +
+            "unverändert an einen Receiver durchgeleitet (Dolby, DTS), bleibt er unbearbeitet."
+    )
+}

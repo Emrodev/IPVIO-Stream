@@ -1070,6 +1070,10 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     k == Key.MediaFastForward && cur.live && LiveTimeshift.active -> { LiveTimeshift.seekBy(player, step); flash = Flash(PIcon.Forward, "+" + step / 1000 + " s"); true }
                     k == Key.MediaNext && cur.live -> { zap(1); true }
                     k == Key.MediaPrevious && cur.live -> { zap(-1); true }
+                    // Remote channel keys P+ / P- (e.g. Sony PROG): next / previous channel. The "Up goes to the next channel"
+                    // setting only affects Up / Down.
+                    k == Key.ChannelUp && cur.live -> { zap(1); true }
+                    k == Key.ChannelDown && cur.live -> { zap(-1); true }
                     k == Key.MediaNext && cur.archive != null -> { val ch = curItem; val nx = archNext; if (ch != null && nx != null) playArchive(ch, nx) else backToLive(); true }
                     k == Key.MediaPrevious && cur.archive != null -> { val ch = curItem; val pv = archPrev; if (ch != null && pv != null) playArchive(ch, pv); true }
                     k == Key.MediaNext && !cur.live && hasNext -> { playEpisode(epList[epIdx + 1]); true }

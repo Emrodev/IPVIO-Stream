@@ -75,6 +75,12 @@ object PlaylistLogic {
         else -> e is java.io.IOException && !noSpace(e)
     }
 
+    /** First place inside the app in the stack trace of [e] (or its cause), e.g. "XtreamApi.kt:104". */
+    fun where(e: Throwable): String? = generateSequence(e) { it.cause }.take(4)
+        .flatMap { it.stackTrace.asSequence() }
+        .firstOrNull { it.className.startsWith("com.ipvio.") && it.fileName != null }
+        ?.let { "${it.fileName}:${it.lineNumber}" }
+
     fun friendlyError(e: Throwable): String = when (e) {
         is PlaylistError -> e.message ?: "Laden fehlgeschlagen."
         is java.net.UnknownHostException -> "Server nicht gefunden. Adresse und Internetverbindung prüfen."
@@ -85,7 +91,8 @@ object PlaylistLogic {
         is IllegalArgumentException -> "Ungültige Adresse."
         is OutOfMemoryError -> TOO_BIG_HINT
         is java.io.IOException -> if (noSpace(e)) NO_SPACE else "Verbindung unterbrochen. Bitte erneut versuchen."
-        else -> "Laden fehlgeschlagen (" + e.javaClass.simpleName + ")."
+        // Unexpected error: name the place in the app (file:line), so a screenshot is enough for a bug report
+        else -> "Laden fehlgeschlagen (" + e.javaClass.simpleName + (where(e)?.let { ", $it" } ?: "") + ")."
     }
 }
 

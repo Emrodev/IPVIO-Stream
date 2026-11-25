@@ -24,13 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Settings > Import list: bring a Letterboxd, MyAnimeList or Trakt export into the app.
+ * Settings > Import list: bring a Letterboxd or MyAnimeList export into the app.
  * Two ways: pick the file on this device, or upload it from the phone over the Wi-Fi (small web page, same as the transfer page).
  */
 @Composable
 internal fun ListImportPage(ctx: Context) {
-    Hint("Hole deine Listen von Letterboxd, MyAnimeList oder Trakt in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.")
-    Hint("Letterboxd: ZIP oder CSV · MyAnimeList: XML · Trakt: JSON")
+    Hint("Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.")
+    Hint("Letterboxd: ZIP oder CSV · MyAnimeList: XML")
     val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val name = uri.lastPathSegment ?: "list"

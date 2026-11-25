@@ -4,7 +4,7 @@ import java.io.ByteArrayInputStream
 import java.util.zip.ZipInputStream
 
 /**
- * Import of lists exported from other services (Letterboxd ZIP/CSV, MyAnimeList XML, Trakt JSON). Pure Kotlin so it can be unit tested.
+ * Import of lists exported from other services (Letterboxd ZIP/CSV, MyAnimeList XML). Trakt JSON is not supported. Pure Kotlin so it can be unit tested.
  * The parsers are tolerant: unknown columns/fields are ignored, anything without a title is skipped.
  */
 object ListImportLogic {
@@ -21,7 +21,7 @@ object ListImportLogic {
         val defaultStatus = if (lname.contains("watchlist") || lname.contains("plan")) Status.WATCHLIST else Status.WATCHED
         return when {
             t.startsWith("<") -> parseMal(t)
-            t.startsWith("[") || t.startsWith("{") -> parseTrakt(t, defaultStatus)
+            t.startsWith("[") || t.startsWith("{") -> emptyList()  // Trakt JSON files are not supported
             else -> parseCsv(t, defaultStatus)
         }
     }
@@ -102,37 +102,6 @@ object ListImportLogic {
             Row(title, null, st, !movie)
         }.toList()
 
-    /**
-     * Trakt JSON, tolerant: walks the whole document and takes every object that has a "movie" or "show" child with a "title",
-     * or (for flat lists) an object with "title" directly. "watchlist" in the file name or "listed_at" = watchlist.
-     */
-    fun parseTrakt(json: String, defaultStatus: Status): List<Row> {
-        val root = runCatching { org.json.JSONTokener(json).nextValue() }.getOrNull() ?: return emptyList()
-        val out = ArrayList<Row>()
-        fun row(o: org.json.JSONObject, series: Boolean?, parent: org.json.JSONObject?) {
-            val title = o.optString("title").trim()
-            if (title.isEmpty()) return
-            val listed = parent?.has("listed_at") == true && !parent.has("watched_at") && !parent.has("last_watched_at") && !parent.has("plays")
-            val st = if (listed) Status.WATCHLIST else defaultStatus
-            out.add(Row(title, o.optInt("year", 0).takeIf { it > 0 }, st, series))
-        }
-        fun walk(n: Any?) {
-            when (n) {
-                is org.json.JSONArray -> for (i in 0 until n.length()) walk(n.opt(i))
-                is org.json.JSONObject -> {
-                    val mv = n.optJSONObject("movie"); val sh = n.optJSONObject("show")
-                    when {
-                        mv != null -> row(mv, false, n)
-                        sh != null -> row(sh, true, n)
-                        n.has("title") -> row(n, null, null)
-                        else -> for (k in n.keys()) walk(n.opt(k))
-                    }
-                }
-            }
-        }
-        walk(root)
-        return out
-    }
 
     /** Matches rows against the library; returns pairs of (item, status). Same normalized title and (if both known) year ±1. */
     fun match(rows: List<Row>, items: List<Item>): List<Pair<Item, Status>> {

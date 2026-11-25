@@ -53,9 +53,9 @@ OK = Ton hierher, OK lange = Sender wechseln¦OK = dźwięk stąd, długie OK = 
 So sieht die Reihenfolge aus¦Tak wygląda wynikowa kolejność
 Nichts gezeigt¦Nic nie jest pokazywane
 Listen importieren¦Importuj listy
-Letterboxd, MyAnimeList, Trakt¦Letterboxd, MyAnimeList, Trakt
-Hole deine Listen von Letterboxd, MyAnimeList oder Trakt in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦Przenieś do aplikacji swoje listy z Letterboxd, MyAnimeList lub Trakt. Tytuły są dopasowywane do Twojej playlisty: importowane są listy do obejrzenia i obejrzane.
-Letterboxd: ZIP oder CSV · MyAnimeList: XML · Trakt: JSON¦Letterboxd: ZIP lub CSV · MyAnimeList: XML · Trakt: JSON
+Letterboxd, MyAnimeList¦Letterboxd, MyAnimeList
+Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦Przenieś do aplikacji swoje listy z Letterboxd, MyAnimeList. Tytuły są dopasowywane do Twojej playlisty: importowane są listy do obejrzenia i obejrzane.
+Letterboxd: ZIP oder CSV · MyAnimeList: XML¦Letterboxd: ZIP lub CSV · MyAnimeList: XML
 Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.¦To urządzenie nie ma bezpiecznego magazynu kluczy: adresy playlist z danymi logowania są przechowywane bez szyfrowania.
 Datei vom Gerät wählen¦Wybierz plik z urządzenia
 Auf diesem Gerät gibt es keine Dateiauswahl. Nutze den Import im WLAN.¦To urządzenie nie ma wyboru plików. Użyj importu przez Wi-Fi.

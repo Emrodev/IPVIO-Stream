@@ -67,7 +67,7 @@ private val CATS = listOf(
     Cat(AIcon.Lock, "Jugendschutz", "PIN, Inhalte ab 18"),
     Cat(AIcon.Storage, "Speicher", "Cache, Verlauf, Fortsetzen"),
     Cat(AIcon.Pulse, "Diagnose", "Status und Fehlersuche"),
-    Cat(AIcon.Download, "Listen importieren", "Letterboxd, MyAnimeList, Trakt"),
+    Cat(AIcon.Download, "Listen importieren", "Letterboxd, MyAnimeList"),
     Cat(AIcon.Live, "Boomer Mode", "Ganz einfach: große Kacheln zum Auswählen"),
     Cat(AIcon.Sliders, "Startseite anpassen", "Reihen und Widgets wählen und ordnen"),
     Cat(AIcon.Live, "Sports Hub", "Sportarten, Wettbewerbe, Hinweise, Bereiche"),
@@ -987,6 +987,7 @@ internal fun phoneDiagReport(ctx: Context): String {
 @Composable
 private fun AudioPage(ctx: Context) {
     TrackSettingsSection(ctx)
+    AudioLevelSettingsSection(ctx)
     // Round 14: subtitle style with live preview. Highlighting shows the effect immediately in the picture above, OK adopts it.
     Text("Untertitel-Stil", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     var pSize by remember { mutableStateOf<Int?>(null) }
