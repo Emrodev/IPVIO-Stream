@@ -154,7 +154,18 @@ class ParsedPlaylist(
     val items: List<Item>, val epgUrls: List<String>,
     val counts: Map<String, Int> = emptyMap(), val bytes: Map<String, Long> = emptyMap(),
     /** Channels with archive (catchup) according to the playlist: channel ID → details. */
-    val catchup: Map<String, CatchupInfo> = emptyMap()
+    val catchup: Map<String, CatchupInfo> = emptyMap(),
+    /** T-058: what parsing left out and why (for the load report on the Diagnostics page). */
+    val report: ParseReport = ParseReport()
+)
+
+/**
+ * T-058: entries of a list and where they went. [entries] = address lines with an #EXTINF line, [separators] = skipped
+ * divider lines ("##### DE #####"), [hiddenLang] / [hiddenMode] = left out by the language filter or the content mode,
+ * [episodes] = series entries (episodes or placeholders) that were combined into [Kind.SERIES] items.
+ */
+class ParseReport(
+    val entries: Int = 0, val separators: Int = 0, val hiddenLang: Int = 0, val hiddenMode: Int = 0, val episodes: Int = 0
 )
 
 /** Result of the quick scan pass (without creating titles): titles and amount of data per language. */
@@ -273,11 +284,33 @@ object M3uParser {
         epgFromHeader(text.lineSequence().firstOrNull { it.startsWith("#EXTM3U") })
 
     private fun clean(raw: String): String {
-        var t = LangTagLogic.stripDashTag(raw.replace(PREFIX, ""))
+        // T-059: each regular expression only runs when its cheap necessary condition holds (same result, the profile of a
+        // 205,000-entry list on the JVM showed clean() as the largest part of parsing)
+        var t = if (raw.indexOf('|') >= 0 || raw.indexOf(':') >= 0) raw.replace(PREFIX, "") else raw
+        t = LangTagLogic.stripDashTag(t)
         if (t.indexOf('(') >= 0 || t.indexOf('[') >= 0) t = t.replace(BRACKETS, "")
-        t = t.replace(TAGS, "")
-        t = t.replace(SPACES, " ").trim().trim('-', '|', ':', '.', ' ')
+        if (mayHaveTag(t)) t = t.replace(TAGS, "")
+        if (hasDoubleSpace(t)) t = t.replace(SPACES, " ")
+        t = t.trim().trim('-', '|', ':', '.', ' ')
         return if (t.isBlank()) raw.trim() else t
+    }
+
+    /** Necessary condition for [TAGS]: one of its words' letters ("4k", "hd", "hevc", "h265", "1080", "720", "multi", "german", "dual"). */
+    internal fun mayHaveTag(s: String): Boolean {
+        if (mayHaveQuality(s)) return true
+        return s.contains("hevc", true) || s.contains("h265", true) || s.contains("multi", true) ||
+            s.contains("german", true) || s.contains("dual", true)
+    }
+
+    /** Necessary condition for [SPACES] (`\s{2,}`): two whitespace characters in a row. */
+    internal fun hasDoubleSpace(s: String): Boolean {
+        var prev = false
+        for (ch in s) {
+            val w = ch == ' ' || ch == '\t' || ch == '\n' || ch == '\u000B' || ch == '\u000C' || ch == '\r'
+            if (w && prev) return true
+            prev = w
+        }
+        return false
     }
 
     private fun isSeparator(n: String): Boolean {
@@ -391,7 +424,12 @@ object M3uParser {
      * one after another, beginnings/labels/languages as references to shared texts. Saves a good 30 MB at the peak when parsing large lists
      * (580,000 episodes).
      */
-    private class SeriesAcc(val title: String, val logo: String?, val group: String, val q: String?, val lang: String) {
+    private class SeriesAcc(
+        val title: String, val logo: String?, val group: String, val q: String?, val lang: String,
+        val dist: String? = null, val placeholder: Boolean = false
+    ) {
+        /** T-058: another series of the same name exists (then the year, if any, is kept to tell them apart). */
+        var split = false
         var n = 0
         var ss = IntArray(4)
         var nn = IntArray(4)
@@ -450,20 +488,35 @@ object M3uParser {
         var headCu: CatchupInfo? = null
         val catchup = HashMap<String, CatchupInfo>()
 
+        var nEntries = 0; var nSep = 0; var nLang = 0; var nMode = 0; var nEp = 0
         entries(lines, check, onHeader = { header = it; headCu = CatchupLogic.fromInfo(it, "") }) { e ->
-            val kd = classify(e, st, langOf) ?: return@entries
-            if (LangTagLogic.hides(hidden, kd.lang, kd.kind)) return@entries
+            nEntries++
+            val kd = classify(e, st, langOf) ?: run { nSep++; return@entries }
+            if (LangTagLogic.hides(hidden, kd.lang, kd.kind)) { if (kd.lang in hidden) nLang++ else nMode++; return@entries }
+            if (kd.kind == Kind.SERIES) nEp++
             val group = pool.of(e.group)
             val q = quality(e.name, e.group)
             when (kd.kind) {
                 Kind.SERIES -> {
                     val m = kd.se
                     // Key (= series ID) as before from the cleaned name, so Resume/My list are preserved
-                    val cleaned = clean(m?.groupValues?.get(1) ?: e.name)
-                    val key = cleaned.lowercase()
+                    val rawName = m?.groupValues?.get(1) ?: e.name
+                    val cleaned = clean(rawName)
+                    val base = cleaned.lowercase()
+                    // T-058: same name, but a different series (other year or country, or another provider series in
+                    // another category): own key. The first one keeps the old key, so its ID stays the same.
+                    val dist = SeriesKeyLogic.distinguisher(rawName)
+                    val ph = SeriesKeyLogic.isPlaceholder(e.url)
+                    var key = base
+                    val first = series[base]
+                    if (first != null && SeriesKeyLogic.differs(first.group, first.dist, first.placeholder, group, dist, ph)) {
+                        key = SeriesKeyLogic.altKey(base, group, dist, ph && first.group != group)
+                        first.split = true
+                    }
                     val title = TitleText.title(cleaned)
                     val acc = series.getOrPut(key) {
-                        SeriesAcc(title, attr(e.info, "tvg-logo")?.ifBlank { null }, group, q, kd.lang)
+                        SeriesAcc(title, attr(e.info, "tvg-logo")?.ifBlank { null }, group, q, kd.lang, dist, ph)
+                            .also { if (key != base) it.split = true }
                     }
                     if (acc.done) return@entries
                     val season = m?.groupValues?.get(2)?.toIntOrNull() ?: 1
@@ -508,9 +561,12 @@ object M3uParser {
                 }
                 i = j
             }
-            out.add(Item("s_$key", Kind.SERIES, acc.title, null, "", acc.logo, acc.group, EpisodeTable.of(eps, pool), acc.q, lang = acc.lang))
+            // T-058: two series of the same name: the year goes into the year field, a country into the title ("The Office (UK)")
+            val year = if (acc.split) SeriesKeyLogic.yearOf(acc.dist) else null
+            val title = if (acc.split && acc.dist != null && year == null) "${acc.title} (${acc.dist})" else acc.title
+            out.add(Item("s_$key", Kind.SERIES, title, year, "", acc.logo, acc.group, EpisodeTable.of(eps, pool), acc.q, lang = acc.lang))
         }
         out.trimToSize()
-        return ParsedPlaylist(out, epgFromHeader(header), st.counts(), st.bytes, catchup)
+        return ParsedPlaylist(out, epgFromHeader(header), st.counts(), st.bytes, catchup, ParseReport(nEntries, nSep, nLang, nMode, nEp))
     }
 }

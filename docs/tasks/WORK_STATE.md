@@ -1,9 +1,18 @@
+Last update: 2026-11-25 (T-058 missing content and EPG matching, T-059 playlist switch and parser speed). Read `CLAUDE.md` first, then this file.
 Last update: 2026-11-23 (T-051 to T-054, analysis and plans for four user issues). Read `CLAUDE.md` first, then this file.
 Last update: 2026-11-23 (T-051 stage 3, fixes after the test build). Read `CLAUDE.md` first, then this file.
 
 The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not add new entries there.
 
 ## Current task
+
+Last update: 2026-11-25. Branch `claude/modest-johnson-415uuv` (from `main` f6270c3). Maintainer's priorities: 1. users see fewer channels, movies and series than the provider sends, and EPG matching; 2. speed (start, screen changes, playlist switch without loading screen).
+
+- T-058 (`docs/tasks/T-058-missing-content-and-epg-matching.md`): same-name series no longer merged (first keeps its ID), partial Xtream `get.php` lists loaded through the API, load report in Settings > Diagnostics > Log, XMLTV matching by normalized ID and channel name.
+- T-059 (`docs/tasks/T-059-instant-playlist-switch-and-parser-speed.md`): playlist switch keeps the screen when memory allows; parser about 30 % faster on the JVM.
+- Checks: 491/491 tests of the 75 JVM-runnable test classes (Kotlin 2.0.21 compiler downloaded into the scratchpad, JUnit 4.13.2). Not run: Gradle, device. Android files not compiled here.
+- Next: maintainer builds and runs the test steps in both task files; sends the "list has N entries" and "Playlist switch … ms" lines from the diagnostics log. Speed work after that only from device measurements ("Opened …: N ms" lines, T-056).
+- ID note: T-056 is already used in the code (screen timing, search index) without a task file; T-057 skipped to avoid confusion.
 
 Last update: 2026-11-23. Four user issues (Fire TV) analysed, no app code changed, plans only:
 
@@ -48,7 +57,7 @@ The full list with test steps is in `docs/tasks/WORK_STATE-history.md`, section 
 
 ## Task IDs
 
-- Highest ID in `docs/tasks/`: T-046. **Next free ID: T-047** (use `/new-task`, which checks this).
+- Highest ID in `docs/tasks/`: T-059. **Next free ID: T-060** (use `/new-task`, which checks this).
 - IDs used by more than one file: T-009, T-014, T-026, T-027, T-032. The files are not renamed here, because the old log and other task files refer to them by name. Renaming needs a decision.
 
 ## Conventions

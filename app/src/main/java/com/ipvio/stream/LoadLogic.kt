@@ -26,6 +26,27 @@ object LoadLogic {
     /** Does the list contain at least one movie or series? Stops at the first one. */
     fun hasVod(lines: Sequence<String>): Boolean = lines.any { isVodLine(it) }
 
+    /** Categories of the movies and of the series in a list, passed through [normGroup] (T-058). */
+    class VodGroups(val movies: Set<String>, val series: Set<String>)
+
+    /** Collects the categories of the movie and series addresses of a list (the group-title of the #EXTINF line before each). */
+    fun vodGroups(lines: Sequence<String>): VodGroups {
+        val movies = HashSet<String>()
+        val series = HashSet<String>()
+        var group: String? = null
+        for (raw in lines) {
+            val l = raw.trim()
+            if (l.startsWith("#EXTINF")) { group = groupTitle(l)?.let { normGroup(it) }; continue }
+            if (l.isEmpty() || l.startsWith("#")) continue
+            val g = group
+            if (g != null) {
+                if (l.contains("/movie/")) movies.add(g) else if (l.contains("/series/")) series.add(g)
+            }
+            group = null
+        }
+        return VodGroups(movies, series)
+    }
+
     /** How many bytes of playlist fit in memory (memory share [SHARE] divided by [FACTOR]). */
     fun budget(maxHeap: Long): Long = (maxHeap * SHARE / FACTOR).toLong()
 

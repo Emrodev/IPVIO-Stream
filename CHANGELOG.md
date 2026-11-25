@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Fix: many series were missing. Series with the same name were merged into one: "The Office (US)" and "(UK)", two series of different years, and on Xtream and Stalker logins the same series in two categories (for example a German and an English category). Each is its own series now and appears in its own category. A series you watched before keeps its progress and its place in My list (T-058). Not device tested yet
+- Fix: Xtream playlists whose M3U link delivers only part of the movies or series are now loaded completely through the provider's API (before, only when the link had no movie or series at all). Press "Reload" on the playlist once (T-058). Not device tested yet
+- TV guide: channels without a guide ID, or with an ID that differs only slightly from the guide's, now get their programme by a similar ID or by the channel name. Names used by several channels in the guide are only matched when the language fits (T-058). Not device tested yet
+- Settings > Diagnostics > Log: after loading a playlist, one line shows how many entries the provider's list has and how many were left out, and why (divider lines, language filter, content mode, parental control, ignored categories, broken titles) (T-058). Not device tested yet
+- Switching playlists: when there is enough memory, the current screen stays and the list changes in place, instead of showing the loading screen (T-059). Not device tested yet
+- Faster reading of large playlists (about 30 % in a test on a computer, not measured on a TV device) (T-059)
 
 ## 1.4.9
 - Series: "Download season" is shown on every series, also before the first play (before, it was only shown after a series had been started). Not device tested yet

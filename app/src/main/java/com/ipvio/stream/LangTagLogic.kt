@@ -123,6 +123,7 @@ object LangTagLogic {
 
     /** Removes a language tag with a dash at the start ("EN - Title" → "Title") so title and TMDB search are clean. */
     fun stripDashTag(name: String): String {
+        if (name.indexOf('-') < 0 && name.indexOf('–') < 0) return name   // T-059: no dash, no regular expression
         val m = DASH_TAG.find(name) ?: return name
         val code = m.groupValues[1].uppercase()
         return if (code in CODES && code !in WORDLIKE) name.substring(m.range.last + 1) else name
