@@ -1479,6 +1479,23 @@ object PlaylistStore {
         }
     }
 
+    /**
+     * Content mode of the main playlist was changed: parse the stored list again with the new mode (no download).
+     * A running load (start-up or refresh) holds the load lock; then this waits and tries again for up to 30 s instead of
+     * dropping the change, so "Movies & series" switched back on brings the titles back at once. Rebuilding alone
+     * ([applyMode]) cannot bring back titles left out while parsing. Runs in [switchScope], so closing the edit window or
+     * leaving the settings page does not stop it. (Taken from branch claude/epic-albattani-ses0se, 22 Nov 2026.)
+     */
+    fun modeChanged(c: Context) {
+        val app = c.applicationContext
+        switchScope.launch {
+            repeat(60) {
+                if (reapplyLanguages(app)) return@launch
+                delay(500)
+            }
+        }
+    }
+
     /** Content mode of a playlist was changed: rebuild the shown list (no new download). */
     suspend fun applyMode(c: Context) {
         // While a load runs, it rebuilds at its end anyway and then picks up the new mode

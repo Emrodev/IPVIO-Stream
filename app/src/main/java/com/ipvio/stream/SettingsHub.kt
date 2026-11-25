@@ -1372,7 +1372,7 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
             // Content mode not "all": one press loads movies and series again (same steps as "Apply" in the edit window)
             if (PlaylistMode.version.let { PlaylistMode.get(ctx, pl.url) } != PlaylistMode.ALL) SmallPill("Alle Inhalte zeigen") {
                 PlaylistMode.set(ctx, pl.url, PlaylistMode.ALL)
-                if (isActive) scope.launch { if (!PlaylistStore.reapplyLanguages(ctx)) PlaylistStore.applyMode(ctx) }
+                if (isActive) PlaylistStore.modeChanged(ctx)
                 else PlaylistStore.reloadOtherAsync(ctx, i)
             }
             SmallPill("Neu laden", icon = AIcon.Refresh) { if (isActive) reload() else PlaylistStore.reloadOtherAsync(ctx, i) }

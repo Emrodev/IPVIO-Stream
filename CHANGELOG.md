@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 1.5.1 (versionCode 17)
 - Player: new option "Tunneled playback (Live TV)" (Settings > Player > Source & quality, off by default). It lets picture and sound run through one hardware path of the device, which can help on channels where the picture stutters while the sound plays normally. It only works if the device supports it; if the picture stays black or the sound is out of sync, switch it off (#146, T-066). Not measured, not device tested yet
 - Series: new option Settings > Playlists > Series > "Combine seasons" (off by default). For Xtream providers that list every season as its own series ("Show S01", "Show S02"), the seasons appear as one series. The history and "My list" entries of those series start again while the option is on; the old ones come back when you switch it off (#151, T-065). Not device tested yet
 - Live TV: new switch "Genre categories in Live TV" (Settings > Live TV). Off = the provider's own categories follow "All channels" and the automatic Sport, Movies, Documentaries, Kids, News and Music rows are gone. On by default, as before (#96, T-063). Not device tested yet
@@ -16,14 +18,14 @@
 - Sports alerts: the delay can be set up to 120 s (before: 60 s), so an alert does not spoil a goal on a stream that runs behind (#130, T-057). The switch to turn alerts off is Settings > Sports Hub. Not device tested yet
 - Playlists: the app no longer creates a new secure key when the old one cannot be read for a moment (seen on some boxes after a restart). Before, this could make saved logins unreadable for good, so a playlist seemed to vanish (#112, T-056). Cause not confirmed on a device. If a saved playlist still cannot be read, the empty home screen now says so and asks you to add it again. Not device tested yet
 - Live TV on phones: tapping a category or "Search channels" now opens it. Before, a tap did nothing without a remote (#152, T-055). Not device tested yet
-
-## 1.5.1 (versionCode 17)
+- Playlists: switching "Movies & series" back on in a playlist's content mode now brings them back even while the list is being loaded; before, the change was dropped until the next reload. Not device tested yet
 - Phone page: the import section is titled "Import & Trakt" (was "Import lists"). Arabic, Dutch and Polish show the English title until they are translated.
 - Settings: "Import lists" is renamed "Import & Trakt" (Arabic, Dutch and Polish still show the old translation until they are updated). Not device tested
 - Settings > Import & Trakt: the Trakt sign-in has its own button "Connect Trakt", next to "Start import over Wi-Fi". It opens the phone sign-in page (/trakt) with a QR code and the same code. Shows whether the TV is connected to Trakt. Texts in English for now. Not device tested
 - Trakt (T-031, step 3): phone page at /trakt (4-digit code, link to Trakt, paste "code|state"); the TV checks the state and exchanges the code. Phone page texts are English only for now. No entry point on the TV yet. Not device tested
 - Trakt (T-031, step 2): code-to-token exchange (PKCE, no client secret) and encrypted token storage without a plain-text fallback. Not wired to a screen yet. Not device tested
 - Trakt (T-031, step 1): build field for the Trakt API client ID (`secrets.properties` or environment variable), pure login logic (`TraktLogic`) with JVM tests. No login screen and no sync yet. Not device tested
+
 ## 1.5.0 (versionCode 16)
 - Lists import: Trakt export files (JSON) can no longer be imported; Letterboxd and MyAnimeList stay. Lists imported from Trakt before stay visible
 - Live TV: the remote's channel keys P+ and P- switch to the next and the previous channel in the player (the "Up goes to the next channel" setting only affects Up and Down). Not device tested yet

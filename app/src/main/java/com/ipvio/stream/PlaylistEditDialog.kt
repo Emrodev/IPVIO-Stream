@@ -116,9 +116,13 @@ internal fun PlaylistEditDialog(ctx: Context, index: Int, scope: CoroutineScope,
                     if (ch.mode) PlaylistMode.set(ctx, url, mode)
                     if (ch.refresh) { PlaylistRefresh.set(ctx, url, refresh); Updater.apply(ctx) }
                     if (ch.shown && !shown) PlaylistStore.setShown(ctx, index, false)
-                    if (ch.mode || (ch.shown && !shown)) scope.launch {
+                    // Main list: the mode is applied while parsing the stored list again (no download); retried while a
+                    // load runs, in a scope that outlives this window
+                    val mainMode = ch.mode && index == PlaylistStore.active
+                    if (mainMode) PlaylistStore.modeChanged(ctx)
+                    if ((ch.mode && !mainMode) || (ch.shown && !shown)) scope.launch {
                         // The mode is applied while parsing the stored list again (no download); then the extra lists are rebuilt
-                        if (ch.mode && !PlaylistStore.reapplyLanguages(ctx)) PlaylistStore.applyMode(ctx)
+                        if (ch.mode && !mainMode && !PlaylistStore.reapplyLanguages(ctx)) PlaylistStore.applyMode(ctx)
                         if (ch.shown) PlaylistStore.applyMulti(ctx)
                     }
                     // Switched on: loaded in a scope that outlives this window (stored copy first, otherwise the server)
