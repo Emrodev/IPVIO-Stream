@@ -164,7 +164,7 @@ Keine Erinnerungen¦Nenhum lembrete
 Live¦Ao vivo
 Nächste Sendungen¦Próximos programas
 Sendungen aus dem Archiv deines Anbieters¦Programas do arquivo do provedor
-Suche nach Sendern, Filmen, Serien …¦Buscar canais, filmes, séries …
+Suche nach Sendern, Filmen, Serien …¦Pesquisar...
 Home¦Início
 EPG¦EPG
 TV-Programm¦Guia de programação

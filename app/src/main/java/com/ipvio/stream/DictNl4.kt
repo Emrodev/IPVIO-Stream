@@ -164,7 +164,7 @@ Keine Erinnerungen¦Geen herinneringen
 Live¦Live
 Nächste Sendungen¦Volgende uitzendingen
 Sendungen aus dem Archiv deines Anbieters¦Uitzendingen uit het archief van je aanbieder
-Suche nach Sendern, Filmen, Serien …¦Zoek naar zenders, films, series …
+Suche nach Sendern, Filmen, Serien …¦Zoeken...
 Home¦Start
 EPG¦EPG
 TV-Programm¦Tv-programma

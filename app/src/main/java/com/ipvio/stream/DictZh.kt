@@ -899,7 +899,7 @@ Keine Erinnerungen¦无提醒
 Live¦直播
 Nächste Sendungen¦接下来的节目
 Sendungen aus dem Archiv deines Anbieters¦服务商回看中的节目
-Suche nach Sendern, Filmen, Serien …¦搜索频道、电影、剧集 …
+Suche nach Sendern, Filmen, Serien …¦搜索...
 Home¦首页
 EPG¦EPG
 TV-Programm¦节目单

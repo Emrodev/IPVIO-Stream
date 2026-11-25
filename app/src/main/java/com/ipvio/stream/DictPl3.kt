@@ -51,7 +51,7 @@ Keine Erinnerungen¦Brak przypomnień
 Live¦Na żywo
 Nächste Sendungen¦Kolejne audycje
 Sendungen aus dem Archiv deines Anbieters¦Audycje z archiwum Twojego dostawcy
-Suche nach Sendern, Filmen, Serien …¦Szukaj kanałów, filmów, seriali …
+Suche nach Sendern, Filmen, Serien …¦Szukaj...
 Home¦Start
 EPG¦EPG
 TV-Programm¦Program TV

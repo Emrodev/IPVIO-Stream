@@ -187,7 +187,7 @@ Keine Erinnerungen¦No reminders¦Hatırlatma yok¦Nema podsjetnika¦Nema podsje
 Live¦Live¦Canlı¦Uživo¦Uživo¦Uživo¦En directo¦Direct¦Diretta
 Nächste Sendungen¦Next programs¦Sonraki programlar¦Sljedeće emisije¦Sljedeće emisije¦Sledeće emisije¦Próximos programas¦Programmes suivants¦Prossimi programmi
 Sendungen aus dem Archiv deines Anbieters¦Programs from your provider's archive¦Sağlayıcının arşivinden programlar¦Emisije iz arhive tvog provajdera¦Emisije iz arhive tvog pružatelja¦Emisije iz arhive tvog provajdera¦Programas del archivo de tu proveedor¦Programmes du replay de ton fournisseur¦Programmi dall'archivio del tuo provider
-Suche nach Sendern, Filmen, Serien …¦Search channels, movies, series …¦Kanal, film, dizi ara …¦Traži kanale, filmove, serije …¦Traži kanale, filmove, serije …¦Traži kanale, filmove, serije …¦Buscar canales, películas, series …¦Chercher chaînes, films, séries …¦Cerca canali, film, serie …
+Suche nach Sendern, Filmen, Serien …¦Search...¦Ara...¦Traži...¦Traži...¦Traži...¦Buscar...¦Rechercher...¦Cerca...
 Home¦Home¦Ana sayfa¦Početna¦Početna¦Početna¦Inicio¦Accueil¦Home
 EPG¦EPG¦EPG¦EPG¦EPG¦EPG¦EPG¦EPG¦EPG
 TV-Programm¦TV guide¦TV rehberi¦TV program¦TV program¦TV program¦Guía de TV¦Programme TV¦Guida TV
