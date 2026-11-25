@@ -75,6 +75,22 @@ object TraktLogic {
     /** True while the stored access token can still be used without renewal. */
     fun isAccessValid(nowMs: Long, expiresAtMs: Long): Boolean = nowMs < expiresAtMs
 
+    /** Random `state` for one sign-in (16 bytes, base64url). Compare with [stateMatches]. */
+    fun newState(random: SecureRandom = SecureRandom()): String {
+        val bytes = ByteArray(16)
+        random.nextBytes(bytes)
+        return base64UrlNoPad(bytes)
+    }
+
+    /** Compares the `state` returned by Trakt with the expected one in constant time. Null or empty never matches. */
+    fun stateMatches(expected: String, returned: String?): Boolean {
+        if (returned.isNullOrEmpty() || expected.isEmpty()) return false
+        if (returned.length != expected.length) return false
+        var diff = 0
+        for (i in expected.indices) diff = diff or (expected[i].code xor returned[i].code)
+        return diff == 0
+    }
+
     private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
     /** Standard base64url alphabet without padding (RFC 4648 section 5). Written out because minSdk 24 lacks java.util.Base64. */
@@ -99,3 +115,26 @@ object TraktLogic {
         return sb.toString()
     }
 }
+
+/**
+ * One sign-in attempt. The verifier and state live only in memory and only until they expire.
+ * Nothing here is written to storage, logs or backups.
+ */
+class PendingSignIn(
+    val verifier: String,
+    val state: String,
+    private val startedMs: Long,
+    private val ttlMs: Long = DEFAULT_TTL_MS,
+) {
+    fun expired(nowMs: Long): Boolean = nowMs >= startedMs + ttlMs
+
+    /** True when the attempt is still open and the returned state matches. */
+    fun accepts(returnedState: String?, nowMs: Long): Boolean =
+        !expired(nowMs) && TraktLogic.stateMatches(state, returnedState)
+
+    companion object {
+        /** Ten minutes: enough to sign in on the phone, short enough that a forgotten attempt expires. */
+        const val DEFAULT_TTL_MS = 600_000L
+    }
+}
+

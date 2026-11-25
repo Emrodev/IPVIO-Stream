@@ -83,4 +83,24 @@ class TraktLogicTest {
         assertTrue(TraktLogic.isAccessValid(nowMs = 0L, expiresAtMs = expiresAt))
         assertFalse(TraktLogic.isAccessValid(nowMs = expiresAt, expiresAtMs = expiresAt))
     }
+
+    @Test fun stateIsRandomAndMatchesOnlyExactly() {
+        val a = TraktLogic.newState()
+        val b = TraktLogic.newState()
+        assertEquals(22, a.length)
+        assertFalse(a == b)
+        assertTrue(TraktLogic.stateMatches(a, a))
+        assertFalse(TraktLogic.stateMatches(a, b))
+        assertFalse(TraktLogic.stateMatches(a, null))
+        assertFalse(TraktLogic.stateMatches(a, ""))
+        assertFalse(TraktLogic.stateMatches(a, a.substring(1)))
+    }
+
+    @Test fun pendingSignInAcceptsOnlyWithinTtlAndMatchingState() {
+        val p = PendingSignIn(verifier = "v".repeat(43), state = "STATE", startedMs = 1_000L, ttlMs = 1_000L)
+        assertTrue(p.accepts("STATE", nowMs = 1_500L))
+        assertFalse(p.accepts("OTHER", nowMs = 1_500L))
+        assertFalse(p.accepts("STATE", nowMs = 2_000L))
+        assertTrue(p.expired(2_000L))
+    }
 }
