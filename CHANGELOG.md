@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Polish: every dictionary text now has a Polish translation (178 texts of 1.4.8 – 1.5.1 that showed in English, among them private categories, playlist editing, Sports Hub, DNS, VPN, downloads, search, people, multi view, Trakt, player buttons and "What's new"), and "Import & Trakt" replaces the old "Import lists" title
+- Phone pages and a few settings texts ("Default sorting", the sorting hint, "Titles", "Start") had no dictionary row, so every language except German showed English or German there. They now have one (English, Polish; the other languages fall back to English as before)
+- Sound levelling: its texts (T-028) were never loaded into the dictionary and showed in German in every language. Now English, the other dictionary languages, Dutch and Polish show
+- Movies: the message about the limit for automatic genres stayed German in every language when the library size was shown with a space as thousands separator. Fixed
 
 ## 1.5.1 (versionCode 17)
 - "What's new" after the update: Trakt first, then the most important changes and fixes of 1.5.0 and 1.5.1 (1.5.0 had no notes)
