@@ -65,6 +65,11 @@ class TraktLogicTest {
         assertFalse(TraktLogic.isHttpsRedirect("https://example.org/a b"))
     }
 
+    @Test fun registeredRedirectIsHttps() {
+        assertTrue(TraktLogic.isHttpsRedirect(TraktLogic.REDIRECT_URI))
+        assertEquals("https://emrodev.github.io/IPVIO-Stream/trakt-callback/", TraktLogic.REDIRECT_URI)
+    }
+
     @Test fun clientIdCheck() {
         assertTrue(TraktLogic.hasClientId("y_7Xynhs7CYGaW1huVVJGmd8ooTL0WQKTntnObBacfA"))
         assertFalse(TraktLogic.hasClientId(""))

@@ -15,6 +15,8 @@ import java.security.SecureRandom
  */
 object TraktLogic {
     const val AUTHORIZE_URL = "https://auth.trakt.tv/oauth/authorize"
+    /** Redirect URI registered in the Trakt app: the static helper page on GitHub Pages (branch gh-pages). */
+    const val REDIRECT_URI = "https://emrodev.github.io/IPVIO-Stream/trakt-callback/"
     /** Token endpoint host (**unverified** here: the PKCE page names the path /oauth/token only). */
     const val TOKEN_URL = "https://api.trakt.tv/oauth/token"
 
