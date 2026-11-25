@@ -42,6 +42,8 @@ val MENU_LABELS = listOf("Home", "Filme", "Serien", "Live TV", "Suche", "Einstel
 
 object AppSettings {
     var ipvioFilter by mutableStateOf(false)
+    /** #151: Xtream series that a provider lists season by season are shown as one series. Off by default (it changes the series id). */
+    var mergeSeasons by mutableStateOf(false)
     var gridCols by mutableIntStateOf(4)
     var gridRows by mutableIntStateOf(3)
     var cardW by mutableIntStateOf(150)
@@ -95,6 +97,7 @@ object AppSettings {
         val p = prefs(c)
         // Default: provider categories; automatic genres only if chosen (setting or view "Categories")
         ipvioFilter = p.getBoolean("ipvio_filter", false)
+        mergeSeasons = p.getBoolean("merge_seasons", false)
         gridCols = p.getInt("grid_cols", 6).coerceIn(3, 10)
         gridRows = p.getInt("grid_rows", 3).coerceIn(2, 8)
         cardW = p.getInt("card_w", 150).coerceIn(110, 220)
@@ -223,6 +226,11 @@ object AppSettings {
         keys.forEach { e.remove(it) }
         e.apply()
         init(c)
+    }
+
+    fun setMergeSeasons(c: Context, v: Boolean) {
+        mergeSeasons = v
+        prefs(c).edit().putBoolean("merge_seasons", v).apply()
     }
 
     fun set(c: Context, v: Boolean) {
@@ -619,6 +627,29 @@ object EpProgress {
         if (old == v) return
         m[k] = v
         store(c, seriesId, m)
+    }
+
+    /** Number of titles in the progress store (T-031 Trakt sync: new marks only fill free places). */
+    @Synchronized
+    fun count(c: Context): Int = prefs(c).all.size
+
+    /** Size of the progress store: beyond it the oldest titles are forgotten. */
+    fun capacity(): Int = MAX_SERIES
+
+    /**
+     * T-031 Trakt sync: marks [keys] as watched where the title has no progress for them yet. Existing entries (also an
+     * episode the user is in the middle of) are never changed, and a title is only added when the store has room, so no
+     * other title is forgotten for it.
+     */
+    @Synchronized
+    fun addWatched(c: Context, seriesId: String, keys: Collection<Long>) {
+        if (PrivateCats.isPrivateId(seriesId)) return
+        val known = prefs(c).contains(seriesId)
+        if (!known && prefs(c).all.size >= MAX_SERIES) return
+        val m = load(c, seriesId)
+        var changed = false
+        for (k in keys) if (!m.containsKey(k)) { m[k] = ResumeLogic.EpPos(MARK_SECONDS, MARK_SECONDS); changed = true }
+        if (changed) store(c, seriesId, m)
     }
 
     /** Length (seconds) of the placeholder progress that marks an episode as watched by hand. */

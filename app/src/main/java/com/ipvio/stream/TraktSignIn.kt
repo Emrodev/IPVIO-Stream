@@ -24,7 +24,10 @@ object TraktSignIn {
         val p = pending ?: return TraktAuth.Outcome.REJECTED
         pending = null
         if (!p.accepts(returnedState, nowMs)) return TraktAuth.Outcome.REJECTED
-        return TraktAuth.exchange(context, code, p.verifier, nowMs)
+        val r = TraktAuth.exchange(context, code, p.verifier, nowMs)
+        // Step 4/5: take history and watchlist into the app right after a successful sign-in
+        if (r == TraktAuth.Outcome.OK) TraktSync.syncAsync(context)
+        return r
     }
 
     fun cancel() { pending = null }

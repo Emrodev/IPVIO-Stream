@@ -5,7 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** T-058: guide channels for playlist channels with a missing or slightly different tvg-id. */
+/** T-067: guide channels for playlist channels with a missing or slightly different tvg-id. */
 class EpgMatchLogicTest {
     private fun ch(id: String, name: String, tvg: String? = null, lang: String? = null) = EpgMatchLogic.Channel(id, name, tvg, lang)
 

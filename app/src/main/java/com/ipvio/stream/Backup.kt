@@ -37,7 +37,9 @@ object Backup {
         // T-028: private categories
         "ipvio_privatecats",
         // T-049d: Sports Hub settings
-        "ipvio_sportset"
+        "ipvio_sportset",
+        // T-062: buttons of the Live TV player
+        "ipvio_playerbtns"
     )
 
     /** Own API keys (TMDB, OMDb); not profile-scoped. Only travel inside the encrypted part of a sync. */

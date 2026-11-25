@@ -95,3 +95,20 @@ Keep the watch history, watchlist and favorites of a user in step with their Tra
 - `assembleDebug`: BUILD SUCCESSFUL.
 - `TraktLogicTest`: 13 of 13 passed.
 - Not yet done: phone route on a device (`/trakt`), real Trakt sign-in with an account, token storage check.
+
+## Steps 4 and 5: read-only sync (25 Nov 2026, branch `claude/modest-johnson-415uuv`)
+
+Decided by the maintainer on 25 Nov 2026 ("4 and 5 must work"): history and watchlist from Trakt into the app, read only. Writing back to Trakt (plan step 7) is not part of it.
+
+- `TraktSyncLogic.kt` (pure, JVM tests `TraktSyncLogicTest`): API paths, headers, JSON refresh body, parsing of `/sync/watched/{movies,shows}` and `/sync/watchlist/{movies,shows}`, pagination stop, and the plan: titles matched with the playlist by name and year (`ListImportLogic.match`); watched marks only for episodes **without any progress** in the app (an episode in the middle stays as it is); new titles only while the progress store (`EpProgress`, 400 titles) has room, most recently watched first, so no title of the user is pushed out.
+- `TraktSync.kt`: reads the four lists (paged, `limit=1000`, at most 20 pages each), renews the access token when it is expired or refused once (JSON body, `grant_type=refresh_token`, no client secret), stores "Trakt · Gesehen" and "Trakt · Merkliste" through `ImportedLists`, adds the marks through `EpProgress.addWatched`. Runs after a successful sign-in, at app start at most every 6 hours (8 s after the playlist is there, `MainActivity`) and with "Sync now". "Trakt trennen" revokes the token at Trakt (best effort), deletes it and the two categories; check marks stay. Diagnostics line with numbers only.
+- `TraktAuth.exchange`: JSON body instead of a form, User-Agent header.
+- `ListImportUi.kt`: when connected, a panel with status, last sync time, "Jetzt synchronisieren" and "Trakt trennen" instead of the connect button.
+- `DictT031.kt`: German keys with English rows (other languages show English).
+- `EpProgress.count`, `capacity`, `addWatched` (`Store.kt`).
+
+**API source:** the official documentation hosts (developer.trakt.tv, trakt.docs.apiary.io) could not be resolved from the session. Paths, headers, the JSON token body and the response fields were taken from two open-source clients: `trakt.tv` 8.3.0 (npm: `methods.json`, `trakt.js`) and `trakt.py` 4.4.0 (PyPI: `interfaces/sync`, `mapper/sync.py`, `core/request.py`). Both agree. Still to confirm on a device with a real account.
+
+**Release blocker:** `release.yml` must pass the repository secret `TRAKT_CLIENT_ID` to the release build (workflow change, needs the maintainer's approval).
+
+**Test results:** `TraktSyncLogicTest` 11/11 and `TraktLogicTest` 13/13 on the JVM in the session (Kotlin 2.0.21, JUnit 4.13.2, org.json 20250517). Not run: Gradle build of the Android files (CI), device test with a Trakt account.
