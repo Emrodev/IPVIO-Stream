@@ -202,12 +202,15 @@ private val EMPTY_HOME = HomeData(
     emptyList(), emptyList(), emptyMap(), emptyList(), false
 )
 
-private fun topRated(list: List<Item>): List<Item> =
-    list.mapNotNull { i ->
+// T-069: one entry per TMDB title (the best-rated copy), so the same film from several provider entries shows once
+private fun topRated(list: List<Item>): List<Item> {
+    val scored = list.mapNotNull { i ->
         val m = MetaRepo.cached(i)
         val sc = m?.score()
-        if (m != null && (m.votes >= 300 || m.tmdbId <= 0) && sc != null) i to sc else null
-    }.sortedByDescending { it.second }.map { it.first }
+        if (m != null && (m.votes >= 300 || m.tmdbId <= 0) && sc != null) Triple(i, sc, m) else null
+    }.sortedByDescending { it.second }
+    return TopRatedLogic.distinctByKey(scored) { t -> TopRatedLogic.tmdbKey(t.third.tmdbId, t.third.isTv) }.map { it.first }
+}
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -1003,7 +1006,8 @@ private fun Hero(
                 // with IMDb and Rotten Tomatoes rating (fetched the first time, then remembered on the device)
                 val m = rememberFullMeta(c, rememberMeta(c))
                 Column(verticalArrangement = Arrangement.spacedBy(dpx(if (home) 10 else 8))) {
-                    Kicker(Lang.tr(kindLabel(c.kind)) + (qualityOf(c)?.let { q -> "  ·  " + q.uppercase() } ?: ""))
+                    // Only the picture quality: the filter above already says movie or series
+                    qualityOf(c)?.let { Kicker(it.uppercase()) }
                     Text(
                         raw = true, text = c.title, color = Tok.TextHi, fontSize = spx(if (home) 80 else 72), lineHeight = spx(if (home) 80 else 72),
                         fontWeight = FontWeight.ExtraBold, letterSpacing = (-1.5).sp, maxLines = 2, overflow = TextOverflow.Ellipsis

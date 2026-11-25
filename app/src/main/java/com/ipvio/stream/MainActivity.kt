@@ -147,17 +147,9 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalFoundationApi::class)
 val SmoothSpec = object : BringIntoViewSpec {
     override val scrollAnimationSpec = tween<Float>(280, easing = FastOutSlowInEasing)
-    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-        val peek = 90f
-        val leading = offset
-        val trailing = offset + size
-        return when {
-            leading >= 0f && trailing <= containerSize -> 0f
-            leading < 0f && trailing > containerSize -> 0f
-            leading < 0f -> leading - peek
-            else -> trailing - containerSize + peek
-        }
-    }
+    // T-070: focused item kept in the middle; at the end of a list the scroll stops and the focus moves on
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
+        FocusCenterLogic.scrollDistance(offset, size, containerSize)
 }
 
 @OptIn(ExperimentalFoundationApi::class)

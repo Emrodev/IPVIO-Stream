@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Sports Hub settings: "Live results" was listed twice; now once
+- Trakt sign-in on the phone: the Trakt login opens in its own tab, so the code page stays open for the paste (the sign-in no longer fails with "not accepted" when the login ran in the same tab)
+- Search placeholder is the short "Search..." (translated in each language)
+- Search: picking a recent search keeps the focus in the search screen (it no longer jumps to the sidebar); on an empty category, Down from the category tiles reaches "Show all hits"
+- Movie and series covers and hero: the kind word is gone, only the picture quality (FHD, 2K, SD) stays above the title, and nothing is shown when the quality is unknown
+- Top rated: each TMDB title is shown once, the best-rated copy (T-069). Titles without a TMDB match are unchanged
+- Focus scrolling: the focused row stays in the middle of the screen while you move through a list; at the start or end of a list the scroll stops and the focus moves to the edge (T-070). Not device tested yet
 
 ## 1.5.1 (versionCode 17)
 - "What's new" after the update: Trakt first, then the most important changes and fixes of 1.5.0 and 1.5.1 (1.5.0 had no notes)

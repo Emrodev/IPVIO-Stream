@@ -165,6 +165,8 @@ fun SearchScreen(
     val sideFocus = remember { FocusRequester() }
     val tilesFirst = remember { FocusRequester() }
     val heroFirst = remember { FocusRequester() }
+    // "Show all hits" on an empty category: Down from the tiles goes there, because there is no result row to go to
+    val noHitsBtn = remember { FocusRequester() }
     var inSidebar by remember { mutableStateOf(false) }
 
     SideEffect { NavState.tab = tab; ContentFocus.tab = tab }
@@ -353,7 +355,11 @@ fun SearchScreen(
                             recent.forEachIndexed { i, term ->
                                 // OK searches again, long OK / menu key removes just this entry
                                 MiniChip(term, false, (if (i == 0) Modifier.focusRequester(firstHistory) else Modifier)
-                                    .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true, icon = AIcon.History) { SearchState.query = term }
+                                    .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true, icon = AIcon.History) {
+                                    // Same as #101 above: the chips disappear after a pick, so keep focus in the search screen
+                                    SearchState.query = term
+                                    runCatching { ContentFocus.req.requestFocus() }
+                                }
                             }
                             if (allRecent.size > 3) MiniChip("Alle anzeigen", false) { showAllHistory = true }
                         }
@@ -406,7 +412,7 @@ fun SearchScreen(
                         if (e.type != KeyEventType.KeyDown) false
                         else when (e.key) {
                             Key.DirectionUp -> runCatching { heroFirst.requestFocus() }.isSuccess
-                            Key.DirectionDown -> runCatching { firstRes.requestFocus() }.isSuccess
+                            Key.DirectionDown -> runCatching { (if (selectedEmpty && fl != 0) noHitsBtn else firstRes).requestFocus() }.isSuccess
                             else -> false
                         }
                     },
@@ -481,7 +487,7 @@ fun SearchScreen(
                                     if (others.isNotEmpty()) Text(Lang.tr("Treffer gibt es in {0}.").replace("{0}", others), color = Muted, fontSize = skf(19), raw = true)
                                     if (fl == 5 && !MetaRepo.enabled()) Text(Lang.tr("Personen-Suche braucht einen TMDB-Schlüssel."), color = Muted, fontSize = skf(19), raw = true)
                                 }
-                                PillButton("Alle Treffer zeigen", light = true) { SearchState.filter = 0 }
+                                PillButton("Alle Treffer zeigen", Modifier.focusRequester(noHitsBtn), light = true) { SearchState.filter = 0 }
                             }
                         }
                     }

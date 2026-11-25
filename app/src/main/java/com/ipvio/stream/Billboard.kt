@@ -120,7 +120,8 @@ fun BillboardInfo(item: Item, modifier: Modifier = Modifier) {
     Crossfade(item, animationSpec = tween(if (Look.motion == 0) 0 else 450), label = "bbi", modifier = modifier) { c ->
         val m = rememberFullMeta(c, rememberMeta(c))
         Column(Modifier.widthIn(max = dpx(980)), verticalArrangement = Arrangement.spacedBy(dpx(14))) {
-            Kicker(Lang.tr(kindLabel(c.kind)) + (qualityOf(c)?.let { q -> "  ·  " + q.uppercase() } ?: ""))
+            // Only the picture quality: the filter above already says movie or series
+            qualityOf(c)?.let { Kicker(it.uppercase()) }
             // The info block must fit into the space above the selected row: title always single-line (long titles smaller),
             // description at most two lines. Otherwise it runs into the row title.
             val tsz = if (c.title.length <= 24) 84 else if (c.title.length <= 34) 66 else 54
