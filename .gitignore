@@ -13,3 +13,9 @@ captures/
 .externalNativeBuild/
 .cxx/
 .DS_Store
+
+# Local secrets (CLAUDE.md section 10): API keys, OAuth client IDs, signing keys
+secrets.properties
+keystore.properties
+*.jks
+*.keystore
