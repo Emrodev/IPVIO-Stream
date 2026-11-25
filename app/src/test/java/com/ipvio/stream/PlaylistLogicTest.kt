@@ -115,4 +115,10 @@ class Runde14ListTest {
         // shortened at a word boundary
         assertTrue(s.removeSuffix("…").split(" ").all { it.startsWith("Wort") && it.length > 4 })
     }
+
+    @Test fun unexpectedLoadError_namesThePlaceInTheApp() {
+        val e = runCatching { error("boom") }.exceptionOrNull()!!
+        val msg = PlaylistLogic.friendlyError(e)
+        assertTrue(msg, msg.startsWith("Laden fehlgeschlagen (IllegalStateException, PlaylistLogicTest.kt:"))
+    }
 }
