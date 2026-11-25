@@ -33,6 +33,8 @@ Working rules for AI-assisted changes to this repository. Read this file first i
 - Conversation with the maintainer may be in German.
 - **No German terms on GitHub, ever.** This covers CHANGELOG, README, `docs/`, release notes, release text, PR and issue text, commit messages and code comments. When text refers to something on screen, quote the English label from the dictionaries (the English column in `Dict*.kt`), never the German key. Exception: the German source strings inside the `Dict*.kt` dictionary files themselves (they are the translation keys).
 - Existing German identifiers and comments are translated in stages (see `docs/REFACTORING-PROGRESS.md`), not all at once.
+- **Every new or changed UI text is translated into every language the app offers in the same change** (the codes in `I18nCore.CODES`: de, en, tr, bs, hr, sr, es, fr, it, nl, ar, pl, zh, pt). This is not optional and not a follow-up task. A new text needs a row in each language column; a changed text needs its translations updated too. A missing translation is an exception that the maintainer must approve in the PR; it is never the default.
+- Check the changed texts against every language column before a PR is opened. Stale translations of renamed labels count as missing translations (example: the Polish and Dutch "Import & Trakt" rows still had the old "Import lists" wording after the label changed).
 
 ## 5. Protected areas (no change without an approved plan)
 
