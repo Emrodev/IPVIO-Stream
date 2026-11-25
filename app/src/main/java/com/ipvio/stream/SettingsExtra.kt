@@ -67,6 +67,11 @@ fun SourceSettingsSection(ctx: Context) {
         "Liest beim Öffnen eines Titels den Anfang der Datei und zeigt Auflösung, HDR, Tonspuren und Untertitel. Das belegt kurz eine Verbindung zum Anbieter – bei Zugängen mit nur einer Verbindung ausschalten, wenn gleichzeitig etwas anderes läuft.",
         PlaybackPrefs.probe
     ) { PlaybackPrefs.setProbe(ctx, it) }
+    ToggleRow(
+        "Tunneling-Wiedergabe (Live TV)",
+        "Lässt Bild und Ton über einen gemeinsamen Hardware-Pfad des Geräts laufen. Kann bei Sendern helfen, bei denen das Bild ruckelt, während der Ton normal läuft. Wirkt nur, wenn das Gerät es für den Sender kann. Bleibt das Bild schwarz oder läuft der Ton versetzt, schalte es aus. Die Ton-Verzögerung kann dabei wirkungslos sein, und mit einem Zusatzbild ist es aus.",
+        PlaybackPrefs.tunneling
+    ) { PlaybackPrefs.setTunneling(ctx, it) }
     Text("Dieses Gerät: " + DeviceCaps.summary(), color = Muted, fontSize = 15.sp)
     if (PlaybackPrefs.learnedCap in 1..3) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Gelernt: 4K ruckelte hier mehrmals – Automatik nimmt höchstens Full HD.", color = DS.Gold, fontSize = 15.sp)

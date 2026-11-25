@@ -23,6 +23,8 @@ Last update: 2026-11-24 (issue review, branch `claude/exciting-johnson-9gi5zn`).
   - T-063 (#96): switch "Genre categories in Live TV" (Settings > Live TV, key `genres` in `ipvio_livetv`, default on). 3/3 JVM tests. Movies and Series already have "Automatic genres" (off by default).
   - T-064 (#145): M3U categories from `tvg-group`, other letter case, single quotes and `#EXTGRP:` lines (`M3uGroupLogic`, 6/6; parser tests 8/8). Cause not confirmed; Xtream/Stalker unchanged. Question for the reporter drafted in the file, not posted.
   - T-065 (#151): option "Combine seasons" (Settings > Playlists > Series, default off): Xtream series that a provider lists season by season become one series (`SeasonMergeLogic`, pseudo code `~merge` in the hidden set, `lazyParts`, `LazySeries`). Changes the series id while on. 26 JVM tests. Touches the IPTV core: needs a review. The reporter's provider type is unknown (hypothesis).
+  - T-066 (#146): option "Tunneled playback (Live TV)" (Settings > Player > Source & quality, key `tunneling` in `ipvio_playback`, default off; `TunnelingLogic`; `applyTunneling()` in `PlayerScreen.kt`). Media3 API not compiled here. Needs a review and a device test.
+  - #84: no code change. One sentence and a screenshot ("can't play series"); the maintainer asked on 22 Nov whether it works now, no answer. Needs the provider type and what is shown.
   - Comments posted on #131 and #118 (24 Nov 2026) as dictated by the maintainer.
 - Open: #118 can be answered (the per-playlist reload button exists since 1.4.5); #131 not analysed; #130, #67, #109 can be closed after a device check.
 - Next: maintainer decides on the PR #40 port (#10, #25) and tests T-055 to T-059 on the device.

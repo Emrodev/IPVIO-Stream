@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Player: new option "Tunneled playback (Live TV)" (Settings > Player > Source & quality, off by default). It lets picture and sound run through one hardware path of the device, which can help on channels where the picture stutters while the sound plays normally. It only works if the device supports it; if the picture stays black or the sound is out of sync, switch it off (#146, T-066). Not measured, not device tested yet
 - Series: new option Settings > Playlists > Series > "Combine seasons" (off by default). For Xtream providers that list every season as its own series ("Show S01", "Show S02"), the seasons appear as one series. The history and "My list" entries of those series start again while the option is on; the old ones come back when you switch it off (#151, T-065). Not device tested yet
 - Live TV: new switch "Genre categories in Live TV" (Settings > Live TV). Off = the provider's own categories follow "All channels" and the automatic Sport, Movies, Documentaries, Kids, News and Music rows are gone. On by default, as before (#96, T-063). Not device tested yet
 - Playlists (M3U): categories written as `tvg-group`, in other letter case, with single quotes or on a `#EXTGRP:` line are now found; before, such channels all landed in "Sonstige" (#145, T-064; cause not confirmed). Not device tested yet

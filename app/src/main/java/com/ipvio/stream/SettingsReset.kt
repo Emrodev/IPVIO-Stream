@@ -33,6 +33,7 @@ object SettingsReset {
                 PlaybackPrefs.setQuality(ctx, QualityLogic.AUTO)
                 PlaybackPrefs.setFallback(ctx, true)
                 PlaybackPrefs.setProbe(ctx, true)
+                PlaybackPrefs.setTunneling(ctx, false)
                 DeadLinks.setHide(ctx, false)
             }
             SettingsResetLogic.GENRES -> {

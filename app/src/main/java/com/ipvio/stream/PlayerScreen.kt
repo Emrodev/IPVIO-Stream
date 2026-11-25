@@ -438,6 +438,14 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         return true
     }
 
+    /** #146: tunneled playback for Live TV when the user switched it on (the player falls back by itself if the device cannot). */
+    fun applyTunneling() {
+        val want = TunnelingLogic.wanted(PlaybackPrefs.tunneling, cur.live, second != null)
+        (player.trackSelectionParameters as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector.Parameters)?.let {
+            if (it.tunnelingEnabled != want) player.trackSelectionParameters = it.buildUpon().setTunnelingEnabled(want).build()
+        }
+    }
+
     /** Audio and subtitles according to settings and the remembered choice for this title. */
     fun applyTrackPrefs() {
         val mem = TrackMemory.get(ctx, cur.itemId)
@@ -447,6 +455,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         (player.trackSelectionParameters as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector.Parameters)?.let {
             player.trackSelectionParameters = it.buildUpon().setConstrainAudioChannelCountToDeviceCapabilities(false).build()
         }
+        applyTunneling()
         var p = player.trackSelectionParameters.buildUpon()
         val audios = TrackLogic.audioPrefs(AppSettings.audioLang, AppSettings.audioLang2, mem?.first)
         p = p.setPreferredAudioLanguages(*audios.toTypedArray())
@@ -1037,6 +1046,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         triedUrls.clear()
         applyTrackPrefs()
     }
+    // #146: a second picture switches tunneling off, closing it switches it on again
+    LaunchedEffect(second != null, cur.live, PlaybackPrefs.tunneling) { applyTunneling() }
     LaunchedEffect(notice) { if (notice != null) { delay(5000); notice = null } }
     LaunchedEffect(digitBuf) {
         if (digitBuf.isNotEmpty()) { delay(1800); commitDigits() }
