@@ -71,4 +71,5 @@ Laden · {0}¦Download · {0}
 Gesehen¦Watched
 Download gestartet: {0}¦Download started: {0}
 {0} Folgen in der Warteschlange¦{0} episodes queued
+Mit Trakt verbinden¦Connect Trakt
 """

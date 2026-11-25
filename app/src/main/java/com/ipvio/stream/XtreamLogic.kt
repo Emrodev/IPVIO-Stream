@@ -110,6 +110,7 @@ object XtreamLogic {
 
     /** Ending of the placeholder address of a series whose episodes are only loaded on opening. */
     const val LAZY_EXT = "xtser"
+    private const val LAZY_SUFFIX = ".xtser"
 
     /**
      * Placeholder for a series: one entry instead of all episodes. Parsing sees a series with one episode (S01E01);
@@ -138,12 +139,24 @@ object XtreamLogic {
      * Placeholder addresses of a series (one per source with several playlists, label = name of the source, empty for the first).
      * Empty if the series has real episodes.
      */
-    fun lazyUrls(i: Item): List<Pair<String, String>> {
-        if (i.kind != Kind.SERIES || i.episodes.size != 1) return emptyList()
-        val e = i.episodes[0]
-        val vs = e.variants.ifEmpty { listOf(Variant(e.url, "", e.quality, null)) }
-        if (vs.any { parseLazy(it.url) == null }) return emptyList()
-        return vs.map { it.url to it.label }
+    fun lazyUrls(i: Item): List<Pair<String, String>> = lazyParts(i).map { it.first to it.second }
+
+    /**
+     * Placeholder addresses of a series as (address, label, season of the placeholder). Usually one placeholder; with
+     * "Combine seasons" (#151) one per season of the show. Empty if the series has real episodes.
+     */
+    fun lazyParts(i: Item): List<Triple<String, String, Int>> {
+        if (i.kind != Kind.SERIES || i.episodes.isEmpty()) return emptyList()
+        // Cheap check first (this runs for every series card): a series with real episodes does not end in the placeholder ending
+        val first = i.episodes[0]
+        if (!(first.variants.firstOrNull()?.url ?: first.url).endsWith(LAZY_SUFFIX)) return emptyList()
+        val out = ArrayList<Triple<String, String, Int>>()
+        for (e in i.episodes) {
+            val vs = e.variants.ifEmpty { listOf(Variant(e.url, "", e.quality, null)) }
+            if (vs.any { parseLazy(it.url) == null }) return emptyList()
+            for (v in vs) out.add(Triple(v.url, v.label, e.season))
+        }
+        return out
     }
 
     fun isLazy(i: Item): Boolean = lazyUrls(i).isNotEmpty()

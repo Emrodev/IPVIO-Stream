@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** T-058: series of the same name that are different series are no longer merged into one. */
+/** T-067: series of the same name that are different series are no longer merged into one. */
 class SeriesSplitTest {
     private fun series(m3u: String) = M3uParser.parse(m3u.trimIndent()).filter { it.kind == Kind.SERIES }
 

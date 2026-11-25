@@ -32,9 +32,9 @@ Automatic checks:
 | T9 | Phone remote: 4-digit access code and failed-attempt counter | partly (`RemoteLogicTest`); counter test open |
 | T10 | Backup JSON round trip (export, then import) | open |
 | T11 | Favorite order, playlist mode switch and settings reset logic | exists (`FavOrderLogicTest`, `AddFlowLogicTest`, `SettingsResetLogicTest`) |
-| T12 | Same-name series split (year, country, placeholders in different categories), parse report (T-058) | exists (`SeriesSplitTest`) |
-| T13 | Guide matching by normalized tvg-id and channel name (T-058) | exists (`EpgMatchLogicTest`) |
-| T14 | Partial `get.php` movie/series categories, playlist switch memory rule (T-058, T-059) | exists (`LoadLogicTest`, `SwitchLogicTest`) |
+| T12 | Same-name series split (year, country, placeholders in different categories), parse report (T-067) | exists (`SeriesSplitTest`) |
+| T13 | Guide matching by normalized tvg-id and channel name (T-067) | exists (`EpgMatchLogicTest`) |
+| T14 | Partial `get.php` movie/series categories, playlist switch memory rule (T-067, T-068) | exists (`LoadLogicTest`, `SwitchLogicTest`) |
 
 Manual checks on a device or Fire TV, for each release:
 

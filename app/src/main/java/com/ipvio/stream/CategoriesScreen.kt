@@ -80,7 +80,8 @@ private val TILE_COLORS = listOf(
 @Composable
 fun CategoriesScreen(
     req: CatReq, tab: Int,
-    onPick: (String, List<Item>, Int) -> Unit, onOpen: (Item) -> Unit,
+    /** The last argument is the genre when an IPVIO genre category was opened, otherwise null (#27). */
+    onPick: (String, List<Item>, Int, String?) -> Unit, onOpen: (Item) -> Unit,
     onBack: () -> Unit, onGoTab: (Int) -> Unit
 ) {
     val ctx = LocalContext.current
@@ -124,7 +125,7 @@ fun CategoriesScreen(
     // A folder row opens the folder; every other row works as before
     val pickOrOpen: (String, List<Item>, Int) -> Unit = { name, items, s ->
         val f = folderByLabel[name]
-        if (mode == 1 && f != null) { folder = f.prefix } else { onPick(name, items, s) }
+        if (mode == 1 && f != null) { folder = f.prefix } else { onPick(name, items, s, if (mode == 0 && name != "Sonstige" && req.ipvio.containsKey(name)) name else null) }
     }
     val entries = remember(map, az, saved, CatOrder.version, req.recent, req.watch) {
         val l = map.entries.map { it.key to it.value }

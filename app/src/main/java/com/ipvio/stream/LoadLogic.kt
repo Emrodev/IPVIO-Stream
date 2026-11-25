@@ -26,7 +26,7 @@ object LoadLogic {
     /** Does the list contain at least one movie or series? Stops at the first one. */
     fun hasVod(lines: Sequence<String>): Boolean = lines.any { isVodLine(it) }
 
-    /** Categories of the movies and of the series in a list, passed through [normGroup] (T-058). */
+    /** Categories of the movies and of the series in a list, passed through [normGroup] (T-067). */
     class VodGroups(val movies: Set<String>, val series: Set<String>)
 
     /** Collects the categories of the movie and series addresses of a list (the group-title of the #EXTINF line before each). */

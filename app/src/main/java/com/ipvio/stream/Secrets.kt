@@ -23,15 +23,21 @@ object Secrets {
 
     private fun key(): SecretKey? = try {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (ks.getKey(ALIAS, null) as? SecretKey) ?: KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").run {
-            init(
-                KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                    .setKeySize(256)
-                    .build()
-            )
-            generateKey()
+        val existing = ks.getKey(ALIAS, null) as? SecretKey
+        // #112: never create a new key over an alias that still exists, see SecretsLogic
+        when (SecretsLogic.keyAction(existing != null, ks.containsAlias(ALIAS))) {
+            SecretsLogic.KeyAction.USE -> existing
+            SecretsLogic.KeyAction.UNAVAILABLE -> null
+            SecretsLogic.KeyAction.GENERATE -> KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").run {
+                init(
+                    KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                        .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                        .setKeySize(256)
+                        .build()
+                )
+                generateKey()
+            }
         }
     } catch (e: Exception) {
         null

@@ -74,16 +74,16 @@ object Xmltv {
     fun customUrl(c: Context): String = prefs(c).getString("custom", "") ?: ""
     fun setCustom(c: Context, u: String) { prefs(c).edit().putString("custom", u.trim()).apply() }
 
-    /** T-058: tvg-id (lower case) not found in the guide → guide ID matched by normalized ID or name ([EpgMatchLogic]). */
+    /** T-067: tvg-id (lower case) not found in the guide → guide ID matched by normalized ID or name ([EpgMatchLogic]). */
     @Volatile private var redirect: Map<String, String> = emptyMap()
-    /** T-058: channel ID of a channel without tvg-id → guide ID matched by its name. */
+    /** T-067: channel ID of a channel without tvg-id → guide ID matched by its name. */
     @Volatile private var byItem: Map<String, String> = emptyMap()
 
     private fun keyOf(id: String): String { val l = id.lowercase(); return if (progs.containsKey(l)) l else redirect[l] ?: l }
     fun has(id: String?): Boolean = id != null && progs.containsKey(keyOf(id))
     fun forChannel(id: String?): List<EpgEntry> = if (id == null) emptyList() else progs[keyOf(id)] ?: emptyList()
 
-    /** Program of a channel: by its tvg-id, or (T-058) by the guide channel its name was matched with. */
+    /** Program of a channel: by its tvg-id, or (T-067) by the guide channel its name was matched with. */
     fun forItem(i: Item): List<EpgEntry> {
         if (i.tvgId != null) return forChannel(i.tvgId)
         val k = byItem[i.id] ?: return emptyList()
@@ -102,7 +102,7 @@ object Xmltv {
         if (all.isEmpty()) { status = "Keine EPG-Adresse gefunden"; return }
         val liveItems = items.filter { it.kind == Kind.LIVE }
         val wanted = liveItems.mapNotNull { it.tvgId?.lowercase() }.toHashSet()
-        // T-058: channels without tvg-id are matched by name, so a list without IDs can still get the program
+        // T-067: channels without tvg-id are matched by name, so a list without IDs can still get the program
         if (liveItems.isEmpty()) { status = "Playlist enthält keine Sender-IDs (tvg-id)"; return }
         val chans = liveItems.map { EpgMatchLogic.Channel(it.id, it.title, it.tvgId, it.lang) }
         job?.cancel()
@@ -150,7 +150,7 @@ object Xmltv {
         url: String, wantedIds: Set<String>, out: HashMap<String, MutableList<EpgEntry>>, past: Map<String, Int> = emptyMap(),
         chans: List<EpgMatchLogic.Channel> = emptyList(), red: HashMap<String, String> = HashMap(), bi: HashMap<String, String> = HashMap()
     ) {
-        // T-058: the <channel> elements come before the programmes (XMLTV order); collected first, matched at the first programme
+        // T-067: the <channel> elements come before the programmes (XMLTV order); collected first, matched at the first programme
         val guide = HashMap<String, List<String>>()
         var wanted: Set<String> = wantedIds
         var matched = false

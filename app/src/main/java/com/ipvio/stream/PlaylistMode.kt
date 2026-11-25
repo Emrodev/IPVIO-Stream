@@ -33,10 +33,13 @@ object PlaylistMode {
     }
 
     /** Hidden languages of a playlist plus its content mode as pseudo codes (used while loading, see LangTagLogic.hides). */
-    fun withMode(c: Context, url: String, hidden: Set<String>): Set<String> = when (get(c, url)) {
-        LIVE_ONLY -> hidden + LangTagLogic.NO_VOD
-        VOD_ONLY -> hidden + LangTagLogic.NO_LIVE
-        else -> hidden
+    fun withMode(c: Context, url: String, hidden: Set<String>): Set<String> {
+        val h = when (get(c, url)) {
+            LIVE_ONLY -> hidden + LangTagLogic.NO_VOD
+            VOD_ONLY -> hidden + LangTagLogic.NO_LIVE
+            else -> hidden
+        }
+        return if (AppSettings.mergeSeasons) h + LangTagLogic.MERGE_SEASONS else h   // #151
     }
 
     /** The items of one playlist as its mode allows (same list object when nothing is removed). */

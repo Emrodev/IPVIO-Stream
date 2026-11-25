@@ -1,4 +1,4 @@
-# T-059 – Playlist switch without loading screen, faster parsing
+# T-068 – Playlist switch without loading screen, faster parsing
 
 ## Goal
 
@@ -48,7 +48,7 @@ Storage format, start-up order, the screens.
 
 - JVM: parsing the synthetic list 909 ms → 623 ms (warm runs, JVM on the build machine; a Fire TV is slower, the ratio is not
   measured there). Old and new parser output compared on 50 tricky names (tags, brackets, dashes, tabs, accents): identical.
-- `SwitchLogicTest` 3/3; all 75 JVM-runnable test classes 491/491 (with T-058).
+- `SwitchLogicTest` 3/3; all 75 JVM-runnable test classes 491/491 (with T-067).
 - **Not run:** Gradle build, device test, time measurement on a device.
 
 ## Status

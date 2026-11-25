@@ -1,7 +1,7 @@
 package com.ipvio.stream
 
 /**
- * T-058: matching playlist channels with the channels of an XMLTV guide when the tvg-id is missing or not exactly the
+ * T-067: matching playlist channels with the channels of an XMLTV guide when the tvg-id is missing or not exactly the
  * guide's ID. Before, only an exact tvg-id gave a channel its program; a list without tvg-ids got nothing from XMLTV at all,
  * and an ID like "DasErste.de" next to the guide's "daserste.de@HD" stayed empty.
  *

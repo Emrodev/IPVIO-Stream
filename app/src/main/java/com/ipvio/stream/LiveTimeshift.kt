@@ -34,6 +34,9 @@ object LiveSettings {
     /** Up = next channel and Down = previous channel in Live TV (T-052). false = default: Up = previous. */
     var upIsNext by mutableStateOf(false)
         private set
+    /** #96: automatic genre categories (Sport, Movies, ...) before the provider's categories in Live TV. Default on, as before. */
+    var genres by mutableStateOf(true)
+        private set
     private var inited = false
 
     fun init(c: Context) {
@@ -45,13 +48,15 @@ object LiveSettings {
         recDir = p.getInt("dir", 0).coerceAtLeast(0)
         recPad = p.getInt("pad", 3).coerceIn(0, 30)
         upIsNext = p.getBoolean("up_next", false)
+        genres = p.getBoolean("genres", true)
     }
 
     private fun save(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
         .putBoolean("ts", timeshift).putInt("mb", bufferMb).putInt("dir", recDir).putInt("pad", recPad)
-        .putBoolean("up_next", upIsNext).apply()
+        .putBoolean("up_next", upIsNext).putBoolean("genres", genres).apply()
 
     fun setUpIsNext(c: Context, v: Boolean) { upIsNext = v; save(c) }
+    fun setGenres(c: Context, v: Boolean) { genres = v; save(c) }
     fun setTimeshift(c: Context, v: Boolean) { timeshift = v; save(c) }
     fun setBufferMb(c: Context, v: Int) { bufferMb = v; save(c) }
     fun setRecDir(c: Context, v: Int) { recDir = v; save(c) }

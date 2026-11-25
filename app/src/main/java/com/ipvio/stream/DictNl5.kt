@@ -490,8 +490,8 @@ Einer groß, drei klein¦Eén groot, drie klein
 OK = Ton hierher, OK lange = Sender wechseln¦OK = geluid hier, OK lang = zender wisselen
 So sieht die Reihenfolge aus¦Zo ziet de volgorde eruit
 Nichts gezeigt¦Niets getoond
-Listen importieren¦Lijsten importeren
-Letterboxd, MyAnimeList¦Letterboxd, MyAnimeList
+Import & Trakt¦Lijsten importeren
+Letterboxd, MyAnimeList, Trakt¦Letterboxd, MyAnimeList, Trakt
 Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦Haal je lijsten van Letterboxd, MyAnimeList in de app. De titels worden vergeleken met je afspeellijst: kijklijst en gezien worden overgenomen.
 Letterboxd: ZIP oder CSV · MyAnimeList: XML¦Letterboxd: ZIP of CSV · MyAnimeList: XML
 Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.¦Dit apparaat heeft geen veilige sleutelopslag: playlist-adressen met inloggegevens worden onversleuteld opgeslagen.

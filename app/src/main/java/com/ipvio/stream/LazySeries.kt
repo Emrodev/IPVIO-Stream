@@ -48,14 +48,15 @@ object LazySeries {
             done[i.id] = Hit(r, System.currentTimeMillis())
             r
         }
-        val urls = XtreamLogic.lazyUrls(i)
-        if (urls.isEmpty()) return i
+        val parts = XtreamLogic.lazyParts(i)
+        if (parts.isEmpty()) return i
         return withContext(Dispatchers.IO) {
             val api = PlaylistStore.xtreamApi(ctx)
             var eps: List<Episode>? = null
-            for ((url, label) in urls) {
+            for ((url, label, season) in parts) {
                 val (acct, sid) = XtreamLogic.parseLazy(url) ?: continue
-                val l = api.episodeList(acct, sid) ?: continue
+                // #151: a combined series has one placeholder per season; episodes numbered from season 1 move to that season
+                val l = SeasonMergeLogic.remap(api.episodeList(acct, sid) ?: continue, season)
                 eps = if (eps == null) l else MultiLogic.mergeEpisodes(eps, l, label.ifBlank { "2" })
             }
             val e = eps ?: return@withContext null

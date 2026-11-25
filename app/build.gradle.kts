@@ -36,8 +36,8 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 16
-        versionName = "1.5.0"
+        versionCode = 17
+        versionName = "1.5.1"
         // Name under the icon; the debug build overrides it (see buildTypes)
         manifestPlaceholders["appLabel"] = "IPVIO Stream"
 
@@ -45,6 +45,8 @@ android {
         buildConfigField("String", "OMDB_KEY", "\"${secret("OMDB_KEY")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${secretId("GOOGLE_CLIENT_ID")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_SECRET", "\"${secretId("GOOGLE_CLIENT_SECRET")}\"")
+        // Trakt API application (T-031, PKCE: no client secret is issued): empty until set in secrets.properties or as an environment variable
+        buildConfigField("String", "TRAKT_CLIENT_ID", "\"${secretId("TRAKT_CLIENT_ID")}\"")
     }
 
     signingConfigs {
