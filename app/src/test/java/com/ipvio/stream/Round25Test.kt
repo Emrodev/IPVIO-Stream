@@ -64,11 +64,4 @@ class Round25Test {
         assertEquals(ListImportLogic.Status.WATCHLIST, rows[1].status)
         assertEquals(false, rows[1].series)
     }
-
-    @Test fun parsesTraktJsonTolerantly() {
-        val json = "[{\"watched_at\":\"x\",\"movie\":{\"title\":\"Heat\",\"year\":1995,\"ids\":{\"imdb\":\"tt0113277\"}}},{\"show\":{\"title\":\"Lost\",\"year\":2004}}]"
-        val rows = ListImportLogic.parse("watched.json", json.toByteArray())
-        assertEquals(listOf("Heat", "Lost"), rows.map { it.title })
-        assertEquals(true, rows[1].series)
-    }
 }

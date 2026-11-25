@@ -110,8 +110,8 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
 <input name="code" inputmode="numeric" maxlength="4" placeholder="${t("Code vom Fernseher", "Code from the TV")}" required>
 <textarea name="epg" rows="3" placeholder="http://…/xmltv.php?username=…&amp;password=…"></textarea>
 <button type="submit">${t("An den Fernseher senden", "Send to TV")}</button></form>""" else "") +
-            (if (feats.list) """<h2>${t("Listen importieren (Letterboxd, MyAnimeList, Trakt)", "Import lists (Letterboxd, MyAnimeList, Trakt)")}</h2>
-<p>${t("Exportdatei wählen: Letterboxd ZIP oder CSV, MyAnimeList XML, Trakt JSON. Titel, die in deiner Playlist vorkommen, kommen in Merkliste bzw. Verlauf.", "Choose the export file: Letterboxd ZIP or CSV, MyAnimeList XML, Trakt JSON. Titles found in your playlist go to the watchlist or history.")}</p>
+            (if (feats.list) """<h2>${t("Listen importieren (Letterboxd, MyAnimeList)", "Import lists (Letterboxd, MyAnimeList)")}</h2>
+<p>${t("Exportdatei wählen: Letterboxd ZIP oder CSV, MyAnimeList XML. Titel, die in deiner Playlist vorkommen, kommen in Merkliste bzw. Verlauf.", "Choose the export file: Letterboxd ZIP or CSV, MyAnimeList XML. Titles found in your playlist go to the watchlist or history.")}</p>
 <input id="lc" inputmode="numeric" maxlength="4" placeholder="${t("Code vom Fernseher", "Code from the TV")}">
 <input id="lf" type="file">
 <button onclick="lu()">${t("Liste hochladen", "Upload list")}</button><p id="ls"></p>""" + sendFileJs("lu", "/listimport", "lc", "lf", "ls") else "") +
@@ -510,7 +510,7 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
         /** Largest uploadable playlist file. */
         const val MAX_UPLOAD = 400L * 1024 * 1024
 
-        /** Largest uploadable list export (Letterboxd, MyAnimeList, Trakt); same limit as the file picker on the TV (ListImportUi). */
+        /** Largest uploadable list export (Letterboxd, MyAnimeList); same limit as the file picker on the TV (ListImportUi). */
         const val MAX_LIST_UPLOAD = 16L * 1024 * 1024
         /** Largest unread body that is still read to the end before an error reply (larger ones: connection just closes). */
         const val MAX_DRAIN = 64L * 1024 * 1024
