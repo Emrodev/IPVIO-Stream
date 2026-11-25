@@ -20,6 +20,8 @@ Last update: 2026-11-24 (issue review, branch `claude/exciting-johnson-9gi5zn`).
   - #131: no code change. On Live TV Left opens the channel list by design; Left/Right seeking is for movies and episodes. Decision for the maintainer.
   - T-061: search with the filter "Persons": Down reaches the people results (`firstKey` fallback "pe"). Not device tested.
   - T-062: implemented after the maintainer's decisions (24 Nov): fewer Live TV player buttons, rewind/forward buttons (seek step; archive for catch-up channels, buffer otherwise), own button list in Settings > Live TV (`ipvio_playerbtns`, in the backup). 11/11 JVM tests. Touches `PlayerScreen.kt`: needs a review. Several points are unverified on a device (see the file).
+  - T-063 (#96): switch "Genre categories in Live TV" (Settings > Live TV, key `genres` in `ipvio_livetv`, default on). 3/3 JVM tests. Movies and Series already have "Automatic genres" (off by default).
+  - T-064 (#145): M3U categories from `tvg-group`, other letter case, single quotes and `#EXTGRP:` lines (`M3uGroupLogic`, 6/6; parser tests 8/8). Cause not confirmed; Xtream/Stalker unchanged. Question for the reporter drafted in the file, not posted.
   - Comments posted on #131 and #118 (24 Nov 2026) as dictated by the maintainer.
 - Open: #118 can be answered (the per-playlist reload button exists since 1.4.5); #131 not analysed; #130, #67, #109 can be closed after a device check.
 - Next: maintainer decides on the PR #40 port (#10, #25) and tests T-055 to T-059 on the device.

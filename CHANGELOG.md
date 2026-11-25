@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Live TV: new switch "Genre categories in Live TV" (Settings > Live TV). Off = the provider's own categories follow "All channels" and the automatic Sport, Movies, Documentaries, Kids, News and Music rows are gone. On by default, as before (#96, T-063). Not device tested yet
+- Playlists (M3U): categories written as `tvg-group`, in other letter case, with single quotes or on a `#EXTGRP:` line are now found; before, such channels all landed in "Sonstige" (#145, T-064; cause not confirmed). Not device tested yet
 - Live TV player: fewer buttons. "Channel list" and "TV guide" are no longer buttons (Left opens the channel list, Right opens the TV guide, as before). Aspect ratio, second picture and "Open externally" are not shown by default; they stay in the player menu "Settings" (T-062). Not device tested yet
 - Live TV player: on channels with an archive (catch-up) there is a rewind button that goes back by the seek step from Settings; with the local buffer there are rewind and forward buttons (T-062). Not device tested yet
 - Settings > Live TV > Player buttons: choose which buttons the Live TV player shows and in which order (T-062). Not device tested yet

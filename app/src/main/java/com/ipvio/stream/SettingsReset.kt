@@ -52,6 +52,7 @@ object SettingsReset {
                 LiveSettings.setRecDir(ctx, 0)
                 LiveSettings.setRecPad(ctx, 3)
                 LiveSettings.setUpIsNext(ctx, false)
+                LiveSettings.setGenres(ctx, true)
                 Reminders.setLead(ctx, DEFAULT_REMINDER_LEAD_MIN)
                 PlayerButtonPrefs.reset(ctx)
             }

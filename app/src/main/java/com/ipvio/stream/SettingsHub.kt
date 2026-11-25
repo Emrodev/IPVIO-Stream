@@ -1310,6 +1310,7 @@ private fun LivePage(ctx: Context) {
     Text("TV-Programm (EPG)", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     Text("Programm bei $xtream von ${counts.first} Sendern möglich", color = Muted, fontSize = 15.sp)
     Text("XMLTV: ${Xmltv.status}", color = Accent2, fontSize = 15.sp)
+    ToggleRow("Genre-Kategorien in Live TV", "Sport, Filme, Dokumentationen, Kinder, Nachrichten und Musik stehen vor den Kategorien deines Anbieters. Aus = nur die Kategorien deines Anbieters, in seiner Reihenfolge, direkt nach „Alle Sender“.", LiveSettings.genres) { LiveSettings.setGenres(ctx, it) }
     ToggleRow("Sender-Qualitäten bündeln", "Derselbe Sender in 8K, 4K, FHD, HD und SD erscheint als eine Zeile. OK startet die beste Qualität, die anderen wählst du im Menü des Senders (OK gedrückt halten).", General.bundleLive) { General.setBundleLive(ctx, it) }
     val rowSizes = listOf("Klein", "Normal", "Groß")
     SelectRow("Senderzeilen", rowSizes[General.channelRowSize], rowSizes, General.channelRowSize) { General.setChannelRowSize(ctx, it) }

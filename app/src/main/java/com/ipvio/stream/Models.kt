@@ -326,6 +326,8 @@ object M3uParser {
         var info: String? = null
         var name: String? = null
         var group = "Sonstige"
+        var extGroup: String? = null   // #145: a "#EXTGRP:" line applies until the next one
+        var titleGroup = false
         var header = false
         var k = 0
         for (line in lines) {
@@ -334,7 +336,12 @@ object M3uParser {
             if (l.startsWith("#EXTINF")) {
                 info = l
                 name = l.substringAfterLast(',').trim()
-                group = attr(l, "group-title")?.ifBlank { null } ?: "Sonstige"
+                val g = attr(l, "group-title")?.ifBlank { null } ?: M3uGroupLogic.fromInfo(l)
+                titleGroup = g != null
+                group = g ?: extGroup ?: "Sonstige"
+            } else if (l.startsWith("#EXTGRP:", ignoreCase = true)) {
+                extGroup = M3uGroupLogic.fromExtGrp(l)
+                if (!titleGroup && info != null) group = extGroup ?: "Sonstige"
             } else if (l.isNotEmpty() && !l.startsWith("#")) {
                 val n = name
                 val inf = info
@@ -342,7 +349,7 @@ object M3uParser {
                     onEntry(Entry(inf, n, group, l))
                     if (++k % 2000 == 0) check?.invoke()
                 }
-                name = null; info = null
+                name = null; info = null; extGroup = null
             }
         }
     }
