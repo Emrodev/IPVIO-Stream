@@ -90,3 +90,8 @@ Keep the watch history, watchlist and favorites of a user in step with their Tra
 - `RemoteHub.kt`: wires the two callbacks.
 - Helper page on GitHub Pages now shows `code|state` as one copyable text.
 - Open: no entry point on the TV yet (the phone page is reached by typing `http://<TV-IP>:<port>/trakt`); English-only texts on the phone page; `api.trakt.tv` and the response fields unverified; the Secrets side effect (`plainFallback`) when the keystore is missing; not compiled here.
+
+## Test results (maintainer, Android Studio)
+- `assembleDebug`: BUILD SUCCESSFUL.
+- `TraktLogicTest`: 13 of 13 passed.
+- Not yet done: phone route on a device (`/trakt`), real Trakt sign-in with an account, token storage check.
