@@ -72,6 +72,27 @@ object WhatsNew {
     const val BUG_FIXES = "## Bug fixes (hopefully lol)"
 
     val NOTES: Map<String, List<String>> = mapOf(
+        // 1.5.1 (also covers 1.5.0, which had no notes): Trakt first, then the most important changes and fixes
+        "1.5.1" to listOf(
+            "## Trakt",
+            "Neu: Trakt verbinden. Einstellungen > Import & Trakt > „Mit Trakt verbinden“, die Anmeldung läuft bequem über das Handy",
+            "Trakt-Abgleich: gesehene Filme und Folgen bekommen ihr Häkchen, Verlauf und Merkliste erscheinen als Kategorien bei Filme und Serien",
+            "Die App liest nur von Trakt und ändert nichts an deinem Trakt-Konto",
+            "## New",
+            "Fehlende Serien: gleichnamige Serien bei Xtream und Stalker erscheinen jetzt alle, jede in ihrer Kategorie",
+            "Xtream: Filme und Serien werden vollständig geladen, auch wenn der M3U-Link nur einen Teil liefert. Einmal „Neu laden“ drücken",
+            "Ton angleichen: leise Live-Sender klingen so laut wie Streaming-Apps (Einstellungen > Ton & Untertitel)",
+            "Staffeln zusammenfassen: Serien, die dein Anbieter Staffel für Staffel führt, werden eine Serie (Einstellungen > Playlists)",
+            "Live-TV-Player: weniger Knöpfe, Zurückspulen bei Sendern mit Archiv und eine eigene Knopf-Auswahl",
+            "TV-Guide: mehr Sender bekommen ihr Programm, auch ohne passende Sender-ID",
+            "Playlist wechseln ohne Ladebildschirm, große Playlists werden schneller gelesen",
+            "Fernbedienung: P+ und P- schalten im Player den Sender um",
+            BUG_FIXES,
+            "MKV-Filme ohne Index lassen sich wieder spulen und fortsetzen",
+            "Gespeicherte Playlists verschwinden auf manchen Boxen nach einem Neustart nicht mehr",
+            "Hochladen über die Handy-Seite funktioniert wieder",
+            "Inhaltsmodus „Live TV + Filme & Serien“ wirkt sofort, auch während die Playlist lädt"
+        ),
         "1.4.8" to listOf(
             "Neu: VPN mit WireGuard (Einstellungen > Allgemein). Datei deines VPN-Anbieters auswählen, verbinden, fertig – auch der Videostream läuft durch das VPN",
             "Neu: eigener DNS-Server (Einstellungen > Allgemein): Cloudflare, Google, Quad9 oder eine eigene Adresse",

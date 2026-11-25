@@ -116,4 +116,16 @@ class TraktSyncLogicTest {
         assertEquals("3 watched · 2 on the watchlist", I18nCore.translate("3 gesehen · 2 auf der Merkliste", en))
         assertEquals("Last synced: 25.11. 18:30", I18nCore.translate("Zuletzt synchronisiert: 25.11. 18:30", en))
     }
+
+    @Test fun whatsNewLinesOf151HaveEnglishRows() {
+        I18nCore.load(DictA, DictT031)
+        val en = I18nCore.CODES.indexOf("en")
+        val rows = DictT031.lineSequence().filter { it.contains('¦') && !it.startsWith("#") && !it.contains('{') }.toList()
+        assertTrue(rows.size >= 20)
+        for (r in rows) {
+            val (de, eng) = r.split('¦')
+            assertTrue(de, eng.isNotBlank())
+            assertEquals(eng, I18nCore.translate(de, en))
+        }
+    }
 }

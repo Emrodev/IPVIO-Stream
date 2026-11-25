@@ -89,11 +89,24 @@ jobs:
           printf 'storeFile=ipvio-release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
             "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
 
+      - name: Require the Trakt client ID
+        # "Connect Trakt" (Settings > Import & Trakt) only works with the project's Trakt app ID built in. Stop instead of
+        # publishing a release whose Trakt sign-in cannot start. The ID is public by design (PKCE, no client secret).
+        env:
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+        run: |
+          if [ -z "$TRAKT_CLIENT_ID" ]; then
+            echo "::error::Repository secret TRAKT_CLIENT_ID is missing (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+
       - name: Build signed release APK
         # Google sign-in for Drive and live sync: without these the release hides the Drive section (see app/build.gradle.kts)
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          # Trakt sign-in and sync (T-031): read by app/build.gradle.kts into BuildConfig.TRAKT_CLIENT_ID
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
         run: ./gradlew --no-daemon assembleRelease
 
       - name: Verify signature
