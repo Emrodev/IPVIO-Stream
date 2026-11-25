@@ -3,6 +3,8 @@
 ## Unreleased
 
 ## 1.5.1 (versionCode 17)
+- "What's new" after the update: Trakt first, then the most important changes and fixes of 1.5.0 and 1.5.1 (1.5.0 had no notes)
+- Release build: the Trakt client ID (repository secret TRAKT_CLIENT_ID) is passed to the build, and the release stops if it is missing, so no version goes out with a "Connect Trakt" that cannot start
 - Trakt sync (T-031 steps 4 and 5, read only): after "Connect Trakt", at app start (at most every 6 hours) and with "Sync now", the app reads your watched movies and episodes and your watchlist from Trakt. Watched titles in your playlist get their check mark (only added: progress you already have is never changed, and no other title is pushed out of the progress store); history and watchlist appear as the categories "Trakt · Watched" and "Trakt · Watchlist" in Movies and Series. Nothing is written to your Trakt account. "Disconnect Trakt" ends the sign-in and removes the two categories; check marks stay. Not device tested yet
 - Trakt sign-in: the code exchange now sends JSON, as the Trakt clients do, and the access token is renewed automatically when it expires
 - Player: new option "Tunneled playback (Live TV)" (Settings > Player > Source & quality, off by default). It lets picture and sound run through one hardware path of the device, which can help on channels where the picture stutters while the sound plays normally. It only works if the device supports it; if the picture stays black or the sound is out of sync, switch it off (#146, T-066). Not measured, not device tested yet
