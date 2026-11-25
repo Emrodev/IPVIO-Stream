@@ -40,3 +40,27 @@ Keep the watch history, watchlist and favorites of a user in step with their Tra
 5. Settings screen and texts.
 6. Device test (login on Fire TV via phone code, sync, disconnect).
 7. Write-back only after a separate decision.
+
+## Login plan: PKCE without an own domain (planned, no code yet)
+
+**Decision (maintainer, 2026):** no own domain. Plan "phone sign-in" (Weg 2), corrected: Android App Links also need a domain the app owns (`assetlinks.json` on it), so the phone is not opened by the callback directly.
+
+**Flow**
+1. TV creates the PKCE verifier (`TraktLogic.newVerifier`), keeps it in memory for this sign-in only, and shows a QR code of the authorize URL (`TraktLogic.authorizeUrl`, `state` per sign-in).
+2. Phone scans the QR code and signs in at Trakt in the phone browser (`https://auth.trakt.tv/...`).
+3. Trakt redirects to a static `https://` page on GitHub Pages (free, no own domain; URL to be chosen, e.g. the maintainer's `github.io` account). The page only shows the one-time `code` and says "Go back to the TV". It stores nothing and sends nothing to third parties.
+4. The phone page sends the code to the TV over the existing local phone-remote page (same Wi-Fi, existing 4-digit code check). This needs a new route; the phone remote's routes are a protected area (CLAUDE.md section 5), so it needs approval.
+5. The TV posts `code` + verifier to the token endpoint (`TraktLogic.tokenBody`, no client secret), stores the tokens via `Secrets` only, and refuses to store them when no keystore is available.
+
+**Fallback without the phone route:** the user types the code with the TV remote. Trakt codes are long, so this is slow; use only as a backup.
+
+**Needs approval before implementation (CLAUDE.md section 6)**
+- A new GitHub Pages site (public, under the maintainer's account; new deployment).
+- A new phone-remote route (protected area, phone-to-TV transfer).
+- Token storage through `Secrets` (authentication and storage).
+
+**Open checks (unverified until read from the Trakt docs):** the redirect URI accepted for a GitHub Pages URL, the token host `api.trakt.tv`, and the token response fields and lifetime.
+
+**Risks:** the code is short-lived and one-time, but anyone who sees the phone screen can take it. The phone route is plain HTTP on the local network (open item in SECURITY.md), so the code crosses the LAN unencrypted. Keep the code's lifetime short and discard it after use.
+
+**Tests:** JVM tests for the verifier, challenge, URL and body builders (done in `TraktLogicTest`). On device: full sign-in with a real Trakt account, check that the TV stores tokens only with a keystore, and that the code cannot be reused.
