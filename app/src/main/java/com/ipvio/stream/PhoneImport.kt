@@ -111,7 +111,7 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
 <textarea name="epg" rows="3" placeholder="http://…/xmltv.php?username=…&amp;password=…"></textarea>
 <button type="submit">${t("An den Fernseher senden", "Send to TV")}</button></form>""" else "") +
             (if (feats.list) """<h2>${t("Import & Trakt (Letterboxd, MyAnimeList, Trakt)", "Import & Trakt (Letterboxd, MyAnimeList, Trakt)")}</h2>
-<p>${t("Exportdatei wählen: Letterboxd ZIP oder CSV, MyAnimeList XML, Trakt JSON. Titel, die in deiner Playlist vorkommen, kommen in Merkliste bzw. Verlauf.", "Choose the export file: Letterboxd ZIP or CSV, MyAnimeList XML, Trakt JSON. Titles found in your playlist go to the watchlist or history.")}</p>
+<p>${t("Exportdatei wählen: Letterboxd ZIP oder CSV, MyAnimeList XML. Titel, die in deiner Playlist vorkommen, kommen in Merkliste bzw. Verlauf.", "Choose the export file: Letterboxd ZIP or CSV, MyAnimeList XML. Titles found in your playlist go to the watchlist or history.")}</p>
 <input id="lc" inputmode="numeric" maxlength="4" placeholder="${t("Code vom Fernseher", "Code from the TV")}">
 <input id="lf" type="file">
 <button onclick="lu()">${t("Liste hochladen", "Upload list")}</button><p id="ls"></p>""" + sendFileJs("lu", "/listimport", "lc", "lf", "ls") else "") +

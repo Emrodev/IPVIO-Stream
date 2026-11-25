@@ -54,7 +54,7 @@ So sieht die Reihenfolge aus¦Tak wygląda wynikowa kolejność
 Nichts gezeigt¦Nic nie jest pokazywane
 Import & Trakt¦Importuj listy
 Letterboxd, MyAnimeList, Trakt¦Letterboxd, MyAnimeList, Trakt
-Hole deine Listen von Letterboxd, MyAnimeList oder Trakt in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦Przenieś do aplikacji swoje listy z Letterboxd, MyAnimeList lub Trakt. Tytuły są dopasowywane do Twojej playlisty: importowane są listy do obejrzenia i obejrzane.
+Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦Przenieś do aplikacji swoje listy z Letterboxd, MyAnimeList. Tytuły są dopasowywane do Twojej playlisty: importowane są listy do obejrzenia i obejrzane.
 Letterboxd: ZIP oder CSV · MyAnimeList: XML · Trakt: JSON¦Letterboxd: ZIP lub CSV · MyAnimeList: XML · Trakt: JSON
 Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.¦To urządzenie nie ma bezpiecznego magazynu kluczy: adresy playlist z danymi logowania są przechowywane bez szyfrowania.
 Datei vom Gerät wählen¦Wybierz plik z urządzenia

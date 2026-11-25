@@ -492,7 +492,7 @@ So sieht die Reihenfolge aus¦Zo ziet de volgorde eruit
 Nichts gezeigt¦Niets getoond
 Import & Trakt¦Lijsten importeren
 Letterboxd, MyAnimeList, Trakt¦Letterboxd, MyAnimeList, Trakt
-Hole deine Listen von Letterboxd, MyAnimeList oder Trakt in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦Haal je lijsten van Letterboxd, MyAnimeList of Trakt in de app. De titels worden vergeleken met je afspeellijst: kijklijst en gezien worden overgenomen.
+Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦Haal je lijsten van Letterboxd, MyAnimeList in de app. De titels worden vergeleken met je afspeellijst: kijklijst en gezien worden overgenomen.
 Letterboxd: ZIP oder CSV · MyAnimeList: XML · Trakt: JSON¦Letterboxd: ZIP of CSV · MyAnimeList: XML · Trakt: JSON
 Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.¦Dit apparaat heeft geen veilige sleutelopslag: playlist-adressen met inloggegevens worden onversleuteld opgeslagen.
 Datei vom Gerät wählen¦Bestand van apparaat kiezen

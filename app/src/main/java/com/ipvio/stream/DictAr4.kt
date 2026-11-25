@@ -240,7 +240,7 @@ So sieht die Reihenfolge aus¦هكذا يبدو الترتيب
 Nichts gezeigt¦لا شيء معروض
 Import & Trakt¦استيراد القوائم
 Letterboxd, MyAnimeList, Trakt¦Letterboxd وMyAnimeList وTrakt
-Hole deine Listen von Letterboxd, MyAnimeList oder Trakt in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦استورد قوائمك من Letterboxd أو MyAnimeList أو Trakt إلى التطبيق. ستُطابق العناوين مع قائمة تشغيلك، وسيتم استيراد قائمة المحفوظات والمشاهَدات.
+Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦استورد قوائمك من Letterboxd أو MyAnimeList أ إلى التطبيق. ستُطابق العناوين مع قائمة تشغيلك، وسيتم استيراد قائمة المحفوظات والمشاهَدات.
 Letterboxd: ZIP oder CSV · MyAnimeList: XML · Trakt: JSON¦Letterboxd: ZIP أو CSV · MyAnimeList: XML · Trakt: JSON
 Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.¦لا يحتوي هذا الجهاز على مخزن مفاتيح آمن: ستُحفظ عناوين قوائم التشغيل مع بيانات الدخول دون تشفير.
 Datei vom Gerät wählen¦اختيار ملف من الجهاز
