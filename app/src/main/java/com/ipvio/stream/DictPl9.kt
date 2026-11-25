@@ -237,15 +237,5 @@ Gilt für alle Listen (Filme, Serien, Kategorien, Suche). „Jahr: neueste zuers
 Zwischenspeicher beschädigt¦Pamięć podręczna uszkodzona
 WireGuard-Konfiguration (VPN)¦Konfiguracja WireGuard (VPN)
 Import & Trakt (Letterboxd, MyAnimeList, Trakt)¦Import i Trakt (Letterboxd, MyAnimeList, Trakt)
-Ton angleichen¦Wyrównywanie dźwięku
-Klare Sprache¦Wyraźna mowa
-Nachtmodus¦Tryb nocny
-Eigene Einstellung¦Własne ustawienie
-Maximale Anhebung¦Maksymalne wzmocnienie
-Dynamik angleichen¦Wyrównaj głośne i ciche
-Dialoge hervorheben¦Wyróżnij dialogi
-Stark¦Mocno
-Viele Sender sind leiser gemischt als YouTube oder Netflix (Fernsehnorm −23 LUFS statt etwa −16). „Standard“ hebt leise Sender automatisch an, gleicht laute und leise Stellen an und macht Dialoge etwas deutlicher – ohne Übersteuern.¦Wiele kanałów jest zmiksowanych ciszej niż YouTube czy Netflix (norma telewizyjna −23 LUFS zamiast około −16). „Domyślnie” automatycznie podgłaśnia ciche kanały, wyrównuje głośne i ciche fragmenty i nieco wyraźniej podaje dialogi – bez przesterowania.
-„Klare Sprache“ hebt Stimmen stärker hervor. „Nachtmodus“ dämpft laute Stellen stark – gut zum leisen Hören. Wird der Ton unverändert an einen Receiver durchgeleitet (Dolby, DTS), bleibt er unbearbeitet.¦„Wyraźna mowa” mocniej wyróżnia głosy. „Tryb nocny” mocno wycisza głośne fragmenty – dobre do cichego słuchania. Dźwięk przekazywany bez zmian do amplitunera (Dolby, DTS) nie jest przetwarzany.
 Exportdatei wählen: Letterboxd ZIP oder CSV, MyAnimeList XML. Titel, die in deiner Playlist vorkommen, kommen in Merkliste bzw. Verlauf.¦Wybierz plik eksportu: Letterboxd ZIP lub CSV, MyAnimeList XML. Tytuły, które są w Twojej playliście, trafią do listy do obejrzenia lub historii.
 """
