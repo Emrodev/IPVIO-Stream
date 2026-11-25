@@ -174,7 +174,12 @@ object Xmltv {
                     val names = ArrayList<String>(2)
                     var inner = p.next()
                     while (!(inner == XmlPullParser.END_TAG && p.name == "channel") && inner != XmlPullParser.END_DOCUMENT) {
-                        if (inner == XmlPullParser.START_TAG && p.name == "display-name" && names.size < 4) names.add(p.nextText())
+                        // Plain text of the tag (never throws, unlike nextText() on a tag with child elements)
+                        if (inner == XmlPullParser.START_TAG && p.name == "display-name" && names.size < 4) {
+                            inner = p.next()
+                            if (inner == XmlPullParser.TEXT) { p.text?.trim()?.takeIf { it.isNotEmpty() }?.let { names.add(it) } }
+                            continue
+                        }
                         inner = p.next()
                     }
                     if (!id.isNullOrEmpty()) guide[id] = names

@@ -1307,6 +1307,8 @@ object PlaylistStore {
         val free = r.maxMemory() - (r.totalMemory() - r.freeMemory())
         if (!SwitchLogic.roomForBoth(f.length(), free)) return false
         if (!loadLock.tryLock()) return false
+        val before = active
+        var shown = false
         try {
             val head = withContext(Dispatchers.IO) { readHeader(c, u) } ?: return false
             if (head.hidden != hidden || head.counts.isEmpty()) return false
@@ -1322,10 +1324,14 @@ object PlaylistStore {
                 show(c, u, cached.items, cached.epg, cached.order, cached.counts, cached.bytes, hidden)
                 runCatching { loadExtras(c, network = false) }.onFailure { if (it is CancellationException) throw it }
             }
+            shown = true
             PlaylistDiag.log("switch", "kept the old list while reading the stored copy")
             Diag.note("Playlist switch: stored list ${cached.items.size} items read in ${android.os.SystemClock.elapsedRealtime() - t0} ms, the screen stayed")
             return true
         } finally {
+            // Not switched (read failed, cancelled): the old list is still on screen, so its playlist stays the active one.
+            // On a plain failure the normal switch runs next and activates the new one again.
+            if (!shown && active != before) activate(c, before)
             job = null
             loading = false
             loadLock.unlock()

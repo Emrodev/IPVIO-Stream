@@ -428,7 +428,7 @@ object M3uParser {
         val title: String, val logo: String?, val group: String, val q: String?, val lang: String,
         val dist: String? = null, val placeholder: Boolean = false
     ) {
-        /** T-058: another series of the same name exists (then the year, if any, is kept to tell them apart). */
+        /** T-058: split off from the first series of the same name (then its year or country tells them apart). */
         var split = false
         var n = 0
         var ss = IntArray(4)
@@ -503,15 +503,14 @@ object M3uParser {
                     val rawName = m?.groupValues?.get(1) ?: e.name
                     val cleaned = clean(rawName)
                     val base = cleaned.lowercase()
-                    // T-058: same name, but a different series (other year or country, or another provider series in
-                    // another category): own key. The first one keeps the old key, so its ID stays the same.
+                    // T-058: same name, but another provider series (placeholder in another category, or other year or
+                    // country): own key. The first one keeps its key, title and year, so its ID and data stay the same.
                     val dist = SeriesKeyLogic.distinguisher(rawName)
                     val ph = SeriesKeyLogic.isPlaceholder(e.url)
                     var key = base
                     val first = series[base]
                     if (first != null && SeriesKeyLogic.differs(first.group, first.dist, first.placeholder, group, dist, ph)) {
-                        key = SeriesKeyLogic.altKey(base, group, dist, ph && first.group != group)
-                        first.split = true
+                        key = SeriesKeyLogic.altKey(base, group, dist, first.group != group)
                     }
                     val title = TitleText.title(cleaned)
                     val acc = series.getOrPut(key) {
@@ -561,7 +560,8 @@ object M3uParser {
                 }
                 i = j
             }
-            // T-058: two series of the same name: the year goes into the year field, a country into the title ("The Office (UK)")
+            // T-058: a series split off from the first one of its name: the year goes into the year field, a country into the
+            // title ("The Office (UK)"). The first series stays exactly as before.
             val year = if (acc.split) SeriesKeyLogic.yearOf(acc.dist) else null
             val title = if (acc.split && acc.dist != null && year == null) "${acc.title} (${acc.dist})" else acc.title
             out.add(Item("s_$key", Kind.SERIES, title, year, "", acc.logo, acc.group, EpisodeTable.of(eps, pool), acc.q, lang = acc.lang))
