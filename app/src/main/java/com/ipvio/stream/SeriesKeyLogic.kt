@@ -1,7 +1,7 @@
 package com.ipvio.stream
 
 /**
- * When two playlist entries with the same cleaned series name are one series, and when they are two (T-058).
+ * When two playlist entries with the same cleaned series name are one series, and when they are two (T-067).
  * Pure logic, no Android, testable.
  *
  * The parser merges entries by the cleaned name. On Xtream and Stalker logins (one placeholder per provider series) that

@@ -41,7 +41,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-data class BrowseReq(val title: String, val items: List<Item>, val sort: Int = 0)
+/** [genre]: set when the view was opened from an IPVIO genre category; the Genre pill then shows it (#27). */
+data class BrowseReq(val title: String, val items: List<Item>, val sort: Int = 0, val genre: String? = null)
 
 class BrowseState(req0: BrowseReq) {
     /** Titles of the view; grows when a Stalker category is loaded further on opening ([StalkerMore]). */
@@ -54,6 +55,7 @@ class BrowseState(req0: BrowseReq) {
     /** Language filter (code from [LangTagLogic], "?" = untagged), null = all. Saved per type in [BrowseLangPrefs]. */
     var lang by mutableStateOf<String?>(null)
     internal var langInit = false
+    internal var genreInit = false
     /** Source with several playlists: -1 = all, otherwise index into [PlaylistStore.sourceNames]. */
     var source by mutableIntStateOf(-1)
     var focused by mutableIntStateOf(0)
@@ -199,6 +201,15 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
         value = withContext(Dispatchers.Default) { facetsOf(req.items) }.also { state.lastFacets = ver to it }
     }
     val genres = facets?.genres.orEmpty()
+    // #27: opened from an IPVIO genre category: show it in the Genre pill. The list already is that genre, so it does not change.
+    // Only a real genre of this list is taken over (not "Sonstige" or the name of an imported source).
+    LaunchedEffect(genres) {
+        if (!state.genreInit && genres.isNotEmpty()) {
+            state.genreInit = true
+            val g = req.genre
+            if (g != null && state.genre == null && g in genres) state.genre = g
+        }
+    }
     val countries = facets?.countries.orEmpty()
     val yearOptions = listOf("Alle") + DECADES + facets?.years.orEmpty()
 

@@ -1,7 +1,7 @@
 package com.ipvio.stream
 
 /**
- * T-058: one line for Settings > Diagnostics after a playlist was parsed: how many entries the provider's list had and
+ * T-067: one line for Settings > Diagnostics after a playlist was parsed: how many entries the provider's list had and
  * where they went. Answers "the provider has more channels, movies or series than the app shows" without a logcat.
  * English only (the Diagnostics log is not translated), numbers and the host only: no address, no login.
  * Pure logic, no Android, testable.

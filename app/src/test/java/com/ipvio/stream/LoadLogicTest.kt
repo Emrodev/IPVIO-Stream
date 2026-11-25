@@ -194,7 +194,7 @@ http://h/x
         assertFalse(LoadLogic.hasVod(live.lineSequence()))
     }
 
-    // T-058: categories of movies and series in a get.php list, to see whether most of the provider's are missing
+    // T-067: categories of movies and series in a get.php list, to see whether most of the provider's are missing
     @Test fun vodGroupsCollectsMovieAndSeriesCategories() {
         val m3u = "#EXTM3U\n#EXTINF:-1 group-title=\"News\",A\nhttp://h/live/u/p/1.ts\n" +
             "#EXTINF:-1 group-title=\"Action\",M\nhttp://h/movie/u/p/2.mp4\n" +

@@ -513,7 +513,7 @@ private fun AppContent() {
             ) }
             c != null -> Box(Modifier.fillMaxSize().screenEnter()) { CategoriesScreen(
                 c, tab,
-                onPick = { name, list, sort -> browse = BrowseState(BrowseReq(name, list, sort)) },
+                onPick = { name, list, sort, genre -> browse = BrowseState(BrowseReq(name, list, sort, genre)) },
                 onOpen = open,
                 onBack = { cats = null },
                 onGoTab = { if (it != MenuLogic.EPG) cats = null; goTab(it) }

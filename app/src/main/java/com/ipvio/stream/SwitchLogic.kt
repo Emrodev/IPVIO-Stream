@@ -1,7 +1,7 @@
 package com.ipvio.stream
 
 /**
- * T-059: may the current list stay on screen while the stored copy of another playlist is read? Pure logic, testable.
+ * T-068: may the current list stay on screen while the stored copy of another playlist is read? Pure logic, testable.
  *
  * The stored copy is a compact binary file; the items built from it take several times its size in memory (strings as
  * UTF-16, one object per item and episode). [FACTOR] is a cautious estimate (not measured on a device); the read itself

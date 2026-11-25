@@ -147,7 +147,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Recorder.list(ctx).map { Recorder.itemOf(it) } }
         LiveRecCache.items = value
     }
-    val names = (if (PlaylistStore.lists.size > 1) listOf("PL") else emptyList()) + listOf("HOME", "GUIDE", "SEARCH", "MULTI", FAV_CAT) + (if (recs.isNotEmpty()) listOf("REC") else emptyList()) + myLists.map { ChannelListLogic.key(it) } + listOf("NEW", "ALL") + genres.keys.filter { it !in HiddenCats.list } + favCats + CatOrder.sorted(CatOrder.LIVE, groups.keys.toList()).filter { it !in favCats && it !in HiddenCats.list } + (if (HiddenCats.list.any { it in groups || it in genres }) listOf("HIDDEN") else emptyList())
+    remember { LiveSettings.init(ctx); 0 }   // #96: switch for the automatic genre categories
+    val names = (if (PlaylistStore.lists.size > 1) listOf("PL") else emptyList()) + listOf("HOME", "GUIDE", "SEARCH", "MULTI", FAV_CAT) + (if (recs.isNotEmpty()) listOf("REC") else emptyList()) + myLists.map { ChannelListLogic.key(it) } + listOf("NEW", "ALL") + LiveGenreLogic.visible(genres.keys, HiddenCats.list, LiveSettings.genres) + favCats + CatOrder.sorted(CatOrder.LIVE, groups.keys.toList()).filter { it !in favCats && it !in HiddenCats.list } + (if (HiddenCats.list.any { it in groups || it in genres }) listOf("HIDDEN") else emptyList())
     val catKeys = remember(names) { val seen = HashSet<String>(); names.mapIndexed { i, n -> if (seen.add(n)) n else "$n#$i" } }
     val curList = ChannelLists.byKey(sel)
     // Own list currently being filled (OK on a channel adds it); declared early because bundling depends on it
@@ -265,6 +266,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     SideEffect { ContentFocus.tab = 3 }
     // Selection points to a deleted list: back to "All channels"
     LaunchedEffect(sel, myLists.size) { if (ChannelListLogic.idOfKey(sel) != null && curList == null) sel = "ALL" }
+    // #96: the selected automatic genre category is switched off: back to "All channels"
+    LaunchedEffect(sel, LiveSettings.genres) { if (!LiveSettings.genres && LiveGenre.isGenreKey(sel)) sel = "ALL" }
 
     // Add a channel to an own list: in "All channels"/categories OK adds the channel (instead of starting it)
     val addList = addTo?.let { id -> myLists.firstOrNull { it.id == id } }
@@ -326,7 +329,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             onFocus = { hot = "SEARCH"; sel = "SEARCH" },
                             onRight = { runCatching { kbFirst.requestFocus() } },
                             onFav = {}, icon = AIcon.Edit, raw = true
-                        ) { runCatching { kbFirst.requestFocus() } }
+                        ) { hot = "SEARCH"; sel = "SEARCH"; runCatching { kbFirst.requestFocus() } }   // touch: no focus change on tap
                         return@itemsIndexed
                     }
                     if (n == "PL") {
@@ -427,7 +430,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null,
                             floating = plainCat && floatingCat == n
-                        ) { if (floatingCat == null) enterChannels() }
+                        ) { if (floatingCat == null) { hot = n; enterChannels() } }   // touch: a tap does not move focus, so set the category here
                         // Menu of a provider category: favorite on/off, hide, move, sorting of all categories
                         var sortMenu by remember { mutableStateOf(false) }
                         // Menu of a genre category (Sports, Movies, ...): hide

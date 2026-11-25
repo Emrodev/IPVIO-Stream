@@ -145,6 +145,8 @@ object PlaylistStore {
 
     var loading by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
+    /** #112: a saved playlist list exists but could not be decrypted, so the app starts empty. Shown on the empty home screen. */
+    var unreadable by mutableStateOf(false)
     /**
      * Updating failed while the old list is still shown (the old list stays). Before, this stayed silent, so it looked as if
      * the playlist simply did not update. Shown in the playlist settings; cleared by the next successful load.
@@ -351,7 +353,7 @@ object PlaylistStore {
         val enc = p.getString("lists_enc", null)
         val dec = if (enc != null) Secrets.decrypt(enc) else null
         // #112: the saved list exists but cannot be decrypted (e.g. the key was lost). It is kept, see persist()
-        if (enc != null && dec == null) Diag.report("The saved playlist list could not be decrypted")
+        if (enc != null && dec == null) { unreadable = true; Diag.report("The saved playlist list could not be decrypted") }
         val json = dec ?: p.getString("lists", "[]")
         try {
             val a = JSONArray(json)
@@ -842,7 +844,7 @@ object PlaylistStore {
         if (cancelled()) throw CancellationException("abgebrochen")
         val api = XtreamApi(client, uaFor(c, u))
         if (groups.movies.isNotEmpty() || groups.series.isNotEmpty()) {
-            // T-058: some providers put only part of their movies or series into get.php. Most of the provider's movie or
+            // T-067: some providers put only part of their movies or series into get.php. Most of the provider's movie or
             // series categories missing from the list: load the whole list through the API (two small requests to check).
             val vodApi = runCatching { api.vodCategoryNames(acct) }.getOrDefault(emptyList())
             val serApi = runCatching { api.seriesCategoryNames(acct) }.getOrDefault(emptyList())
@@ -1291,7 +1293,7 @@ object PlaylistStore {
     }
 
     /**
-     * T-059: switching to a playlist with a stored copy keeps the current list on screen while the copy is read, then
+     * T-068: switching to a playlist with a stored copy keeps the current list on screen while the copy is read, then
      * replaces it in one step. Before, the list was emptied first, so Live TV, Movies and Series turned into the loading
      * screen for the length of the read. Only when memory has room for both lists for a moment (weak Fire TV sticks ran
      * out of memory with both); the read stops when memory gets tight and the old switch (empty first) runs instead.
@@ -1802,7 +1804,7 @@ object PlaylistStore {
         return ok
     }
 
-    /** T-058: load report for Settings > Diagnostics (where the provider's entries went). Never fails the load. */
+    /** T-067: load report for Settings > Diagnostics (where the provider's entries went). Never fails the load. */
     private fun reportLoad(u: String, p: ParsedPlaylist, hidden: Set<String>) {
         runCatching {
             var live = 0; var movies = 0; var series = 0

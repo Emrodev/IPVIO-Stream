@@ -1311,6 +1311,7 @@ private fun LivePage(ctx: Context) {
     Text("TV-Programm (EPG)", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     Text("Programm bei $xtream von ${counts.first} Sendern möglich", color = Muted, fontSize = 15.sp)
     Text("XMLTV: ${Xmltv.status}", color = Accent2, fontSize = 15.sp)
+    ToggleRow("Genre-Kategorien in Live TV", "Sport, Filme, Dokumentationen, Kinder, Nachrichten und Musik stehen vor den Kategorien deines Anbieters. Aus = nur die Kategorien deines Anbieters, in seiner Reihenfolge, direkt nach „Alle Sender“.", LiveSettings.genres) { LiveSettings.setGenres(ctx, it) }
     ToggleRow("Sender-Qualitäten bündeln", "Derselbe Sender in 8K, 4K, FHD, HD und SD erscheint als eine Zeile. OK startet die beste Qualität, die anderen wählst du im Menü des Senders (OK gedrückt halten).", General.bundleLive) { General.setBundleLive(ctx, it) }
     val rowSizes = listOf("Klein", "Normal", "Groß")
     SelectRow("Senderzeilen", rowSizes[General.channelRowSize], rowSizes, General.channelRowSize) { General.setChannelRowSize(ctx, it) }
@@ -1330,6 +1331,7 @@ private fun LivePage(ctx: Context) {
     ChannelListsSection(ctx)
     CatchupSection()
     LiveBufferSection(ctx)
+    PlayerButtonsSection(ctx)   // T-062
     ReminderSettingsSection(ctx)
 }
 
@@ -1392,6 +1394,11 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
     // The language filter lives on the filter page now (Genres & categories), together with the other filters
     SectionTitle("Sprachen der Inhalte")
     Hint("Which languages are loaded, and which groups and categories are hidden, is set on the page Genres & categories.")
+    SectionTitle("Serien")
+    ToggleRow("Staffeln zusammenfassen", "Manche Anbieter führen jede Staffel als eigene Serie („Show S01“, „Show S02“). Ein: diese Staffeln erscheinen als eine Serie. Gilt für Xtream-Playlists. Verlauf und „Meine Liste“ dieser Serien beginnen neu; die alten Einträge bleiben erhalten, wenn du es wieder ausschaltest.", AppSettings.mergeSeasons) {
+        AppSettings.setMergeSeasons(ctx, it)
+        LangFilter.setAndApply(ctx, LangFilter.hidden)   // read the stored list again with the new option
+    }
     PillButton("Sprachen der Inhalte öffnen", icon = AIcon.Globe) { onFilter() }
     SectionTitle("Automatisch aktualisieren")
     Hint("Gilt für alle Playlists ohne eigenen Plan. Einen eigenen Plan stellst du bei „Bearbeiten“ einer Playlist ein.")

@@ -1,4 +1,4 @@
-Last update: 2026-11-25 (T-058 missing content and EPG matching, T-059 playlist switch and parser speed). Read `CLAUDE.md` first, then this file.
+Last update: 2026-11-25 (T-067 missing content and EPG matching, T-068 playlist switch and parser speed). Read `CLAUDE.md` first, then this file.
 Last update: 2026-11-23 (T-051 to T-054, analysis and plans for four user issues). Read `CLAUDE.md` first, then this file.
 Last update: 2026-11-23 (T-051 stage 3, fixes after the test build). Read `CLAUDE.md` first, then this file.
 
@@ -8,13 +8,41 @@ The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not a
 
 Last update: 2026-11-25. Branch `claude/modest-johnson-415uuv` (from `main` f6270c3). Maintainer's priorities: 1. users see fewer channels, movies and series than the provider sends, and EPG matching; 2. speed (start, screen changes, playlist switch without loading screen).
 
-- T-058 (`docs/tasks/T-058-missing-content-and-epg-matching.md`): same-name series no longer merged (first keeps its ID), partial Xtream `get.php` lists loaded through the API, load report in Settings > Diagnostics > Log, XMLTV matching by normalized ID and channel name.
-- T-059 (`docs/tasks/T-059-instant-playlist-switch-and-parser-speed.md`): playlist switch keeps the screen when memory allows; parser about 30 % faster on the JVM.
+- T-067 (`docs/tasks/T-067-missing-content-and-epg-matching.md`): same-name series no longer merged (first keeps its ID), partial Xtream `get.php` lists loaded through the API, load report in Settings > Diagnostics > Log, XMLTV matching by normalized ID and channel name.
+- T-068 (`docs/tasks/T-068-instant-playlist-switch-and-parser-speed.md`): playlist switch keeps the screen when memory allows; parser about 30 % faster on the JVM.
 - Checks: 491/491 tests of the 75 JVM-runnable test classes (Kotlin 2.0.21 compiler downloaded into the scratchpad, JUnit 4.13.2). Not run: Gradle, device. Android files not compiled here.
 - Next: maintainer builds and runs the test steps in both task files; sends the "list has N entries" and "Playlist switch … ms" lines from the diagnostics log. Speed work after that only from device measurements ("Opened …: N ms" lines, T-056).
-- ID note: T-056 is already used in the code (screen timing, search index) without a task file; T-057 skipped to avoid confusion.
+- ID note: T-055 to T-066 were taken by branch `claude/exciting-johnson-9gi5zn`; this work was renumbered from T-058/T-059 to T-067/T-068 on 25 Nov 2026.
 
 Last update: 2026-11-23. Four user issues (Fire TV) analysed, no app code changed, plans only:
+
+Last update: 2026-11-24 (issue review, branch `claude/exciting-johnson-9gi5zn`). Done: T-055 (#152, same cause as #67): a tap on a Live TV category or on "Search channels" now sets the category (`LiveTab.kt`, 2 lines). Not built, not device tested. Findings, no code change:
+- **PR #40 and #70 (fork `browanoncoder`) were closed on 16 Nov without a merge.** Their issue comments say "fixed" for #67, #10, #25, #28, but `CuelessMkvExtractor`, `TapSeekLogic` and `MkvSeekLogic` do not exist in the code. #10 (MKV without Cues) and #25 (tap-to-seek) are therefore still open in the code. Porting touches the player core: needs approval (CLAUDE.md section 6).
+- #109 is already fixed in the code (`HomeScreen.kt`, commits `fc824dc`, `494f00d`); close after a device check.
+- #112 (playlist vanishes): `Secrets.key()` swallows every exception, so a short keystore failure at start looks like an empty list. T-027 only stops overwriting the unreadable list. Needs logcat from the Fire TV and approval for a storage change.
+- No code yet for #125, #27, #23, #145, #131, #130, #151, #84, #146, #118 (a reply is enough).
+- Done after that (branch `claude/exciting-johnson-9gi5zn`, all not built, not device tested):
+  - T-056 (#112): `Secrets.key()` never replaces an existing key alias (`SecretsLogic`, 3/3 JVM tests); the empty home screen says when the saved playlist cannot be read (`PlaylistStore.unreadable`, row in `DictEn1`, 5/5).
+  - T-057 (#130): alert delay options up to 120 s. The switch and delay already existed (Settings > Sports Hub). Per-team switch not done.
+  - T-058 (#125): the home row "Recently added" uses the added date like the page (`RecentSortLogic.newestN`, 6/6).
+  - T-059 (#27): the Genre pill shows the opened genre category. Switching category through the pill is not done.
+  - Syntax check of the changed Kotlin files with the compiler bundled in Gradle: no syntax errors (no Android classes here, so no type check).
+  - T-060 (#10, #25): ported from the closed PR #40: MKV seeking without Cues (`CuelessMkvExtractor`, `MkvSeekLogic`) and tap-to-seek on the timeline (`TapSeekLogic`); 10/10 JVM tests. Touches `PlayerScreen.kt`: needs a review. Only these two parts of #40 were taken over.
+  - #131: no code change. On Live TV Left opens the channel list by design; Left/Right seeking is for movies and episodes. Decision for the maintainer.
+  - T-061: search with the filter "Persons": Down reaches the people results (`firstKey` fallback "pe"). Not device tested.
+  - T-062: implemented after the maintainer's decisions (24 Nov): fewer Live TV player buttons, rewind/forward buttons (seek step; archive for catch-up channels, buffer otherwise), own button list in Settings > Live TV (`ipvio_playerbtns`, in the backup). 11/11 JVM tests. Touches `PlayerScreen.kt`: needs a review. Several points are unverified on a device (see the file).
+  - T-063 (#96): switch "Genre categories in Live TV" (Settings > Live TV, key `genres` in `ipvio_livetv`, default on). 3/3 JVM tests. Movies and Series already have "Automatic genres" (off by default).
+  - T-064 (#145): M3U categories from `tvg-group`, other letter case, single quotes and `#EXTGRP:` lines (`M3uGroupLogic`, 6/6; parser tests 8/8). Cause not confirmed; Xtream/Stalker unchanged. Question for the reporter drafted in the file, not posted.
+  - T-065 (#151): option "Combine seasons" (Settings > Playlists > Series, default off): Xtream series that a provider lists season by season become one series (`SeasonMergeLogic`, pseudo code `~merge` in the hidden set, `lazyParts`, `LazySeries`). Changes the series id while on. 26 JVM tests. Touches the IPTV core: needs a review. The reporter's provider type is unknown (hypothesis).
+  - T-066 (#146): option "Tunneled playback (Live TV)" (Settings > Player > Source & quality, key `tunneling` in `ipvio_playback`, default off; `TunnelingLogic`; `applyTunneling()` in `PlayerScreen.kt`). Media3 API not compiled here. Needs a review and a device test.
+  - #84: no code change. One sentence and a screenshot ("can't play series"); the maintainer asked on 22 Nov whether it works now, no answer. Needs the provider type and what is shown.
+  - 25 Nov: replies posted on every open issue except #110 (28 comments, "update coming soon" where a fix is in the branch). Still no fix and no cause: #73 (memory estimate for a large Xtream list, persists on 1.4.9), #104/#84 (Strong8K: episodes of Xtream series do not show; look at `XtreamApi.walkEpisodes` / `episodeList` next), #108 (Connection lost). Open statements to check: #129 says the Play Protect review will be looked at.
+  - 25 Nov (earlier): comment drafts for 15 issues in `docs/tasks/ISSUE-COMMENTS-2026-11-25.md` (not posted); device test plan in `docs/tasks/DEVICE-TEST-PLAN-2026-11-25.md`. 518 JVM tests ran green (15 test files need Android and were not run). English check: no German text in docs.
+  - Comments posted on #131 and #118 (24 Nov 2026) as dictated by the maintainer.
+- Open: #118 can be answered (the per-playlist reload button exists since 1.4.5); #131 not analysed; #130, #67, #109 can be closed after a device check.
+- Next: maintainer decides on the PR #40 port (#10, #25) and tests T-055 to T-059 on the device.
+
+Earlier entry, 2026-11-23. Four user issues (Fire TV) analysed, no app code changed, plans only:
 
 - T-051 sound of the previous channel keeps playing: not reproduced, candidates listed (`docs/tasks/T-051-audio-after-channel-change.md`).
 - T-052 setting for Up/Down in Live TV: plan, default proposed = current behaviour, maintainer decides (`docs/tasks/T-052-live-up-down-setting.md`).
@@ -57,7 +85,7 @@ The full list with test steps is in `docs/tasks/WORK_STATE-history.md`, section 
 
 ## Task IDs
 
-- Highest ID in `docs/tasks/`: T-059. **Next free ID: T-060** (use `/new-task`, which checks this).
+- Highest ID in `docs/tasks/`: T-068. **Next free ID: T-069** (use `/new-task`, which checks this).
 - IDs used by more than one file: T-009, T-014, T-026, T-027, T-032. The files are not renamed here, because the old log and other task files refer to them by name. Renaming needs a decision.
 
 ## Conventions

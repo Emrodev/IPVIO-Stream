@@ -61,7 +61,7 @@ object SportAlerts {
     var current by mutableStateOf<Alert?>(null)
     var enabled by mutableStateOf(true)
     var delaySec by mutableIntStateOf(30)
-    val DELAYS = listOf(0, 30, 60)
+    val DELAYS = listOf(0, 30, 60, 90, 120)
     // Mini score (window in the corner while one of your teams plays live)
     var miniOn by mutableStateOf(false)
     /** 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right */

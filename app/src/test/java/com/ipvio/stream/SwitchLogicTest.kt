@@ -4,7 +4,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** T-059: the current list stays on screen during a playlist switch only when memory has room for both. */
+/** T-068: the current list stays on screen during a playlist switch only when memory has room for both. */
 class SwitchLogicTest {
     private val mb = 1024L * 1024
 
