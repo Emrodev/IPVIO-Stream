@@ -37,3 +37,11 @@ Status: done in code, not built with Gradle, not device tested. Branch `claude/c
 6. Home hero and Billboard: the kicker above the title shows only FHD/2K/SD (or nothing).
 7. Home "Top rated": the same film appears once (e.g. The Godfather from several provider entries).
 8. Any vertical list (e.g. Live TV channels, Movies grid, Settings): move Down; the focused row stays in the middle until the list ends, then the focus moves towards the bottom edge. Also move Up the same way. Check that no row jumps or is cut off; report any screen where it breaks.
+
+## T-071: automatic Trakt sync interval (follow-up, 25 Nov 2026)
+
+- Setting in the Trakt panel (`ListImportUi.kt`): "Sync automatically" with six choices: on every app start, every 6 hours (default, as before), 12 hours, daily, weekly, only manually.
+- Stored as a number in the Trakt preferences (`ipvio_trakt`, key `autoInterval`). It is not in the backup, like the other Trakt state.
+- Logic in `TraktSyncLogic.autoDue` (5 new tests in `TraktSyncLogicTest.kt`, run here on an extracted copy of the function; the full test file needs Android classes). Translations in `DictT071.kt` (`DictT071Test`, 2 tests, run here).
+- The check happens at app start only. A sync while the app stays open for days is not done; a background job (WorkManager) would be a new decision.
+- Test steps: connect Trakt; pick "Only manually", restart the app, check that no sync starts; pick "Every 12 hours", sync once, restart within 12 hours (no sync), after 12 hours (sync).

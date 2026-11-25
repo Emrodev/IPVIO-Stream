@@ -109,6 +109,29 @@ class TraktSyncLogicTest {
         assertTrue(TraktSyncLogic.autoDue(TraktSyncLogic.AUTO_INTERVAL_MS + 5, 5))
     }
 
+    @Test fun manualIntervalNeverSyncsAtStart() {
+        assertFalse(TraktSyncLogic.autoDue(10_000L, 0L, TraktSyncLogic.INTERVAL_MANUAL_MS))
+        assertFalse(TraktSyncLogic.autoDue(Long.MAX_VALUE / 2, 1L, TraktSyncLogic.INTERVAL_MANUAL_MS))
+    }
+
+    @Test fun everyStartAlwaysSyncs() {
+        assertTrue(TraktSyncLogic.autoDue(10_000L, 9_999L, TraktSyncLogic.INTERVAL_START_MS))
+        assertTrue(TraktSyncLogic.autoDue(10_000L, 0L, TraktSyncLogic.INTERVAL_START_MS))
+    }
+
+    @Test fun twelveHourIntervalWaitsTwelveHours() {
+        val twelve = 12L * 3600_000L
+        assertFalse(TraktSyncLogic.autoDue(twelve - 1, 0L + 1, twelve))
+        assertTrue(TraktSyncLogic.autoDue(twelve + 1, 1L, twelve))
+    }
+
+    @Test fun intervalChoicesHaveSixOptionsInOrder() {
+        assertEquals(6, TraktSyncLogic.INTERVAL_CHOICES.size)
+        assertEquals(TraktSyncLogic.INTERVAL_START_MS, TraktSyncLogic.INTERVAL_CHOICES.first())
+        assertEquals(TraktSyncLogic.INTERVAL_MANUAL_MS, TraktSyncLogic.INTERVAL_CHOICES.last())
+        assertTrue(TraktSyncLogic.INTERVAL_CHOICES.contains(TraktSyncLogic.AUTO_INTERVAL_MS))
+    }
+
     @Test fun syncTextsHaveEnglishRowsWithMatchingPlaceholders() {
         I18nCore.load(DictA, DictT031)
         val en = I18nCore.CODES.indexOf("en")
