@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.5.1 (versionCode 17)
+- Phone page: the import section is titled "Import & Trakt" (was "Import lists"). Arabic, Dutch and Polish show the English title until they are translated.
+- Settings: "Import lists" is renamed "Import & Trakt" (Arabic, Dutch and Polish still show the old translation until they are updated). Not device tested
+- Settings > Import & Trakt: the Trakt sign-in has its own button "Connect Trakt", next to "Start import over Wi-Fi". It opens the phone sign-in page (/trakt) with a QR code and the same code. Shows whether the TV is connected to Trakt. Texts in English for now. Not device tested
+- Trakt (T-031, step 3): phone page at /trakt (4-digit code, link to Trakt, paste "code|state"); the TV checks the state and exchanges the code. Phone page texts are English only for now. No entry point on the TV yet. Not device tested
+- Trakt (T-031, step 2): code-to-token exchange (PKCE, no client secret) and encrypted token storage without a plain-text fallback. Not wired to a screen yet. Not device tested
+- Trakt (T-031, step 1): build field for the Trakt API client ID (`secrets.properties` or environment variable), pure login logic (`TraktLogic`) with JVM tests. No login screen and no sync yet. Not device tested
 ## 1.5.0 (versionCode 16)
 - Lists import: Trakt export files (JSON) can no longer be imported; Letterboxd and MyAnimeList stay. Lists imported from Trakt before stay visible
 - Live TV: the remote's channel keys P+ and P- switch to the next and the previous channel in the player (the "Up goes to the next channel" setting only affects Up and Down). Not device tested yet

@@ -238,8 +238,8 @@ Einer groß, drei klein¦واحد كبير وثلاثة صغار
 OK = Ton hierher, OK lange = Sender wechseln¦OK = الصوت هنا، OK مطولًا = تغيير القناة
 So sieht die Reihenfolge aus¦هكذا يبدو الترتيب
 Nichts gezeigt¦لا شيء معروض
-Listen importieren¦استيراد القوائم
-Letterboxd, MyAnimeList¦Letterboxd وMyAnimeList
+Import & Trakt¦استيراد القوائم
+Letterboxd, MyAnimeList, Trakt¦Letterboxd وMyAnimeList وTrakt
 Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦استورد قوائمك من Letterboxd أو MyAnimeList أ إلى التطبيق. ستُطابق العناوين مع قائمة تشغيلك، وسيتم استيراد قائمة المحفوظات والمشاهَدات.
 Letterboxd: ZIP oder CSV · MyAnimeList: XML¦Letterboxd: ZIP أو CSV · MyAnimeList: XML
 Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.¦لا يحتوي هذا الجهاز على مخزن مفاتيح آمن: ستُحفظ عناوين قوائم التشغيل مع بيانات الدخول دون تشفير.
