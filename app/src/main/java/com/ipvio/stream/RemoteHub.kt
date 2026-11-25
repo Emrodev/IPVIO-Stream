@@ -88,7 +88,7 @@ object RemoteHub {
 
     /** Live channel for the phone: like [itemJson] plus favorite flag and the running show (from the loaded XMLTV, no network). */
     private fun liveJson(i: Item): String {
-        val cur = Epg.current(Xmltv.forChannel(i.tvgId))
+        val cur = Epg.current(Xmltv.forItem(i))
         return RemoteLogic.live(itemJson(i), Library.isFav(i.id), cur?.title, cur?.start ?: 0L, cur?.end ?: 0L)
     }
 
@@ -111,12 +111,12 @@ object RemoteHub {
                 val live = PrivateCats.visible(all).filter { it.kind == Kind.LIVE }
                 // Channels whose guide is in the loaded XMLTV
                 for (c in live) {
-                    if (!Xmltv.has(c.tvgId)) continue
-                    for (e in Xmltv.forChannel(c.tvgId)) if (ProgSearchLogic.matches(e.title, text)) hits.add(ProgSearchLogic.Hit(c.id, c.title, e.title, e.start, e.end))
+                    if (!Xmltv.hasItem(c)) continue
+                    for (e in Xmltv.forItem(c)) if (ProgSearchLogic.matches(e.title, text)) hits.add(ProgSearchLogic.Hit(c.id, c.title, e.title, e.start, e.end))
                 }
                 // Xtream channels without XMLTV guide: short guide per channel (Epg.now caches it for 2 minutes).
                 // At most XTREAM_FETCH_PER_REQUEST channels are fetched per request, so the first search can be partial.
-                val xt = live.filter { !Xmltv.has(it.tvgId) && Epg.supported(it) }
+                val xt = live.filter { !Xmltv.hasItem(it) && Epg.supported(it) }
                 val need = xt.filter { Epg.peek(it) == null }.take(ProgSearchLogic.XTREAM_FETCH_PER_REQUEST)
                 if (need.isNotEmpty()) runCatching {
                     runBlocking { withTimeoutOrNull(9_000) { need.map { async { Epg.now(it) } }.awaitAll() } }

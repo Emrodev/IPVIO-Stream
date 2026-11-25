@@ -35,8 +35,11 @@ object MatchLogic {
      * Title for the TMDB search: without the provider's language tag at the start (also "DE - ", which stays in the displayed title).
      * "DE - Game of Thrones" otherwise found other series at TMDB.
      */
+    // T-058: country added to tell two series of the same name apart ("The Office (UK)"); TMDB names them without it
+    private val COUNTRY_END = Regex("""\s*[\(\[]\s*(?:US|UK|AU|NZ|CA)\s*[\)\]]\s*$""", RegexOption.IGNORE_CASE)
+
     fun searchTitle(title: String): String {
-        var t = title.trim()
+        var t = title.trim().replace(COUNTRY_END, "").ifEmpty { title.trim() }
         repeat(2) {
             val m = LEAD.find(t) ?: return@repeat
             if (LangTagLogic.detect(m.groupValues[1]) == null) return@repeat
