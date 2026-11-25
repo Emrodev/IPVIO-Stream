@@ -1393,6 +1393,11 @@ private fun PlaylistPage(ctx: Context, onAdd: () -> Unit, reload: () -> Unit, on
     // The language filter lives on the filter page now (Genres & categories), together with the other filters
     SectionTitle("Sprachen der Inhalte")
     Hint("Which languages are loaded, and which groups and categories are hidden, is set on the page Genres & categories.")
+    SectionTitle("Serien")
+    ToggleRow("Staffeln zusammenfassen", "Manche Anbieter führen jede Staffel als eigene Serie („Show S01“, „Show S02“). Ein: diese Staffeln erscheinen als eine Serie. Gilt für Xtream-Playlists. Verlauf und „Meine Liste“ dieser Serien beginnen neu; die alten Einträge bleiben erhalten, wenn du es wieder ausschaltest.", AppSettings.mergeSeasons) {
+        AppSettings.setMergeSeasons(ctx, it)
+        LangFilter.setAndApply(ctx, LangFilter.hidden)   // read the stored list again with the new option
+    }
     PillButton("Sprachen der Inhalte öffnen", icon = AIcon.Globe) { onFilter() }
     SectionTitle("Automatisch aktualisieren")
     Hint("Gilt für alle Playlists ohne eigenen Plan. Einen eigenen Plan stellst du bei „Bearbeiten“ einer Playlist ein.")

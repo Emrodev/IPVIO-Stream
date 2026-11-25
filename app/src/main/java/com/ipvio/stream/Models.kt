@@ -456,6 +456,7 @@ object M3uParser {
         var header: String? = null
         var headCu: CatchupInfo? = null
         val catchup = HashMap<String, CatchupInfo>()
+        val mergeSeasons = LangTagLogic.MERGE_SEASONS in hidden   // #151
 
         entries(lines, check, onHeader = { header = it; headCu = CatchupLogic.fromInfo(it, "") }) { e ->
             val kd = classify(e, st, langOf) ?: return@entries
@@ -466,14 +467,18 @@ object M3uParser {
                 Kind.SERIES -> {
                     val m = kd.se
                     // Key (= series ID) as before from the cleaned name, so Resume/My list are preserved
-                    val cleaned = clean(m?.groupValues?.get(1) ?: e.name)
+                    var cleaned = clean(m?.groupValues?.get(1) ?: e.name)
+                    var season = m?.groupValues?.get(2)?.toIntOrNull() ?: 1
+                    // #151: a provider series that is one season of a show ("Show S02") joins the other seasons of that show
+                    if (mergeSeasons && e.url.endsWith("." + XtreamLogic.LAZY_EXT)) {
+                        SeasonMergeLogic.split(cleaned)?.let { (base, s) -> cleaned = base; season = s }
+                    }
                     val key = cleaned.lowercase()
                     val title = TitleText.title(cleaned)
                     val acc = series.getOrPut(key) {
                         SeriesAcc(title, attr(e.info, "tvg-logo")?.ifBlank { null }, group, q, kd.lang)
                     }
                     if (acc.done) return@entries
-                    val season = m?.groupValues?.get(2)?.toIntOrNull() ?: 1
                     val num = m?.groupValues?.get(3)?.toIntOrNull() ?: (acc.n + 1)
                     val vl = pool.ofOrNull(LANG.find(e.name)?.groupValues?.get(1)?.uppercase())
                     val label = pool.of(listOfNotNull(vl, q, group.take(18)).joinToString(" · "))

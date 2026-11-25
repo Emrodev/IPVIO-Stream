@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Series: new option Settings > Playlists > Series > "Combine seasons" (off by default). For Xtream providers that list every season as its own series ("Show S01", "Show S02"), the seasons appear as one series. The history and "My list" entries of those series start again while the option is on; the old ones come back when you switch it off (#151, T-065). Not device tested yet
 - Live TV: new switch "Genre categories in Live TV" (Settings > Live TV). Off = the provider's own categories follow "All channels" and the automatic Sport, Movies, Documentaries, Kids, News and Music rows are gone. On by default, as before (#96, T-063). Not device tested yet
 - Playlists (M3U): categories written as `tvg-group`, in other letter case, with single quotes or on a `#EXTGRP:` line are now found; before, such channels all landed in "Sonstige" (#145, T-064; cause not confirmed). Not device tested yet
 - Live TV player: fewer buttons. "Channel list" and "TV guide" are no longer buttons (Left opens the channel list, Right opens the TV guide, as before). Aspect ratio, second picture and "Open externally" are not shown by default; they stay in the player menu "Settings" (T-062). Not device tested yet
