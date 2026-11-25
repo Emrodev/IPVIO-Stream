@@ -31,8 +31,26 @@ object SoftAudio {
         return ok
     }
 
-    fun factory(ctx: Context): DefaultRenderersFactory =
-        DefaultRenderersFactory(ctx)
+    fun factory(ctx: Context): DefaultRenderersFactory {
+        AudioLevel.init(ctx)
+        return LevelledRenderersFactory(ctx)
             .setExtensionRendererMode(if (available(ctx)) DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
             .setEnableDecoderFallback(true)
+    }
+
+    /**
+     * Same audio sink as Media3's default (DefaultRenderersFactory.buildAudioSink in 1.11.1), plus sound levelling
+     * (T-028). The sink is shared by the platform and the FFmpeg audio renderer, so both decoders are covered.
+     */
+    private class LevelledRenderersFactory(ctx: Context) : DefaultRenderersFactory(ctx) {
+        override fun buildAudioSink(
+            context: Context,
+            enableFloatOutput: Boolean,
+            enableAudioOutputPlaybackParams: Boolean
+        ): AudioSink = DefaultAudioSink.Builder(context)
+            .setEnableFloatOutput(enableFloatOutput)
+            .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+            .setAudioProcessors(arrayOf(AudioLevelProcessor()))
+            .build()
+    }
 }
