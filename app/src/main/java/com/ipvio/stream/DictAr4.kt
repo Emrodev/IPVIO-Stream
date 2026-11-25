@@ -238,7 +238,7 @@ Einer groß, drei klein¦واحد كبير وثلاثة صغار
 OK = Ton hierher, OK lange = Sender wechseln¦OK = الصوت هنا، OK مطولًا = تغيير القناة
 So sieht die Reihenfolge aus¦هكذا يبدو الترتيب
 Nichts gezeigt¦لا شيء معروض
-Listen importieren¦استيراد القوائم
+Import & Trakt¦استيراد القوائم
 Letterboxd, MyAnimeList, Trakt¦Letterboxd وMyAnimeList وTrakt
 Hole deine Listen von Letterboxd, MyAnimeList oder Trakt in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦استورد قوائمك من Letterboxd أو MyAnimeList أو Trakt إلى التطبيق. ستُطابق العناوين مع قائمة تشغيلك، وسيتم استيراد قائمة المحفوظات والمشاهَدات.
 Letterboxd: ZIP oder CSV · MyAnimeList: XML · Trakt: JSON¦Letterboxd: ZIP أو CSV · MyAnimeList: XML · Trakt: JSON

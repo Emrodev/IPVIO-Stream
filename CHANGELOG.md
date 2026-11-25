@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Settings: "Import lists" is renamed "Import & Trakt" (German: "Import & Trakt"; Arabic, Dutch and Polish still show the old translation until they are updated). Not device tested
 - Settings > Import list: the Trakt sign-in is on the same page as Letterboxd and MyAnimeList. "Import im WLAN starten" shows a second address and QR code for Trakt (/trakt), with the same code. Shows whether the TV is connected to Trakt. Texts in English for now. Not device tested
 - Trakt (T-031, step 3): phone page at /trakt (4-digit code, link to Trakt, paste "code|state"); the TV checks the state and exchanges the code. Phone page texts are English only for now. No entry point on the TV yet. Not device tested
 - Trakt (T-031, step 2): code-to-token exchange (PKCE, no client secret) and encrypted token storage without a plain-text fallback. Not wired to a screen yet. Not device tested

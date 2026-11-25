@@ -67,7 +67,7 @@ private val CATS = listOf(
     Cat(AIcon.Lock, "Jugendschutz", "PIN, Inhalte ab 18"),
     Cat(AIcon.Storage, "Speicher", "Cache, Verlauf, Fortsetzen"),
     Cat(AIcon.Pulse, "Diagnose", "Status und Fehlersuche"),
-    Cat(AIcon.Download, "Listen importieren", "Letterboxd, MyAnimeList, Trakt"),
+    Cat(AIcon.Download, "Import & Trakt", "Letterboxd, MyAnimeList, Trakt"),
     Cat(AIcon.Live, "Boomer Mode", "Ganz einfach: große Kacheln zum Auswählen"),
     Cat(AIcon.Sliders, "Startseite anpassen", "Reihen und Widgets wählen und ordnen"),
     Cat(AIcon.Live, "Sports Hub", "Sportarten, Wettbewerbe, Hinweise, Bereiche"),
