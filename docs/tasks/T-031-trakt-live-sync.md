@@ -1,6 +1,6 @@
 # T-031: live sync with Trakt through its API — plan only
 
-**Status:** plan. No code. Needs the maintainer's approval (CLAUDE.md section 6: authentication, secrets, network, storage). The one-time import (T-030) stays separate and does not depend on this.
+**Status:** step 1 in progress. The maintainer registered the Trakt app and gave the client ID (not secret, not stored in the repository). The maintainer left the decisions to the assistant, so these defaults were taken: client secret accepted in the APK (non-commercial app), read-only first (Trakt → app), device-code login, tokens only via `Secrets` (no plain-text fallback). Step 1 done in code: `BuildConfig.TRAKT_CLIENT_ID` / `TRAKT_CLIENT_SECRET` (from `secrets.properties`) and `TraktLogic.kt` with `TraktLogicTest.kt` (not run: no Gradle here). Login screen, token storage and sync are not started. The one-time import (T-030) stays separate and does not depend on this.
 
 **Verification status:** the facts below come from community sources (apis.io overview, trakt-rs and trakt.py examples). The official Trakt documentation (trakt.docs.apiary.io) could not be reached from the session, so every endpoint, header, token lifetime and rate limit is **unverified** until it is checked against that documentation.
 

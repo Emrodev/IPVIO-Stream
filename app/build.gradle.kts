@@ -45,6 +45,9 @@ android {
         buildConfigField("String", "OMDB_KEY", "\"${secret("OMDB_KEY")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${secretId("GOOGLE_CLIENT_ID")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_SECRET", "\"${secretId("GOOGLE_CLIENT_SECRET")}\"")
+        // Trakt API application (T-031): empty until the keys are set in secrets.properties or as environment variables
+        buildConfigField("String", "TRAKT_CLIENT_ID", "\"${secretId("TRAKT_CLIENT_ID")}\"")
+        buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${secretId("TRAKT_CLIENT_SECRET")}\"")
     }
 
     signingConfigs {
