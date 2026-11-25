@@ -239,9 +239,9 @@ OK = Ton hierher, OK lange = Sender wechseln¦OK = الصوت هنا، OK مطو
 So sieht die Reihenfolge aus¦هكذا يبدو الترتيب
 Nichts gezeigt¦لا شيء معروض
 Listen importieren¦استيراد القوائم
-Letterboxd, MyAnimeList, Trakt¦Letterboxd وMyAnimeList وTrakt
-Hole deine Listen von Letterboxd, MyAnimeList oder Trakt in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦استورد قوائمك من Letterboxd أو MyAnimeList أو Trakt إلى التطبيق. ستُطابق العناوين مع قائمة تشغيلك، وسيتم استيراد قائمة المحفوظات والمشاهَدات.
-Letterboxd: ZIP oder CSV · MyAnimeList: XML · Trakt: JSON¦Letterboxd: ZIP أو CSV · MyAnimeList: XML · Trakt: JSON
+Letterboxd, MyAnimeList¦Letterboxd وMyAnimeList
+Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦استورد قوائمك من Letterboxd أو MyAnimeList أ إلى التطبيق. ستُطابق العناوين مع قائمة تشغيلك، وسيتم استيراد قائمة المحفوظات والمشاهَدات.
+Letterboxd: ZIP oder CSV · MyAnimeList: XML¦Letterboxd: ZIP أو CSV · MyAnimeList: XML
 Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.¦لا يحتوي هذا الجهاز على مخزن مفاتيح آمن: ستُحفظ عناوين قوائم التشغيل مع بيانات الدخول دون تشفير.
 Datei vom Gerät wählen¦اختيار ملف من الجهاز
 Auf diesem Gerät gibt es keine Dateiauswahl. Nutze den Import im WLAN.¦لا يوجد منتقي ملفات على هذا الجهاز. استخدم الاستيراد عبر Wi-Fi.

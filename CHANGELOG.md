@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 1.5.0 (versionCode 16)
+- Lists import: Trakt export files (JSON) can no longer be imported; Letterboxd and MyAnimeList stay. Lists imported from Trakt before stay visible
+- Live TV: the remote's channel keys P+ and P- switch to the next and the previous channel in the player (the "Up goes to the next channel" setting only affects Up and Down). Not device tested yet
+- Sound: new "Sound levelling" in Settings > Audio & subtitles, off by default. Live channels are mixed to broadcast loudness (about −23 LUFS) and sounded 7–9 dB quieter than YouTube or Netflix; "Default" raises them to about −16 LUFS with a limiter (no clipping), evens out loud and quiet parts and lifts dialogue a little. Modes: Off, Standard, Clear speech, Night mode, Custom (maximum boost, levelling strength, dialogue lift). Off is bit-identical to before; passthrough to a receiver is not processed (T-028)
+- Phone page: "Upload" for a playlist file, a list or a VPN configuration did nothing. The page script missed a closing brace, so the upload function was never defined. A rejected upload (wrong code) now shows the reply instead of a bare "Error"
+- Playlists: the "Edit" window never gets taller than the screen; "Apply" and "Cancel" stay visible on a phone in landscape and on a 1080p TV. Not device tested on a TV yet
+- Load errors: an unexpected error names the place in the app (file and line), so a screenshot is enough for a bug report
+- Fix: many series were missing on Xtream and Stalker playlists. Series with the same name were merged into one: the same series in two categories (for example a German and an English category), "The Office (US)" and "(UK)", or two series of different years. Each is its own series now and appears in its own category. A series you watched before keeps its progress and its place in My list. Plain M3U lists are unchanged (T-058). Not device tested yet
+- Fix: Xtream playlists whose M3U link delivers only part of the movies or series are now loaded completely through the provider's API (before, only when the link had no movie or series at all). Press "Reload" on the playlist once (T-058). Not device tested yet
+- TV guide: channels without a guide ID, or with an ID that differs only slightly from the guide's, now get their programme by a similar ID or by the channel name. Names used by several channels in the guide are only matched when the language fits (T-058). Not device tested yet
+- Settings > Diagnostics > Log: after loading a playlist, one line shows how many entries the provider's list has and how many were left out, and why (divider lines, language filter, content mode, parental control, ignored categories, broken titles) (T-058). Not device tested yet
+- Switching playlists: when there is enough memory, the current screen stays and the list changes in place, instead of showing the loading screen (T-059). Not device tested yet
+- Faster reading of large playlists (about 30 % in a test on a computer, not measured on a TV device) (T-059)
+
 ## 1.4.9
 - Series: "Download season" is shown on every series, also before the first play (before, it was only shown after a series had been started). Not device tested yet
 - Series: "Pick episodes" opens the episode list of the shown season with a check box per episode. The checked episodes are queued together, with one notice about the provider terms before the first download. Not device tested yet

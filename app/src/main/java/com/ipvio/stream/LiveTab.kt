@@ -291,9 +291,20 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     Box(Modifier.fillMaxSize()) {
         FocusedBackdrop(focusedState, Modifier.fillMaxSize())
         Row(Modifier.fillMaxSize().padding(top = 20.dp)) {
+            // Up on the first category goes to the last one (like the channel list, #107)
+            val lastCat = remember { FocusRequester() }
+            fun wrapCat() {
+                plScope.launch {
+                    catState.scrollToItem(names.lastIndex)
+                    repeat(20) {
+                        if (runCatching { lastCat.requestFocus() }.isSuccess) return@launch
+                        kotlinx.coroutines.delay(30)
+                    }
+                }
+            }
             LazyColumn(Modifier.width(270.dp).fillMaxHeight().padding(start = 24.dp, end = 8.dp), state = catState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 // Stable keys: after moving a category, focus and menu state move with the row (duplicates get an index suffix)
-                itemsIndexed(names, key = { i, n -> catKeys.getOrElse(i) { "$n#$i" } }) { _, n ->
+                itemsIndexed(names, key = { i, n -> catKeys.getOrElse(i) { "$n#$i" } }) { i, n ->
                     val ml = ChannelLists.byKey(n)
                     if (n == "GUIDE") {
                         // TV guide as in the design: starts the last watched (otherwise first) channel of the selection and opens the guide
@@ -394,6 +405,12 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         CatRow(
                             label, count, n == hot,
                             (if (n == hot) Modifier.focusRequester(ContentFocus.req) else Modifier).then(
+                                if (i == names.lastIndex) Modifier.focusRequester(lastCat) else Modifier
+                            ).then(
+                                if (i == 0) Modifier.onPreviewKeyEvent { k ->
+                                    if (k.type == KeyEventType.KeyDown && k.key == Key.DirectionUp && !(plainCat && floatingCat == n)) { wrapCat(); true } else false
+                                } else Modifier
+                            ).then(
                                 if (plainCat && floatingCat == n) Modifier.onPreviewKeyEvent { k ->
                                     // While floating every key belongs to the move: Up/Down move, OK puts it down, Left/Right do nothing
                                     if (k.type != KeyEventType.KeyDown) return@onPreviewKeyEvent k.key != Key.Back

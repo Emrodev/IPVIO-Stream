@@ -838,15 +838,26 @@ object PlaylistStore {
      */
     private fun vodViaApi(c: Context, u: String, acct: XtreamLogic.Acct, got: Pair<File, Charset>): Pair<File, Charset> {
         val host = hostOf(u)
-        val hasVod = runCatching { got.first.bufferedReader(got.second).useLines { LoadLogic.hasVod(it) } }.getOrDefault(true)
-        if (hasVod) { Diag.note("$host: Xtream list (get.php) with movies or series"); return got }
+        val groups = runCatching { got.first.bufferedReader(got.second).useLines { LoadLogic.vodGroups(it) } }.getOrNull() ?: return got
         if (cancelled()) throw CancellationException("abgebrochen")
-        if (!runCatching { XtreamApi(client, uaFor(c, u)).hasVodCategories(acct) }.getOrDefault(false)) {
-            Diag.note("$host: Xtream list (get.php) without movies or series; the provider's API lists no movie or series categories either")
-            return got
+        val api = XtreamApi(client, uaFor(c, u))
+        if (groups.movies.isNotEmpty() || groups.series.isNotEmpty()) {
+            // T-058: some providers put only part of their movies or series into get.php. Most of the provider's movie or
+            // series categories missing from the list: load the whole list through the API (two small requests to check).
+            val vodApi = runCatching { api.vodCategoryNames(acct) }.getOrDefault(emptyList())
+            val serApi = runCatching { api.seriesCategoryNames(acct) }.getOrDefault(emptyList())
+            val partial = LoadLogic.missingCategories(vodApi, groups.movies) || LoadLogic.missingCategories(serApi, groups.series)
+            PlaylistDiag.log("vod", "get.php movie categories ${groups.movies.size}/${vodApi.size}, series ${groups.series.size}/${serApi.size}, partial=$partial")
+            if (!partial) { Diag.note("$host: Xtream list (get.php) with movies or series"); return got }
+            Diag.note("$host: Xtream list (get.php) misses most movie or series categories (movies ${groups.movies.size} of ${vodApi.size}, series ${groups.series.size} of ${serApi.size}): loading through the API")
+        } else {
+            if (!runCatching { api.hasVodCategories(acct) }.getOrDefault(false)) {
+                Diag.note("$host: Xtream list (get.php) without movies or series; the provider's API lists no movie or series categories either")
+                return got
+            }
+            Diag.note("$host: Xtream list (get.php) without movies or series, the provider's API has them: loading through the API")
+            PlaylistDiag.log("vod", "get.php has no movies or series, the provider lists them: API")
         }
-        Diag.note("$host: Xtream list (get.php) without movies or series, the provider's API has them: loading through the API")
-        PlaylistDiag.log("vod", "get.php has no movies or series, the provider lists them: API")
         // downloadApi writes the same raw file: keep the get.php list aside until the API list is complete
         val keep = File(got.first.path + ".liveonly")
         keep.delete()
@@ -1279,11 +1290,60 @@ object PlaylistStore {
         }
     }
 
+    /**
+     * T-059: switching to a playlist with a stored copy keeps the current list on screen while the copy is read, then
+     * replaces it in one step. Before, the list was emptied first, so Live TV, Movies and Series turned into the loading
+     * screen for the length of the read. Only when memory has room for both lists for a moment (weak Fire TV sticks ran
+     * out of memory with both); the read stops when memory gets tight and the old switch (empty first) runs instead.
+     * false = not possible here, the normal switch runs.
+     */
+    private suspend fun switchKeepingList(c: Context, i: Int): Boolean {
+        if (rawChannels.isEmpty()) return false
+        val u = PlaylistLogic.normalizeUrl(lists[i].url) ?: return false
+        if (SublistStore.active(c, key(u)) != null) return false   // a saved sublist filter is applied by the normal load
+        val hidden = PlaylistMode.withMode(c, u, LangFilter.hidden)
+        val f = cacheFile(c, u)
+        val r = Runtime.getRuntime()
+        val free = r.maxMemory() - (r.totalMemory() - r.freeMemory())
+        if (!SwitchLogic.roomForBoth(f.length(), free)) return false
+        if (!loadLock.tryLock()) return false
+        val before = active
+        var shown = false
+        try {
+            val head = withContext(Dispatchers.IO) { readHeader(c, u) } ?: return false
+            if (head.hidden != hidden || head.counts.isEmpty()) return false
+            job = currentCoroutineContext()[Job]
+            loading = true
+            activate(c, i)   // the header and the playlist menu show the new choice at once
+            val t0 = android.os.SystemClock.elapsedRealtime()
+            val cached = withContext(Dispatchers.IO) { readCache(c, u, hidden) }
+            if (cached == null || cached.counts.isEmpty()) return false
+            clearSublistForLoad()
+            error = null; refreshError = null
+            withContext(Dispatchers.IO) {
+                show(c, u, cached.items, cached.epg, cached.order, cached.counts, cached.bytes, hidden)
+                runCatching { loadExtras(c, network = false) }.onFailure { if (it is CancellationException) throw it }
+            }
+            shown = true
+            PlaylistDiag.log("switch", "kept the old list while reading the stored copy")
+            Diag.note("Playlist switch: stored list ${cached.items.size} items read in ${android.os.SystemClock.elapsedRealtime() - t0} ms, the screen stayed")
+            return true
+        } finally {
+            // Not switched (read failed, cancelled): the old list is still on screen, so its playlist stays the active one.
+            // On a plain failure the normal switch runs next and activates the new one again.
+            if (!shown && active != before) activate(c, before)
+            job = null
+            loading = false
+            loadLock.unlock()
+        }
+    }
+
     suspend fun switchTo(c: Context, i: Int, fresh: Boolean = false) {
         ensure(c)
         if (i !in lists.indices) return
         if (loadLock.isLocked) return   // a load is already running: do not interfere
         if (!fresh && switchFromMemory(c, i)) return
+        if (!fresh && switchKeepingList(c, i)) return
         activate(c, i)
         // Mark the load before the list is emptied: otherwise one frame shows "No channels yet" instead of the loading screen.
         // No suspension point between here and load(), so its lock is still free.
@@ -1712,6 +1772,7 @@ object PlaylistStore {
                 val list = parsed.items
                 if (sig(list) != before || !usedCache || b.hidden != shownHidden) show(c, u, list, urls, order, parsed.counts, parsed.bytes, b.hidden)
                 else { primaryEpg = urls; primaryOrder = order; langCounts = parsed.counts; langBytes = parsed.bytes; restartCatchup(c) }
+                reportLoad(u, parsed, b.hidden)
                 // Renew further shown playlists from the server as well
                 loadExtras(c, network = true)
                 if (save) finishSave(c, u)
@@ -1739,6 +1800,17 @@ object PlaylistStore {
         }
         loading = false
         return ok
+    }
+
+    /** T-058: load report for Settings > Diagnostics (where the provider's entries went). Never fails the load. */
+    private fun reportLoad(u: String, p: ParsedPlaylist, hidden: Set<String>) {
+        runCatching {
+            var live = 0; var movies = 0; var series = 0
+            for (i in p.items) when (i.kind) { Kind.LIVE -> live++; Kind.MOVIE -> movies++; Kind.SERIES -> series++ }
+            val filters = Parental.hideAdult || DeadLinks.hide || !IgnoredGroups.isEmpty
+            val shown = if (filters) shownOf(p.items).size else p.items.size
+            Diag.note(LoadReportLogic.line(hostOf(u), p.report, live, movies, series, shown, p.items.size, hidden - LangTagLogic.PSEUDO))
+        }
     }
 
     /** Newly added playlist loaded successfully: adopt it into the list and delete the remembered job. */

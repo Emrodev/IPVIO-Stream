@@ -211,7 +211,7 @@ private fun AppContent() {
     val ctx = LocalContext.current
     remember {
         AppSettings.init(ctx); WatchStore.init(ctx); History.init(ctx); Library.init(ctx); QualityStore.init(ctx); PrivateCats.init(ctx)
-        PlaybackPrefs.init(ctx); PlayerSync.init(ctx); loadWishboxTexts(); DeadLinks.init(ctx); ChannelLists.init(ctx); Reminders.init(ctx); Reminders.schedule(ctx)
+        PlaybackPrefs.init(ctx); PlayerSync.init(ctx); AudioLevel.init(ctx); loadWishboxTexts(); DeadLinks.init(ctx); ChannelLists.init(ctx); Reminders.init(ctx); Reminders.schedule(ctx)
         // W-010b: live sync of favorites and history (silent; only when Google Drive is connected)
         LiveSync.start(ctx); 0
     }

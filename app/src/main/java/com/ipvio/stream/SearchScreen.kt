@@ -82,7 +82,7 @@ private class HitCard(val item: Item, val program: ProgSearchLogic.Hit?)
  * XMLTV guide first; Xtream channels without XMLTV get their short guide (at most [ProgSearchLogic.XTREAM_FETCH_PER_REQUEST], 9 s).
  */
 private suspend fun progHits(all: List<Item>, q: String): ProgState {
-    val xt = all.filter { it.kind == Kind.LIVE && !Xmltv.has(it.tvgId) && Epg.supported(it) && Epg.peek(it) == null }
+    val xt = all.filter { it.kind == Kind.LIVE && !Xmltv.hasItem(it) && Epg.supported(it) && Epg.peek(it) == null }
         .take(ProgSearchLogic.XTREAM_FETCH_PER_REQUEST)
     if (xt.isNotEmpty()) withTimeoutOrNull(9_000) { coroutineScope { xt.map { async { Epg.now(it) } }.awaitAll() } }
     val now = System.currentTimeMillis() / 1000
@@ -91,7 +91,7 @@ private suspend fun progHits(all: List<Item>, q: String): ProgState {
     for (c in all) {
         if (c.kind != Kind.LIVE) continue
         if (SearchSport.isSport(c)) sportIds.add(c.id)
-        val list = if (Xmltv.has(c.tvgId)) Xmltv.forChannel(c.tvgId) else Epg.peek(c).orEmpty()
+        val list = if (Xmltv.hasItem(c)) Xmltv.forItem(c) else Epg.peek(c).orEmpty()
         for (e in list) if (ProgSearchLogic.matches(e.title, q)) hits.add(ProgSearchLogic.Hit(c.id, c.title, e.title, e.start, e.end))
     }
     val live = ProgSearchLogic.select(hits.filter { it.channelId !in sportIds }, now, ProgSearchLogic.Mode.LIVE)

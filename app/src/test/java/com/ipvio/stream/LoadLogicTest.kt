@@ -193,4 +193,20 @@ http://h/x
         val live = "#EXTM3U\n#EXTINF:-1 group-title=\"News\",A\nhttp://h/live/u/p/1.ts\n#EXTINF:-1,B\nhttp://h/u/p/2\n"
         assertFalse(LoadLogic.hasVod(live.lineSequence()))
     }
+
+    // T-058: categories of movies and series in a get.php list, to see whether most of the provider's are missing
+    @Test fun vodGroupsCollectsMovieAndSeriesCategories() {
+        val m3u = "#EXTM3U\n#EXTINF:-1 group-title=\"News\",A\nhttp://h/live/u/p/1.ts\n" +
+            "#EXTINF:-1 group-title=\"Action\",M\nhttp://h/movie/u/p/2.mp4\n" +
+            "#EXTINF:-1 group-title=\"Drama \",S S01E01\nhttp://h/series/u/p/3.mkv\n"
+        val g = LoadLogic.vodGroups(m3u.lineSequence())
+        assertEquals(setOf("action"), g.movies)
+        assertEquals(setOf("drama"), g.series)
+    }
+
+    @Test fun partialVodListIsDetectedByCategories() {
+        val api = listOf("Action", "Drama", "Comedy", "Horror", "Kids", "Docu")
+        assertTrue(LoadLogic.missingCategories(api, setOf("action", "drama")))
+        assertFalse(LoadLogic.missingCategories(api, setOf("action", "drama", "comedy", "horror")))
+    }
 }

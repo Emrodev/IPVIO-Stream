@@ -52,6 +52,12 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
     /** Names of the live categories (small request), to check a list from get.php for completeness. Empty on error. */
     fun liveCategoryNames(a: XtreamLogic.Acct): Collection<String> = categories(a, "get_live_categories").values
 
+    /** Names of the movie categories (small request), to check a list from get.php for completeness. Empty on error. */
+    fun vodCategoryNames(a: XtreamLogic.Acct): Collection<String> = categories(a, "get_vod_categories").values
+
+    /** Names of the series categories (small request). Empty on error. */
+    fun seriesCategoryNames(a: XtreamLogic.Acct): Collection<String> = categories(a, "get_series_categories").values
+
     /** Does the provider list movie or series categories (two small requests)? false on error. */
     fun hasVodCategories(a: XtreamLogic.Acct): Boolean =
         categories(a, "get_vod_categories").isNotEmpty() || categories(a, "get_series_categories").isNotEmpty()
