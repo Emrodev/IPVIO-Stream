@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Trakt (T-031, step 1): build fields for the Trakt API client ID and secret (`secrets.properties` or environment variables), pure login logic (`TraktLogic`) with JVM tests. No login screen and no sync yet. Not device tested
+- Trakt (T-031, step 1): build field for the Trakt API client ID (`secrets.properties` or environment variable), pure login logic (`TraktLogic`) with JVM tests. No login screen and no sync yet. Not device tested
 
 ## 1.4.9
 - Series: "Download season" is shown on every series, also before the first play (before, it was only shown after a series had been started). Not device tested yet
