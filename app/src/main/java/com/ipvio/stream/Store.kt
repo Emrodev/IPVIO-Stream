@@ -629,6 +629,29 @@ object EpProgress {
         store(c, seriesId, m)
     }
 
+    /** Number of titles in the progress store (T-031 Trakt sync: new marks only fill free places). */
+    @Synchronized
+    fun count(c: Context): Int = prefs(c).all.size
+
+    /** Size of the progress store: beyond it the oldest titles are forgotten. */
+    fun capacity(): Int = MAX_SERIES
+
+    /**
+     * T-031 Trakt sync: marks [keys] as watched where the title has no progress for them yet. Existing entries (also an
+     * episode the user is in the middle of) are never changed, and a title is only added when the store has room, so no
+     * other title is forgotten for it.
+     */
+    @Synchronized
+    fun addWatched(c: Context, seriesId: String, keys: Collection<Long>) {
+        if (PrivateCats.isPrivateId(seriesId)) return
+        val known = prefs(c).contains(seriesId)
+        if (!known && prefs(c).all.size >= MAX_SERIES) return
+        val m = load(c, seriesId)
+        var changed = false
+        for (k in keys) if (!m.containsKey(k)) { m[k] = ResumeLogic.EpPos(MARK_SECONDS, MARK_SECONDS); changed = true }
+        if (changed) store(c, seriesId, m)
+    }
+
     /** Length (seconds) of the placeholder progress that marks an episode as watched by hand. */
     private const val MARK_SECONDS = 60
 

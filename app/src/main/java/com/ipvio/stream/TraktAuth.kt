@@ -1,7 +1,8 @@
 package com.ipvio.stream
 
 import android.content.Context
-import okhttp3.FormBody
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Request
 import org.json.JSONObject
 
@@ -23,9 +24,12 @@ object TraktAuth {
     /** Exchanges [code] for tokens and stores them when the keystore is available. */
     fun exchange(context: Context, code: String, verifier: String, nowMs: Long = System.currentTimeMillis()): Outcome {
         val form = TraktLogic.tokenBody(code, verifier, BuildConfig.TRAKT_CLIENT_ID.trim(), TraktLogic.REDIRECT_URI)
-        val body = FormBody.Builder().apply { form.forEach { (k, v) -> add(k, v) } }.build()
+        // JSON body, as the Trakt clients send it (trakt.tv for Node, trakt.py)
+        val body = TraktSyncLogic.exchangeBody(form).toRequestBody("application/json".toMediaType())
         val raw: String = try {
-            Net.base.newCall(Request.Builder().url(TraktLogic.TOKEN_URL).post(body).build()).execute().use { r ->
+            Net.base.newCall(
+                Request.Builder().url(TraktLogic.TOKEN_URL).header("User-Agent", "IPVIO Stream/" + BuildConfig.VERSION_NAME).post(body).build()
+            ).execute().use { r ->
                 if (!r.isSuccessful) return Outcome.REJECTED
                 r.body?.string().orEmpty()
             }

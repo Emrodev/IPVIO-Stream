@@ -248,6 +248,12 @@ private fun AppContent() {
     LaunchedEffect(searchList) {
         withContext(Dispatchers.Default) { runCatching { SearchCache.build(PrivateCats.visible(searchList)) } }
     }
+    // T-031: Trakt history and watchlist into the app once the playlist is there (at most every 6 hours, needs a sign-in).
+    // Waits 8 s so the first screens and the playlist refresh get the CPU and the network first.
+    val traktReady = searchList.isNotEmpty() && !PlaylistStore.loading
+    LaunchedEffect(traktReady) {
+        if (traktReady) { kotlinx.coroutines.delay(8_000); runCatching { TraktSync.autoSync(ctx) } }
+    }
     // New app version on GitHub? Check silently once a day; a find appears in the bell at the top right.
     LaunchedEffect(Unit) {
         delay(3_000)   // only after the start, the playlist takes priority
