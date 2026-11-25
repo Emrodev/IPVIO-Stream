@@ -64,3 +64,22 @@ Keep the watch history, watchlist and favorites of a user in step with their Tra
 **Risks:** the code is short-lived and one-time, but anyone who sees the phone screen can take it. The phone route is plain HTTP on the local network (open item in SECURITY.md), so the code crosses the LAN unencrypted. Keep the code's lifetime short and discard it after use.
 
 **Tests:** JVM tests for the verifier, challenge, URL and body builders (done in `TraktLogicTest`). On device: full sign-in with a real Trakt account, check that the TV stores tokens only with a keystore, and that the code cannot be reused.
+
+## Phone route: detailed plan (planned, no code, needs approval)
+
+**Simpler than before:** the TV already shows a phone page (`PhoneImport.kt`, QR code, 4-digit code, lock after 5 wrong codes, runs only while its screen is open). Use that page for Trakt, so the TV needs only one QR code.
+
+**Steps**
+1. TV, on the Trakt screen: create the verifier (`TraktLogic.newVerifier`) and a `state`, keep both in memory for this sign-in only, and show the phone page.
+2. Phone page: a "Sign in to Trakt" button opens `TraktLogic.authorizeUrl(...)` in the phone browser (the URL includes the challenge, never the verifier).
+3. Phone browser: user signs in at Trakt; Trakt redirects to `TraktLogic.REDIRECT_URI` (GitHub Pages helper page), which shows the code.
+4. User copies the code into a field on the phone page and sends it with the 4-digit code. New route, e.g. `POST /trakt` (name to be chosen; the route list is a protected area).
+5. TV checks `state`, exchanges code + verifier at the token endpoint (`TraktLogic.tokenBody`), stores the tokens only through `Secrets`, and clears the verifier. Refuse to store tokens when no keystore is available.
+
+**Why the plain-HTTP LAN is acceptable here (to confirm in review):** the code alone is useless. The exchange needs the verifier, which never leaves the TV. An attacker who sees the code on the LAN cannot turn it into tokens. The 4-digit code still guards the route against other devices on the Wi-Fi.
+
+**Feature flag:** add the Trakt part behind a setting (off by default) so existing users see no change (CLAUDE.md section 6: visible effect).
+
+**Changes needed (each needs approval):** new phone route and page text (protected area, translations per `docs/TESTING.md`), new Trakt screen on the TV, token storage in `Secrets`, new setting.
+
+**Tests:** JVM for `state` check, code length and charset validation, token body; device test for the whole flow with a real Trakt account, wrong code (lock after 5), keystore missing (no token stored), sign-out removes tokens.
