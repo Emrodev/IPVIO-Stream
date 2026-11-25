@@ -25,30 +25,35 @@
   <div class="card">
     <div id="ok" hidden>
       <h1>Sign-in complete</h1>
-      <p>Go back to IPVIO Stream on your TV and enter this code:</p>
+      <p>Go back to IPVIO Stream on your TV and paste this text into the phone page:</p>
       <div class="code" id="code"></div>
       <button id="copy" type="button">Copy code</button>
       <p class="muted">The code works once and expires after a few minutes. You can close this page.</p>
     </div>
     <div id="fail" hidden>
       <h1>Sign-in not completed</h1>
-      <p>Trakt did not return a code. Go back to IPVIO Stream on your TV and start the sign-in again.</p>
+      <p>Trakt did not return a code and state. Go back to IPVIO Stream on your TV and start the sign-in again.</p>
     </div>
   </div>
 </main>
 <script>
 (function () {
-  // Reads the one-time code from the URL fragment or query. Nothing is stored or sent anywhere.
+  // Reads the one-time code and the state from the address. Nothing is stored or sent anywhere.
   var params = new URLSearchParams(location.search || "");
   var hash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
   var code = params.get("code") || hash.get("code");
+  var state = params.get("state") || hash.get("state");
   var ok = document.getElementById("ok");
   var fail = document.getElementById("fail");
-  if (code && /^[A-Za-z0-9._~-]{8,256}$/.test(code)) {
-    document.getElementById("code").textContent = code;
+  var okCode = /^[A-Za-z0-9._~-]{8,512}$/;
+  var okState = /^[A-Za-z0-9_-]{8,128}$/;
+  if (code && state && okCode.test(code) && okState.test(state)) {
+    var text = code + "|" + state;
+    document.getElementById("code").textContent = text;
     ok.hidden = false;
     document.getElementById("copy").addEventListener("click", function () {
-      try { navigator.clipboard.writeText(code); this.textContent = "Copied"; } catch (e) { this.textContent = "Select the code"; }
+      var btn = this;
+      try { navigator.clipboard.writeText(text); btn.textContent = "Copied"; } catch (e) { btn.textContent = "Select the text"; }
     });
     // Remove the code from the address bar so it is not left in history.
     try { history.replaceState(null, "", location.pathname); } catch (e) { /* ignore */ }
