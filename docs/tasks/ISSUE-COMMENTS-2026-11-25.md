@@ -1,6 +1,6 @@
 # Draft comments for the issues of 25 Nov 2026
 
-Drafts only. Nothing is posted. English only (CLAUDE.md section 4); every comment ends with the footer. The fixes are on the branch `claude/exciting-johnson-9gi5zn` and are not device tested yet, so the texts say "will be in the next version" and ask the reporter to try it. Do not close an issue before the fix has been tested on a device.
+These comments were posted on 25 Nov 2026 (each with the line that the update is coming soon), plus replies on #75, #105, #24, #28, #69, #68, #103, #73, #104, #108, #129, #99 and #23 that are not drafted here. #110 is the maintainer's own wish note and has no reply. English only (CLAUDE.md section 4); every comment ends with the footer. The fixes are on the branch `claude/exciting-johnson-9gi5zn` and are not device tested yet, so the texts say "will be in the next version" and ask the reporter to try it. Do not close an issue before the fix has been tested on a device.
 
 Footer for every comment:
 
