@@ -490,7 +490,9 @@ private fun CatTile(name: String, items: List<Item>, modifier: Modifier, onClick
 private fun AutoGenresOff() {
     val all = PlaylistStore.channels
     val n = remember(all) { all.count { it.kind != Kind.LIVE } }
-    val nf = java.text.NumberFormat.getIntegerInstance()
+    // Plain digits: the translated text is found by a pattern that reads digits, dots and commas only (not the space
+    // some locales use as thousands separator), otherwise the German text stays
+    val nf = java.text.NumberFormat.getIntegerInstance(java.util.Locale.GERMANY)
     val shape = RoundedCornerShape(DS.RadiusL)
     Column(
         Modifier.widthIn(max = 720.dp).clip(shape).background(Surf).padding(24.dp),
