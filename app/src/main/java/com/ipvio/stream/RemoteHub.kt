@@ -56,6 +56,9 @@ object RemoteHub {
             }
         }
         s.onList = { name, bytes -> main.post { appCtx?.let { ListImportApply.run(it, name, bytes) } } }
+        // Trakt sign-in from the phone page (T-031): the TV keeps the verifier and exchanges the code
+        s.traktStart = { TraktSignIn.start() }
+        s.traktFinish = { code, state -> appCtx?.let { TraktSignIn.finish(it, code, state) } ?: TraktAuth.Outcome.REJECTED }
         s.api = { name, q ->
             // The phone opened the page or used it: close the QR card on the TV (it would otherwise stay in front of the player).
             // "state" is polled all the time and must not count.
