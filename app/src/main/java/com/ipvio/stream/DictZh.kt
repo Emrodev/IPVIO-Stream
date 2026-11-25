@@ -1554,9 +1554,9 @@ OK = Ton hierher, OK lange = Sender wechseln¦确认键 = 此画面出声，长�
 So sieht die Reihenfolge aus¦这是最终的排列顺序
 Nichts gezeigt¦未显示任何内容
 Listen importieren¦导入列表
-Letterboxd, MyAnimeList, Trakt¦Letterboxd、MyAnimeList、Trakt
-Hole deine Listen von Letterboxd, MyAnimeList oder Trakt in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦把 Letterboxd、MyAnimeList 或 Trakt 的列表导入应用。节目会与你的播放列表匹配：待看和已看都会导入。
-Letterboxd: ZIP oder CSV · MyAnimeList: XML · Trakt: JSON¦Letterboxd：ZIP 或 CSV · MyAnimeList：XML · Trakt：JSON
+Letterboxd, MyAnimeList¦Letterboxd、MyAnimeList
+Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦把 Letterboxd、MyAnimeList 的列表导入应用。节目会与你的播放列表匹配：待看和已看都会导入。
+Letterboxd: ZIP oder CSV · MyAnimeList: XML¦Letterboxd：ZIP 或 CSV · MyAnimeList：XML
 Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.¦此设备没有安全密钥存储：含登录信息的播放列表地址将未加密保存。
 Datei vom Gerät wählen¦从设备选择文件
 Auf diesem Gerät gibt es keine Dateiauswahl. Nutze den Import im WLAN.¦此设备没有文件选择器，请使用 Wi-Fi 导入。

@@ -490,9 +490,9 @@ OK = Ton hierher, OK lange = Sender wechseln¦OK = ativar áudio nesta tela, Seg
 So sieht die Reihenfolge aus¦Esta é a ordem configurada
 Nichts gezeigt¦Nada exibido
 Listen importieren¦Importar listas externas
-Letterboxd, MyAnimeList, Trakt¦Letterboxd, MyAnimeList, Trakt
-Hole deine Listen von Letterboxd, MyAnimeList oder Trakt in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦Importe seus filmes e animes do Letterboxd, MyAnimeList ou Trakt e cruze com sua lista de IPTV.
-Letterboxd: ZIP oder CSV · MyAnimeList: XML · Trakt: JSON¦Letterboxd: ZIP ou CSV · MyAnimeList: XML · Trakt: JSON
+Letterboxd, MyAnimeList¦Letterboxd, MyAnimeList
+Hole deine Listen von Letterboxd, MyAnimeList in die App. Die Titel werden mit deiner Playlist abgeglichen: Merkliste und Gesehen werden übernommen.¦Importe seus filmes e animes do Letterboxd, MyAnimeList e cruze com sua lista de IPTV.
+Letterboxd: ZIP oder CSV · MyAnimeList: XML¦Letterboxd: ZIP ou CSV · MyAnimeList: XML
 Dieses Gerät hat keinen sicheren Schlüsselspeicher: Playlist-Adressen mit Zugangsdaten werden unverschlüsselt gespeichert.¦Este aparelho não possui keystore seguro: dados de lista serão salvos em texto simples.
 Datei vom Gerät wählen¦Escolher arquivo do aparelho
 Auf diesem Gerät gibt es keine Dateiauswahl. Nutze den Import im WLAN.¦Este aparelho não tem gerenciador de arquivos. Use o envio pelo celular via Wi-Fi.
