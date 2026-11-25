@@ -4,7 +4,6 @@ package com.ipvio.stream
 // Format as in DictA–J: de ¦ en ¦ tr ¦ bs ¦ hr ¦ sr ¦ es ¦ fr ¦ it (hr/sr empty = same as bs)
 val DictAudio = """
 Ton angleichen¦Sound levelling¦Ses dengeleme¦Ujednačavanje zvuka¦¦¦Nivelación de sonido¦Égalisation du son¦Livellamento audio
-Standard (empfohlen)¦Standard (recommended)¦Standart (önerilen)¦Standardno (preporučeno)¦¦¦Estándar (recomendado)¦Standard (recommandé)¦Standard (consigliato)
 Klare Sprache¦Clear speech¦Net konuşma¦Jasan govor¦¦¦Voz clara¦Voix claire¦Voce chiara
 Nachtmodus¦Night mode¦Gece modu¦Noćni način¦¦¦Modo nocturno¦Mode nuit¦Modalità notte
 Eigene Einstellung¦Custom¦Özel¦Prilagođeno¦¦¦Personalizado¦Personnalisé¦Personalizzato
@@ -29,7 +28,6 @@ fun loadAudioLevelTexts() {
 // Dutch column for the rows above
 val DictNlAudio = """
 Ton angleichen¦Geluid egaliseren
-Standard (empfohlen)¦Standaard (aanbevolen)
 Klare Sprache¦Heldere spraak
 Nachtmodus¦Nachtmodus
 Eigene Einstellung¦Aangepast

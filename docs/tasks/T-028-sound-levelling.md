@@ -20,7 +20,7 @@ User report: live channels are much quieter than YouTube or Netflix on the same 
   Mode Off leaves the samples bit-identical.
 - `AudioLevel.kt` (new): per-profile settings in `ipvio_audio` (`mode`, `boost`, `level`, `speech`, all indexes) like the audio delay in `PlayerSync`, and `AudioLevelProcessor`, a Media3 `BaseAudioProcessor` for 16-bit and float PCM. Settings apply immediately, also during playback. On seek the automatic gain keeps its level.
 - `SoftAudio.kt`: `factory()` returns a `DefaultRenderersFactory` subclass whose `buildAudioSink` is Media3 1.11.1's default plus the processor. Both the platform decoder and the FFmpeg renderer use this sink. `PlayerScreen.kt` and `DualView.kt` are unchanged.
-- Settings > Sound & subtitles: new row "Ton angleichen" with Aus / Standard (empfohlen) / Klare Sprache / Nachtmodus / Eigene Einstellung. "Eigene Einstellung" shows Maximale Anhebung (Aus, +3 … +12 dB), Dynamik angleichen (Aus/Leicht/Mittel/Stark), Dialoge hervorheben (Aus, +3/+6/+9 dB) and Zurücksetzen.
+- Settings > Sound & subtitles: new row "Ton angleichen" with Aus / Standard / Klare Sprache / Nachtmodus / Eigene Einstellung. "Eigene Einstellung" shows Maximale Anhebung (Aus, +3 … +12 dB), Dynamik angleichen (Aus/Leicht/Mittel/Stark), Dialoge hervorheben (Aus, +3/+6/+9 dB) and Zurücksetzen.
 - `DictAudio.kt` (new): the texts in all 10 languages, loaded additively like `DictW.kt`, so `Lang.kt` is not touched.
 - `MainActivity.kt`: `AudioLevel.init(ctx)` next to `PlayerSync.init(ctx)`.
 

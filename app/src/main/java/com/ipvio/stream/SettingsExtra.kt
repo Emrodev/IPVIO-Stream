@@ -162,7 +162,7 @@ fun CatchupSection() {
 /** Sound levelling (T-028): presets plus the three controls of "Custom". Changes apply at once, also during playback. */
 @Composable
 fun AudioLevelSettingsSection(ctx: Context) {
-    val modes = listOf("Aus", "Standard (empfohlen)", "Klare Sprache", "Nachtmodus", "Eigene Einstellung")
+    val modes = listOf("Aus", "Standard", "Klare Sprache", "Nachtmodus", "Eigene Einstellung")
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SelectRow("Ton angleichen", modes[AudioLevel.mode], modes, AudioLevel.mode, active = AudioLevel.mode != AudioLevelLogic.MODE_OFF) {
             AudioLevel.setMode(ctx, it)
