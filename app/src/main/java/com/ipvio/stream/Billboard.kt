@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
@@ -26,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
@@ -95,16 +98,24 @@ class PivotSpec(private val pivot: Float, private val list: () -> androidx.compo
 
 /** Full-screen background with the scene image of the title; without an image a gradient from the title color. */
 @Composable
-fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier, dim: Float = 0f) {
-    Box(modifier.background(Bg)) {
+fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier, dim: Float = 0f, trailerOn: Boolean = false) {
+    // While a trailer plays under the page (TrailerPreview), the background leaves a hole and the picture steps aside
+    val hole = trailerOn && TrailerHole.rect != null
+    Box(modifier.holeBackground(Bg)) {
         // 17c: calm picture (no constant zoom), medium image size (w780) instead of full resolution – saves memory and computing time
         Crossfade(item, animationSpec = tween(if (Look.motion == 0) 0 else 600), label = "bb") { it0 ->
             if (it0 != null) {
                 val m = rememberMeta(it0)
                 val url = m?.backdrop?.let { b -> cardBackdrop(b) } ?: m?.poster?.let { p -> cardPoster(p) }
-                if (url != null) AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.TopEnd)
+                if (url != null) AsyncImage(url, null, Modifier.fillMaxSize().graphicsLayer { alpha = if (hole) 0f else 1f }, contentScale = ContentScale.Crop, alignment = Alignment.TopEnd)
                 else ArtPlaceholder(it0, Modifier.fillMaxSize(), showTitle = false)
             }
+        }
+        // Home screen option: the selected title's trailer after 2 s behind the picture (not for live channels)
+        if (trailerOn && item != null && item.kind != Kind.LIVE) {
+            val m = rememberFullMeta(item, rememberMeta(item))
+            TrailerPreview(m?.trailerKey, active = true, trailerLang = m?.trailerLang,
+                modifier = Modifier.align(Alignment.TopEnd).fillMaxWidth(0.72f).aspectRatio(16f / 9f))
         }
         // Gradients: strong on the left (text), at the bottom into the background (rows), subtle at the top
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Bg, 0.24f to Bg.copy(alpha = .94f), 0.48f to Bg.copy(alpha = .5f), 0.72f to Color.Transparent)))

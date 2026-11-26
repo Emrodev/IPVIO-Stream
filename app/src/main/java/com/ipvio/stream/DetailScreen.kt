@@ -11,6 +11,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.input.InputMode
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -419,10 +421,18 @@ private fun DetailScreenFull(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Bg)) {
+    Box(Modifier.fillMaxSize().holeBackground(Bg)) {
         // Round 15: layout like the big picture of the home screen (image on the right, faded into the background at the left and bottom)
         // 17c: calm background image (the constant zoom cost too much computing time on the Fire TV)
-        meta?.backdrop?.let { AsyncImage(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.TopEnd) }
+        // While the trailer plays under the page the picture steps aside (TrailerHole)
+        meta?.backdrop?.let { AsyncImage(it, null, Modifier.fillMaxSize().graphicsLayer { alpha = if (TrailerHole.rect != null && !embedded) 0f else 1f }, contentScale = ContentScale.Crop, alignment = Alignment.TopEnd) }
+        // Trailer behind the header after 2 s, like Prime Video (only on the real detail page, while the header has focus)
+        if (!embedded && showActions && item.kind != Kind.LIVE && !DemoMode.active && General.trailerPreview) {
+            // Remote (TV): while the header buttons have focus. Touch (phone, tablet): there is no focus, so while the header is on screen
+            val touch = LocalInputModeManager.current.inputMode == InputMode.Touch
+            val headerOnScreen by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
+            TrailerPreview(meta?.trailerKey, active = if (touch) headerOnScreen else heroFocused, modifier = Modifier.align(Alignment.TopEnd).fillMaxWidth(0.78f).aspectRatio(16f / 9f), trailerLang = meta?.trailerLang)
+        }
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Bg, 0.3f to Bg.copy(alpha = .92f), 0.55f to Bg.copy(alpha = .5f), 0.8f to Color.Transparent)))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Bg.copy(alpha = .5f), 0.2f to Color.Transparent, 0.55f to Bg.copy(alpha = .78f), 0.8f to Bg)))
         LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(horizontal = 28.dp, vertical = 36.dp)) {
