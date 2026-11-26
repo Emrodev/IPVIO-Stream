@@ -246,6 +246,7 @@ private fun AppContent() {
     // so opening the search does not wait for it. Same list object as the search screen uses, so the cache is hit.
     val searchList = PlaylistStore.channels
     LaunchedEffect(searchList) {
+        delay(StartupLogic.SEARCH_INDEX_DELAY_MS)   // T-069: the home rows and the first scrolling get the CPU first
         withContext(Dispatchers.Default) { runCatching { SearchCache.build(PrivateCats.visible(searchList)) } }
     }
     // T-031: Trakt history and watchlist into the app once the playlist is there (at most every 6 hours, needs a sign-in).
@@ -303,6 +304,8 @@ private fun AppContent() {
     LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); if (!DemoMode.active) Classifier.restart(ctx, all) }
     // Private categories (T-028): ids of their titles, so history and resume can skip them
     LaunchedEffect(all) { PrivateCats.reload(all) }   // after the first screen is up, and debounced while the list is still changing
+    // T-069: lists kept for the next screen visit belong to one playlist; a new list must not keep the old titles in memory
+    LaunchedEffect(all) { ScreenCaches.clear() }
 
     fun start(item: Item, title: String, url: String, startMs: Long = 0L) {
         if (DemoMode.active) return   // sample entries have no stream address

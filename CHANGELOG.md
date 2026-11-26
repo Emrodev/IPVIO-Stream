@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Speed (T-069): typing in the search no longer stalls with large playlists. The search for running shows ran over every channel and its TV guide on the main thread after each typing pause; it now runs in the background, and opening the search no longer builds a table of the whole playlist first. Not measured, not device tested yet
+- Speed (T-069): Live TV, its start view, the player's channel list (Left), movie and series lists and category pages open without repeating work done on the last visit. Live TV with a playlist filter or private categories no longer recomputes its genre rows each time it opens. The "Language" filter of a title list is counted in the background. Not measured, not device tested yet
+- Start (T-069): the search index is built 3 seconds after the list is shown, so the home rows and the first scrolling get the processor first, and more settings files are read in parallel at start. Not measured, not device tested yet
 - Polish: every dictionary text now has a Polish translation (178 texts of 1.4.8 – 1.5.1 that showed in English, among them private categories, playlist editing, Sports Hub, DNS, VPN, downloads, search, people, multi view, Trakt, player buttons and "What's new"), and "Import & Trakt" replaces the old "Import lists" title
 - Phone pages and a few settings texts ("Default sorting", the sorting hint, "Titles", "Start") had no dictionary row, so every language except German showed English or German there. They now have one (English, Polish; the other languages fall back to English as before)
 - Sound levelling: its texts (T-028) were never loaded into the dictionary and showed in German in every language. Now English, the other dictionary languages, Dutch and Polish show

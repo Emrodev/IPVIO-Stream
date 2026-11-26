@@ -78,6 +78,15 @@ internal suspend fun holdJump(state: LazyListState, index: Int) {
     else if (row.offset + row.size > info.viewportEndOffset) state.scrollToItem(index, -(info.viewportEndOffset - peek - row.size).coerceAtLeast(0))
 }
 
+/** T-069: filtered channel lists of the last visit (playlist filter, private categories); emptied by [ScreenCaches]. */
+internal object LiveListCache {
+    val live = LastResults<List<Item>>(max = 1)
+    val groups = LastResults<Map<String, List<Item>>>(max = 1)
+    /** Channels by id, only built when an own channel list needs it */
+    val byId = LastResults<Map<String, Item>>(max = 1)
+    fun clear() { live.clear(); groups.clear(); byId.clear() }
+}
+
 /** Last read recordings (session only), shown while the folder is read again in the background. */
 private object LiveRecCache {
     @Volatile var items: List<Item> = emptyList()
@@ -105,10 +114,17 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     val srcVer = AreaSource.version
     val srcK = remember(srcVer, srcNames, PlaylistMode.version) { AreaSource.sources(ctx, SectionSourceLogic.SECTION_LIVE) }
     // Private categories (T-028) stay in their own category only: not in "All channels", genres, search, Multi view
-    val live = remember(liveAll, srcK, PrivateCats.version) { PrivateCats.filter(if (srcK.isEmpty()) liveAll else liveAll.filter { it.src in srcK }) }
+    // T-069: the filtered lists come from LiveListCache, so every visit of Live TV gets the same list objects back: the genre
+    // rows (LiveGenre.split, a pass with patterns over all channels) and the bundles are then found in their caches instead of
+    // being computed again on the main thread each time the tab opens with a playlist filter or private categories.
+    val live = remember(liveAll, srcK, PrivateCats.version) {
+        LiveListCache.live.get(liveAll, srcK to PrivateCats.version) { PrivateCats.filter(if (srcK.isEmpty()) liveAll else liveAll.filter { it.src in srcK }) }
+    }
     val groups = remember(groupsAll, srcK) {
-        if (srcK.isEmpty()) groupsAll else LinkedHashMap<String, List<Item>>().also { m ->
-            for ((g, l) in groupsAll) { val f = l.filter { it.src in srcK }; if (f.isNotEmpty()) m[g] = f }
+        if (srcK.isEmpty()) groupsAll else LiveListCache.groups.get(groupsAll, srcK) {
+            LinkedHashMap<String, List<Item>>().also { m ->
+                for ((g, l) in groupsAll) { val f = l.filter { it.src in srcK }; if (f.isNotEmpty()) m[g] = f }
+            }
         }
     }
     // Genres (sports, movies, documentary, kids, news, music) – detected by category and channel name
@@ -139,7 +155,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     val favCats = CatFavs.list.filter { it in groups && it !in HiddenCats.list }
     val myLists = ChannelLists.lists.toList()
     // Only built when an own channel list needs it (thousands of channels, not needed for opening the tab)
-    val byIdLazy = remember(live) { lazy { live.associateBy { it.id } } }
+    val byIdLazy = remember(live) { lazy { LiveListCache.byId.get(live) { live.associateBy { it.id } } } }
     // Order: favorites, own channel lists, "New channel list", all channels, categories
     // Recordings (round 20): own category as soon as there are any
     // Reading the recordings folder (also USB storage) is file I/O: done in the background, the last result shows meanwhile
@@ -800,8 +816,8 @@ fun ReminderCard(r: Reminder, modifier: Modifier, onClose: () -> Unit, onSwitch:
 @Composable
 private fun LiveHome(live: List<Item>, genres: Map<String, List<Item>>, favs: List<Item>, firstReq: FocusRequester, onOpen: (Item, List<Item>) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val byId = remember(live) { live.associateBy { it.id } }
-    val recent = remember(live, History.ids.size) { Parental.filter(History.ids.mapNotNull { byId[it] }).take(24) }
+    // T-069: one pass that keeps only the watched channels, instead of a map of every channel on each visit
+    val recent = remember(live, History.ids.size) { Parental.filter(ScreenCacheLogic.inOrder(History.ids.toList(), live) { it.id }).take(24) }
     val rows = ArrayList<Pair<String, List<Item>>>()
     if (recent.isNotEmpty()) rows.add("Zuletzt gesehen" to recent)
     if (favs.isNotEmpty()) rows.add("Favoriten" to favs.take(40))
