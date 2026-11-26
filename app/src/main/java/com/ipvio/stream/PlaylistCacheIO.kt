@@ -15,7 +15,7 @@ import java.io.OutputStream
  */
 object PlaylistCacheIO {
     /** 6 adds the provider's "added" date (#22) at the end of each entry; 3 to 5 are still read (date 0).
-     *  7 adds the provider's TMDB id (T-072) after the date; 3 to 6 are still read (id 0). */
+     *  7 adds the provider's TMDB id (T-076) after the date; 3 to 6 are still read (id 0). */
     const val VERSION = 7
     private const val MAX_STR = 1 shl 20      // 1 MB per text: anything larger can only be a corrupt file
     private const val MAX_COUNT = 2_000_000

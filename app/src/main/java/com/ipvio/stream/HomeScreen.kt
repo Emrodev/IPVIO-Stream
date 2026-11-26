@@ -215,7 +215,7 @@ private val EMPTY_HOME = HomeData(
     emptyList(), emptyList(), emptyMap(), emptyList(), false
 )
 
-// T-069: one entry per TMDB title (the best-rated copy), so the same film from several provider entries shows once
+// T-073: one entry per TMDB title (the best-rated copy), so the same film from several provider entries shows once
 private fun topRated(list: List<Item>): List<Item> {
     val scored = list.mapNotNull { i ->
         val m = MetaRepo.cached(i)

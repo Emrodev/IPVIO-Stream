@@ -1,6 +1,6 @@
 package com.ipvio.stream
 
-// T-071: texts of the automatic Trakt sync setting (Settings > Playlists > Trakt).
+// T-075: texts of the automatic Trakt sync setting (Settings > Playlists > Trakt).
 // Format: key¦English¦Turkish¦Bosnian¦Croatian¦Serbian¦Spanish¦French¦Italian. Dutch, Arabic and Polish: own columns below.
 // Drafted, not reviewed by a native speaker.
 val DictT071 = """

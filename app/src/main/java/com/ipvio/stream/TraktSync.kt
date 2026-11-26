@@ -43,7 +43,7 @@ object TraktSync {
     fun lastSyncMs(c: Context): Long = prefs(c).getLong(LAST, 0L)
     fun lastSummary(c: Context): String = prefs(c).getString(SUMMARY, "") ?: ""
 
-    /** T-071: automatic sync interval in ms (see [TraktSyncLogic.INTERVAL_CHOICES]); default 6 hours. */
+    /** T-075: automatic sync interval in ms (see [TraktSyncLogic.INTERVAL_CHOICES]); default 6 hours. */
     private const val INTERVAL = "autoInterval"
     fun autoInterval(c: Context): Long = prefs(c).getLong(INTERVAL, TraktSyncLogic.AUTO_INTERVAL_MS)
     fun setAutoInterval(c: Context, ms: Long) { prefs(c).edit().putLong(INTERVAL, ms).apply() }

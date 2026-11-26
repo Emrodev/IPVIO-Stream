@@ -143,7 +143,7 @@ class MainActivity : ComponentActivity() {
 val SmoothSpec = object : BringIntoViewSpec {
     // T-070 (device performance): shorter with "Weak device"
     override val scrollAnimationSpec get() = tween<Float>(ThemeMath.scrollMs(DevicePerf.reduceVisuals), easing = FastOutSlowInEasing)
-    // T-070 (focus): focused item kept in the middle; at the end of a list the scroll stops and the focus moves on
+    // T-074 (focus): focused item kept in the middle; at the end of a list the scroll stops and the focus moves on
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
         FocusCenterLogic.scrollDistance(offset, size, containerSize)
 }

@@ -55,13 +55,13 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 
 ### B-006 Home: "Top rated" shows each TMDB title once
 
-- Expected: the same film from several provider entries appears once, with its best-rated copy (T-069).
+- Expected: the same film from several provider entries appears once, with its best-rated copy (T-073).
 - Marker: `TopRatedLogic.distinctByKey` in `app/src/main/java/com/ipvio/stream/HomeScreen.kt`
 - Test steps: Home, "Top rated" row: no title twice (e.g. The Godfather).
 
 ### B-007 Lists: the focused row stays in the middle of the screen
 
-- Expected: moving Up/Down keeps the focused row centred until the list ends (T-070).
+- Expected: moving Up/Down keeps the focused row centred until the list ends (T-074).
 - Marker: `FocusCenterLogic.scrollDistance` in `app/src/main/java/com/ipvio/stream/MainActivity.kt`
 - Test steps: any long vertical list; move Down and Up; no row jumps or is cut off.
 
@@ -74,23 +74,23 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 
 ### B-009 Trakt: automatic sync interval setting
 
-- Expected: "Automatically sync" in the Trakt panel with six choices; default every 6 hours; "Only manually" never syncs at app start (T-071).
+- Expected: "Automatically sync" in the Trakt panel with six choices; default every 6 hours; "Only manually" never syncs at app start (T-075).
 - Marker: `TraktSyncLogic.autoDue(System.currentTimeMillis(), lastSyncMs(app), autoInterval(app))` in `app/src/main/java/com/ipvio/stream/TraktSync.kt`
 - Marker: `TraktSync.setAutoInterval(ctx, ms)` in `app/src/main/java/com/ipvio/stream/ListImportUi.kt`
-- Test steps: T-071 in `docs/tasks/T-069-T-070-user-issues-batch.md`.
+- Test steps: T-075 in `docs/tasks/T-073-T-074-user-issues-batch.md`.
 
-### B-012 Movies and Category grids: the same film is shown once (T-072)
+### B-012 Movies and Category grids: the same film is shown once (T-076)
 
 - Expected: the same film from several provider entries (e.g. "Der Pate" and "The Godfather", both TMDB 238) appears once in a
   category grid and in "Top rated". The provider's TMDB id is used when it is sent; the metadata cache is the fallback.
-  Titles without any id stay as they are. Series are not covered yet (see T-072).
+  Titles without any id stay as they are. Series are not covered yet (see T-076).
 - Marker: `TopRatedLogic.collapse(l, { it.tmdb }` in `app/src/main/java/com/ipvio/stream/CategoriesScreen.kt`
 - Marker: `TopRatedLogic.keyOf(t.first.tmdb` in `app/src/main/java/com/ipvio/stream/HomeScreen.kt`
 - Marker: `(f["tmdb"] ?: f["tmdb_id"])` in `app/src/main/java/com/ipvio/stream/XtreamLogic.kt`
 - Marker: `const val VERSION = 7` in `app/src/main/java/com/ipvio/stream/PlaylistCacheIO.kt`
 - Test steps: reload the Xtream playlist once (the cache is rewritten in version 7). A category with a film in German and English
   shows it once. Old caches (version 6) still load; the titles are then shown as before until the playlist is reloaded.
-- Status: JVM tests of the logic pass (T-072). Not device tested.
+- Status: JVM tests of the logic pass (T-076). Not device tested.
 
 ### B-010 Trakt sign-in on the phone: the login link opens in its own tab
 

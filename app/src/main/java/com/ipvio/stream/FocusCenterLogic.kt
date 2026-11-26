@@ -1,7 +1,7 @@
 package com.ipvio.stream
 
 /**
- * T-070: the focused row stays in the middle of the list while the user moves. At the start or end of a list the
+ * T-074: the focused row stays in the middle of the list while the user moves. At the start or end of a list the
  * scroll stops (the lazy list clamps it), and the focus then moves towards the edge of the screen.
  */
 object FocusCenterLogic {

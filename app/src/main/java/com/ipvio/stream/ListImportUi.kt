@@ -96,7 +96,7 @@ internal fun ListImportPage(ctx: Context) {
     }
 }
 
-/** T-071: labels of [TraktSyncLogic.INTERVAL_CHOICES], same order. */
+/** T-075: labels of [TraktSyncLogic.INTERVAL_CHOICES], same order. */
 private val TRAKT_INTERVAL_LABELS = listOf("Bei jedem Start", "Alle 6 Stunden", "Alle 12 Stunden", "Täglich", "Wöchentlich", "Nur manuell")
 
 /**
@@ -120,7 +120,7 @@ private fun TraktSyncPanel(ctx: android.content.Context, onDisconnected: () -> U
             last > 0 -> Text(summary, color = Muted, fontSize = 15.sp)
         }
         if (last > 0 && !running) Text("Zuletzt synchronisiert: {0}".replace("{0}", dayLabel(last / 1000) + " " + hhmm(last / 1000)), color = Muted, fontSize = 14.sp)
-        // T-071: how often the app reads Trakt on its own (checked at app start)
+        // T-075: how often the app reads Trakt on its own (checked at app start)
         var interval by remember { mutableStateOf(TraktSync.autoInterval(ctx)) }
         Text("Automatisch synchronisieren", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Text("Die App liest deine Trakt-Daten beim Start, sobald die gewählte Zeit abgelaufen ist. Wenn die App nicht geöffnet wird, gibt es keine Abfrage.", color = Muted, fontSize = 14.sp)

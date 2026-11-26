@@ -261,7 +261,7 @@ private fun ListMode(
     val more = cur?.let { StalkerMore.added[it.first] }
     val prev = remember(cur?.first, cur?.second, more) {
         val c = cur
-        // T-072: the same film from several entries (e.g. German and English title) is shown once
+        // T-076: the same film from several entries (e.g. German and English title) is shown once
         val unique = { l: List<Item> -> TopRatedLogic.collapse(l, { it.tmdb }, { MetaRepo.cached(it)?.tmdbId ?: 0 }, { it.kind == Kind.SERIES }) }
         if (c == null) emptyList<Item>()
         else if (isTopEntry(c.first)) unique(c.second).take(40)

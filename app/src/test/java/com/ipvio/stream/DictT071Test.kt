@@ -3,7 +3,7 @@ package com.ipvio.stream
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** T-071: translations of the automatic Trakt sync setting. */
+/** T-075: translations of the automatic Trakt sync setting. */
 class DictT071Test {
     private fun tr(s: String, code: String): String {
         I18nCore.load(DictT071)

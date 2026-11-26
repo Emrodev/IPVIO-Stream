@@ -139,7 +139,7 @@ data class Item(
     val src: Int = 0,
     /** #22: date the provider added the title (Unix seconds, 0 = unknown, e.g. older caches or M3U). */
     val added: Long = 0L,
-    /** T-072: TMDB id the provider sends with the title (Xtream "tmdb"); 0 = unknown, e.g. older caches or M3U. */
+    /** T-076: TMDB id the provider sends with the title (Xtream "tmdb"); 0 = unknown, e.g. older caches or M3U. */
     val tmdb: Int = 0
 ) {
     // Key for the metadata cache: computed once per title instead of anew on every sort comparison.
