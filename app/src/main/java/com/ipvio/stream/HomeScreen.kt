@@ -494,7 +494,9 @@ fun HomeScreen(
         if (hidden) return@LaunchedEffect
         if (AppNav.focusTab == tab && LastFocus.pending == null) {
             AppNav.focusTab = -1
-            repeat(10) {
+            // T-069d: first attempts right after the content is laid out (before: after 150 ms)
+            if (focusSoon(150) { runCatching { ContentFocus.req.requestFocus() }.getOrDefault(false) }) return@LaunchedEffect
+            repeat(9) {
                 delay(150)
                 if (runCatching { ContentFocus.req.requestFocus() }.isSuccess) return@LaunchedEffect
             }
@@ -504,7 +506,8 @@ fun HomeScreen(
         if (hidden) return@LaunchedEffect
         if (HomeReturn.returning) {
             HomeReturn.returning = false
-            delay(1200)
+            // T-069d: the cards restore their focus within a few frames now (before 150 ms): the fallback waits 0.5 s (before 1.2 s)
+            delay(500)
             if (LastFocus.pending != null) {
                 LastFocus.pending = null
                 val st = states[tab]
@@ -515,18 +518,18 @@ fun HomeScreen(
     }
     // T-069b: shown again after a page that lay on top (this screen stayed composed). The cards are still there, so their own
     // restore step does not run again: the same rules as after a rebuild are applied here. The card of the opened title takes
-    // the focus; without one, "Watch now" at the top after 1.2 s; switched here from the menu: the content.
+    // the focus; without one, "Watch now" at the top after 0.5 s; switched here from the menu: the content.
     var wasHidden by remember { mutableStateOf(hidden) }
     LaunchedEffect(hidden) {
         if (hidden) { wasHidden = true; return@LaunchedEffect }
         if (!wasHidden) return@LaunchedEffect
         wasHidden = false
         HomeReturn.returning = false
-        delay(150)   // laid out and placed again
         val id = LastFocus.pending
         if (id != null) {
-            if (FocusReturn.request(id)) { LastFocus.pending = null; return@LaunchedEffect }
-            delay(1050)
+            // As soon as the screen is laid out and placed again (T-069d)
+            if (focusSoon(150) { FocusReturn.request(id) }) { LastFocus.pending = null; return@LaunchedEffect }
+            delay(350)
             if (LastFocus.pending != null) {
                 LastFocus.pending = null
                 val st = states[tab]
@@ -535,9 +538,10 @@ fun HomeScreen(
             }
         } else if (AppNav.focusTab == tab) {
             AppNav.focusTab = -1
-            repeat(10) {
-                if (runCatching { ContentFocus.req.requestFocus() }.isSuccess) return@LaunchedEffect
+            if (focusSoon(150) { runCatching { ContentFocus.req.requestFocus() }.getOrDefault(false) }) return@LaunchedEffect
+            repeat(9) {
                 delay(150)
+                if (runCatching { ContentFocus.req.requestFocus() }.isSuccess) return@LaunchedEffect
             }
         }
     }
@@ -638,7 +642,8 @@ fun HomeScreen(
     // snapshotFlow instead of LaunchedEffect(Billboard.focused): reading the focused title here recomposed the whole home screen
     // (all visible rows and cards) on every move of the highlight
     LaunchedEffect(Unit) {
-        snapshotFlow { Billboard.focused }.collectLatest { f -> if (bbItemState.value != null) delay(450); bbItemState.value = f }
+        // T-069d: the info follows after 280 ms of rest (before 450 ms); paging through still updates nothing
+        snapshotFlow { Billboard.focused }.collectLatest { f -> if (bbItemState.value != null) delay(280); bbItemState.value = f }
     }
     val bbAnim = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(bbOnState) {
@@ -938,8 +943,7 @@ private fun ItemsRow(
     val firstCard = firstReq ?: remember { FocusRequester() }
     LaunchedEffect(Unit) {
         if (PillMemory.key == key) {
-            delay(250)
-            runCatching { headerReq.requestFocus() }
+            focusSoon(250) { runCatching { headerReq.requestFocus() }.getOrDefault(false) }   // T-069d (before: after 250 ms)
             PillMemory.key = null
         }
     }

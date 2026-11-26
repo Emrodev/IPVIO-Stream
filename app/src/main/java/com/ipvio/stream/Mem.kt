@@ -44,10 +44,12 @@ object Mem {
 
     /** Buffer sizes for the player: (min ms, max ms, start ms, rebuffer ms, byte limit). */
     fun bufferPlan(tier: Int): IntArray = when (tier) {
-        // After a stall playback resumes only with a few seconds in the buffer (rebuffer ms); too little means stall, play 1 s, stall again
-        0 -> intArrayOf(10_000, 25_000, 1_500, 5_000, 14 * 1024 * 1024)
-        1 -> intArrayOf(20_000, 40_000, 2_000, 6_000, 28 * 1024 * 1024)
-        else -> intArrayOf(30_000, 60_000, 2_500, 8_000, -1)
+        // After a stall playback resumes only with a few seconds in the buffer (rebuffer ms); too little means stall, play 1 s, stall again.
+        // T-069e: start ms 1,000 / 1,250 / 1,500 (before 1,500 / 2,000 / 2,500): the picture comes sooner after Play and zapping.
+        // On a slow line the automatic buffer mode raises it again (+2 s per level) and lowers it after clean playbacks.
+        0 -> intArrayOf(10_000, 25_000, 1_000, 5_000, 14 * 1024 * 1024)
+        1 -> intArrayOf(20_000, 40_000, 1_250, 6_000, 28 * 1024 * 1024)
+        else -> intArrayOf(30_000, 60_000, 1_500, 8_000, -1)
     }
 
     fun loadControl(ctx: Context): DefaultLoadControl {

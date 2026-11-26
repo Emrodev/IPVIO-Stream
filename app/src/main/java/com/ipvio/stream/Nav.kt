@@ -120,14 +120,33 @@ object FocusReturn {
     }
 }
 
+/** T-069d: pause between two focus attempts of [focusSoon]. */
+private const val FOCUS_STEP_MS = 40L
+
+/**
+ * T-069d: asks for the focus as soon as the target can take it, instead of after a fixed wait: first after the next frame
+ * (the target is laid out then), then every 40 ms, and a last time once [maxMs] (the fixed wait used before) has passed.
+ * Returns true as soon as [request] succeeded. Needs a frame clock (LaunchedEffect, rememberCoroutineScope).
+ */
+suspend fun focusSoon(maxMs: Long, request: () -> Boolean): Boolean {
+    androidx.compose.runtime.withFrameNanos { }
+    var waited = 0L
+    while (waited < maxMs) {
+        if (request()) return true
+        delay(FOCUS_STEP_MS)
+        waited += FOCUS_STEP_MS
+    }
+    return request()
+}
+
 @Composable
 fun Modifier.restoreFocus(id: String): Modifier {
     val fr = remember { FocusRequester() }
     androidx.compose.runtime.DisposableEffect(id, fr) { FocusReturn.add(id, fr); onDispose { FocusReturn.remove(id, fr) } }
     LaunchedEffect(Unit) {
         if (LastFocus.pending == id) {
-            delay(150)
-            runCatching { fr.requestFocus() }
+            // T-069d: as soon as the card is laid out (before: always after 150 ms)
+            focusSoon(150) { runCatching { fr.requestFocus() }.getOrDefault(false) }
             LastFocus.pending = null
         }
     }

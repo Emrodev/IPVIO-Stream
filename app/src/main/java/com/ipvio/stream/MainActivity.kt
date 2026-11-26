@@ -148,7 +148,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalFoundationApi::class)
 val SmoothSpec = object : BringIntoViewSpec {
-    override val scrollAnimationSpec = tween<Float>(280, easing = FastOutSlowInEasing)
+    override val scrollAnimationSpec = tween<Float>(ThemeMath.SCROLL_MS, easing = FastOutSlowInEasing)
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
         val peek = 90f
         val leading = offset
@@ -396,10 +396,11 @@ private fun AppContent() {
     LaunchedEffect(jumpTick) {
         if (jumpTick == 0) return@LaunchedEffect
         val id = tab
-        delay(150)
-        repeat(20) {
+        // T-069d: from the next frame on, every 40 ms (before: first try after 150 ms, then every 120 ms); same 2.4 s in total
+        withFrameNanos { }
+        repeat(60) {
             if (ContentFocus.tab == id && runCatching { ContentFocus.req.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
-            delay(120)
+            delay(40)
         }
     }
     fun goTab(id: Int) {

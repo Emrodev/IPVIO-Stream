@@ -43,7 +43,8 @@ object ZapContext {
 }
 
 /** How long the focus must rest on a category before the channel column switches to it (ms). */
-private const val CAT_REST_MS = 220L
+// T-069d: 140 ms (before 220 ms); still longer than the key repeat, so holding Down builds no list on the way
+private const val CAT_REST_MS = 140L
 
 /** Remembers the last chosen category / list in Live TV (also across a restart). */
 object LiveMemory {
@@ -305,7 +306,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // snapshotFlow instead of LaunchedEffect(focusTarget): reading the state in composition would recompose the whole tab on every focus move
     // (held Down key = dozens of recompositions per second on a Fire TV stick)
     LaunchedEffect(Unit) {
-        snapshotFlow { focusTarget }.collectLatest { t -> if (focusedState.value != null) kotlinx.coroutines.delay(300); focusedState.value = t }
+        // T-069d: the info follows after 200 ms of rest (before 300 ms)
+        snapshotFlow { focusTarget }.collectLatest { t -> if (focusedState.value != null) kotlinx.coroutines.delay(200); focusedState.value = t }
     }
     Box(Modifier.fillMaxSize()) {
         FocusedBackdrop(focusedState, Modifier.fillMaxSize())

@@ -238,8 +238,11 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
             listState.scrollToItem(restoreIdx)
             withFrameNanos { }
             withFrameNanos { }
-        } else delay(200)
-        runCatching { restoreFocus.requestFocus() }
+            runCatching { restoreFocus.requestFocus() }
+        } else {
+            // T-069d: as soon as the grid is laid out (before: always after 200 ms)
+            focusSoon(200) { runCatching { restoreFocus.requestFocus() }.getOrDefault(false) }
+        }
     }
 
     // Stalker portal: near the end of the list fetch the next titles of the category (like IPTVnator when scrolling)

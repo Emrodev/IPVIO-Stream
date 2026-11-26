@@ -40,7 +40,7 @@ Seen, not changed (needs a decision or touches a protected area):
 - The home screen is disposed when a detail page opens and composed again on Back (`MainActivity.kt`, `when` on the
   screens). Done in T-069b (maintainer decision 26 Nov 2026, below).
 - Every screen fades in (`screenEnter`): 380 ms with Settings > "Design and color" > "Animations" set to "Normal" (the default), 220 ms
-  with "Subtle", none with "Off". Shorter times are a visible design change: maintainer decision.
+  with "Subtle", none with "Off". Done in T-069d (maintainer decision 26 Nov 2026, below).
 - Play from a home row runs `Sources.alternatives(item, all)` (a pass over the playlist) on the main thread in
   `MainActivity.start`. Done in T-069c (maintainer decision 26 Nov 2026, below).
 - `DriveSync.init` decrypts the Drive token with the Android keystore on the main thread at start (only with Drive
@@ -104,6 +104,8 @@ animations, dependencies, Gradle.
   tests) and `StartupLogicTest`: 10/10 passed.
 - T-069b/c: `HomeKeepLogicTest` (3 new), `MovieSourcesLogicTest` (4 new, compiled with `Models.kt` and the 13 pure files it
   needs), `ScreenCacheLogicTest`, `StartupLogicTest`: 17/17 passed.
+- T-069d/e: `MotionTimingTest` (2 new), `BufferRelaxTest` (5 new): 7/7 passed. `PlayerBufferTest` and `Round17Test` were not
+  run here (they need Android-only files); `BufferLogic.byteLimit`, `bump` and `scale` are unchanged.
 - Syntax check of every changed Kotlin file with the same compiler: no syntax errors. Android and Compose classes are
   not available here, so there was no type check.
 - **Not run:** Gradle build, Android unit tests, device test, time measurement on a device.
@@ -144,6 +146,23 @@ T-069c (movie sources):
 
 20. A movie that the playlist has in several qualities: Play from a home row and from the detail page; the quality choice
     (automatic, chosen source, chosen quality) works as before; "Source" on the detail page lists the same entries.
+
+T-069d (fade-in and focus):
+
+21. Switch Home, Movies, Series, Live TV through the menu: the new screen is there almost at once (short fade), the focus is
+    in the content right away. With "Animations" = "Off" nothing fades, as before.
+22. Back from a title list, from "Show all", from a person page and from the search: the focus lands on the same element as
+    before, only sooner. Hold Down on the home screen for a few seconds: the rows follow without lagging behind.
+23. Live TV: move through the categories with Up/Down, single steps and held: the channel list follows sooner; holding does
+    not stutter.
+
+T-069e (player start):
+
+24. Settings > Player > "Network and frame rate" > "Buffer (for slow internet)": note the level in the hint. Zap through 10 channels and start 3 movies:
+    the picture comes sooner than in the previous version.
+25. On a slow line or a weak provider: if a channel stutters right after the start more often than before, report it (the
+    automatic mode raises the buffer again).
+26. "Automatic" with level 1 or 2: watch 5 times for at least 2 minutes without stutter, then the hint shows one level less.
 
 ## T-069b – Home screen kept under the detail page
 
@@ -215,7 +234,63 @@ on the main thread for every movie that starts (also Play from a home row); the 
 - Memory: one number and one reference per movie (about 1 MB for 150,000 movies, estimate).
 - Play within 2 s of a list change, or after Android reported low memory, uses the old pass (same result, as before).
 
+## T-069d – Shorter fade-in and no fixed waits on the navigation path
+
+Maintainer decision (26 Nov 2026): start with points 3 and 4 of the second idea list (this section and T-069e).
+
+### Changes (visible: every screen change and every focus step is quicker)
+
+- `ThemeMath.kt` (pure, JVM tests): one place for the times. Screen fade-in 160 ms with "Normal" (before 380 ms), 110 ms with
+  "Subtle" (before 220 ms), none with "Off" (as before). Soft scrolling to the focused element 200 ms (before 280 ms), the
+  scrolling that keeps the focused row at its height 260 ms (before 380 ms), at once with "Off" (as before). Used by
+  `Visuals.screenEnter`, `SmoothSpec` (`MainActivity.kt`) and `PivotSpec` (`Billboard.kt`).
+- `Nav.kt`: `focusSoon(maxMs)` asks for the focus right after the next frame and then every 40 ms, with a last try once the old
+  fixed wait has passed. Used where the focus waited a fixed time before: card of the opened title on return
+  (`restoreFocus`, 150 ms), menu switch into the content (`MainActivity`, 150 ms then every 120 ms), switch from the sidebar
+  into the content and the T-069b return (`HomeScreen`, 150 ms), "Show all" back to the row link (250 ms), title list back to
+  the grid (`BrowseScreen`, 200 ms), person page (`CastUi.kt`, 150 ms), header tab after Back (`Header.kt`, 100 ms).
+- `HomeScreen.kt`: the fallback to "Watch now" when no card took the focus after a return waits 0.5 s (before 1.2 s); the
+  background info follows the focused title after 280 ms of rest (before 450 ms).
+- `LiveTab.kt`: the channel list follows the focused category after 140 ms (before 220 ms), the info panel follows the
+  focused channel after 200 ms (before 300 ms). Both stay longer than the key repeat, so holding Up/Down still builds nothing on
+  the way.
+- Not changed: dialogs and pop-ups (they open their own window and need the short wait), the poster preview that opens after
+  a longer rest (design), the metadata lookup delay of cards that fly past (protects the TMDB limit).
+
+### Risks
+
+- A focus request that succeeds earlier than before could land before a list has settled on its restored position; the list
+  then scrolls to the card (as it did after 150 ms). Not verified on a device.
+- Faster scrolling can look less soft on large TVs; the times are in one place (`ThemeMath`) to tune them.
+
+## T-069e – Faster player start, the automatic buffer steps down again
+
+### Analysis
+
+- `Mem.bufferPlan`: playback starts when 1.5 s (low-memory devices, e.g. Fire TV sticks), 2 s or 2.5 s of the stream are
+  buffered.
+- Buffer mode "Automatic" (Settings > Player > "Network and frame rate" > "Buffer (for slow internet)") raises a learned level after stutter; each level
+  adds 2 s before every start (`BufferLogic.scale`). The level never went down again, so after one bad evening every start and
+  every channel change waited 2 or 4 s longer, for good (only choosing the mode again reset it).
+
+### Changes
+
+- `Mem.kt`: start buffer 1.0 s / 1.25 s / 1.5 s (before 1.5 / 2 / 2.5 s). Buffer after a stall, buffer sizes and byte limits unchanged.
+- `Round17Logic.kt` (`BufferLogic`, pure, JVM tests): `afterPlayback` lowers the learned level by one after 5 clean playbacks
+  in a row; `isClean` = ready, no stutter, at least 2 minutes. Short playbacks (zapping) neither count nor reset the count.
+- `Store.kt` (`AppSettings`): new key `buf_clean` in `ipvio_settings` (count of clean playbacks; no key renamed or removed);
+  `learnBuffer` and `setBufferMode` reset it.
+- `PlayerScreen.kt`: remembers the time of the first "ready" and whether stutter raised the buffer; on closing the player it
+  reports the playback to `AppSettings.bufferPlayback`.
+
+### Risks
+
+- A shorter start buffer means a slightly higher chance of a short stall right after the start on slow lines; the automatic
+  mode then raises the level again as before (and lowers it after 5 clean playbacks).
+- The hint under the setting still says the buffer grows when it stutters; it does not mention that it shrinks again. A new
+  hint text needs new dictionary rows in all languages (maintainer decision, not done).
+
 ## Status
 
 Implemented on branch `claude/nifty-pasteur-ubd26z` (based on `dev` bc952a1), open for build and device test.
-T-069b and T-069c added on the same branch (26 Nov 2026).
+T-069b and T-069c added on the same branch (26 Nov 2026), T-069d and T-069e later the same day.
