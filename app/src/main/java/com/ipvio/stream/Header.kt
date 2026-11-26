@@ -152,7 +152,8 @@ private fun NavTab(t: HeaderTab, fixedReq: FocusRequester?) {
     LaunchedEffect(Unit) {
         if (HeaderFocus.returnTo == t.id) {
             HeaderFocus.returnTo = null
-            repeat(40) { kotlinx.coroutines.delay(100); if (runCatching { back.requestFocus() }.getOrDefault(false)) return@LaunchedEffect }
+            // T-069d: from the next frame on (before: first try after 100 ms); gives up after the same 4 s
+            focusSoon(4_000) { runCatching { back.requestFocus() }.getOrDefault(false) }
         }
     }
     Row(

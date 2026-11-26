@@ -71,8 +71,11 @@ internal object SearchCache {
     @Synchronized fun suggest(all: List<Item>): WordSuggest = sug?.takeIf { it.first === all }?.second ?: WordSuggest(all).also { sug = all to it }
 }
 
-/** Programme hits for the typed text: [live] = shows on other channels running now, [sport] = sport shows running now or in the next 24 hours. */
-private class ProgState(val live: List<ProgSearchLogic.Hit>, val sport: List<ProgSearchLogic.Hit>)
+/**
+ * Programme hits for the typed text: [live] = shows on other channels running now, [sport] = sport shows running now or in the next 24 hours.
+ * [items] = the channels of these hits by id (T-069: found in the background, so opening the search no longer builds a map of the whole playlist).
+ */
+private class ProgState(val live: List<ProgSearchLogic.Hit>, val sport: List<ProgSearchLogic.Hit>, val items: Map<String, Item> = emptyMap())
 
 /** One card of a result row: the channel, and the programme when the card is a programme hit (null = channel name hit). */
 private class HitCard(val item: Item, val program: ProgSearchLogic.Hit?)
@@ -82,9 +85,17 @@ private class HitCard(val item: Item, val program: ProgSearchLogic.Hit?)
  * XMLTV guide first; Xtream channels without XMLTV get their short guide (at most [ProgSearchLogic.XTREAM_FETCH_PER_REQUEST], 9 s).
  */
 private suspend fun progHits(all: List<Item>, q: String): ProgState {
-    val xt = all.filter { it.kind == Kind.LIVE && !Xmltv.hasItem(it) && Epg.supported(it) && Epg.peek(it) == null }
-        .take(ProgSearchLogic.XTREAM_FETCH_PER_REQUEST)
+    // T-069: both passes over all channels run off the main thread (before, they ran on it after every typing pause).
+    // The guide caches read here are thread safe (ConcurrentHashMap, LruCache, volatile maps).
+    val xt = withContext(Dispatchers.Default) {
+        all.asSequence().filter { it.kind == Kind.LIVE && !Xmltv.hasItem(it) && Epg.supported(it) && Epg.peek(it) == null }
+            .take(ProgSearchLogic.XTREAM_FETCH_PER_REQUEST).toList()
+    }
     if (xt.isNotEmpty()) withTimeoutOrNull(9_000) { coroutineScope { xt.map { async { Epg.now(it) } }.awaitAll() } }
+    return withContext(Dispatchers.Default) { progMatch(all, q) }
+}
+
+private fun progMatch(all: List<Item>, q: String): ProgState {
     val now = System.currentTimeMillis() / 1000
     val sportIds = HashSet<String>()
     val hits = ArrayList<ProgSearchLogic.Hit>()
@@ -97,7 +108,10 @@ private suspend fun progHits(all: List<Item>, q: String): ProgState {
     val live = ProgSearchLogic.select(hits.filter { it.channelId !in sportIds }, now, ProgSearchLogic.Mode.LIVE)
     val sport = (ProgSearchLogic.select(hits.filter { it.channelId in sportIds }, now, ProgSearchLogic.Mode.LIVE) +
         ProgSearchLogic.select(hits.filter { it.channelId in sportIds }, now, ProgSearchLogic.Mode.UPCOMING)).sortedBy { it.start }
-    return ProgState(live, sport)
+    val ids = HashSet<String>()
+    for (h in live) ids.add(h.channelId)
+    for (h in sport) ids.add(h.channelId)
+    return ProgState(live, sport, ScreenCacheLogic.byIds(ids, all) { it.id })
 }
 
 /** Live channel cards: the channel name hits (with their running show if one matches), then the programme hits of other channels. */
@@ -128,7 +142,6 @@ fun SearchScreen(
     val scope = rememberCoroutineScope()
     // Private categories (T-028) are not searchable; they stay reachable through their own category
     val all = PlaylistStore.channels.let { PrivateCats.visible(it) }
-    val byId = remember(all) { all.associateBy { it.id } }
     // Build the index in the background; searches also run in the background and only after a short typing pause
     // With very large playlists memory can run out while the index is built: then free the image cache and try once more,
     // and if it still does not fit, the search stays empty instead of the app crashing.
@@ -219,8 +232,8 @@ fun SearchScreen(
     val prog = if (progFor.first == q && !searching) progFor.second else ProgState(emptyList(), emptyList())
     // Sport: channel name hits that look like sports channels (sport filter), and the sport shows
     val rlSport = remember(rl0) { rl0.filter { SearchSport.isSport(it) } }
-    val liveAll = remember(rl0, prog.live, byId) { liveCardsOf(rl0, prog.live, byId) }
-    val sportAll = remember(prog.sport, byId) { prog.sport.mapNotNull { h -> byId[h.channelId]?.let { HitCard(it, h) } } }
+    val liveAll = remember(rl0, prog.live, prog.items) { liveCardsOf(rl0, prog.live, prog.items) }
+    val sportAll = remember(prog.sport, prog.items) { prog.sport.mapNotNull { h -> prog.items[h.channelId]?.let { HitCard(it, h) } } }
     // People (T-053c): TMDB person search, debounced; empty without a TMDB key
     val people by produceState(emptyList<PersonRef>(), q) {
         if (q.length < 2) { value = emptyList(); return@produceState }

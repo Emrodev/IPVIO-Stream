@@ -80,7 +80,7 @@ val LocalRowFocus = compositionLocalOf { false }
 @OptIn(ExperimentalFoundationApi::class)
 class PivotSpec(private val pivot: Float, private val list: () -> androidx.compose.foundation.lazy.LazyListState) : BringIntoViewSpec {
     @Suppress("OVERRIDE_DEPRECATION")
-    override val scrollAnimationSpec = tween<Float>(if (Look.motion == 0) 1 else 380, easing = FastOutSlowInEasing)
+    override val scrollAnimationSpec = tween<Float>(ThemeMath.pivotScrollMs(Look.motion), easing = FastOutSlowInEasing)
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
         if (size >= containerSize * 0.45f) return SmoothSpec.calculateScrollDistance(offset, size, containerSize)
         val d = offset - containerSize * pivot
@@ -101,7 +101,8 @@ fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier, dim: Float = 0
         Crossfade(item, animationSpec = tween(if (Look.motion == 0) 0 else 600), label = "bb") { it0 ->
             if (it0 != null) {
                 val m = rememberMeta(it0)
-                val url = m?.backdrop?.let { b -> cardBackdrop(b) } ?: m?.poster?.let { p -> cardPoster(p) }
+                // Full-screen picture: the poster fallback keeps the card size w342 also with "Weak device" (T-070)
+                val url = m?.backdrop?.let { b -> cardBackdrop(b) } ?: m?.poster?.let { p -> DevicePerfLogic.cardPoster(p, false) }
                 if (url != null) AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.TopEnd)
                 else ArtPlaceholder(it0, Modifier.fillMaxSize(), showTitle = false)
             }

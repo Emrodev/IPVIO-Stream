@@ -519,6 +519,10 @@ private fun GeneralPage(ctx: Context) {
     ToggleRow("Beenden bestätigen", "Auf der Startseite muss „Zurück“ zweimal gedrückt werden, damit die App nicht aus Versehen schließt.", General.confirmExit) { General.setConfirmExit(ctx, it) }
     // #95: the device's screensaver or sleep timer is blocked while the app is open (window flag, see ScreenAwake)
     ToggleRow("Bildschirm beim Stöbern wach halten", "An: Der Fernseher geht nicht in den Bildschirmschoner oder Ruhezustand, solange die App offen ist. Aus: nur während der Wiedergabe.", General.keepAwakeBrowse) { General.setKeepAwakeBrowse(ctx, it) }
+    // T-070: device performance (Automatic / Weak device / Strong device), see DevicePerfLogic
+    val perfNames = listOf("Automatisch", "Schwaches Gerät", "Starkes Gerät")
+    SelectRow("Geräteleistung", perfNames[DevicePerf.mode], perfNames, DevicePerf.mode) { DevicePerf.set(ctx, it) }
+    Hint("Schwaches Gerät: keine Animationen, kein Hintergrundbild, keine Vorschau, kleinere Bilder und weniger Arbeit im Hintergrund – für Sticks und Boxen, die ruckeln. Starkes Gerät: alles an, auch bei wenig Arbeitsspeicher. Automatisch: spart bei wenig Arbeitsspeicher nur, was man nicht sieht.")
     // Phone/tablet: landscape (the UI is built for the TV)
     if (MobilePrefs.isMobile(ctx)) {
         val act = generateSequence<Context>(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()
@@ -769,7 +773,7 @@ private fun PlayerPage(ctx: Context) {
 
 @Composable
 private fun DesignPage(ctx: Context) {
-    fun save(accent: Int = Look.accentIdx, custom: Int = Look.custom, bg: Int = Look.bgIdx, motion: Int = Look.motion, scale: Int = Look.uiScale, custom2: Int = Look.custom2) =
+    fun save(accent: Int = Look.accentIdx, custom: Int = Look.custom, bg: Int = Look.bgIdx, motion: Int = Look.motionChoice, scale: Int = Look.uiScale, custom2: Int = Look.custom2) =
         AppSettings.setLook(ctx, accent, custom, bg, motion, scale, custom2)
     fun col(rgb: Int) = Color(0xFF000000.toInt() or rgb)
     // Show the preview at the top right (fixed, does not scroll along); show highlighted colors only there
@@ -867,9 +871,11 @@ private fun DesignPage(ctx: Context) {
     SectionTitle("Animationen")
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Look.MOTION.forEachIndexed { i, n ->
-            ChoiceChip(n, Look.motion == i, onFocus = { hover(it, Lang.tr(n)) { DesignPreview.motion = i } }) { save(motion = i) }
+            ChoiceChip(n, Look.motionChoice == i, onFocus = { hover(it, Lang.tr(n)) { DesignPreview.motion = i } }) { save(motion = i) }
         }
     }
+    // T-070: the choice is kept, but "Weak device" switches the animations off
+    if (DevicePerf.reduceVisuals) Hint("Aus, solange bei „Geräteleistung“ „Schwaches Gerät“ gewählt ist (Einstellungen > Allgemein).")
     }
     if (tab == 3) {
     Look.SCALES.indices.chunked(3).forEach { row ->

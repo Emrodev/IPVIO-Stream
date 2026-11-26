@@ -237,12 +237,21 @@ object DeadLinks {
  * same kind, same cleaned title and same year. The language stays the same – the app never switches the language by itself.
  */
 object Sources {
-    fun alternatives(item: Item, all: List<Item>): List<Item> {
-        if (item.kind != Kind.MOVIE) return listOf(item)
-        val k = item.mk
-        val same = all.filter { it.kind == Kind.MOVIE && it.lang == item.lang && it.mk == k }
-        return if (same.isEmpty()) listOf(item) else (listOf(item) + same.filter { it.id != item.id })
-    }
+    /** T-069c: number index of the movies of the shown playlist, built in the background ([buildIndex], [use]); null until then. */
+    @Volatile private var index: MovieSourceIndex? = null
+
+    /** Same result as before; uses the index when it was built for this list, otherwise the pass over [all]. */
+    fun alternatives(item: Item, all: List<Item>): List<Item> =
+        index?.takeIf { it.all === all }?.alternatives(item) ?: MovieSourcesLogic.scan(item, all)
+
+    /** The index for [all]: the current one if it was built for this list, otherwise a new one (call off the main thread). */
+    fun buildIndex(all: List<Item>): MovieSourceIndex = index?.takeIf { it.all === all } ?: MovieSourceIndex.build(all)
+
+    /** Makes [idx] the index used by [alternatives] (replaces the previous list's index). */
+    fun use(idx: MovieSourceIndex) { index = idx }
+
+    /** Frees the index (new playlist, low memory); [alternatives] then scans until [prepare] runs again. */
+    fun clearIndex() { index = null }
 
     fun asVariants(list: List<Item>): List<Variant> {
         // Make labels unique (same quality in the same folder: "HD · Movies (2)") so they can be selected

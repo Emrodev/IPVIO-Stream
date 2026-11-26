@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -140,7 +139,8 @@ fun PersonScreen(ref: PersonRef, all: List<Item>, onOpen: (Item) -> Unit, onBack
     // Filmography filter: 0 all, 1 movies, 2 series
     var kindFilter by remember(ref.id) { mutableIntStateOf(0) }
     val first = remember { FocusRequester() }
-    LaunchedEffect(owned.isNotEmpty()) { if (owned.isNotEmpty()) { delay(150); runCatching { first.requestFocus() } } }
+    // T-069d: as soon as the first card is laid out (before: after 150 ms)
+    LaunchedEffect(owned.isNotEmpty()) { if (owned.isNotEmpty()) focusSoon(150) { runCatching { first.requestFocus() }.getOrDefault(false) } }
     val tabNames = listOf("Übersicht", "Filmografie")
 
     Box(Modifier.fillMaxSize().background(Bg)) {

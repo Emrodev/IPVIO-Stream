@@ -4,7 +4,7 @@ All settings are on the **Settings** tab of the sidebar. They are grouped into t
 
 | Tile | What it does |
 |---|---|
-| General | Start screen, exit behaviour, autostart, landscape on phones |
+| General | Start screen, exit behaviour, autostart, landscape on phones, device performance (Automatic, Weak device, Strong device) |
 | Language & region | App language (10 languages), clock format, time zone |
 | View | Card size and artwork with live preview, sidebar position (left, right, top) and labels, grid, default cinema view |
 | Design | Colour theme, background, fonts (Outfit, Inter, system), text and display size, animations |
@@ -23,6 +23,15 @@ All settings are on the **Settings** tab of the sidebar. They are grouped into t
 
 ## API keys
 Step-by-step instructions for the free TMDB and OMDb keys are in the [README](../README.md#your-own-api-keys-optional). Enter them under *Settings > API keys* and press **Save and check**. Without keys the app uses the information of your Xtream provider.
+
+## Device performance
+*Settings > General > Device performance* (T-070). **Automatic** (default) behaves as before; on devices with little
+memory (most Fire TV sticks) it only starts the work you do not see later (genre detection, search index). **Weak device**
+switches off the animations, the background picture behind the home rows, the running slideshow bar, the poster preview and
+the focus shadow, uses smaller card images and a small image cache, builds the search index only when the search opens and
+does not keep the home screen under a detail page. **Strong device** switches everything on, also on devices with little
+memory. The player buffer always follows the device's memory. The animation choice under *Design and color* is kept and
+applies again when you leave "Weak device".
 
 ## Typing on a TV
 Use the phone import: *Playlists > Enter from phone* shows an address; open it on a phone in the same Wi-Fi and type the login there.

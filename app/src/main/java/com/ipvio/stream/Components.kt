@@ -144,8 +144,8 @@ fun seriesInfo(item: Item): String {
     return if (ec <= 0) a else a + " · " + (if (ec == 1) "1 Folge" else "$ec Folgen")
 }
 
-/** For cards the smaller TMDB image size is enough (w342 instead of w500): less data, faster, less memory. */
-fun cardPoster(url: String): String = url.replace("/t/p/w500/", "/t/p/w342/")
+/** For cards the smaller TMDB image size is enough (w342 instead of w500): less data, faster, less memory. T-070: w185 with "Weak device". */
+fun cardPoster(url: String): String = DevicePerfLogic.cardPoster(url, DevicePerf.profile.smallImages)
 
 @Composable
 fun PosterCard(

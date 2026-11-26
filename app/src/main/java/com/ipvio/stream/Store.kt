@@ -85,6 +85,8 @@ object AppSettings {
     /** Buffer: 0 Automatic (learns on stutter), 1 Normal, 2 Large, 3 Very large. [bufferLearned] = level 0..2 learned by the automatic mode. */
     var bufferMode by mutableIntStateOf(0)
     var bufferLearned by mutableIntStateOf(0)
+    /** T-069e: clean playbacks in a row since the last stutter (the automatic mode steps down after [BufferLogic.RELAX_AFTER]). */
+    private var bufferClean = 0
     var clockPos by mutableIntStateOf(0)
     var clockOpacity by mutableIntStateOf(70)
     var clockSize by mutableIntStateOf(1)
@@ -128,6 +130,7 @@ object AppSettings {
         clockBgOpacity = p.getInt("clock_bg_op", 40).coerceIn(10, 100)
         bufferMode = p.getInt("buf_mode", 0).coerceIn(0, 3)
         bufferLearned = p.getInt("buf_learned", 0).coerceIn(0, 2)
+        bufferClean = p.getInt("buf_clean", 0).coerceAtLeast(0)
         clockPos = p.getInt("clock_pos", 0).coerceIn(0, 3)
         clockOpacity = p.getInt("clock_opacity", 70).coerceIn(20, 100)
         clockSize = p.getInt("clock_size", 1).coerceIn(0, 2)
@@ -177,7 +180,7 @@ object AppSettings {
         Look.custom = p.getInt("look_custom", Look.BRAND_GREEN) and 0xFFFFFF
         Look.custom2 = p.getInt("look_custom2", -1).let { if (it < 0) -1 else it and 0xFFFFFF }
         Look.bgIdx = p.getInt("look_bg", Look.DEFAULT_BG).coerceIn(0, Look.BGS.lastIndex)
-        Look.motion = p.getInt("look_motion", 2).coerceIn(0, 2)
+        Look.motionChoice = p.getInt("look_motion", 2).coerceIn(0, 2)
         Look.uiScale = p.getInt("look_scale", Look.DEFAULT_SCALE).coerceIn(0, Look.SCALES.lastIndex)
     }
 
@@ -187,10 +190,10 @@ object AppSettings {
         Look.custom = custom and 0xFFFFFF
         Look.custom2 = if (custom2 < 0) -1 else custom2 and 0xFFFFFF
         Look.bgIdx = bg.coerceIn(0, Look.BGS.lastIndex)
-        Look.motion = motion.coerceIn(0, 2)
+        Look.motionChoice = motion.coerceIn(0, 2)
         Look.uiScale = scale.coerceIn(0, Look.SCALES.lastIndex)
         prefs(c).edit().putInt("look_accent", Look.accentIdx).putInt("look_custom", Look.custom).putInt("look_custom2", Look.custom2).putInt("look_bg", Look.bgIdx).putInt("look_ver", 6)
-            .putInt("look_motion", Look.motion).putInt("look_scale", Look.uiScale).apply()
+            .putInt("look_motion", Look.motionChoice).putInt("look_scale", Look.uiScale).apply()
     }
 
     fun setTz(c: Context, mode: Int) {
@@ -269,16 +272,25 @@ object AppSettings {
 
     /** Changing the mode resets the learned level. */
     fun setBufferMode(c: Context, mode: Int) {
-        bufferMode = mode.coerceIn(0, 3); bufferLearned = 0
-        prefs(c).edit().putInt("buf_mode", bufferMode).putInt("buf_learned", 0).apply()
+        bufferMode = mode.coerceIn(0, 3); bufferLearned = 0; bufferClean = 0
+        prefs(c).edit().putInt("buf_mode", bufferMode).putInt("buf_learned", 0).putInt("buf_clean", 0).apply()
+    }
+
+    /** T-069e: a playback ended; [clean] = ran long enough without stutter. Clean ones in a row lower the learned level again. */
+    fun bufferPlayback(c: Context, clean: Boolean) {
+        val r = BufferLogic.afterPlayback(bufferMode, bufferLearned, bufferClean, clean)
+        if (r[0] == bufferLearned && r[1] == bufferClean) return
+        bufferLearned = r[0]; bufferClean = r[1]
+        prefs(c).edit().putInt("buf_learned", r[0]).putInt("buf_clean", r[1]).apply()
     }
 
     /** The automatic mode noticed stutter: next playback with a larger buffer. */
     fun learnBuffer(c: Context) {
         val n = BufferLogic.bump(bufferMode, bufferLearned)
-        if (n == bufferLearned) return
-        bufferLearned = n
-        prefs(c).edit().putInt("buf_learned", n).apply()
+        // T-069e: stutter starts the count of clean playbacks again
+        if (n == bufferLearned) { if (bufferClean != 0) { bufferClean = 0; prefs(c).edit().putInt("buf_clean", 0).apply() }; return }
+        bufferLearned = n; bufferClean = 0
+        prefs(c).edit().putInt("buf_learned", n).putInt("buf_clean", 0).apply()
     }
 
     fun setAutoFps(c: Context, on: Boolean) {

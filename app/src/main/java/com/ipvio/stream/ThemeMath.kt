@@ -120,6 +120,18 @@ object ThemeMath {
 
     fun hexOf(rgb: Int): String = "#" + String.format("%06X", rgb and 0xFFFFFF)
 
+    /** T-069d: fade-in of a new screen in ms by animation level (0 = off, 1 = subtle, 2 = normal). Before: 220 and 380 ms. */
+    fun screenEnterMs(motion: Int): Int = when (motion) { 0 -> 0; 1 -> 110; else -> 160 }
+
+    /** T-069d: soft scrolling to the focused element in ms, for every animation level as before. Before: 280 ms. */
+    const val SCROLL_MS = 200
+
+    /** T-070: the same scrolling with "Weak device": short, so a slow device does not animate while the next key arrives. */
+    fun scrollMs(weak: Boolean): Int = if (weak) 120 else SCROLL_MS
+
+    /** T-069d: scrolling that keeps the focused row at its height, in ms ("Off": at once). Before: 380 ms. */
+    fun pivotScrollMs(motion: Int): Int = if (motion == 0) 1 else 260
+
     /** Scaling on focusing depending on the animation level (0 = off, 1 = subtle, 2 = normal). */
     fun focusScale(target: Float, motion: Int): Float = when (motion) {
         0 -> 1f
