@@ -613,7 +613,8 @@ fun HomeScreen(
     val reload: () -> Unit = { PlaylistStore.savedUrl(ctx)?.let { u -> scope.launch { PlaylistStore.load(ctx, u, false) } } }
 
     // Round 17b (Cinematic Remake): background and info follow the selected title once the big picture has scrolled away
-    val bbTab = tab in 0..2
+    // T-070: "Weak device" without the background picture: Home, Movies and Series then scroll like Favorites and My list
+    val bbTab = tab in 0..2 && !DevicePerf.reduceVisuals
     val bbState = states[tab.coerceIn(0, states.lastIndex)]
     // Round 18: even when the big picture is still partly visible (e.g. first row "Popular series"), the background shows
     // the info of the selected title – and the big picture (slideshow) pauses.
@@ -1092,14 +1093,16 @@ private fun Hero(
         ) {
             // Active dot fills up until the next change (shows when the picture changes)
             val prog = remember(idx) { androidx.compose.animation.core.Animatable(0f) }
-            LaunchedEffect(idx, General.heroSec) {
-                if (General.heroSec > 0) prog.animateTo(1f, tween(General.heroSec * 1000, easing = androidx.compose.animation.core.LinearEasing))
+            // T-070: "Weak device": the bar does not run (it was redrawn on every frame while the home screen is open)
+            val runBar = General.heroSec > 0 && !DevicePerf.reduceVisuals
+            LaunchedEffect(idx, General.heroSec, runBar) {
+                if (runBar) prog.animateTo(1f, tween(General.heroSec * 1000, easing = androidx.compose.animation.core.LinearEasing))
             }
             featured.indices.forEach { i ->
                 // 17c: progress only drawn (no rebuild on every frame)
                 if (i == idx) Box(Modifier.width(dpx(40)).height(dpx(7)).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .3f))) {
                     Box(Modifier.fillMaxSize().graphicsLayer {
-                        scaleX = if (General.heroSec > 0) prog.value.coerceIn(0.08f, 1f) else 1f
+                        scaleX = if (runBar) prog.value.coerceIn(0.08f, 1f) else 1f
                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
                     }.background(Accent1))
                 }

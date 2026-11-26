@@ -22,4 +22,10 @@ class MotionTimingTest {
         assertEquals(260, ThemeMath.pivotScrollMs(1))
         assertEquals(260, ThemeMath.pivotScrollMs(2))
     }
+
+    @Test
+    fun weakDeviceScrollsShorter() {
+        assertEquals(ThemeMath.SCROLL_MS, ThemeMath.scrollMs(false))
+        assertTrue(ThemeMath.scrollMs(true) < ThemeMath.SCROLL_MS)
+    }
 }

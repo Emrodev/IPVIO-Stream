@@ -88,7 +88,10 @@ object Look {
     /** Custom color 2 (highlight, text and frame on the background); -1 = automatic from color 1. */
     var custom2 by mutableIntStateOf(-1)
     var bgIdx by mutableIntStateOf(DEFAULT_BG)
-    var motion by mutableIntStateOf(2)
+    /** Animation level chosen in Settings > "Design and color" (0 off, 1 subtle, 2 normal); stored as `look_motion`. */
+    var motionChoice by mutableIntStateOf(2)
+    /** T-070: the level in use: "Off" while "Device performance" is "Weak device", otherwise the choice. */
+    val motion: Int get() = if (DevicePerf.reduceVisuals) 0 else motionChoice
     var uiScale by mutableIntStateOf(DEFAULT_SCALE)
 
     private fun bgRgb(): Int = BGS[bgIdx.coerceIn(0, BGS.lastIndex)].bg
@@ -128,7 +131,7 @@ object Look {
         return LookPalette(c(b.bg), c(b.surf), c(b.surf2), c(fill), c(high), c(ThemeMath.onAccent(fill)))
     }
 
-    fun reset() { accentIdx = DEFAULT_ACCENT; custom = BRAND_GREEN; custom2 = -1; bgIdx = DEFAULT_BG; motion = 2; uiScale = DEFAULT_SCALE }
+    fun reset() { accentIdx = DEFAULT_ACCENT; custom = BRAND_GREEN; custom2 = -1; bgIdx = DEFAULT_BG; motionChoice = 2; uiScale = DEFAULT_SCALE }
 }
 
 /** Focus enlargement, depending on the chosen animation level. */

@@ -7,6 +7,8 @@ The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not a
 
 ## Current task
 
+Last update: 2026-11-26, fourth round. T-070 (`docs/tasks/T-070-device-performance-setting.md`): setting "Device performance" (Automatic / Weak device / Strong device) in Settings > General, maintainer's choices recorded in the task file. New files `DevicePerfLogic.kt`, `DevicePerf.kt`, `DictT070.kt`; `Look.motion` is now the level in use (stored choice `Look.motionChoice`, same key). New key `device_perf` in `ipvio_general`. JVM tests 15/15 (with T-069d/e). Not built, not device tested. Next: maintainer runs the 7 steps in the task file.
+
 Last update: 2026-11-26. Branch `claude/nifty-pasteur-ubd26z` (from `dev` bc952a1). Maintainer's request: start, screen changes and scrolling as fast and smooth as possible without breaking anything.
 
 - T-069 (`docs/tasks/T-069-screen-open-and-start-speed.md`): programme search off the main thread and without a map of the whole playlist; Live TV, its start view, the player's channel list, title lists (language choices) and category pages reuse the work of the last visit (`ScreenCacheLogic.kt`, `LastResults`); search index 3 s after the list is shown; 18 more settings files opened in parallel at start. New caches are emptied by `ScreenCaches.clear()` on low memory and on every playlist change.
@@ -99,7 +101,7 @@ The full list with test steps is in `docs/tasks/WORK_STATE-history.md`, section 
 
 ## Task IDs
 
-- Highest ID in `docs/tasks/`: T-069. **Next free ID: T-070** (use `/new-task`, which checks this).
+- Highest ID in `docs/tasks/`: T-070. **Next free ID: T-071** (use `/new-task`, which checks this).
 - IDs used by more than one file: T-009, T-014, T-026, T-027, T-032. The files are not renamed here, because the old log and other task files refer to them by name. Renaming needs a decision.
 
 ## Conventions

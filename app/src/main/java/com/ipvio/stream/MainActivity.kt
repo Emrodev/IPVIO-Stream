@@ -32,8 +32,6 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Density
 import coil.Coil
-import coil.ImageLoader
-import coil.memory.MemoryCache
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,14 +64,9 @@ class MainActivity : ComponentActivity() {
         val app = applicationContext
         Thread({ runCatching { Updater.apply(app) } }, "updater-apply").start()
         CrashLog.install(this)
-        Coil.setImageLoader(
-            ImageLoader.Builder(this)
-                .memoryCache { MemoryCache.Builder(this).maxSizePercent(Mem.imageCachePercent(Mem.tier(this))).build() }
-                .allowRgb565(true)
-                .bitmapFactoryMaxParallelism(Mem.imageDecoders(Mem.tier(this)))
-                .crossfade(false)
-                .build()
-        )
+        // T-070: image cache size and decoder count follow "Device performance" (Automatic: the detected memory, as before)
+        DevicePerf.init(this)
+        Coil.setImageLoader(DevicePerf.imageLoader(this))
         ScreenAwake.attach(this)
         intent?.getStringExtra(Reminders.EXTRA_CH)?.let { AppNav.openChannel = it }
         setContent { App(pick) }
@@ -148,7 +141,8 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalFoundationApi::class)
 val SmoothSpec = object : BringIntoViewSpec {
-    override val scrollAnimationSpec = tween<Float>(ThemeMath.SCROLL_MS, easing = FastOutSlowInEasing)
+    // T-070: shorter with "Weak device"
+    override val scrollAnimationSpec get() = tween<Float>(ThemeMath.scrollMs(DevicePerf.reduceVisuals), easing = FastOutSlowInEasing)
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
         val peek = 90f
         val leading = offset
@@ -271,7 +265,10 @@ private fun AppContent() {
     // so opening the search does not wait for it. Same list object as the search screen uses, so the cache is hit.
     val searchList = PlaylistStore.channels
     LaunchedEffect(searchList) {
-        delay(StartupLogic.SEARCH_INDEX_DELAY_MS)   // T-069: the home rows and the first scrolling get the CPU first
+        // T-070: "Weak device" builds the index only when the search opens (saves memory); low memory in "Automatic": later
+        val perf = DevicePerf.profile
+        if (perf.searchOnDemand) return@LaunchedEffect
+        delay(perf.searchDelayMs)   // T-069: the home rows and the first scrolling get the CPU first
         withContext(Dispatchers.Default) { runCatching { SearchCache.build(PrivateCats.visible(searchList)) } }
     }
     // T-031: Trakt history and watchlist into the app once the playlist is there (at most every 6 hours, needs a sign-in).
@@ -326,7 +323,8 @@ private fun AppContent() {
     // Do not fall into the screensaver while downloading and parsing the playlist
     KeepScreenOn("playlist", PlaylistStore.loading)
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)
-    LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); if (!DemoMode.active) Classifier.restart(ctx, all) }
+    // T-070: 30 s instead of 8 s on weak devices and with little memory (DevicePerfLogic)
+    LaunchedEffect(all) { kotlinx.coroutines.delay(DevicePerf.profile.genreDelayMs); if (!DemoMode.active) Classifier.restart(ctx, all) }
     // Private categories (T-028): ids of their titles, so history and resume can skip them
     LaunchedEffect(all) { PrivateCats.reload(all) }   // after the first screen is up, and debounced while the list is still changing
     // T-069: lists kept for the next screen visit belong to one playlist; a new list must not keep the old titles in memory.
@@ -513,7 +511,8 @@ private fun AppContent() {
         val pageOnTop = personTop != null || d != null
         // Checked when a page opens and again when Android reports low memory (then the hidden home screen is let go)
         val heapTight = remember(top, Mem.trimTick) { Mem.heapTight(HomeKeepLogic.HEAP_LIMIT) }
-        val homeHidden = HomeKeepLogic.keepHidden(homeBase, pageOnTop, heapTight)
+        // T-070: not with "Weak device" (saves the memory of the kept screen)
+        val homeHidden = HomeKeepLogic.keepHidden(homeBase, pageOnTop, heapTight, HomeKeepLogic.ENABLED && DevicePerf.profile.keepHome)
         // The focus must not stay on a hidden card (keys would go there until the page takes the focus)
         LaunchedEffect(homeHidden) { if (homeHidden && homeFocus[0]) runCatching { focusManager.clearFocus(force = true) } }
         if (HomeKeepLogic.composeHome(homeBase, pageOnTop, homeHidden)) {

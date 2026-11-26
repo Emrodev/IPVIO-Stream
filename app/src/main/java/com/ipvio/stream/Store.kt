@@ -180,7 +180,7 @@ object AppSettings {
         Look.custom = p.getInt("look_custom", Look.BRAND_GREEN) and 0xFFFFFF
         Look.custom2 = p.getInt("look_custom2", -1).let { if (it < 0) -1 else it and 0xFFFFFF }
         Look.bgIdx = p.getInt("look_bg", Look.DEFAULT_BG).coerceIn(0, Look.BGS.lastIndex)
-        Look.motion = p.getInt("look_motion", 2).coerceIn(0, 2)
+        Look.motionChoice = p.getInt("look_motion", 2).coerceIn(0, 2)
         Look.uiScale = p.getInt("look_scale", Look.DEFAULT_SCALE).coerceIn(0, Look.SCALES.lastIndex)
     }
 
@@ -190,10 +190,10 @@ object AppSettings {
         Look.custom = custom and 0xFFFFFF
         Look.custom2 = if (custom2 < 0) -1 else custom2 and 0xFFFFFF
         Look.bgIdx = bg.coerceIn(0, Look.BGS.lastIndex)
-        Look.motion = motion.coerceIn(0, 2)
+        Look.motionChoice = motion.coerceIn(0, 2)
         Look.uiScale = scale.coerceIn(0, Look.SCALES.lastIndex)
         prefs(c).edit().putInt("look_accent", Look.accentIdx).putInt("look_custom", Look.custom).putInt("look_custom2", Look.custom2).putInt("look_bg", Look.bgIdx).putInt("look_ver", 6)
-            .putInt("look_motion", Look.motion).putInt("look_scale", Look.uiScale).apply()
+            .putInt("look_motion", Look.motionChoice).putInt("look_scale", Look.uiScale).apply()
     }
 
     fun setTz(c: Context, mode: Int) {

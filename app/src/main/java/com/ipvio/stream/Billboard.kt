@@ -101,7 +101,8 @@ fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier, dim: Float = 0
         Crossfade(item, animationSpec = tween(if (Look.motion == 0) 0 else 600), label = "bb") { it0 ->
             if (it0 != null) {
                 val m = rememberMeta(it0)
-                val url = m?.backdrop?.let { b -> cardBackdrop(b) } ?: m?.poster?.let { p -> cardPoster(p) }
+                // Full-screen picture: the poster fallback keeps the card size w342 also with "Weak device" (T-070)
+                val url = m?.backdrop?.let { b -> cardBackdrop(b) } ?: m?.poster?.let { p -> DevicePerfLogic.cardPoster(p, false) }
                 if (url != null) AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.TopEnd)
                 else ArtPlaceholder(it0, Modifier.fillMaxSize(), showTitle = false)
             }
