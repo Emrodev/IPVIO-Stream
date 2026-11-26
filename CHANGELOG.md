@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Detail page: the trailer plays behind the header after 2 seconds, like Prime Video ("Play trailers automatically", Settings > General, on by default). With a remote it runs while the top buttons have focus, on a touch screen while the header is on screen; moving down, starting playback or leaving the app stops it. Tested on a phone, a Fire TV Stick and an NVIDIA Shield
+- Home screen: "Trailer on the home screen" (off by default): the trailer of the selected title plays behind the big picture
+- Trailers: TMDB's trailer in the app language is chosen first, then English, then any; the player shows its interface in the app language and switches on subtitles (app language preferred) when the trailer is in another language
+- Why the trailer works now on TV devices (T-032): inside Compose the YouTube WebView plays sound but shows a black picture on Fire TV and Shield (decoding runs, the frames never reach the screen; translucent windows and forced H.264 did not help). A plain Android WebView placed in the activity's content frame under the Compose view shows the picture on all three devices. While it plays, the app's backgrounds leave a hole at its place (`TrailerHole`, `holeBackground`), so the page's gradients, text and buttons stay on top. The WebView is taller than the visible place, so YouTube's title bar, logo and "More videos" stay hidden
 - Polish: every dictionary text now has a Polish translation (178 texts of 1.4.8 – 1.5.1 that showed in English, among them private categories, playlist editing, Sports Hub, DNS, VPN, downloads, search, people, multi view, Trakt, player buttons and "What's new"), and "Import & Trakt" replaces the old "Import lists" title
 - Phone pages and a few settings texts ("Default sorting", the sorting hint, "Titles", "Start") had no dictionary row, so every language except German showed English or German there. They now have one (English, Polish; the other languages fall back to English as before)
 - Sound levelling: its texts (T-028) were never loaded into the dictionary and showed in German in every language. Now English, the other dictionary languages, Dutch and Polish show

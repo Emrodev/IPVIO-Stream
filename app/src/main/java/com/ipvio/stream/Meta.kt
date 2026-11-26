@@ -37,7 +37,9 @@ data class Meta(
     /** Age rating as shown, e.g. "FSK 12" or "PG-13 (US)", see [AgeRatingLogic]. */
     val age: String? = null,
     /** The age rating was asked for (also true when none exists), so older cache entries load it once. */
-    val ageChecked: Boolean = false
+    val ageChecked: Boolean = false,
+    /** Language of the trailer video (TMDB iso_639_1), null = unknown. */
+    val trailerLang: String? = null
 ) {
     /** Rating for sorting and filtering (0 to 10): first IMDb, then Rotten Tomatoes, then TMDB, last the provider's value. */
     fun score(): Double? =
@@ -257,7 +259,7 @@ object MetaRepo {
             j.put("poster", m.poster); j.put("backdrop", m.backdrop); j.put("overview", m.overview)
             j.put("rating", m.rating); j.put("year", m.year)
             j.put("genres", m.genres.joinToString("|")); j.put("runtime", m.runtime)
-            j.put("trailer", m.trailerKey); j.put("imdbId", m.imdbId)
+            j.put("trailer", m.trailerKey); j.put("trailerLang", m.trailerLang); j.put("imdbId", m.imdbId)
             j.put("imdbRating", m.imdbRating); j.put("rt", m.rtRating); j.put("ext", m.extended)
             j.put("gids", m.genreIds.joinToString(",")); j.put("lang", m.lang); j.put("votes", m.votes)
             j.put("countries", m.countries.joinToString(",")); j.put("ui", m.uiLang)
@@ -287,7 +289,7 @@ object MetaRepo {
                 countries = (j.str("countries") ?: "").split(",").filter { it.isNotBlank() },
                 uiLang = j.optString("ui", "de"),
                 checked = j.optBoolean("chk"),
-                age = j.str("age"), ageChecked = j.optBoolean("agec")
+                age = j.str("age"), ageChecked = j.optBoolean("agec"), trailerLang = j.str("trailerLang")
             )
         } catch (e: Exception) {
             null
@@ -445,15 +447,17 @@ object MetaRepo {
                 o.optJSONArray("episode_run_time")?.let { if (it.length() > 0) it.getInt(0) else null }
             else o.optInt("runtime").takeIf { it > 0 }
             val imdb = if (b.isTv) o.optJSONObject("external_ids")?.str("imdb_id") else o.str("imdb_id")
-            var trailer: String? = null
+            // Trailer in the app language if TMDB has one, otherwise English, otherwise any (TrailerLogic.pick)
+            val vids = ArrayList<TrailerLogic.Video>()
             o.optJSONObject("videos")?.optJSONArray("results")?.let { v ->
                 for (x in 0 until v.length()) {
                     val e = v.getJSONObject(x)
-                    if (e.optString("site") == "YouTube" && e.optString("type") == "Trailer") {
-                        trailer = e.optString("key"); break
-                    }
+                    vids.add(TrailerLogic.Video(e.optString("key"), e.optString("site"), e.optString("type"),
+                        e.optString("iso_639_1").takeIf { it.isNotBlank() && it != "null" }, e.optBoolean("official")))
                 }
             }
+            val chosen = TrailerLogic.pick(vids, Lang.code())
+            val trailer: String? = chosen?.key
             var ov = o.str("overview")?.takeIf { it.isNotBlank() }
             if (ov == null && Lang.code() != "en") {
                 // TMDB has no text in this language: fetch the English text as a fallback (never keep the text of another language)
@@ -462,7 +466,7 @@ object MetaRepo {
             }
             val age = if (needAge) AgeRatingLogic.pick(ageByCountry(o, b.isTv), country) else b.age
             m = b.copy(overview = ov ?: b.overview.takeIf { b.uiLang == Lang.code() }, genres = genres, runtime = runtime,
-                trailerKey = trailer, imdbId = imdb, uiLang = Lang.code(), checked = true, age = age, ageChecked = needAge || b.ageChecked)
+                trailerKey = trailer, trailerLang = chosen?.lang, imdbId = imdb, uiLang = Lang.code(), checked = true, age = age, ageChecked = needAge || b.ageChecked)
         } catch (e: Exception) {
         }
         if (Config.OMDB_KEY.isNotBlank() && m.imdbId != null) {
