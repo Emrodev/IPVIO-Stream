@@ -62,6 +62,19 @@ private object HomeReturn {
     var returning = false
 }
 
+/**
+ * T-069b: results of the home screen's background lookups for the last inputs (compared by object), kept when the screen is
+ * built again (back from the player, a title list or the search): the tile images and the "Because you watched" row are there
+ * at once instead of appearing late and pushing the rows down. A new playlist or new home data gives new objects, so the
+ * lookup runs again as before.
+ */
+private object HomeLookCache {
+    class Tiles(val topM: List<Item>, val topS: List<Item>, val favs: Int, val watch: Int, val images: Map<Int, String>)
+    class Because(val srcIds: List<String>, val byId: Map<String, Item>, val row: Pair<Item, List<Item>>?)
+    @Volatile var tiles: Tiles? = null
+    @Volatile var because: Because? = null
+}
+
 /** Last adopted genre state and trend list – kept when leaving the home screen. */
 private object HomeVer {
     var value = -1
@@ -215,7 +228,9 @@ fun HomeScreen(
     tab: Int, onTab: (Int) -> Unit, states: List<LazyListState>,
     onOpen: (Item) -> Unit, onPlayNow: (Item) -> Unit,
     onResume: (Entry, Item) -> Unit, onBrowse: (BrowseReq) -> Unit,
-    onCategories: (CatReq) -> Unit, onAdd: () -> Unit
+    onCategories: (CatReq) -> Unit, onAdd: () -> Unit,
+    // T-069b: true while a detail or person page lies on top and this screen is kept composed (not laid out, not drawn)
+    hidden: Boolean = false
 ) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -296,7 +311,10 @@ fun HomeScreen(
     // "Because you watched X": similar titles (TMDB) of the last 3 started movies/series, matched against the own playlist.
     // The titles of all sources are merged; the row is named after the most recent source that has matches.
     val becauseSrcs = histHome.filter { it.kind != Kind.LIVE }.take(BecauseLogic.SOURCES)
-    val because by produceState<Pair<Item, List<Item>>?>(null, becauseSrcs.map { it.id }, byId.size) {
+    val becauseIds = becauseSrcs.map { it.id }
+    val becauseHit = HomeLookCache.because?.takeIf { it.srcIds == becauseIds && it.byId === byId }
+    val because by produceState(becauseHit?.row, becauseIds, byId.size) {
+        if (becauseHit != null) { value = becauseHit.row; return@produceState }
         if (becauseSrcs.isEmpty()) return@produceState
         val seen = History.ids.toSet()
         var label: Item? = null
@@ -313,6 +331,7 @@ fun HomeScreen(
         }
         val src = label
         if (src != null && BecauseLogic.show(found.size)) value = src to found.values.take(20)
+        HomeLookCache.because = HomeLookCache.Because(becauseIds, byId, value)
     }
 
     // Check new episodes of favorite series (bell)
@@ -320,7 +339,7 @@ fun HomeScreen(
         if (byId.isNotEmpty()) NewEpisodes.check(ctx, Library.favs.mapNotNull { byId[it] }.filter { it.kind == Kind.SERIES })
     }
 
-    SideEffect { NavState.tab = tab; ContentFocus.tab = if (tab in 0 until MenuLogic.COUNT) tab else -1 }
+    SideEffect { if (!hidden) { NavState.tab = tab; ContentFocus.tab = if (tab in 0 until MenuLogic.COUNT) tab else -1 } }
 
     // Header (search, reminders, profile) and quick access as in the design
     var picker by remember { mutableStateOf(false) }
@@ -413,7 +432,9 @@ fun HomeScreen(
         (favLiveHome + histHome.filter { it.kind == Kind.LIVE }).distinctBy { it.id }.ifEmpty { homeSafe(live.take(40), noAdult).take(20) }
     }
     val favVod by remember(byId) { derivedStateOf { Library.favs.mapNotNull { byId[it] }.filter { it.kind != Kind.LIVE } } }
-    val tileImg by produceState(emptyMap<Int, String>(), topM.size, topS.size, favVod.size, watchList.size) {
+    val tilesHit = HomeLookCache.tiles?.takeIf { it.topM === topM && it.topS === topS && it.favs == favVod.size && it.watch == watchList.size }
+    val tileImg by produceState(tilesHit?.images ?: emptyMap(), topM.size, topS.size, favVod.size, watchList.size) {
+        if (tilesHit != null) { value = tilesHit.images; return@produceState }
         val used = HashSet<String>()
         val out = HashMap<Int, String>()
         suspend fun pick(id: Int, list: List<Item>) {
@@ -425,6 +446,7 @@ fun HomeScreen(
         pick(1, topM); pick(2, topS)
         pick(MenuLogic.FAVS, favVod.ifEmpty { topM.drop(3) })
         pick(MenuLogic.MYLIST, watchList.filter { it.kind != Kind.LIVE }.ifEmpty { topS.drop(3) })
+        HomeLookCache.tiles = HomeLookCache.Tiles(topM, topS, favVod.size, watchList.size, HashMap(out))
     }
     val liveLogos = nowChannels.mapNotNull { it.logo }.take(3)
     // #109: after playback the list is rebuilt and briefly empty; show the last count while it loads instead of 0
@@ -466,7 +488,10 @@ fun HomeScreen(
         HeroCache.byTab[tab] = ids to ready.toList()
     }
     // Switched here from another screen via the sidebar (e.g. search): focus the content
+    // T-069b: composed while hidden under a page (e.g. back from the player to a detail page): the focus steps below run
+    // when the screen is shown, never while it is hidden (they would take the focus away from the page on top)
     LaunchedEffect(Unit) {
+        if (hidden) return@LaunchedEffect
         if (AppNav.focusTab == tab && LastFocus.pending == null) {
             AppNav.focusTab = -1
             repeat(10) {
@@ -476,6 +501,7 @@ fun HomeScreen(
         }
     }
     LaunchedEffect(Unit) {
+        if (hidden) return@LaunchedEffect
         if (HomeReturn.returning) {
             HomeReturn.returning = false
             delay(1200)
@@ -487,13 +513,41 @@ fun HomeScreen(
             }
         }
     }
+    // T-069b: shown again after a page that lay on top (this screen stayed composed). The cards are still there, so their own
+    // restore step does not run again: the same rules as after a rebuild are applied here. The card of the opened title takes
+    // the focus; without one, "Watch now" at the top after 1.2 s; switched here from the menu: the content.
+    var wasHidden by remember { mutableStateOf(hidden) }
+    LaunchedEffect(hidden) {
+        if (hidden) { wasHidden = true; return@LaunchedEffect }
+        if (!wasHidden) return@LaunchedEffect
+        wasHidden = false
+        HomeReturn.returning = false
+        delay(150)   // laid out and placed again
+        val id = LastFocus.pending
+        if (id != null) {
+            if (FocusReturn.request(id)) { LastFocus.pending = null; return@LaunchedEffect }
+            delay(1050)
+            if (LastFocus.pending != null) {
+                LastFocus.pending = null
+                val st = states[tab]
+                val atTop = (tab == 0 && st.firstVisibleItemIndex == 0) || (tab in 1..2 && st.firstVisibleItemIndex <= 1)
+                if (atTop) runCatching { ContentFocus.req.requestFocus() }
+            }
+        } else if (AppNav.focusTab == tab) {
+            AppNav.focusTab = -1
+            repeat(10) {
+                if (runCatching { ContentFocus.req.requestFocus() }.isSuccess) return@LaunchedEffect
+                delay(150)
+            }
+        }
+    }
 
     var inSidebar by remember { mutableStateOf(false) }
     // App start: focus on "Watch now" instead of the sidebar. The top picture appears only once playlist and info are loaded
     // (can take a few seconds); so it retries for up to 15 s, and the marker is set only on success.
     // After 3 s only while focus is still in the sidebar (if the user has already chosen, nothing is stolen).
-    LaunchedEffect(ready.isNotEmpty(), tab) {
-        if (tab != 0 || HomeFlags.heroDone || LastFocus.pending != null) return@LaunchedEffect
+    LaunchedEffect(ready.isNotEmpty(), tab, hidden) {
+        if (hidden || tab != 0 || HomeFlags.heroDone || LastFocus.pending != null) return@LaunchedEffect
         var waited = 0
         while (waited < 45000) {
             delay(150); waited += 150
@@ -510,7 +564,8 @@ fun HomeScreen(
             .filterIsInstance<android.app.Activity>().firstOrNull()
         act?.finishAffinity()
     }
-    BackHandler(enabled = !inSidebar && all.isNotEmpty()) {
+    // T-069b: no Back handling while hidden under a page (the page handles Back)
+    BackHandler(enabled = !hidden && !inSidebar && all.isNotEmpty()) {
         val now = System.currentTimeMillis()
         if (tab == 0 && General.confirmExit && now - lastBack < 2500) exitApp()
         // Round 17: Back goes up exactly one level – further down the home screen first up to "Watch now",
@@ -526,7 +581,7 @@ fun HomeScreen(
         else runCatching { sideFocus.requestFocus() }
     }
     // Movies/series: Back from the rows leads first to the tabs at the top, from there into the sidebar
-    BackHandler(enabled = !inSidebar && !inHeader && isVod && all.isNotEmpty()) {
+    BackHandler(enabled = !hidden && !inSidebar && !inHeader && isVod && all.isNotEmpty()) {
         scope.launch {
             runCatching { states[tab].scrollToItem(0) }
             repeat(8) {
@@ -536,8 +591,8 @@ fun HomeScreen(
             runCatching { sideFocus.requestFocus() }
         }
     }
-    BackHandler(enabled = inSidebar && tab != 0) { onTab(0) }
-    BackHandler(enabled = inSidebar && tab == 0 && General.confirmExit) {
+    BackHandler(enabled = !hidden && inSidebar && tab != 0) { onTab(0) }
+    BackHandler(enabled = !hidden && inSidebar && tab == 0 && General.confirmExit) {
         val now = System.currentTimeMillis()
         if (now - lastBack < 2500) exitApp()
         else { lastBack = now; android.widget.Toast.makeText(ctx, Lang.tr("Noch einmal Zurück drücken zum Beenden"), android.widget.Toast.LENGTH_SHORT).show() }
@@ -844,7 +899,7 @@ fun HomeScreen(
             if (DesignPreview.visible) DesignPreviewPanel(Modifier.align(Alignment.TopEnd).padding(top = dpx(84), end = DS.PageX))
         }
         if (picker) {
-            BackHandler { picker = false }
+            BackHandler(enabled = !hidden) { picker = false }
             ProfilePicker { id -> picker = false; if (id != Profiles.active) Profiles.switchTo(ctx, id) }
         }
         Sidebar(

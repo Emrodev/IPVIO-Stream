@@ -38,11 +38,11 @@ Found on the main thread, ordered by expected effect (**unverified**, not measur
 Seen, not changed (needs a decision or touches a protected area):
 
 - The home screen is disposed when a detail page opens and composed again on Back (`MainActivity.kt`, `when` on the
-  screens). Keeping it composed under the detail page is an architectural change with memory and focus effects.
+  screens). Done in T-069b (maintainer decision 26 Nov 2026, below).
 - Every screen fades in (`screenEnter`): 380 ms with Settings > "Design and color" > "Animations" set to "Normal" (the default), 220 ms
   with "Subtle", none with "Off". Shorter times are a visible design change: maintainer decision.
 - Play from a home row runs `Sources.alternatives(item, all)` (a pass over the playlist) on the main thread in
-  `MainActivity.start` (play path, not changed).
+  `MainActivity.start`. Done in T-069c (maintainer decision 26 Nov 2026, below).
 - `DriveSync.init` decrypts the Drive token with the Android keystore on the main thread at start (only with Drive
   connected). Secrets handling: needs approval (CLAUDE.md section 6).
 
@@ -102,7 +102,9 @@ animations, dependencies, Gradle.
 
 - Ran here (JDK 21, Kotlin 2.0.21 compiler bundled with Gradle 8.14.3, JUnit 4.13.2): `ScreenCacheLogicTest` (6 new
   tests) and `StartupLogicTest`: 10/10 passed.
-- Syntax check of the 10 changed Kotlin files with the same compiler: no syntax errors. Android and Compose classes are
+- T-069b/c: `HomeKeepLogicTest` (3 new), `MovieSourcesLogicTest` (4 new, compiled with `Models.kt` and the 13 pure files it
+  needs), `ScreenCacheLogicTest`, `StartupLogicTest`: 17/17 passed.
+- Syntax check of every changed Kotlin file with the same compiler: no syntax errors. Android and Compose classes are
   not available here, so there was no type check.
 - **Not run:** Gradle build, Android unit tests, device test, time measurement on a device.
 
@@ -124,6 +126,96 @@ animations, dependencies, Gradle.
    line and the "Opened …: N ms" lines (Search, Tab 3, Browse, Categories) so the next round can use device numbers.
 10. Low memory (Fire TV Stick with a large list): no crash; after the system frees memory the screens still open.
 
+T-069b (home screen kept under the detail page), most important, please test with the remote only:
+
+11. Home: open a title from a row, press Back: the home screen is there at once, the same card is focused, the rows did not
+    move. Same from Movies, Series, Favorites and My list, and from the big picture ("Watch now" / the info button).
+12. On the detail page press Up, Down, Left and Right at every edge, also on a series while "Loading episodes …" shows and on a
+    person page: the focus never disappears (no invisible movement), OK never opens something that is not on screen.
+13. Detail page > a person > a title > Back three times: each page comes back, then the home screen with the focused card.
+14. Detail page > Play > Back from the player > Back: the home screen comes back with the focus on the card (built again, as before).
+15. Home key on the remote while a detail page is open, then open the app again: the home screen, focus on the content.
+16. Back on the home screen after returning: it behaves as before (up to "Watch now", then the menu, then "Press Back again to exit" if set).
+17. Favorites: on the detail page add or remove a favorite, Back: the Favorites row shows the change.
+18. "Because you watched": after Search > Back the row is there at once, it does not appear late.
+19. Settings > Diagnostics > Log: "Opened Tab 0: N ms" after Back from a detail page; please send the number (before: the full build).
+
+T-069c (movie sources):
+
+20. A movie that the playlist has in several qualities: Play from a home row and from the detail page; the quality choice
+    (automatic, chosen source, chosen quality) works as before; "Source" on the detail page lists the same entries.
+
+## T-069b – Home screen kept under the detail page
+
+Maintainer decision (26 Nov 2026): work on points 2 and 3 of the open decisions (this section and T-069c).
+
+### Analysis
+
+`AppContent` showed exactly one screen (`when`): opening a detail or person page disposed `HomeScreen`, Back composed it
+again: every row, card, image request and focus step, and the 380 ms fade-in (`screenEnter`). The data came from `HomeCache`,
+so the cost is the composition and layout of the whole screen, plus two background lookups that started again from empty
+(tile images, "Because you watched" row), so the row appeared late and pushed the rows below it down.
+
+Risks found in the code before the change: `ContentFocus.req` and other focus requesters live in the home screen; its effects
+request the focus at composition (menu switch, return fallback, first "Watch now"); it has five Back handlers.
+
+### Changes
+
+- `HomeKeepLogic.kt` (new, pure, JVM tests): when `HomeScreen` is the base screen, when it is kept hidden (a detail or person
+  page on top, memory below 70 % of the app's limit), switch `ENABLED` for a rollback.
+- `MainActivity.kt`: `HomeScreen` is drawn before the other screens in `KeepAliveBox`. While a detail or person page opened from
+  it is on top, the box keeps the screen composed but neither measures, places nor draws it. Content that is not placed gets
+  no D-pad focus and no touch (the way Compose treats list items composed ahead). If the focus is still on a home card when the
+  page opens, it is cleared, so no key reaches a hidden card. Title lists, categories, search, downloads, Boomer Mode, the add
+  screen and the player still replace the home screen as before.
+- `HomeScreen.kt`: parameter `hidden`. While hidden: no Back handler, no focus request of its own, no write of the shared
+  navigation state. When shown again it applies the same focus rules as after a rebuild (card of the opened title, otherwise
+  "Watch now" after 1.2 s at the top, or the content after a menu switch). Tile images and the "Because you watched" row are
+  kept for the next build of the screen (`HomeLookCache`, found again by the objects they were computed from).
+- `Nav.kt`: `FocusReturn` lists the cards with `restoreFocus` that are composed, so the kept screen can focus the card of the
+  opened title again.
+
+### Effect (expected, not measured)
+
+Back from a detail or person page shows the home screen in the next frame with its rows, scroll positions and images, without
+the fade-in. After the player, a title list or the search the screen is still built again (as before), but without the late
+"Because you watched" row and tile images.
+
+### Risks
+
+- **Focus**: the safety relies on Compose not offering content that is not placed to D-pad search (used for prefetched list
+  items). Not verified on a device. If a key ever moves the focus into the hidden screen, the focus seems lost on the page;
+  Back still works. Rollback: `HomeKeepLogic.ENABLED = false`.
+- **Memory**: the home screen's state and the images of its visible cards stay in memory while the page is open (a few MB,
+  estimate). Not kept when the app's memory is above 70 % of its limit; checked when a page opens and again whenever Android
+  reports low memory (`Mem.trimTick`), then the hidden screen is let go and built again on Back, as before.
+- While hidden, the home screen still follows changes (favorites, history, a playlist refresh) and its slideshow timer runs;
+  nothing is laid out or drawn for it.
+- Back from the player to a detail page: the home screen under it is composed hidden but its rows are built only when it is
+  shown, so this path gains less.
+
+## T-069c – Movie sources for Play without a pass over the playlist
+
+### Analysis
+
+`Sources.alternatives(item, all)` compares kind, language and key text of every title (`all.filter`). `MainActivity.start` runs it
+on the main thread for every movie that starts (also Play from a home row); the detail page runs it in the background.
+
+### Changes
+
+- `MovieSourcesLogic.kt` (new, pure, JVM tests): `scan` is the old rule; `MovieSourceIndex` keeps one number per movie
+  (key text and language) and compares numbers first, the texts only on a number match. Same result and order as `scan`
+  (tested against it on 5,000 random titles).
+- `Playback.kt` (`Sources`): uses the index when it was built for the same list, otherwise the old pass.
+- `MainActivity.kt`, `StartupLogic.kt`: the index is built 2 s after a list is shown, in the background; a list change cancels
+  it. `ScreenCaches.clear()` frees it with the other caches (new playlist, low memory).
+
+### Risks
+
+- Memory: one number and one reference per movie (about 1 MB for 150,000 movies, estimate).
+- Play within 2 s of a list change, or after Android reported low memory, uses the old pass (same result, as before).
+
 ## Status
 
 Implemented on branch `claude/nifty-pasteur-ubd26z` (based on `dev` bc952a1), open for build and device test.
+T-069b and T-069c added on the same branch (26 Nov 2026).

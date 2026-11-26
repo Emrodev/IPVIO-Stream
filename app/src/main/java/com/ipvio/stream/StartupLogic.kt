@@ -15,6 +15,9 @@ object StartupLogic {
      */
     const val SEARCH_INDEX_DELAY_MS = 3_000L
 
+    /** T-069c: wait before the movie source index of a newly shown list is built (after the home rows, before the search index). */
+    const val SOURCES_INDEX_DELAY_MS = 2_000L
+
     /**
      * [shownFromStore] = the stored list is on screen now. [userStarted] = not the silent refresh at the app start: the user
      * reloaded, switched or added the list (no waiting). Only the silent refresh at a start is moved back, so the

@@ -99,9 +99,31 @@ object RowStates {
     fun get(k: String): LazyListState = m.getOrPut(k) { LazyListState() }
 }
 
+/**
+ * T-069b: the cards with [restoreFocus] that are composed right now, by title id (newest last). A screen that stayed composed
+ * under a detail page (HomeScreen) puts the focus back on the card of the opened title with [request]; a screen built again
+ * does it in [restoreFocus] itself, as before. Main thread only (composition effects).
+ */
+object FocusReturn {
+    private val byId = HashMap<String, ArrayList<FocusRequester>>()
+    fun add(id: String, fr: FocusRequester) { byId.getOrPut(id) { ArrayList(1) }.add(fr) }
+    fun remove(id: String, fr: FocusRequester) {
+        val l = byId[id] ?: return
+        l.remove(fr)
+        if (l.isEmpty()) byId.remove(id)
+    }
+    /** Focuses the last composed card of title [id]; false if none is composed or it cannot take the focus. */
+    fun request(id: String): Boolean {
+        val l = byId[id] ?: return false
+        for (i in l.indices.reversed()) if (runCatching { l[i].requestFocus() }.getOrDefault(false)) return true
+        return false
+    }
+}
+
 @Composable
 fun Modifier.restoreFocus(id: String): Modifier {
     val fr = remember { FocusRequester() }
+    androidx.compose.runtime.DisposableEffect(id, fr) { FocusReturn.add(id, fr); onDispose { FocusReturn.remove(id, fr) } }
     LaunchedEffect(Unit) {
         if (LastFocus.pending == id) {
             delay(150)
