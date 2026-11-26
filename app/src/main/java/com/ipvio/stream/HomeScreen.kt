@@ -209,7 +209,7 @@ private fun topRated(list: List<Item>): List<Item> {
         val sc = m?.score()
         if (m != null && (m.votes >= 300 || m.tmdbId <= 0) && sc != null) Triple(i, sc, m) else null
     }.sortedByDescending { it.second }
-    return TopRatedLogic.distinctByKey(scored) { t -> TopRatedLogic.tmdbKey(t.third.tmdbId, t.third.isTv) }.map { it.first }
+    return TopRatedLogic.distinctByKey(scored) { t -> TopRatedLogic.keyOf(t.first.tmdb, t.third.tmdbId, t.third.isTv) }.map { it.first }
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)

@@ -79,6 +79,19 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 - Marker: `TraktSync.setAutoInterval(ctx, ms)` in `app/src/main/java/com/ipvio/stream/ListImportUi.kt`
 - Test steps: T-071 in `docs/tasks/T-069-T-070-user-issues-batch.md`.
 
+### B-012 Movies and Category grids: the same film is shown once (T-072)
+
+- Expected: the same film from several provider entries (e.g. "Der Pate" and "The Godfather", both TMDB 238) appears once in a
+  category grid and in "Top rated". The provider's TMDB id is used when it is sent; the metadata cache is the fallback.
+  Titles without any id stay as they are. Series are not covered yet (see T-072).
+- Marker: `TopRatedLogic.collapse(l, { it.tmdb }` in `app/src/main/java/com/ipvio/stream/CategoriesScreen.kt`
+- Marker: `TopRatedLogic.keyOf(t.first.tmdb` in `app/src/main/java/com/ipvio/stream/HomeScreen.kt`
+- Marker: `(f["tmdb"] ?: f["tmdb_id"])` in `app/src/main/java/com/ipvio/stream/XtreamLogic.kt`
+- Marker: `const val VERSION = 7` in `app/src/main/java/com/ipvio/stream/PlaylistCacheIO.kt`
+- Test steps: reload the Xtream playlist once (the cache is rewritten in version 7). A category with a film in German and English
+  shows it once. Old caches (version 6) still load; the titles are then shown as before until the playlist is reloaded.
+- Status: JVM tests of the logic pass (T-072). Not device tested.
+
 ### B-010 Trakt sign-in on the phone: the login link opens in its own tab
 
 - Expected: the code page stays open; the paste works after the login (not "The sign-in was not accepted").

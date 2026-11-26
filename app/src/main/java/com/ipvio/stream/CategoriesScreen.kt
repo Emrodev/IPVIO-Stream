@@ -247,9 +247,11 @@ private fun ListMode(
     val more = cur?.let { StalkerMore.added[it.first] }
     val prev = remember(cur?.first, cur?.second, more) {
         val c = cur
+        // T-072: the same film from several entries (e.g. German and English title) is shown once
+        val unique = { l: List<Item> -> TopRatedLogic.collapse(l, { it.tmdb }, { MetaRepo.cached(it)?.tmdbId ?: 0 }, { it.kind == Kind.SERIES }) }
         if (c == null) emptyList<Item>()
-        else if (isTopEntry(c.first)) c.second.take(40)
-        else StalkerMore.withAdded(c.first, c.second).takeLast(40).reversed()
+        else if (isTopEntry(c.first)) unique(c.second).take(40)
+        else unique(StalkerMore.withAdded(c.first, c.second)).takeLast(40).reversed()
     }
     val ctx = LocalContext.current
     // Stayed on the category briefly: fetch the next portion from the portal (not while scrolling quickly)

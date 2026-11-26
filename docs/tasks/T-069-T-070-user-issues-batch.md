@@ -45,3 +45,16 @@ Status: done in code, not built with Gradle, not device tested. Branch `claude/c
 - Logic in `TraktSyncLogic.autoDue` (5 new tests in `TraktSyncLogicTest.kt`, run here on an extracted copy of the function; the full test file needs Android classes). Translations in `DictT071.kt` (`DictT071Test`, 2 tests, run here).
 - The check happens at app start only. A sync while the app stays open for days is not done; a background job (WorkManager) would be a new decision.
 - Test steps: connect Trakt; pick "Only manually", restart the app, check that no sync starts; pick "Every 12 hours", sync once, restart within 12 hours (no sync), after 12 hours (sync).
+
+## T-072: same film shown once (25-26 Nov 2026)
+
+Goal: the same title from several provider entries (German and English name, 4K/FHD/HD) appears once in category grids and in "Top rated".
+
+- Approved by the maintainer on 26 Nov 2026 as option A (provider TMDB id) with option B (metadata cache) as fallback.
+- **Storage change (approved):** the playlist cache goes to version 7 and each entry gets an optional TMDB id after the "added" date
+  (`PlaylistCacheIO.kt`). Version 3 to 6 caches are still read (id 0). `Item` has a new field `tmdb` (default 0, `Models.kt`).
+  The Xtream reader writes the `tmdb` attribute for movies (`XtreamLogic.kt`, field `tmdb` or `tmdb_id`, digits only).
+- Logic: `TopRatedLogic.keyOf` and `collapse` (JVM tests: 6 in `TopRatedLogicTest.kt`). Applied in `CategoriesScreen.kt` (grid preview) and `HomeScreen.kt` (Top rated).
+- **Not done:** series (their entries are built from episodes, `Models.kt` series branch, season merge). Titles without a provider id and without a cached metadata entry stay separate. Option B (a TMDB lookup for every title) is not built.
+- **Unverified:** whether the providers send the `tmdb` field. Check one provider response; if it is missing, only the cache fallback works.
+- Test steps: see B-012 in `docs/BEHAVIOUR-REGISTER.md`. Also: open a category with a film in two languages; the grid shows it once.

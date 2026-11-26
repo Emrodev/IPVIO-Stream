@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Movies: the same film from several provider entries (e.g. German and English title) is shown once in a category grid and in "Top rated" when the provider sends its TMDB id (or the title is already in the metadata cache). The playlist cache is rewritten once in the new format (version 7); the old cache still loads. Series not yet. Not device tested yet (B-012, T-072)
 - Live TV categories: Up on the first category goes to the last one, and Down on the last goes to the first (before, Up did nothing and Down did not wrap). Same as the channel list. Not device tested yet (B-003)
 - Movies and Series: Left from the titles grid goes back to the category you came from, not to a neighbouring category (regression fixed; same as Live TV). Not device tested yet (B-001)
 - Trakt: new setting "Automatically sync" in the Trakt panel: at every app start, every 6 hours (the default, as before), every 12 hours, daily, weekly, or only when you tap "Sync now". The check runs when the app starts; if the app is not opened, nothing is read (T-071). Not device tested yet

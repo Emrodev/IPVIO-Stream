@@ -17,6 +17,16 @@ object TopRatedLogic {
         }
     }
 
+    /**
+     * T-072: TMDB key of a title. The id the provider sent wins (exact, no network); the id from the metadata cache is the fallback
+     * for titles without one. 0 for both = unknown, no key.
+     */
+    fun keyOf(providerId: Int, cachedId: Int, isTv: Boolean): String? = tmdbKey(if (providerId > 0) providerId else cachedId, isTv)
+
+    /** T-072: keeps the first title per TMDB key (input sorted best first where it matters). Titles without a key stay. */
+    fun <T> collapse(items: List<T>, providerId: (T) -> Int, cachedId: (T) -> Int, isTv: (T) -> Boolean): List<T> =
+        distinctByKey(items) { keyOf(providerId(it), cachedId(it), isTv(it)) }
+
     /** Key for the TMDB id; movies and series are separate TMDB ids, so the kind is part of the key. */
     fun tmdbKey(tmdbId: Int, isTv: Boolean): String? = if (tmdbId > 0) (if (isTv) "tv:" else "movie:") + tmdbId else null
 }
