@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Sports Hub: the games of each league appear as soon as that league answers, instead of waiting for all leagues (B-017, T-077). Not device tested yet
 - Live TV: genre rows (Sport, Movies, Documentaries, Kids, News, Music) can be moved up and down like the provider categories; the default order is unchanged (B-015, T-077). Not device tested yet
 - Playlist lists opened from the top bar (Home, Movies, Series) close with Left or Right as well as Back (B-016). Not device tested yet
 - Settings: the page moves only when a control is cut off; Down at the last control goes to the Back arrow next to the title (B-014). Not device tested yet

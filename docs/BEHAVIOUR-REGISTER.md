@@ -129,6 +129,13 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 - Test steps: open the "Playlist" list on Home, press Left: it closes. Same on Movies and Series (the area playlist pill).
 - Status: not device tested.
 
+### B-017 Sports Hub: the games of each league appear as soon as the league answers (T-077)
+
+- Expected: the day view shows the games of the leagues that have already answered, instead of waiting for all leagues.
+- Marker: `got[l.path] = part` in `app/src/main/java/com/ipvio/stream/SportHub.kt`
+- Test steps: open Sports Hub with several leagues on; the first games appear before the slowest league has answered.
+- Status: not device tested. Known: the first open after an app start still waits for the first answer (no start-up prefetch yet).
+
 ### B-010 Trakt sign-in on the phone: the login link opens in its own tab
 
 - Expected: the code page stays open; the paste works after the login (not "The sign-in was not accepted").
