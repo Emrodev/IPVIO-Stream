@@ -429,6 +429,8 @@ private fun DetailScreenFull(
     var trailerInApp by remember { mutableStateOf(false) }
     val trailerOk = !embedded && showActions && item.kind != Kind.LIVE && !DemoMode.active && General.trailerPreview && TrailerLogic.validKey(meta?.trailerKey)
     val previewActive = trailerOk && !trailerPaused && (if (touchInput) headerTop else heroFocused)
+    // T-080: the trailer is really on the screen (the WebView has reported playback)
+    val trailerVisible = TrailerHole.rect != null
     Box(Modifier.fillMaxSize().holeBackground(Bg)) {
         // Round 15: layout like the big picture of the home screen (image on the right, faded into the background at the left and bottom)
         // 17c: calm background image (the constant zoom cost too much computing time on the Fire TV)
@@ -439,12 +441,15 @@ private fun DetailScreenFull(
             // Remote (TV): while the header buttons have focus. Touch: while the header is on screen (previewActive)
             TrailerPreview(meta?.trailerKey, active = previewActive, modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.8f).aspectRatio(16f / 9f), trailerLang = meta?.trailerLang)
         }
+        // T-080: no dark gradients while the trailer plays, so the picture is seen as it is
+        if (!trailerVisible) {
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Bg, 0.3f to Bg.copy(alpha = .92f), 0.55f to Bg.copy(alpha = .5f), 0.8f to Color.Transparent)))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Bg.copy(alpha = .5f), 0.2f to Color.Transparent, 0.55f to Bg.copy(alpha = .78f), 0.8f to Bg)))
+        }
         LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(horizontal = 28.dp, vertical = 36.dp)) {
             item {
                 Box(
-                    Modifier.fillMaxWidth().heightIn(min = dpx(if (embedded) 400 else 560))
+                    Modifier.fillMaxWidth().heightIn(min = dpx(if (embedded) 400 else 560)).then(if (trailerVisible) Modifier.fillParentMaxHeight() else Modifier)
                         .onPreviewKeyEvent { ev ->
                             if (ev.type == KeyEventType.KeyDown && ev.key == Key.DirectionUp) {
                                 if (onTopUp != null) {
@@ -471,7 +476,7 @@ private fun DetailScreenFull(
                             letterSpacing = (-1.5).sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         HeroMetaLine(item, meta, dots = false)
                         // Tracks of the file read from its header (T-033, issue #24); series: first episode of the shown season
-                        if (showActions && item.kind != Kind.LIVE && !DemoMode.active && !previewActive) playUrl?.let { ProbeLine(it) }
+                        if (showActions && item.kind != Kind.LIVE && !DemoMode.active && !trailerVisible) playUrl?.let { ProbeLine(it) }
                         // Movie started: small progress bar with remaining time
                         if (item.kind != Kind.SERIES && resume != null && resume.dur > 0 && !ResumeLogic.finished(resume.pos, resume.dur)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(10))) {
@@ -481,7 +486,7 @@ private fun DetailScreenFull(
                                 Text("noch " + ((resume.dur - resume.pos) / 60000).coerceAtLeast(1) + " Min", color = Muted, fontSize = spx(14))
                             }
                         }
-                        if (!previewActive) {
+                        if (!trailerVisible) {
                         if (meta?.overview == null && !metaDone) {
                             // Loading skeleton instead of briefly "No description found."
                             val sk = shimmerColor()
