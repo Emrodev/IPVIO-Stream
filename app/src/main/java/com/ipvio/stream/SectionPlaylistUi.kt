@@ -82,7 +82,7 @@ fun SectionPlaylistPopup(tab: Int, onChanged: () -> Unit = {}, onDismiss: () -> 
             Modifier.width(320.dp).heightIn(max = 400.dp).clip(shape)
                 .background(Surf.copy(alpha = 0.97f)).border(1.dp, DS.Overlay3, shape).padding(8.dp)
                 // Left or Right closes the list, like Back (T-077)
-                .onPreviewKeyEvent { e ->
+                .onPreviewKeyEvent { e: KeyEvent ->
                     if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight)) { onDismiss(); true } else false
                 }
         ) {

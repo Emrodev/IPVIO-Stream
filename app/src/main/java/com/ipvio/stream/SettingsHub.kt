@@ -178,7 +178,7 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 }
                 Hint("Setzt nur die Einstellungen dieser Seite auf die Standardwerte zurück. Alle anderen Seiten bleiben unverändert. Um alles auf einmal zurückzusetzen, nutze Einstellungen > Alles zurücksetzen.")
             }
-            Spacer(Modifier.height(8.dp).bringIntoViewRequester(endReq))
+            Spacer(Modifier.height(8.dp))
             }
         }
     }

@@ -101,7 +101,7 @@ fun OptionPopup(options: List<String>, selected: Int, onDismiss: () -> Unit, ico
             Modifier.width(300.dp).heightIn(max = 340.dp).clip(shape)
                 .background(Surf.copy(alpha = 0.97f)).border(1.dp, DS.Overlay3, shape).padding(8.dp)
                 // Playlist lists: Left or Right closes them, like Back (T-077)
-                .then(if (closeOnSide) Modifier.onPreviewKeyEvent { e ->
+                .then(if (closeOnSide) Modifier.onPreviewKeyEvent { e: KeyEvent ->
                     if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight)) { onDismiss(); true } else false
                 } else Modifier)
         ) {
