@@ -107,6 +107,15 @@ object Parental {
         return true
     }
 
+    /** T-079: whether a profile has a PIN (for the lock icon and the "change PIN" action). */
+    fun hasPinFor(c: Context, profileId: Int): Boolean = !prefsOf(c, profileId).getString("parental_hash", null).isNullOrEmpty()
+
+    /** T-079: removes the PIN of a profile; its "adult content hidden" setting stays as it is. */
+    fun removePinFor(c: Context, profileId: Int) {
+        prefsOf(c, profileId).edit().remove("parental_salt").remove("parental_hash").apply()
+        if (profileId == Profiles.active) init(c)
+    }
+
     fun clearPin(c: Context) {
         prefs(c).edit().remove("parental_salt").remove("parental_hash").apply()
         pinSet = false

@@ -145,6 +145,15 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 - Test steps: Settings > Profiles > Add profile: enter 1234, then 1235: "PINs do not match". Enter 1234 twice. Back to the picker, open the new profile: the PIN is asked. Wrong PIN refused. Add another profile and press Back at the PIN step: it opens without asking.
 - Status: JVM tests of the check pass (`ParentalLogicTest`, `DictT078Test`). Not device tested.
 
+### B-019 Profiles: PIN per profile, lock icon, change PIN (T-079)
+
+- Expected: "Add profile" does not ask for a PIN any more. Each profile row has "Add PIN" (or "Change PIN" when it has one). A profile
+  with a PIN shows a lock icon. The PIN prompt names the profile, e.g. "New PIN for „Profile 4“". Change PIN asks the current PIN first.
+- Marker: `SmallPill(if (Parental.hasPinFor(ctx, p.id)) "PIN ändern" else "PIN hinzufügen")` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
+- Marker: `if (Parental.hasPinFor(ctx, p.id)) AppIcon(AIcon.Lock, Accent2, size = 22.dp)` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
+- Test steps: Settings > Profiles > Add profile: no PIN prompt. Profile row: "Add PIN", enter a PIN twice; the lock icon appears. "Change PIN": the old PIN first, then the new one twice. A wrong old PIN is refused.
+- Status: texts tested (`DictT079Test`). Not device tested.
+
 ### B-010 Trakt sign-in on the phone: the login link opens in its own tab
 
 - Expected: the code page stays open; the paste works after the login (not "The sign-in was not accepted").

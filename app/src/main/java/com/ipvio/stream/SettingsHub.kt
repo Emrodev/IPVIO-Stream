@@ -1465,6 +1465,11 @@ private fun ProfilesPage(ctx: Context, onExit: () -> Unit) {
     }
     Text("Aktiv: " + Profiles.activeName(), color = Accent2, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     Hint("Jedes Profil hat eigenen Verlauf, eigene Favoriten, Ansicht, Player-Einstellungen und eigenen Jugendschutz. Playlist, Sprache und Aktualisierung sind für alle gleich.")
+    // T-079: PIN flow of one profile: 0 = current PIN (change only), 1 = new PIN, 2 = repeat it
+    var pinFor by remember { mutableIntStateOf(-1) }
+    var pinStep by remember { mutableIntStateOf(1) }
+    var firstPin by remember { mutableStateOf<String?>(null) }
+    var pinMsg by remember { mutableStateOf<String?>(null) }
     Profiles.list.toList().forEach { p ->
         val isActive = p.id == Profiles.active
         Row(
@@ -1477,8 +1482,12 @@ private fun ProfilesPage(ctx: Context, onExit: () -> Unit) {
                 style = androidx.compose.ui.text.TextStyle(color = if (isActive) Accent2 else Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1, overflow = TextOverflow.Ellipsis
             )
+            if (Parental.hasPinFor(ctx, p.id)) AppIcon(AIcon.Lock, Accent2, size = 22.dp)
             if (!isActive) SmallPill("Wechseln") { Profiles.switchTo(ctx, p.id) }
             SmallPill("Umbenennen") { editing = p.id; name = p.name }
+            SmallPill(if (Parental.hasPinFor(ctx, p.id)) "PIN ändern" else "PIN hinzufügen") {
+                pinFor = p.id; pinStep = if (Parental.hasPinFor(ctx, p.id)) 0 else 1; firstPin = null; pinMsg = null
+            }
             if (!isActive && p.id != 0) ConfirmPill("Löschen") { Profiles.remove(ctx, p.id) }
         }
     }
@@ -1486,24 +1495,29 @@ private fun ProfilesPage(ctx: Context, onExit: () -> Unit) {
         Field(name, { name = it }, "Name des Profils")
         PillButton("Name speichern", light = true) { Profiles.rename(ctx, editing, name); editing = -1 }
     }
-    // T-078: a new profile can get a 4-digit PIN at once (optional: Back leaves it unlocked)
-    var newPinFor by remember { mutableIntStateOf(-1) }
-    var firstPin by remember { mutableStateOf<String?>(null) }
-    var pinMsg by remember { mutableStateOf<String?>(null) }
-    if (Profiles.list.size < Profiles.MAX) PillButton("Profil hinzufügen") {
-        if (Profiles.add(ctx)) { newPinFor = Profiles.list.last().id; firstPin = null; pinMsg = null }
-    }
-    if (newPinFor >= 0) {
-        PinPad(
-            if (firstPin == null) "PIN für das neue Profil" else "PIN wiederholen",
-            "4 Ziffern. Mit Zurück bleibt das Profil ohne PIN.", pinMsg,
+    // T-079: the PIN is set per profile with its own button (not right after "Add profile")
+    if (Profiles.list.size < Profiles.MAX) PillButton("Profil hinzufügen") { Profiles.add(ctx) }
+    Hint("Ein Profil mit PIN lässt sich nur mit dieser PIN öffnen. Die PIN setzt du bei dem Profil mit „PIN hinzufügen“. Das Schloss zeigt, welche Profile eine PIN haben.")
+    if (pinFor >= 0) {
+        val pinName = Profiles.list.firstOrNull { it.id == pinFor }?.let { Profiles.displayName(it) } ?: ""
+        val title = when (pinStep) {
+            0 -> Lang.tr("Aktuelle PIN für „{0}“").replace("{0}", pinName)
+            2 -> Lang.tr("PIN wiederholen")
+            else -> Lang.tr("Neue PIN für „{0}“").replace("{0}", pinName)
+        }
+        PinPad(title, Lang.tr("4 Ziffern. Ein Profil mit PIN öffnest du nur mit dieser PIN."), pinMsg,
             { p ->
-                val f = firstPin
-                if (f == null) { firstPin = p; pinMsg = null }
-                else if (ParentalLogic.confirmed(f, p)) { Parental.setPinFor(ctx, newPinFor, p); newPinFor = -1; firstPin = null; pinMsg = null }
-                else { firstPin = null; pinMsg = "Die PINs stimmen nicht überein" }
+                if (pinStep == 0) {
+                    if (Parental.verifyFor(ctx, pinFor, p)) { pinStep = 1; pinMsg = null } else { pinMsg = Parental.pinError() }
+                } else if (pinStep == 1) {
+                    firstPin = p; pinStep = 2; pinMsg = null
+                } else {
+                    if (ParentalLogic.confirmed(firstPin.orEmpty(), p)) {
+                        Parental.setPinFor(ctx, pinFor, p); pinFor = -1; pinMsg = null
+                    } else { pinStep = 1; pinMsg = Lang.tr("Die PINs stimmen nicht überein") }
+                }
             },
-            { newPinFor = -1; firstPin = null; pinMsg = null }
+            { pinFor = -1; pinMsg = null }
         )
     }
     ToggleRow("Beim Start fragen: Wer schaut?", "Zeigt beim Öffnen der App die Profilauswahl, sobald es mehr als ein Profil gibt.", Profiles.askAtStart) { Profiles.setAsk(ctx, it) }

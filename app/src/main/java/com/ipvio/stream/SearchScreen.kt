@@ -405,7 +405,8 @@ fun SearchScreen(
                     firstKey = ContentFocus.req,
                     onFocusChange = { fieldFocused = it },
                     onRight = { runCatching { tilesFirst.requestFocus() }.isSuccess },
-                    onUp = { runCatching { firstHistory.requestFocus() }.isSuccess }
+                    // T-079: Up from the number row: first suggestion if any are shown, else the first recent search
+                    onUp = { runCatching { firstSugg.requestFocus() }.isSuccess || runCatching { firstHistory.requestFocus() }.isSuccess }
                 )
                 }
             }
