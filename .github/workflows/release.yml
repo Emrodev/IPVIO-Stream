@@ -116,6 +116,21 @@ jobs:
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
           "$APKSIGNER" verify --print-certs "$APK"
 
+      # Certificate guard: an APK signed with another key cannot update the installed app, and users would have to
+      # reinstall. The digest below is the certificate of the published 1.5.1 APK (checked from the APK itself, 27 Nov 2026).
+      # Update it only together with a planned key change (docs/RELEASE.md, "Signature check before every release").
+      - name: Refuse a signing certificate other than the published one
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          DIGEST=$("$APKSIGNER" verify --print-certs "$APK" | grep -m1 'certificate SHA-256 digest' | awk -F': ' '{print $NF}' | tr -d ' ')
+          EXPECTED=e447a64b67fa17ad8caf0372e93e8b52fc9809b9e4c17c75e8477538ebe8b560
+          echo "certificate SHA-256 digest: $DIGEST (published: $EXPECTED)"
+          if [ "$DIGEST" != "$EXPECTED" ]; then
+            echo "::error::Signing certificate $DIGEST differs from the published $EXPECTED. Nothing is published: installed apps could not update."
+            exit 1
+          fi
+
       - name: Create IPVIO-Stream.apk and update.json
         run: |
           cp app/build/outputs/apk/release/app-release.apk IPVIO-Stream.apk
