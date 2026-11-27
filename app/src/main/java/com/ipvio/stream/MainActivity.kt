@@ -481,7 +481,7 @@ private fun AppContent() {
         }
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(Bg).fitScreenInset(playing == null)) {
+    BoxWithConstraints(Modifier.fillMaxSize().holeBackground(Bg).fitScreenInset(playing == null)) {
         val focusManager = LocalFocusManager.current
         val homeFocus = remember { BooleanArray(1) }
         // Scale of the design from the available width (see Design)

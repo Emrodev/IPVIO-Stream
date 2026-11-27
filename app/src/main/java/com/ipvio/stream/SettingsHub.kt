@@ -527,6 +527,8 @@ private fun GeneralPage(ctx: Context) {
     val perfNames = listOf("Automatisch", "Schwaches Gerät", "Starkes Gerät")
     SelectRow("Geräteleistung", perfNames[DevicePerf.mode], perfNames, DevicePerf.mode) { DevicePerf.set(ctx, it) }
     Hint("Schwaches Gerät: keine Animationen, kein Hintergrundbild, keine Vorschau, kleinere Bilder und weniger Arbeit im Hintergrund – für Sticks und Boxen, die ruckeln. Starkes Gerät: alles an, auch bei wenig Arbeitsspeicher. Automatisch: spart bei wenig Arbeitsspeicher nur, was man nicht sieht.")
+    ToggleRow("Trailer automatisch abspielen", "Auf der Detailseite startet der Trailer nach 2 Sekunden hinter dem Titel, solange die Knöpfe oben ausgewählt sind. Braucht einen TMDB-Schlüssel.", General.trailerPreview) { General.setTrailerPreview(ctx, it) }
+    ToggleRow("Trailer auf der Startseite", "Auf der Startseite startet der Trailer des ausgewählten Titels nach 2 Sekunden hinter dem großen Bild. Braucht einen TMDB-Schlüssel.", General.trailerHome) { General.setTrailerHome(ctx, it) }
     // Phone/tablet: landscape (the UI is built for the TV)
     if (MobilePrefs.isMobile(ctx)) {
         val act = generateSequence<Context>(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()
