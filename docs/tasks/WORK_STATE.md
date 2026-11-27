@@ -7,7 +7,9 @@ The former log is kept unchanged in `docs/tasks/WORK_STATE-history.md`. Do not a
 
 ## Current task
 
-Last update: 2026-11-26, fourth round. T-070 (`docs/tasks/T-070-device-performance-setting.md`): setting "Device performance" (Automatic / Weak device / Strong device) in Settings > General, maintainer's choices recorded in the task file. New files `DevicePerfLogic.kt`, `DevicePerf.kt`, `DictT070.kt`; `Look.motion` is now the level in use (stored choice `Look.motionChoice`, same key). New key `device_perf` in `ipvio_general`. JVM tests 15/15 (with T-069d/e). Not built, not device tested. Next: maintainer runs the 7 steps in the task file.
+Last update: 2026-11-27, issue triage (T-079, `docs/tasks/T-079-open-issues-triage.md`). All 28 open issues read and sorted, oldest first. No code change, nothing posted or closed on GitHub. 10 issues are fixed in code and wait for a device test (10, 27, 75, 96, 109, 112, 125, 146, 151, 152). Needs logs: 73, 84, 104, 108. Needs analysis: 23, 28, 131. Needs maintainer decision: 24, 68, 69, 99, 103, 118, 129, 130. Next: maintainer device test list in T-079; then decide the decision group.
+
+Earlier entry, 2026-11-26, fourth round. T-070 (`docs/tasks/T-070-device-performance-setting.md`): setting "Device performance" (Automatic / Weak device / Strong device) in Settings > General, maintainer's choices recorded in the task file. New files `DevicePerfLogic.kt`, `DevicePerf.kt`, `DictT070.kt`; `Look.motion` is now the level in use (stored choice `Look.motionChoice`, same key). New key `device_perf` in `ipvio_general`. JVM tests 15/15 (with T-069d/e). Not built, not device tested. Next: maintainer runs the 7 steps in the task file.
 
 Last update: 2026-11-26. Branch `claude/nifty-pasteur-ubd26z` (from `dev` bc952a1). Maintainer's request: start, screen changes and scrolling as fast and smooth as possible without breaking anything.
 
