@@ -1,6 +1,10 @@
 # T-078: PIN-protected profiles (plan, not started)
 
-Status: **planned, waiting for the maintainer's decisions** (CLAUDE.md section 6: authentication and secrets handling need approval).
+Status: **implemented in a small form (27 Nov 2026), on the proposed defaults** (the maintainer left the decisions open: "do what is best").
+
+What was built: the existing parental PIN (`Parental.kt`: salted hash, attempt limit, locked profile = adult content hidden + PIN) is now also set when a profile is added (`SettingsHub.kt`, `Parental.setPinFor`). The PIN check for two entries is `ParentalLogic.confirmed` (tests). Texts in `DictT078.kt`.
+
+Not changed: the existing lock rules, backup (the PIN is not exported, as before), picker (names stay visible).
 
 ## Goal
 

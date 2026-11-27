@@ -1486,7 +1486,26 @@ private fun ProfilesPage(ctx: Context, onExit: () -> Unit) {
         Field(name, { name = it }, "Name des Profils")
         PillButton("Name speichern", light = true) { Profiles.rename(ctx, editing, name); editing = -1 }
     }
-    if (Profiles.list.size < Profiles.MAX) PillButton("Profil hinzufügen") { Profiles.add(ctx) }
+    // T-078: a new profile can get a 4-digit PIN at once (optional: Back leaves it unlocked)
+    var newPinFor by remember { mutableIntStateOf(-1) }
+    var firstPin by remember { mutableStateOf<String?>(null) }
+    var pinMsg by remember { mutableStateOf<String?>(null) }
+    if (Profiles.list.size < Profiles.MAX) PillButton("Profil hinzufügen") {
+        if (Profiles.add(ctx)) { newPinFor = Profiles.list.last().id; firstPin = null; pinMsg = null }
+    }
+    if (newPinFor >= 0) {
+        PinPad(
+            if (firstPin == null) "PIN für das neue Profil" else "PIN wiederholen",
+            "4 Ziffern. Mit Zurück bleibt das Profil ohne PIN.", pinMsg,
+            { p ->
+                val f = firstPin
+                if (f == null) { firstPin = p; pinMsg = null }
+                else if (ParentalLogic.confirmed(f, p)) { Parental.setPinFor(ctx, newPinFor, p); newPinFor = -1; firstPin = null; pinMsg = null }
+                else { firstPin = null; pinMsg = "Die PINs stimmen nicht überein" }
+            },
+            { newPinFor = -1; firstPin = null; pinMsg = null }
+        )
+    }
     ToggleRow("Beim Start fragen: Wer schaut?", "Zeigt beim Öffnen der App die Profilauswahl, sobald es mehr als ein Profil gibt.", Profiles.askAtStart) { Profiles.setAsk(ctx, it) }
     Hint("Beim Wechseln startet die App kurz neu.")
 }

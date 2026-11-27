@@ -136,6 +136,15 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 - Test steps: open Sports Hub with several leagues on; the first games appear before the slowest league has answered.
 - Status: not device tested. Known: the first open after an app start still waits for the first answer (no start-up prefetch yet).
 
+### B-018 Profiles: a new profile can get a PIN at once (T-078)
+
+- Expected: "Add profile" asks for an optional 4-digit PIN, entered twice. With a PIN the new profile is locked: it asks for the PIN
+  when it is opened from the picker, and adult content is hidden there. Back leaves it without a PIN.
+- Marker: `Parental.setPinFor(ctx, newPinFor, p)` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
+- Marker: `fun confirmed(first: String, second: String): Boolean` in `app/src/main/java/com/ipvio/stream/ParentalLogic.kt`
+- Test steps: Settings > Profiles > Add profile: enter 1234, then 1235: "PINs do not match". Enter 1234 twice. Back to the picker, open the new profile: the PIN is asked. Wrong PIN refused. Add another profile and press Back at the PIN step: it opens without asking.
+- Status: JVM tests of the check pass (`ParentalLogicTest`, `DictT078Test`). Not device tested.
+
 ### B-010 Trakt sign-in on the phone: the login link opens in its own tab
 
 - Expected: the code page stays open; the paste works after the login (not "The sign-in was not accepted").
