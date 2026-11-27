@@ -47,6 +47,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.foundation.verticalScroll
 
 private class Cat(val icon: AIcon, val title: String, val sub: String)
 
@@ -959,26 +960,73 @@ internal fun diagReportLines(ctx: Context): List<Pair<String, String>> {
 @Composable
 private fun DiagPage(ctx: Context, reload: () -> Unit) {
     val lines = diagReportLines(ctx)
-    // T-055: the buttons sit at the top. Below a long list the remote used to jump past every entry to the last button.
+    val shown = lines.filter { it.first != "Log" || it.second.isNotEmpty() }
+    // T-079: the report to the phone uses the transfer page of "Auf ein anderes Gerät übertragen" (its report entry shows the whole report)
+    var serving by remember { mutableStateOf(false) }
+    val ip = remember { PhoneImport.localIp() }
+    val server = remember { PhoneImport { }.apply { crash = { phoneDiagReport(ctx) } } }
+    DisposableEffect(Unit) { onDispose { server.stop() } }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton("Bericht kopieren") {
-            val text = lines.filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { it.first + ": " + it.second }
+            val text = shown.joinToString("\n") { it.first + ": " + it.second }
             runCatching {
                 val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
                 cm?.setPrimaryClip(android.content.ClipData.newPlainText("IPVIO Diagnose", text))
             }
         }
+        if (!serving) PillButton("Am Handy öffnen", light = true, icon = AIcon.Phone) { serving = server.start() }
+        else PillButton("Am Handy beenden", light = true) { server.stop(); serving = false }
         PillButton("Playlist neu laden", light = true, icon = AIcon.Refresh) { reload() }
     }
-    Hint("Der Bericht enthält keine Adressen, Benutzernamen oder Passwörter. Er wird nur in die Zwischenablage kopiert und nirgendwohin gesendet.")
-    Hint("Auf dem Fernseher lässt sich die Zwischenablage oft nicht nutzen: Unter Einstellungen > Speicher > „Übertragung im WLAN starten“ kannst du den Bericht am Handy öffnen (Seite „Letzten Absturzbericht anzeigen“) und dort kopieren.")
-    // T-055: every line of every entry is its own focusable row, so the remote steps through the log one entry at a time
-    lines.filter { it.first != "Log" || it.second.isNotEmpty() }.forEach { (k, v) ->
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                v.split("\n").forEach { line ->
-                    Text(line, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp).focusable())
+    if (serving) {
+        Column(
+            Modifier.clip(RoundedCornerShape(DS.RadiusM)).background(Color(0x14FFFFFF)).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (ip == null) Text("Das Gerät ist nicht mit einem WLAN verbunden.", color = Color(0xFFFFB86B), fontSize = 16.sp)
+            else {
+                Text("Am Handy (im selben WLAN) öffnen:", color = Muted, fontSize = 15.sp)
+                val addr = "http://$ip:${server.port}/transfer"
+                Text(addr, color = Accent2, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                QrWithLabel(addr)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Code", color = Muted, fontSize = 16.sp)
+                    Text(server.code, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                }
+                Text("Auf dem Handy: „Letzten Absturzbericht anzeigen“ öffnen. Dort steht der ganze Bericht als Text und lässt sich markieren und kopieren.", color = Muted, fontSize = 14.sp)
+            }
+        }
+    }
+    Hint("Der Bericht enthält keine Adressen, Benutzernamen oder Passwörter. „Bericht kopieren“ legt ihn nur in die Zwischenablage des Fernsehers. Zum Schicken am Handy nutze „Am Handy öffnen“.")
+    // T-079: the whole report is one focus stop. Up and Down scroll it; at the top or the bottom the focus leaves the box.
+    // Before, every line was a focus stop, so the remote needed many presses to get to the end.
+    val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    var logFocused by remember { mutableStateOf(false) }
+    Box(
+        Modifier.fillMaxWidth().height(380.dp)
+            .clip(RoundedCornerShape(DS.RadiusM))
+            .background(Color(0x0DFFFFFF))
+            .border(2.dp, if (logFocused) Color.White else Color.Transparent, RoundedCornerShape(DS.RadiusM))
+            .padding(16.dp)
+            .onFocusChanged { logFocused = it.isFocused }
+            .focusable()
+            .onPreviewKeyEvent { e ->
+                if (e.type != KeyEventType.KeyDown || (e.key != Key.DirectionDown && e.key != Key.DirectionUp)) return@onPreviewKeyEvent false
+                val down = e.key == Key.DirectionDown
+                if (down && scroll.value >= scroll.maxValue) false
+                else if (!down && scroll.value <= 0) false
+                else { scope.launch { scroll.animateScrollBy(if (down) 160f else -160f) }; true }
+            }
+            .verticalScroll(scroll)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            shown.forEach { (k, v) ->
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        v.split("\n").forEach { line -> Text(line, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp)) }
+                    }
                 }
             }
         }

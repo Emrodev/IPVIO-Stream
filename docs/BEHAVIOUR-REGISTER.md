@@ -154,6 +154,15 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 - Test steps: Settings > Profiles > Add profile: no PIN prompt. Profile row: "Add PIN", enter a PIN twice; the lock icon appears. "Change PIN": the old PIN first, then the new one twice. A wrong old PIN is refused.
 - Status: texts tested (`DictT079Test`). Not device tested.
 
+### B-020 Diagnostics: report to the phone; the log is one scroll area (T-079)
+
+- Expected: "Am Handy öffnen" starts the transfer page (address, QR code and code), where "Letzten Absturzbericht anzeigen" shows the whole report as text to copy.
+  The log is one focus stop: Down and Up scroll it, and at the end or the top the focus leaves the box.
+- Marker: `PhoneImport { }.apply { crash = { phoneDiagReport(ctx) } }` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
+- Marker: `if (down && scroll.value >= scroll.maxValue) false` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
+- Test steps: Settings > Diagnostics: "Am Handy öffnen", scan the QR code on the phone, open "Letzten Absturzbericht anzeigen": the whole report is there. On the TV, Down reaches the log box in a few presses and scrolls to the end.
+- Status: not device tested.
+
 ### B-010 Trakt sign-in on the phone: the login link opens in its own tab
 
 - Expected: the code page stays open; the paste works after the login (not "The sign-in was not accepted").
