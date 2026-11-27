@@ -468,17 +468,17 @@ private fun DetailScreenFull(
                 ) {
                     Column(Modifier.align(if (embedded && !showActions) Alignment.TopStart else Alignment.BottomStart).widthIn(max = dpx(980)).padding(bottom = dpx(18)), verticalArrangement = Arrangement.spacedBy(dpx(12))) {
                         // Round 17b: overline with glow bar, huge title (design "Cinematic Remake", picture 2)
-                        Row(horizontalArrangement = Arrangement.spacedBy(dpx(14)), verticalAlignment = Alignment.CenterVertically) {
+                        if (!trailerVisible) Row(horizontalArrangement = Arrangement.spacedBy(dpx(14)), verticalAlignment = Alignment.CenterVertically) {
                             Kicker(kindLabel(item.kind), raw = false)
                             qualityOf(item)?.let { PreviewQualityBadge(it) }
                         }
-                        Text(raw = true, text = item.title, color = Tok.TextHi, fontSize = spx(84), lineHeight = spx(84), fontWeight = FontWeight.ExtraBold,
+                        if (!trailerVisible) Text(raw = true, text = item.title, color = Tok.TextHi, fontSize = spx(84), lineHeight = spx(84), fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-1.5).sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        HeroMetaLine(item, meta, dots = false)
+                        if (!trailerVisible) HeroMetaLine(item, meta, dots = false)
                         // Tracks of the file read from its header (T-033, issue #24); series: first episode of the shown season
                         if (showActions && item.kind != Kind.LIVE && !DemoMode.active && !trailerVisible) playUrl?.let { ProbeLine(it) }
                         // Movie started: small progress bar with remaining time
-                        if (item.kind != Kind.SERIES && resume != null && resume.dur > 0 && !ResumeLogic.finished(resume.pos, resume.dur)) {
+                        if (!trailerVisible && item.kind != Kind.SERIES && resume != null && resume.dur > 0 && !ResumeLogic.finished(resume.pos, resume.dur)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(10))) {
                                 Box(Modifier.width(dpx(180)).height(dpx(4)).clip(RoundedCornerShape(50)).background(Color(0x40FFFFFF))) {
                                     Box(Modifier.fillMaxWidth((resume.pos.toFloat() / resume.dur).coerceIn(0f, 1f)).fillMaxHeight().background(Accent2))
@@ -521,6 +521,7 @@ private fun DetailScreenFull(
                         ) {
                             val bh = 44
                             Row(Modifier.onFocusChanged { topRowFocused = it.hasFocus }, horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
+                                if (trailerVisible) HeroButton(if (trailerPaused) "Trailer weiter" else "Trailer stoppen", if (trailerPaused) AIcon.Play else AIcon.Close, false, Modifier, bh) { trailerPaused = !trailerPaused }
                                 if (resume != null) {
                                     val oneSeason = seasons.size <= 1
                                     val label = when {
@@ -543,7 +544,7 @@ private fun DetailScreenFull(
                                     }
                                 }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
+                            if (!trailerVisible) Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
                                 val inList = Library.isWatch(item.id)
                                 HeroButton(if (inList) "In Meiner Liste" else "Meine Liste", if (inList) AIcon.Check else AIcon.Plus, false, Modifier, bh) { Library.toggleWatch(ctx, item.id) }
                                 // Round 14: movies and series as favorites (appear under "Favorites")
@@ -567,7 +568,7 @@ private fun DetailScreenFull(
                                 if (item.kind == Kind.SERIES && eps.isNotEmpty()) SeasonDownloadButton(item, eps, { ep -> pick(ep).url }, bh)
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)
-                            Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
+                            if (!trailerVisible) Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
                                 // Own row for the episode picker: the top row is already full and cut off the button
                                 if (item.kind == Kind.SERIES && eps.isNotEmpty()) EpisodePickButton(item, eps, { ep -> pick(ep).url }, bh)
                                 // A finished resume point would otherwise keep offering "Continue"
@@ -619,7 +620,7 @@ private fun DetailScreenFull(
                                 }
                             }
                         }
-                        if (item.kind == Kind.MOVIE && movieAlts.size > 1) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (!trailerVisible && item.kind == Kind.MOVIE && movieAlts.size > 1) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             // Choose the source explicitly (takes precedence over quality) or automatically to suit the device
                             val so = listOf("Automatisch") + movieVars.map { it.label }
                             DropdownPill("Quelle", prefLabel ?: "Automatisch", so, so.indexOf(prefLabel).coerceAtLeast(0), active = prefLabel != null) {
@@ -639,7 +640,7 @@ private fun DetailScreenFull(
                             else "Diese Quelle war zuletzt nicht erreichbar.",
                             DS.Gold, 14.sp, iconSize = 16.dp, maxLines = 3
                         )
-                        if (multi) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (!trailerVisible && multi) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             if (qualities.size > 1) {
                                 val qo = listOf("Automatisch (passend zum Gerät)") + qualities
                                 DropdownPill("Qualität", prefQ ?: "Automatisch", qo, qo.indexOf(prefQ).coerceAtLeast(0), active = prefQ != null) {
@@ -661,7 +662,7 @@ private fun DetailScreenFull(
                             Text("gilt für alle Folgen", color = Muted, fontSize = 13.sp)
                         }
                         credits?.directors?.takeIf { it.isNotEmpty() }?.let { ds ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (!trailerVisible) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("Regie", color = Muted, fontSize = 14.sp)
                                 ds.take(3).forEach { d -> DetailPill(d.name) { onPerson(PersonRef(d.id, d.name, d.photo, item.id)) } }
                             }
