@@ -21,4 +21,13 @@ class FocusCenterLogicTest {
     @Test fun itemLargerThanContainerDoesNotJump() {
         assertEquals(0f, FocusCenterLogic.scrollDistance(-200f, 1500f, 1000f), 0.001f)
     }
+
+    @Test fun edgeModeDoesNotMoveAVisibleItem() {
+        assertEquals(0f, FocusCenterLogic.edgeDistance(100f, 100f, 1000f), 0.001f)
+    }
+
+    @Test fun edgeModeMovesOnlyWhenCutOffAtTheBottom() {
+        // item from 950 to 1050 in a 1000 container: scroll by 50 + the 90 px margin
+        assertEquals(140f, FocusCenterLogic.edgeDistance(950f, 100f, 1000f), 0.001f)
+    }
 }

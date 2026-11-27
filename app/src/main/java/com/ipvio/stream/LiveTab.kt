@@ -165,7 +165,12 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         LiveRecCache.items = value
     }
     remember { LiveSettings.init(ctx); 0 }   // #96: switch for the automatic genre categories
-    val names = (if (PlaylistStore.lists.size > 1) listOf("PL") else emptyList()) + listOf("HOME", "GUIDE", "SEARCH", "MULTI", FAV_CAT) + (if (recs.isNotEmpty()) listOf("REC") else emptyList()) + myLists.map { ChannelListLogic.key(it) } + listOf("NEW", "ALL") + LiveGenreLogic.visible(genres.keys, HiddenCats.list, LiveSettings.genres) + favCats + CatOrder.sorted(CatOrder.LIVE, groups.keys.toList()).filter { it !in favCats && it !in HiddenCats.list } + (if (HiddenCats.list.any { it in groups || it in genres }) listOf("HIDDEN") else emptyList())
+    // T-077: genre rows take part in the category order (they can be moved); default order unchanged: genres, favourites, providers
+    val genreKeys = LiveGenreLogic.visible(genres.keys, HiddenCats.list, LiveSettings.genres)
+    val liveOrderKeys = (genreKeys + favCats + groups.keys.toList()).distinct()
+    // Every move saves the whole own order: include hidden categories and genre rows, or they would be dropped (T-077)
+    val liveMoveKeys = (liveOrderKeys + groupsAll.keys.toList()).distinct()
+    val names = (if (PlaylistStore.lists.size > 1) listOf("PL") else emptyList()) + listOf("HOME", "GUIDE", "SEARCH", "MULTI", FAV_CAT) + (if (recs.isNotEmpty()) listOf("REC") else emptyList()) + myLists.map { ChannelListLogic.key(it) } + listOf("NEW", "ALL") + CatOrder.sorted(CatOrder.LIVE, liveOrderKeys).filter { it !in HiddenCats.list } + (if (HiddenCats.list.any { it in groups || it in genres }) listOf("HIDDEN") else emptyList())
     val catKeys = remember(names) { val seen = HashSet<String>(); names.mapIndexed { i, n -> if (seen.add(n)) n else "$n#$i" } }
     val curList = ChannelLists.byKey(sel)
     // Own list currently being filled (OK on a channel adds it); declared early because bundling depends on it
@@ -435,6 +440,8 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     var catMenu by remember { mutableStateOf(false) }
                     var genMenu by remember { mutableStateOf(false) }
                     val plainCat = ml == null && n != FAV_CAT && n != "ALL" && n != "REC" && n != "HOME" && !LiveGenre.isGenreKey(n) && groups.containsKey(n)
+                    // Movable: provider categories and genre rows (T-077)
+                    val moveCat = plainCat || LiveGenre.isGenreKey(n)
                     Box {
                         CatRow(
                             label, count, n == hot,
@@ -443,12 +450,12 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             ).then(
                                 if (i == 0) Modifier.focusRequester(firstCat) else Modifier
                             ).then(
-                                if (plainCat && floatingCat == n) Modifier.onPreviewKeyEvent { k ->
+                                if (moveCat && floatingCat == n) Modifier.onPreviewKeyEvent { k ->
                                     // While floating every key belongs to the move: Up/Down move, OK puts it down, Left/Right do nothing
                                     if (k.type != KeyEventType.KeyDown) return@onPreviewKeyEvent k.key != Key.Back
                                     when (k.key) {
-                                        Key.DirectionUp -> { CatOrder.move(ctx, CatOrder.LIVE, groupsAll.keys.toList(), n, -1); true }
-                                        Key.DirectionDown -> { CatOrder.move(ctx, CatOrder.LIVE, groupsAll.keys.toList(), n, 1); true }
+                                        Key.DirectionUp -> { CatOrder.move(ctx, CatOrder.LIVE, liveMoveKeys, n, -1); true }
+                                        Key.DirectionDown -> { CatOrder.move(ctx, CatOrder.LIVE, liveMoveKeys, n, 1); true }
                                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> { floatingCat = null; true }
                                         Key.Back -> false
                                         else -> true
@@ -458,15 +465,23 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             onFocus = { hot = n; inChannels = false; catFocusIdx = i }, onRight = { enterChannels() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null,
-                            floating = plainCat && floatingCat == n
+                            floating = moveCat && floatingCat == n
                         ) { if (floatingCat == null) { hot = n; enterChannels() } }   // touch: a tap does not move focus, so set the category here
                         // Menu of a provider category: favorite on/off, hide, move, sorting of all categories
                         var sortMenu by remember { mutableStateOf(false) }
                         // Menu of a genre category (Sports, Movies, ...): hide
-                        if (genMenu && LiveGenre.isGenreKey(n)) OptionPopup(listOf("Kategorie ausblenden"), -1, { genMenu = false }) { _ ->
+                        if (genMenu && LiveGenre.isGenreKey(n)) OptionPopup(
+                            listOf("Kategorie ausblenden", "Mit Hoch/Runter verschieben", "Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben", "Ans Ende verschieben"), -1, { genMenu = false }
+                        ) { i ->
                             genMenu = false
-                            if (sel == n) sel = "ALL"
-                            HiddenCats.hide(ctx, n)
+                            when (i) {
+                                0 -> { if (sel == n) sel = "ALL"; HiddenCats.hide(ctx, n) }
+                                1 -> floatingCat = n
+                                2 -> CatOrder.move(ctx, CatOrder.LIVE, liveMoveKeys, n, -1)
+                                3 -> CatOrder.move(ctx, CatOrder.LIVE, liveMoveKeys, n, 1)
+                                4 -> CatOrder.toTop(ctx, CatOrder.LIVE, liveMoveKeys, n)
+                                else -> CatOrder.toBottom(ctx, CatOrder.LIVE, liveMoveKeys, n)
+                            }
                         }
                         if (catMenu && plainCat) OptionPopup(
                             listOf(
@@ -476,7 +491,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             ), -1, { catMenu = false }
                         ) { i ->
                             catMenu = false
-                            val all = groupsAll.keys.toList()
+                            val all = liveMoveKeys
                             when (i) {
                                 0 -> CatFavs.toggle(ctx, n)
                                 1 -> { if (sel == n) sel = "ALL"; HiddenCats.hide(ctx, n) }

@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Live TV: genre rows (Sport, Movies, Documentaries, Kids, News, Music) can be moved up and down like the provider categories; the default order is unchanged (B-015, T-077). Not device tested yet
+- Playlist lists opened from the top bar (Home, Movies, Series) close with Left or Right as well as Back (B-016). Not device tested yet
+- Settings: the page moves only when a control is cut off; Down at the last control goes to the Back arrow next to the title (B-014). Not device tested yet
+- Search: Up on the number row goes to the first recent search; search results show no "Movie"/"Series" word on the covers (B-013). Not device tested yet
 - Movies: the same film from several provider entries (e.g. German and English title) is shown once in a category grid and in "Top rated" when the provider sends its TMDB id (or the title is already in the metadata cache). The playlist cache is rewritten once in the new format (version 7); the old cache still loads. Series not yet. Not device tested yet (B-012, T-076)
 - Live TV categories: Up on the first category goes to the last one, and Down on the last goes to the first (before, Up did nothing and Down did not wrap). Same as the channel list. Not device tested yet (B-003)
 - Movies and Series: Left from the titles grid goes back to the category you came from, not to a neighbouring category (regression fixed; same as Live TV). Not device tested yet (B-001)

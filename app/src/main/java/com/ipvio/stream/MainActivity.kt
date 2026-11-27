@@ -139,13 +139,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** T-077: set by the settings page while it is open (read by [SmoothSpec] on every focus step). */
+object FocusScrollMode {
+    var edgeOnly = false
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 val SmoothSpec = object : BringIntoViewSpec {
     // T-070 (device performance): shorter with "Weak device"
     override val scrollAnimationSpec get() = tween<Float>(ThemeMath.scrollMs(DevicePerf.reduceVisuals), easing = FastOutSlowInEasing)
     // T-074 (focus): focused item kept in the middle; at the end of a list the scroll stops and the focus moves on
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
-        FocusCenterLogic.scrollDistance(offset, size, containerSize)
+        // T-077: on the settings page the page moves only when a control is cut off (edge mode), no centring
+        if (FocusScrollMode.edgeOnly) FocusCenterLogic.edgeDistance(offset, size, containerSize)
+        else FocusCenterLogic.scrollDistance(offset, size, containerSize)
 }
 
 @OptIn(ExperimentalFoundationApi::class)

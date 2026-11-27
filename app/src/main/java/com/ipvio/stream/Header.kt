@@ -355,7 +355,7 @@ private fun PlaylistSwitchButton() {
     val pls = PlaylistStore.lists.toList()
     Box {
         TextHeaderButton("Playlist", onClick = { open = true })
-        if (open) OptionPopup(pls.map { it.name }, PlaylistStore.active, { open = false }) { i ->
+        if (open) OptionPopup(pls.map { it.name }, PlaylistStore.active, { open = false }, closeOnSide = true) { i ->
             open = false
             if (i != PlaylistStore.active) PlaylistStore.switchAsync(ctx, i)
         }

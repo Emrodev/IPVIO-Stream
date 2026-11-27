@@ -103,6 +103,32 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 - Test steps: Search with recent searches; on "1" press Up: the first recent search is focused. Open a category (e.g. Movies) with hits: the covers show no kind word.
 - Status: not device tested.
 
+### B-014 Settings: the page moves only when a control is cut off; Down at the last control goes to the Back arrow (T-077)
+
+- Expected: on a settings page the page does not move while the focused control is visible; Down at the last control moves
+  the focus to the Back arrow next to the page title (no wrap, no jump of the page, cursor stays visible).
+- Marker: `if (FocusScrollMode.edgeOnly) FocusCenterLogic.edgeDistance(offset, size, containerSize)` in `app/src/main/java/com/ipvio/stream/MainActivity.kt`
+- Marker: `if (!fm.moveFocus(FocusDirection.Down)) runCatching { backFocus.requestFocus() }` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
+- Test steps: Settings > General: press Down to the last control: the page stops moving before it, the Back arrow gets the focus on the next Down. Same on Design > Colors and Sports Hub.
+- Status: not device tested. Known limit: the hints under the last control are no longer scrolled into view by Down.
+
+### B-015 Live TV: genre rows (Sport, Movies, Documentaries, Kids, News, Music) can be moved (T-077)
+
+- Expected: a genre row can be moved with Up/Down (floating) or with the menu ("Move up", "Move down", "To the top", "To the bottom").
+  The default order is unchanged: genres, favourites, provider categories.
+- Marker: `val liveMoveKeys = (liveOrderKeys + groupsAll.keys.toList()).distinct()` in `app/src/main/java/com/ipvio/stream/LiveTab.kt`
+- Marker: `val moveCat = plainCat || LiveGenre.isGenreKey(n)` in `app/src/main/java/com/ipvio/stream/LiveTab.kt`
+- Test steps: Live TV, on "Sport" press OK and hold or the menu key; move it down two places; restart the app: it keeps the place. The default order is as before.
+- Status: not device tested. The switch "Genre categories in Live TV" still turns all of them off.
+
+### B-016 Playlist lists: Left or Right closes them, like Back (T-077)
+
+- Expected: the playlist list opened from the top bar ("Playlist" button on Home, Movies and Series) closes with Left or Right, as well as with Back.
+- Marker: `closeOnSide = true` in `app/src/main/java/com/ipvio/stream/Header.kt`
+- Marker: `if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight)) { onDismiss(); true } else false` in `app/src/main/java/com/ipvio/stream/SectionPlaylistUi.kt`
+- Test steps: open the "Playlist" list on Home, press Left: it closes. Same on Movies and Series (the area playlist pill).
+- Status: not device tested.
+
 ### B-010 Trakt sign-in on the phone: the login link opens in its own tab
 
 - Expected: the code page stays open; the paste works after the login (not "The sign-in was not accepted").

@@ -39,7 +39,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
-import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
@@ -101,6 +100,11 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
     }
     val cardFocus = remember { List(CATS.size) { if (it == 0) ContentFocus.req else FocusRequester() } }
     val backFocus = remember { FocusRequester() }
+    // T-077: the page scrolls in edge mode while the settings are open (see SmoothSpec in MainActivity)
+    DisposableEffect(Unit) {
+        FocusScrollMode.edgeOnly = true
+        onDispose { FocusScrollMode.edgeOnly = false }
+    }
     BackHandler(enabled = page >= 0) { page = -1 }
     LaunchedEffect(page) {
         runCatching { if (page < 0) cardFocus[last].requestFocus() else backFocus.requestFocus() }
@@ -129,14 +133,12 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 SettingsBack(Modifier.focusRequester(backFocus)) { page = -1 }
                 Text(CATS[page].title, color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold)
             }
-            // Below the last selectable element there are often still hints: Down at the end brings them into view
+            // T-077: Down at the last control goes to the Back arrow (no wrap, no page jump); the page only moves when a control is cut off
             val fm = LocalFocusManager.current
-            val endReq = remember { BringIntoViewRequester() }
-            val endScope = rememberCoroutineScope()
             Column(
                 Modifier.onKeyEvent { e ->
                     if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) {
-                        if (!fm.moveFocus(FocusDirection.Down)) endScope.launch { runCatching { endReq.bringIntoView() } }
+                        if (!fm.moveFocus(FocusDirection.Down)) runCatching { backFocus.requestFocus() }
                         true
                     } else false
                 }.fillMaxWidth().clip(RoundedCornerShape(dpx(18))).background(Color(0x0DFFFFFF))
