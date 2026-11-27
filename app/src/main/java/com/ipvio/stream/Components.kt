@@ -144,14 +144,15 @@ fun seriesInfo(item: Item): String {
     return if (ec <= 0) a else a + " · " + (if (ec == 1) "1 Folge" else "$ec Folgen")
 }
 
-/** For cards the smaller TMDB image size is enough (w342 instead of w500): less data, faster, less memory. */
-fun cardPoster(url: String): String = url.replace("/t/p/w500/", "/t/p/w342/")
+/** For cards the smaller TMDB image size is enough (w342 instead of w500): less data, faster, less memory. T-070: w185 with "Weak device". */
+fun cardPoster(url: String): String = DevicePerfLogic.cardPoster(url, DevicePerf.profile.smallImages)
 
 @Composable
 fun PosterCard(
     item: Item, onClick: () -> Unit, modifier: Modifier = Modifier,
     progress: Float? = null, subtitle: String? = null,
-    fixedPosterHeight: Dp? = null, onFocus: () -> Unit = {}, titleLines: Int = 1
+    fixedPosterHeight: Dp? = null, onFocus: () -> Unit = {}, titleLines: Int = 1,
+    kindBadge: Boolean = true
 ) {
     val st = rememberMetaState(item)
     val m = st.meta
@@ -191,7 +192,8 @@ fun PosterCard(
             )
             Box(Modifier.align(Alignment.TopStart).padding(8.dp)) {
                 // Broken (on playback "no longer available" or failed several times): warning icon instead of artwork
-                if (item.kind != Kind.SERIES && DeadLinks.isDead(item.url)) Badge("Gestört", DS.Scrim, DS.Gold, AIcon.Warning) else Badge(kindLabel(item.kind), DS.Scrim)
+                // kindBadge = false inside a list whose heading already names the kind (search results)
+                if (item.kind != Kind.SERIES && DeadLinks.isDead(item.url)) Badge("Gestört", DS.Scrim, DS.Gold, AIcon.Warning) else if (kindBadge) Badge(kindLabel(item.kind), DS.Scrim)
             }
             qualityOf(item)?.let { Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) { QualityBadge(it) } }
             m?.rating?.let {

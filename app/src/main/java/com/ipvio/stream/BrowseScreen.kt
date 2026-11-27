@@ -65,6 +65,8 @@ class BrowseState(req0: BrowseReq) {
     internal var lastKey: BrowseKey? = null
     internal var lastList: List<Item>? = null
     internal var lastFacets: Pair<Int, Facets>? = null
+    /** T-069: language choices of [req]'s titles (counted in the background, kept for the return from the detail page) */
+    internal var lastLangs: Pair<List<Item>, List<String>>? = null
 }
 
 internal data class BrowseKey(val sort: Int, val minRi: Int, val year: String, val genre: String?, val country: String?, val ver: Int, val source: Int = -1, val lang: String? = null)
@@ -216,7 +218,12 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
     val browseKind = remember(req) { req.items.firstOrNull()?.kind }
     // Restore the saved language once, before the first list is computed
     remember(state) { if (!state.langInit) { state.langInit = true; state.lang = BrowseLangPrefs.get(ctx, browseKind) }; 0 }
-    val langOptions = remember(req) { BrowseLangPrefs.available(req.items) }
+    // T-069: counted in the background ("All movies" can have 60,000 titles), like the other filter choices; the pill appears with the result
+    val langOptions by produceState(state.lastLangs?.takeIf { it.first === req.items }?.second ?: emptyList(), req) {
+        val items = req.items
+        state.lastLangs?.takeIf { it.first === items }?.let { value = it.second; return@produceState }
+        value = withContext(Dispatchers.Default) { BrowseLangPrefs.available(items) }.also { state.lastLangs = items to it }
+    }
     val key = BrowseKey(state.sort, state.minRi, state.year, state.genre, state.country, ver, state.source, state.lang)
     val listOrNull by produceState(state.lastList?.takeIf { state.lastKey == key }, req, key) {
         value = withContext(Dispatchers.Default) { filterAndSort(req.items, key) }.also { state.lastKey = key; state.lastList = it }
@@ -231,8 +238,11 @@ var restoreIdx by remember { mutableIntStateOf(state.focused) }
             listState.scrollToItem(restoreIdx)
             withFrameNanos { }
             withFrameNanos { }
-        } else delay(200)
-        runCatching { restoreFocus.requestFocus() }
+            runCatching { restoreFocus.requestFocus() }
+        } else {
+            // T-069d: as soon as the grid is laid out (before: always after 200 ms)
+            focusSoon(200) { runCatching { restoreFocus.requestFocus() }.getOrDefault(false) }
+        }
     }
 
     // Stalker portal: near the end of the list fetch the next titles of the category (like IPTVnator when scrolling)

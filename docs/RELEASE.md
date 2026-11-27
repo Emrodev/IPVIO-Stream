@@ -40,7 +40,20 @@ Users of an APK signed with a different key have to uninstall once (Settings > S
 
 Since 15 Nov 2026, `.github/workflows/release.yml` does steps 1 to 6 after a merge from `dev` into `main`. It runs the tests first and publishes only if they pass. It refuses to overwrite an existing tag, and it writes `update.json` with the SHA-256 itself. If `docs/release-notes/v<versionName>.md` exists, it is the release text and its first four highlight lines become the `notes` in `update.json`; without it, GitHub lists the merged pull requests and the update dialog shows no notes. The manual steps below are the fallback and still define the file format.
 
-**Required before the first automatic release:** the GitHub secrets `ANDROID_KEYSTORE_BASE64` (base64 of the keystore file), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` must hold the **same key** that signed 1.4.2. A different key means that no user can install the update over the app.
+**Required before the first automatic release:** the GitHub secrets `ANDROID_KEYSTORE_BASE64` (base64 of the keystore file), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` must hold the **same key** that signed 1.4.2. A different key means that no user can install the update over the app. **Check this before every release**, see "Signature check before every release" below: the log of 1.5.1 shows the release job signed with the Android debug key, not with the secrets key.
+
+### Signature check before every release (mandatory)
+
+A new version only installs over the old one when both APKs have the **same signing certificate**. If they differ, Android refuses the update and every user has to uninstall the app and lose local data. That must never happen. Do this **before** merging `dev` into `main` (the merge starts the release):
+
+1. Note the certificate of the **published** APK: download `IPVIO-Stream.apk` from `releases/latest`, run `apksigner verify --print-certs IPVIO-Stream.apk` (build-tools of the Android SDK) and note `Signer #1 certificate SHA-256 digest`.
+2. Note the same digest of the **new** build: the `Verify signature` step of the release job prints it (`V2 Signer: certificate SHA-256 digest`), or run the same command on the APK of the new build.
+3. The two digests must be equal. If they differ, **stop**: do not merge into `main`. Decide with the maintainer how existing users are moved (a change of key always needs a plan).
+4. After the release job: its `Verify signature` line must equal the digest of the previous release. Write the checked value below.
+
+**Known state (checked 27 Nov 2026):** the release job of 1.5.1 (run 45681691599, job `release`) signed the APK with the **Android debug key**, `V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug`, SHA-256 digest `e447a64b67fa17ad8caf0372e93e8b52fc9809b9e4c17c75e8477538ebe8b560`. The secrets keystore was not used in that run, although the secrets were set. So 1.5.2 can only be installed over 1.5.1 while the runner keeps producing the same debug key. The release job now compares the digest with this value before it publishes anything (step "Refuse a signing certificate other than the published one"). A different key stops the release, so nothing reaches users.
+
+**Digest of the currently published release (update this after each release):** `e447a64b67fa17ad8caf0372e93e8b52fc9809b9e4c17c75e8477538ebe8b560` (1.5.1).
 
 1. In `app/build.gradle.kts` raise `versionCode` (by 1) and `versionName` (e.g. `"1.2"`).
 2. Build the signed APK: `gradlew assembleRelease` (or Build > Generate Signed App Bundle / APK).

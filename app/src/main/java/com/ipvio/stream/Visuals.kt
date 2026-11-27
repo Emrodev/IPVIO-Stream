@@ -88,7 +88,7 @@ fun ArtPlaceholder(item: Item, modifier: Modifier = Modifier, showTitle: Boolean
 fun Modifier.screenEnter(key: Any? = Unit): Modifier {
     if (Look.motion == 0) return this
     val a = remember(key) { Animatable(0f) }
-    LaunchedEffect(key) { a.animateTo(1f, tween(if (Look.motion == 1) 220 else 380, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(key) { a.animateTo(1f, tween(ThemeMath.screenEnterMs(Look.motion), easing = FastOutSlowInEasing)) }
     return this.graphicsLayer {
         alpha = a.value
         translationY = (1f - a.value) * 18.dp.toPx()

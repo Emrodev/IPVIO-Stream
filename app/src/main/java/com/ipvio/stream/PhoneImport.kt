@@ -191,7 +191,7 @@ button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;backg
         val href = authUrl.replace("&", "&amp;").replace("\"", "&quot;")
         return traktWrap("Sign in to Trakt",
             """<p>1. Tap the button and sign in to Trakt.</p>
-<p><a href="$href">Sign in to Trakt</a></p>
+<p><a href="$href" target="_blank" rel="noopener">Sign in to Trakt</a></p>
 <p>2. Trakt sends you to a page with a code. Copy the whole text shown there (code|state) and paste it below.</p>
 <form method="post" action="/trakt"><input type="hidden" name="code" value="${code.filter { it.isDigit() }}">
 <textarea name="cb" rows="3" style="width:100%" placeholder="code|state" required></textarea>

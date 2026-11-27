@@ -136,7 +136,7 @@ Alle {#0}¦Wszystkie ({#0})
 Alle {0}¦Wszystkie {0}
 Keine {0} in dieser Playlist¦{0} – brak w tej playliście
 Weitere Kategorien findest du unter „Kategorien“ oben.¦Więcej kategorii znajdziesz powyżej w „Kategorie”.
-Filme, Serien oder Sender suchen…¦Szukaj filmów, seriali lub kanałów…
+Filme, Serien oder Sender suchen…¦Szukaj...
 Letzte Suchanfragen¦Ostatnie wyszukiwania
 Verlauf löschen¦Wyczyść historię
 Keine Treffer für „{0}“¦Brak wyników dla „{0}”

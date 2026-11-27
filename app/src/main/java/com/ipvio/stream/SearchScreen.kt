@@ -71,8 +71,11 @@ internal object SearchCache {
     @Synchronized fun suggest(all: List<Item>): WordSuggest = sug?.takeIf { it.first === all }?.second ?: WordSuggest(all).also { sug = all to it }
 }
 
-/** Programme hits for the typed text: [live] = shows on other channels running now, [sport] = sport shows running now or in the next 24 hours. */
-private class ProgState(val live: List<ProgSearchLogic.Hit>, val sport: List<ProgSearchLogic.Hit>)
+/**
+ * Programme hits for the typed text: [live] = shows on other channels running now, [sport] = sport shows running now or in the next 24 hours.
+ * [items] = the channels of these hits by id (T-069: found in the background, so opening the search no longer builds a map of the whole playlist).
+ */
+private class ProgState(val live: List<ProgSearchLogic.Hit>, val sport: List<ProgSearchLogic.Hit>, val items: Map<String, Item> = emptyMap())
 
 /** One card of a result row: the channel, and the programme when the card is a programme hit (null = channel name hit). */
 private class HitCard(val item: Item, val program: ProgSearchLogic.Hit?)
@@ -82,9 +85,17 @@ private class HitCard(val item: Item, val program: ProgSearchLogic.Hit?)
  * XMLTV guide first; Xtream channels without XMLTV get their short guide (at most [ProgSearchLogic.XTREAM_FETCH_PER_REQUEST], 9 s).
  */
 private suspend fun progHits(all: List<Item>, q: String): ProgState {
-    val xt = all.filter { it.kind == Kind.LIVE && !Xmltv.hasItem(it) && Epg.supported(it) && Epg.peek(it) == null }
-        .take(ProgSearchLogic.XTREAM_FETCH_PER_REQUEST)
+    // T-069: both passes over all channels run off the main thread (before, they ran on it after every typing pause).
+    // The guide caches read here are thread safe (ConcurrentHashMap, LruCache, volatile maps).
+    val xt = withContext(Dispatchers.Default) {
+        all.asSequence().filter { it.kind == Kind.LIVE && !Xmltv.hasItem(it) && Epg.supported(it) && Epg.peek(it) == null }
+            .take(ProgSearchLogic.XTREAM_FETCH_PER_REQUEST).toList()
+    }
     if (xt.isNotEmpty()) withTimeoutOrNull(9_000) { coroutineScope { xt.map { async { Epg.now(it) } }.awaitAll() } }
+    return withContext(Dispatchers.Default) { progMatch(all, q) }
+}
+
+private fun progMatch(all: List<Item>, q: String): ProgState {
     val now = System.currentTimeMillis() / 1000
     val sportIds = HashSet<String>()
     val hits = ArrayList<ProgSearchLogic.Hit>()
@@ -97,7 +108,10 @@ private suspend fun progHits(all: List<Item>, q: String): ProgState {
     val live = ProgSearchLogic.select(hits.filter { it.channelId !in sportIds }, now, ProgSearchLogic.Mode.LIVE)
     val sport = (ProgSearchLogic.select(hits.filter { it.channelId in sportIds }, now, ProgSearchLogic.Mode.LIVE) +
         ProgSearchLogic.select(hits.filter { it.channelId in sportIds }, now, ProgSearchLogic.Mode.UPCOMING)).sortedBy { it.start }
-    return ProgState(live, sport)
+    val ids = HashSet<String>()
+    for (h in live) ids.add(h.channelId)
+    for (h in sport) ids.add(h.channelId)
+    return ProgState(live, sport, ScreenCacheLogic.byIds(ids, all) { it.id })
 }
 
 /** Live channel cards: the channel name hits (with their running show if one matches), then the programme hits of other channels. */
@@ -128,7 +142,6 @@ fun SearchScreen(
     val scope = rememberCoroutineScope()
     // Private categories (T-028) are not searchable; they stay reachable through their own category
     val all = PlaylistStore.channels.let { PrivateCats.visible(it) }
-    val byId = remember(all) { all.associateBy { it.id } }
     // Build the index in the background; searches also run in the background and only after a short typing pause
     // With very large playlists memory can run out while the index is built: then free the image cache and try once more,
     // and if it still does not fit, the search stays empty instead of the app crashing.
@@ -165,6 +178,8 @@ fun SearchScreen(
     val sideFocus = remember { FocusRequester() }
     val tilesFirst = remember { FocusRequester() }
     val heroFirst = remember { FocusRequester() }
+    // "Show all hits" on an empty category: Down from the tiles goes there, because there is no result row to go to
+    val noHitsBtn = remember { FocusRequester() }
     var inSidebar by remember { mutableStateOf(false) }
 
     SideEffect { NavState.tab = tab; ContentFocus.tab = tab }
@@ -217,8 +232,8 @@ fun SearchScreen(
     val prog = if (progFor.first == q && !searching) progFor.second else ProgState(emptyList(), emptyList())
     // Sport: channel name hits that look like sports channels (sport filter), and the sport shows
     val rlSport = remember(rl0) { rl0.filter { SearchSport.isSport(it) } }
-    val liveAll = remember(rl0, prog.live, byId) { liveCardsOf(rl0, prog.live, byId) }
-    val sportAll = remember(prog.sport, byId) { prog.sport.mapNotNull { h -> byId[h.channelId]?.let { HitCard(it, h) } } }
+    val liveAll = remember(rl0, prog.live, prog.items) { liveCardsOf(rl0, prog.live, prog.items) }
+    val sportAll = remember(prog.sport, prog.items) { prog.sport.mapNotNull { h -> prog.items[h.channelId]?.let { HitCard(it, h) } } }
     // People (T-053c): TMDB person search, debounced; empty without a TMDB key
     val people by produceState(emptyList<PersonRef>(), q) {
         if (q.length < 2) { value = emptyList(); return@produceState }
@@ -353,7 +368,11 @@ fun SearchScreen(
                             recent.forEachIndexed { i, term ->
                                 // OK searches again, long OK / menu key removes just this entry
                                 MiniChip(term, false, (if (i == 0) Modifier.focusRequester(firstHistory) else Modifier)
-                                    .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true, icon = AIcon.History) { SearchState.query = term }
+                                    .menuKeys(onMenu = { AppSettings.removeSearch(ctx, term) }, onLong = { AppSettings.removeSearch(ctx, term) }), raw = true, icon = AIcon.History) {
+                                    // Same as #101 above: the chips disappear after a pick, so keep focus in the search screen
+                                    SearchState.query = term
+                                    runCatching { ContentFocus.req.requestFocus() }
+                                }
                             }
                             if (allRecent.size > 3) MiniChip("Alle anzeigen", false) { showAllHistory = true }
                         }
@@ -385,7 +404,9 @@ fun SearchScreen(
                     onVoice = if (canVoice) ({ runCatching { voice.launch(VoiceSearch.intent()) }.onFailure { canVoice = false } }) else null,
                     firstKey = ContentFocus.req,
                     onFocusChange = { fieldFocused = it },
-                    onRight = { runCatching { tilesFirst.requestFocus() }.isSuccess }
+                    onRight = { runCatching { tilesFirst.requestFocus() }.isSuccess },
+                    // T-079: Up from the number row: first suggestion if any are shown, else the first recent search
+                    onUp = { runCatching { firstSugg.requestFocus() }.isSuccess || runCatching { firstHistory.requestFocus() }.isSuccess }
                 )
                 }
             }
@@ -406,7 +427,7 @@ fun SearchScreen(
                         if (e.type != KeyEventType.KeyDown) false
                         else when (e.key) {
                             Key.DirectionUp -> runCatching { heroFirst.requestFocus() }.isSuccess
-                            Key.DirectionDown -> runCatching { firstRes.requestFocus() }.isSuccess
+                            Key.DirectionDown -> runCatching { (if (selectedEmpty && fl != 0) noHitsBtn else firstRes).requestFocus() }.isSuccess
                             else -> false
                         }
                     },
@@ -481,7 +502,7 @@ fun SearchScreen(
                                     if (others.isNotEmpty()) Text(Lang.tr("Treffer gibt es in {0}.").replace("{0}", others), color = Muted, fontSize = skf(19), raw = true)
                                     if (fl == 5 && !MetaRepo.enabled()) Text(Lang.tr("Personen-Suche braucht einen TMDB-Schlüssel."), color = Muted, fontSize = skf(19), raw = true)
                                 }
-                                PillButton("Alle Treffer zeigen", light = true) { SearchState.filter = 0 }
+                                PillButton("Alle Treffer zeigen", Modifier.focusRequester(noHitsBtn), light = true) { SearchState.filter = 0 }
                             }
                         }
                     }
@@ -698,7 +719,7 @@ private fun SearchRow(
                 itemsIndexed(list.take(60)) { i, x ->
                     val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) { report(x); showRow() } }
                     if (x.kind == Kind.LIVE) LiveCard(x, { onOpen(x) }, Modifier.width(sk(300)).then(fr))
-                    else PosterCard(x, { onOpen(x) }, Modifier.width(sk(168)).restoreFocus(x.id).then(fr))
+                    else PosterCard(x, { onOpen(x) }, Modifier.width(sk(168)).restoreFocus(x.id).then(fr), kindBadge = false)
                 }
             }
         }
@@ -866,7 +887,8 @@ private fun KbKey(label: String, modifier: Modifier, onFocusChange: (Boolean) ->
 private fun SketchKeyboard(
     modifier: Modifier, onKey: (String) -> Unit, onSpace: () -> Unit, onDelete: () -> Unit, onClear: () -> Unit,
     onPhone: (() -> Unit)?, onVoice: (() -> Unit)?,
-    firstKey: FocusRequester, onFocusChange: (Boolean) -> Unit, onRight: () -> Boolean
+    firstKey: FocusRequester, onFocusChange: (Boolean) -> Unit, onRight: () -> Boolean,
+    onUp: () -> Boolean = { false }
 ) {
     var symbols by remember { mutableStateOf(false) }
     var special by remember { mutableStateOf(false) }
@@ -875,7 +897,10 @@ private fun SketchKeyboard(
     val gap = sk(9)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(sk(10))) {
         // Number row (always visible)
-        Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
+        // Up from the number row goes to the first recent search (the keyboard sits left, the recent searches right)
+        Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth().onPreviewKeyEvent { e ->
+            e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && onUp()
+        }) {
             KB_DIGITS.forEachIndexed { c, k ->
                 SketchKey(k.toString(), Modifier.weight(1f).then(if (c == 0) Modifier.focusRequester(firstKey) else Modifier), onFocusChange, if (c == KB_DIGITS.lastIndex) onRight else null) { onKey(k.toString()) }
             }

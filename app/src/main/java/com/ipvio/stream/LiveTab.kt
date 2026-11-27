@@ -43,7 +43,8 @@ object ZapContext {
 }
 
 /** How long the focus must rest on a category before the channel column switches to it (ms). */
-private const val CAT_REST_MS = 220L
+// T-069d: 140 ms (before 220 ms); still longer than the key repeat, so holding Down builds no list on the way
+private const val CAT_REST_MS = 140L
 
 /** Remembers the last chosen category / list in Live TV (also across a restart). */
 object LiveMemory {
@@ -78,6 +79,15 @@ internal suspend fun holdJump(state: LazyListState, index: Int) {
     else if (row.offset + row.size > info.viewportEndOffset) state.scrollToItem(index, -(info.viewportEndOffset - peek - row.size).coerceAtLeast(0))
 }
 
+/** T-069: filtered channel lists of the last visit (playlist filter, private categories); emptied by [ScreenCaches]. */
+internal object LiveListCache {
+    val live = LastResults<List<Item>>(max = 1)
+    val groups = LastResults<Map<String, List<Item>>>(max = 1)
+    /** Channels by id, only built when an own channel list needs it */
+    val byId = LastResults<Map<String, Item>>(max = 1)
+    fun clear() { live.clear(); groups.clear(); byId.clear() }
+}
+
 /** Last read recordings (session only), shown while the folder is read again in the background. */
 private object LiveRecCache {
     @Volatile var items: List<Item> = emptyList()
@@ -105,10 +115,17 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     val srcVer = AreaSource.version
     val srcK = remember(srcVer, srcNames, PlaylistMode.version) { AreaSource.sources(ctx, SectionSourceLogic.SECTION_LIVE) }
     // Private categories (T-028) stay in their own category only: not in "All channels", genres, search, Multi view
-    val live = remember(liveAll, srcK, PrivateCats.version) { PrivateCats.filter(if (srcK.isEmpty()) liveAll else liveAll.filter { it.src in srcK }) }
+    // T-069: the filtered lists come from LiveListCache, so every visit of Live TV gets the same list objects back: the genre
+    // rows (LiveGenre.split, a pass with patterns over all channels) and the bundles are then found in their caches instead of
+    // being computed again on the main thread each time the tab opens with a playlist filter or private categories.
+    val live = remember(liveAll, srcK, PrivateCats.version) {
+        LiveListCache.live.get(liveAll, srcK to PrivateCats.version) { PrivateCats.filter(if (srcK.isEmpty()) liveAll else liveAll.filter { it.src in srcK }) }
+    }
     val groups = remember(groupsAll, srcK) {
-        if (srcK.isEmpty()) groupsAll else LinkedHashMap<String, List<Item>>().also { m ->
-            for ((g, l) in groupsAll) { val f = l.filter { it.src in srcK }; if (f.isNotEmpty()) m[g] = f }
+        if (srcK.isEmpty()) groupsAll else LiveListCache.groups.get(groupsAll, srcK) {
+            LinkedHashMap<String, List<Item>>().also { m ->
+                for ((g, l) in groupsAll) { val f = l.filter { it.src in srcK }; if (f.isNotEmpty()) m[g] = f }
+            }
         }
     }
     // Genres (sports, movies, documentary, kids, news, music) – detected by category and channel name
@@ -139,7 +156,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     val favCats = CatFavs.list.filter { it in groups && it !in HiddenCats.list }
     val myLists = ChannelLists.lists.toList()
     // Only built when an own channel list needs it (thousands of channels, not needed for opening the tab)
-    val byIdLazy = remember(live) { lazy { live.associateBy { it.id } } }
+    val byIdLazy = remember(live) { lazy { LiveListCache.byId.get(live) { live.associateBy { it.id } } } }
     // Order: favorites, own channel lists, "New channel list", all channels, categories
     // Recordings (round 20): own category as soon as there are any
     // Reading the recordings folder (also USB storage) is file I/O: done in the background, the last result shows meanwhile
@@ -148,7 +165,12 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
         LiveRecCache.items = value
     }
     remember { LiveSettings.init(ctx); 0 }   // #96: switch for the automatic genre categories
-    val names = (if (PlaylistStore.lists.size > 1) listOf("PL") else emptyList()) + listOf("HOME", "GUIDE", "SEARCH", "MULTI", FAV_CAT) + (if (recs.isNotEmpty()) listOf("REC") else emptyList()) + myLists.map { ChannelListLogic.key(it) } + listOf("NEW", "ALL") + LiveGenreLogic.visible(genres.keys, HiddenCats.list, LiveSettings.genres) + favCats + CatOrder.sorted(CatOrder.LIVE, groups.keys.toList()).filter { it !in favCats && it !in HiddenCats.list } + (if (HiddenCats.list.any { it in groups || it in genres }) listOf("HIDDEN") else emptyList())
+    // T-077: genre rows take part in the category order (they can be moved); default order unchanged: genres, favourites, providers
+    val genreKeys = LiveGenreLogic.visible(genres.keys, HiddenCats.list, LiveSettings.genres)
+    val liveOrderKeys = (genreKeys + favCats + groups.keys.toList()).distinct()
+    // Every move saves the whole own order: include hidden categories and genre rows, or they would be dropped (T-077)
+    val liveMoveKeys = (liveOrderKeys + groupsAll.keys.toList()).distinct()
+    val names = (if (PlaylistStore.lists.size > 1) listOf("PL") else emptyList()) + listOf("HOME", "GUIDE", "SEARCH", "MULTI", FAV_CAT) + (if (recs.isNotEmpty()) listOf("REC") else emptyList()) + myLists.map { ChannelListLogic.key(it) } + listOf("NEW", "ALL") + CatOrder.sorted(CatOrder.LIVE, liveOrderKeys).filter { it !in HiddenCats.list } + (if (HiddenCats.list.any { it in groups || it in genres }) listOf("HIDDEN") else emptyList())
     val catKeys = remember(names) { val seen = HashSet<String>(); names.mapIndexed { i, n -> if (seen.add(n)) n else "$n#$i" } }
     val curList = ChannelLists.byKey(sel)
     // Own list currently being filled (OK on a channel adds it); declared early because bundling depends on it
@@ -289,29 +311,43 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     // snapshotFlow instead of LaunchedEffect(focusTarget): reading the state in composition would recompose the whole tab on every focus move
     // (held Down key = dozens of recompositions per second on a Fire TV stick)
     LaunchedEffect(Unit) {
-        snapshotFlow { focusTarget }.collectLatest { t -> if (focusedState.value != null) kotlinx.coroutines.delay(300); focusedState.value = t }
+        // T-069d: the info follows after 200 ms of rest (before 300 ms)
+        snapshotFlow { focusTarget }.collectLatest { t -> if (focusedState.value != null) kotlinx.coroutines.delay(200); focusedState.value = t }
     }
     Box(Modifier.fillMaxSize()) {
         FocusedBackdrop(focusedState, Modifier.fillMaxSize())
         Row(Modifier.fillMaxSize().padding(top = 20.dp)) {
-            // Up on the first category goes to the last one (like the channel list, #107)
+            // Up on the first category goes to the last one and Down on the last goes to the first (like the channel list, #107).
+            // Same pattern as the channel list: one key handler on the list, the focused row index is tracked.
+            val firstCat = remember { FocusRequester() }
             val lastCat = remember { FocusRequester() }
-            fun wrapCat() {
+            var catFocusIdx by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+            fun wrapCat(target: Int) {
                 plScope.launch {
-                    catState.scrollToItem(names.lastIndex)
+                    catState.scrollToItem(target)
+                    val req = if (target == 0) firstCat else lastCat
+                    // The target row is composed after the scroll; retry briefly until its focus requester is attached
                     repeat(20) {
-                        if (runCatching { lastCat.requestFocus() }.isSuccess) return@launch
+                        if (runCatching { req.requestFocus() }.isSuccess) return@launch
                         kotlinx.coroutines.delay(30)
                     }
                 }
             }
-            LazyColumn(Modifier.width(270.dp).fillMaxHeight().padding(start = 24.dp, end = 8.dp), state = catState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            LazyColumn(
+                Modifier.width(270.dp).fillMaxHeight().padding(start = 24.dp, end = 8.dp).onPreviewKeyEvent { e ->
+                    // Edge wrap only when no category is being moved (a moved category uses Up/Down itself)
+                    if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp) && e.nativeKeyEvent.repeatCount == 0 && floatingCat == null &&
+                        GuideWrapLogic.wrapTarget(catFocusIdx, names.size, e.key == Key.DirectionDown)?.let { wrapCat(it) } != null) true
+                    else false
+                },
+                state = catState, verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 // Stable keys: after moving a category, focus and menu state move with the row (duplicates get an index suffix)
                 itemsIndexed(names, key = { i, n -> catKeys.getOrElse(i) { "$n#$i" } }) { i, n ->
                     val ml = ChannelLists.byKey(n)
                     if (n == "GUIDE") {
                         // TV guide as in the design: starts the last watched (otherwise first) channel of the selection and opens the guide
-                        CatRow("TV-Guide", -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Grid) {
+                        CatRow("TV-Guide", -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Grid) {
                             val src = list.ifEmpty { live }
                             val ch = History.ids.firstNotNullOfOrNull { id -> src.firstOrNull { it.id == id && !ParentalLogic.isAdult(it.group, it.title) } } ?: src.firstOrNull()
                             if (ch != null) { ZapContext.list = src; ZapContext.key = sel; AppNav.openGuide = true; onOpen(ch) }
@@ -319,14 +355,14 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "MULTI") {
-                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
+                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
                         return@itemsIndexed
                     }
                     if (n == "SEARCH") {
                         CatRow(
                             Lang.tr("Sender suchen") + if (query.isNotBlank()) ": $query" else "", -1, hot == "SEARCH",
                             if (hot == "SEARCH") Modifier.focusRequester(ContentFocus.req) else Modifier,
-                            onFocus = { hot = "SEARCH"; sel = "SEARCH" },
+                            onFocus = { hot = "SEARCH"; sel = "SEARCH"; catFocusIdx = i },
                             onRight = { runCatching { kbFirst.requestFocus() } },
                             onFav = {}, icon = AIcon.Edit, raw = true
                         ) { hot = "SEARCH"; sel = "SEARCH"; runCatching { kbFirst.requestFocus() } }   // touch: no focus change on tap
@@ -337,7 +373,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         var plChanged by remember { mutableStateOf(false) }
                         val lbl = Lang.tr("Playlist") + ": " + sectionPlaylistValue(ctx, SectionSourceLogic.SECTION_LIVE, AreaSource.selectedKeys(ctx, SectionSourceLogic.SECTION_LIVE))
                         Box {
-                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Download, raw = true) { plChanged = false; plOpen = true }
+                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Download, raw = true) { plChanged = false; plOpen = true }
                             if (plOpen) SectionPlaylistPopup(SectionSourceLogic.SECTION_LIVE, onChanged = { plChanged = true }) {
                                 plOpen = false; plBack = true
                                 // The chosen category may not exist in the new selection: then "All channels"
@@ -348,7 +384,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     }
                     if (n == "SRC") {
                         val lbl = Lang.tr("Quelle") + ": " + (if (srcK.isEmpty()) Lang.tr("Alle") else srcK.sorted().mapNotNull { srcNames.getOrNull(it) }.joinToString(", ").ifEmpty { Lang.tr("Keine Playlist") })
-                        CatRow(lbl, -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Sliders, raw = true) {
+                        CatRow(lbl, -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Sliders, raw = true) {
                             // One press: All -> first shown playlist -> next -> ... -> All (same order as before)
                             val cur = if (srcK.size == 1) srcK.first() else -1
                             val next = cur + 1
@@ -362,7 +398,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         var hidMenu by remember { mutableStateOf(false) }
                         val hid = HiddenCats.list.filter { it in groups || it in genres }
                         Box {
-                            CatRow(Lang.tr("Ausgeblendete") + " (" + hid.size + ")", -1, false, Modifier, onFocus = {}, onRight = {}, onFav = {}, icon = AIcon.Sliders, raw = true) { hidMenu = true }
+                            CatRow(Lang.tr("Ausgeblendete") + " (" + hid.size + ")", -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = {}, onFav = {}, icon = AIcon.Sliders, raw = true) { hidMenu = true }
                             if (hidMenu) OptionPopup(listOf("Alle wieder einblenden") + hid.map { LiveGenre.byKey(it)?.label ?: it }, -1, { hidMenu = false }) { i ->
                                 hidMenu = false
                                 if (i == 0) HiddenCats.showAll(ctx) else HiddenCats.show(ctx, hid[i - 1])
@@ -371,7 +407,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "NEW") {
-                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Plus) { newList(null) }
+                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Plus) { newList(null) }
                         return@itemsIndexed
                     }
                     val label = when {
@@ -404,40 +440,48 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     var catMenu by remember { mutableStateOf(false) }
                     var genMenu by remember { mutableStateOf(false) }
                     val plainCat = ml == null && n != FAV_CAT && n != "ALL" && n != "REC" && n != "HOME" && !LiveGenre.isGenreKey(n) && groups.containsKey(n)
+                    // Movable: provider categories and genre rows (T-077)
+                    val moveCat = plainCat || LiveGenre.isGenreKey(n)
                     Box {
                         CatRow(
                             label, count, n == hot,
                             (if (n == hot) Modifier.focusRequester(ContentFocus.req) else Modifier).then(
                                 if (i == names.lastIndex) Modifier.focusRequester(lastCat) else Modifier
                             ).then(
-                                if (i == 0) Modifier.onPreviewKeyEvent { k ->
-                                    if (k.type == KeyEventType.KeyDown && k.key == Key.DirectionUp && !(plainCat && floatingCat == n)) { wrapCat(); true } else false
-                                } else Modifier
+                                if (i == 0) Modifier.focusRequester(firstCat) else Modifier
                             ).then(
-                                if (plainCat && floatingCat == n) Modifier.onPreviewKeyEvent { k ->
+                                if (moveCat && floatingCat == n) Modifier.onPreviewKeyEvent { k ->
                                     // While floating every key belongs to the move: Up/Down move, OK puts it down, Left/Right do nothing
                                     if (k.type != KeyEventType.KeyDown) return@onPreviewKeyEvent k.key != Key.Back
                                     when (k.key) {
-                                        Key.DirectionUp -> { CatOrder.move(ctx, CatOrder.LIVE, groupsAll.keys.toList(), n, -1); true }
-                                        Key.DirectionDown -> { CatOrder.move(ctx, CatOrder.LIVE, groupsAll.keys.toList(), n, 1); true }
+                                        Key.DirectionUp -> { CatOrder.move(ctx, CatOrder.LIVE, liveMoveKeys, n, -1); true }
+                                        Key.DirectionDown -> { CatOrder.move(ctx, CatOrder.LIVE, liveMoveKeys, n, 1); true }
                                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> { floatingCat = null; true }
                                         Key.Back -> false
                                         else -> true
                                     }
                                 } else Modifier
                             ),
-                            onFocus = { hot = n; inChannels = false }, onRight = { enterChannels() },
+                            onFocus = { hot = n; inChannels = false; catFocusIdx = i }, onRight = { enterChannels() },
                             onFav = { if (ml != null) listMenu = true else if (plainCat) catMenu = true else if (LiveGenre.isGenreKey(n)) genMenu = true else if (n != FAV_CAT && n != "ALL" && n != "REC" && !LiveGenre.isGenreKey(n)) CatFavs.toggle(ctx, n) },
                             icon = icon, raw = ml != null,
-                            floating = plainCat && floatingCat == n
+                            floating = moveCat && floatingCat == n
                         ) { if (floatingCat == null) { hot = n; enterChannels() } }   // touch: a tap does not move focus, so set the category here
                         // Menu of a provider category: favorite on/off, hide, move, sorting of all categories
                         var sortMenu by remember { mutableStateOf(false) }
                         // Menu of a genre category (Sports, Movies, ...): hide
-                        if (genMenu && LiveGenre.isGenreKey(n)) OptionPopup(listOf("Kategorie ausblenden"), -1, { genMenu = false }) { _ ->
+                        if (genMenu && LiveGenre.isGenreKey(n)) OptionPopup(
+                            listOf("Kategorie ausblenden", "Mit Hoch/Runter verschieben", "Nach oben verschieben", "Nach unten verschieben", "An den Anfang verschieben", "Ans Ende verschieben"), -1, { genMenu = false }
+                        ) { i ->
                             genMenu = false
-                            if (sel == n) sel = "ALL"
-                            HiddenCats.hide(ctx, n)
+                            when (i) {
+                                0 -> { if (sel == n) sel = "ALL"; HiddenCats.hide(ctx, n) }
+                                1 -> floatingCat = n
+                                2 -> CatOrder.move(ctx, CatOrder.LIVE, liveMoveKeys, n, -1)
+                                3 -> CatOrder.move(ctx, CatOrder.LIVE, liveMoveKeys, n, 1)
+                                4 -> CatOrder.toTop(ctx, CatOrder.LIVE, liveMoveKeys, n)
+                                else -> CatOrder.toBottom(ctx, CatOrder.LIVE, liveMoveKeys, n)
+                            }
                         }
                         if (catMenu && plainCat) OptionPopup(
                             listOf(
@@ -447,7 +491,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                             ), -1, { catMenu = false }
                         ) { i ->
                             catMenu = false
-                            val all = groupsAll.keys.toList()
+                            val all = liveMoveKeys
                             when (i) {
                                 0 -> CatFavs.toggle(ctx, n)
                                 1 -> { if (sel == n) sel = "ALL"; HiddenCats.hide(ctx, n) }
@@ -800,8 +844,8 @@ fun ReminderCard(r: Reminder, modifier: Modifier, onClose: () -> Unit, onSwitch:
 @Composable
 private fun LiveHome(live: List<Item>, genres: Map<String, List<Item>>, favs: List<Item>, firstReq: FocusRequester, onOpen: (Item, List<Item>) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val byId = remember(live) { live.associateBy { it.id } }
-    val recent = remember(live, History.ids.size) { Parental.filter(History.ids.mapNotNull { byId[it] }).take(24) }
+    // T-069: one pass that keeps only the watched channels, instead of a map of every channel on each visit
+    val recent = remember(live, History.ids.size) { Parental.filter(ScreenCacheLogic.inOrder(History.ids.toList(), live) { it.id }).take(24) }
     val rows = ArrayList<Pair<String, List<Item>>>()
     if (recent.isNotEmpty()) rows.add("Zuletzt gesehen" to recent)
     if (favs.isNotEmpty()) rows.add("Favoriten" to favs.take(40))

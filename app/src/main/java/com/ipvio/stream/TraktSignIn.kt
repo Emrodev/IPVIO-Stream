@@ -9,10 +9,18 @@ import android.content.Context
 object TraktSignIn {
     @Volatile private var pending: PendingSignIn? = null
 
-    /** Starts a sign-in and returns the Trakt authorize URL, or null when no client ID is built in. */
+    /**
+     * Starts a sign-in and returns the Trakt authorize URL, or null when no client ID is built in.
+     * An open attempt is reused: the phone page asks for the URL again on every reload or back navigation, and a new
+     * state would make a code signed in with the earlier link invalid ("The sign-in was not accepted").
+     */
     fun start(nowMs: Long = System.currentTimeMillis()): String? {
         val clientId = BuildConfig.TRAKT_CLIENT_ID.trim()
         if (!TraktLogic.hasClientId(clientId)) return null
+        val open = pending
+        if (open != null && !open.expired(nowMs)) {
+            return TraktLogic.authorizeUrl(clientId, TraktLogic.REDIRECT_URI, TraktLogic.challenge(open.verifier), open.state)
+        }
         val verifier = TraktLogic.newVerifier()
         val state = TraktLogic.newState()
         pending = PendingSignIn(verifier, state, nowMs)

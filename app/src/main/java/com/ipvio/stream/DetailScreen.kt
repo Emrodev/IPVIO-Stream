@@ -11,6 +11,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.input.InputMode
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -419,16 +421,35 @@ private fun DetailScreenFull(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Bg)) {
+    // T-080: while the trailer plays on the detail page it is centred and the description and file info step aside
+    val touchInput = LocalInputModeManager.current.inputMode == InputMode.Touch
+    val headerTop by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
+    var trailerPaused by remember(item.id) { mutableStateOf(false) }
+    var trailerMenu by remember { mutableStateOf(false) }
+    var trailerInApp by remember { mutableStateOf(false) }
+    val trailerOk = !embedded && showActions && item.kind != Kind.LIVE && !DemoMode.active && General.trailerPreview && TrailerLogic.validKey(meta?.trailerKey)
+    val previewActive = trailerOk && !trailerPaused && (if (touchInput) headerTop else heroFocused)
+    // T-080: the trailer is really on the screen (the WebView has reported playback)
+    val trailerVisible = TrailerHole.rect != null
+    Box(Modifier.fillMaxSize().holeBackground(Bg)) {
         // Round 15: layout like the big picture of the home screen (image on the right, faded into the background at the left and bottom)
         // 17c: calm background image (the constant zoom cost too much computing time on the Fire TV)
-        meta?.backdrop?.let { AsyncImage(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.TopEnd) }
+        // While the trailer plays under the page the picture steps aside (TrailerHole)
+        meta?.backdrop?.let { AsyncImage(it, null, Modifier.fillMaxSize().graphicsLayer { alpha = if (TrailerHole.rect != null && !embedded) 0f else 1f }, contentScale = ContentScale.Crop, alignment = Alignment.TopEnd) }
+        // Trailer behind the header after 2 s, like Prime Video (only on the real detail page, while the header has focus)
+        if (trailerOk) {
+            // Remote (TV): while the header buttons have focus. Touch: while the header is on screen (previewActive)
+            TrailerPreview(meta?.trailerKey, active = previewActive, modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.8f).aspectRatio(16f / 9f), trailerLang = meta?.trailerLang)
+        }
+        // T-080: no dark gradients while the trailer plays, so the picture is seen as it is
+        if (!trailerVisible) {
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Bg, 0.3f to Bg.copy(alpha = .92f), 0.55f to Bg.copy(alpha = .5f), 0.8f to Color.Transparent)))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Bg.copy(alpha = .5f), 0.2f to Color.Transparent, 0.55f to Bg.copy(alpha = .78f), 0.8f to Bg)))
+        }
         LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(horizontal = 28.dp, vertical = 36.dp)) {
             item {
                 Box(
-                    Modifier.fillMaxWidth().heightIn(min = dpx(if (embedded) 400 else 560))
+                    Modifier.fillMaxWidth().heightIn(min = dpx(if (embedded) 400 else 560)).then(if (trailerVisible) Modifier.fillParentMaxHeight() else Modifier)
                         .onPreviewKeyEvent { ev ->
                             if (ev.type == KeyEventType.KeyDown && ev.key == Key.DirectionUp) {
                                 if (onTopUp != null) {
@@ -447,17 +468,17 @@ private fun DetailScreenFull(
                 ) {
                     Column(Modifier.align(if (embedded && !showActions) Alignment.TopStart else Alignment.BottomStart).widthIn(max = dpx(980)).padding(bottom = dpx(18)), verticalArrangement = Arrangement.spacedBy(dpx(12))) {
                         // Round 17b: overline with glow bar, huge title (design "Cinematic Remake", picture 2)
-                        Row(horizontalArrangement = Arrangement.spacedBy(dpx(14)), verticalAlignment = Alignment.CenterVertically) {
+                        if (!trailerVisible) Row(horizontalArrangement = Arrangement.spacedBy(dpx(14)), verticalAlignment = Alignment.CenterVertically) {
                             Kicker(kindLabel(item.kind), raw = false)
                             qualityOf(item)?.let { PreviewQualityBadge(it) }
                         }
-                        Text(raw = true, text = item.title, color = Tok.TextHi, fontSize = spx(84), lineHeight = spx(84), fontWeight = FontWeight.ExtraBold,
+                        if (!trailerVisible) Text(raw = true, text = item.title, color = Tok.TextHi, fontSize = spx(84), lineHeight = spx(84), fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-1.5).sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        HeroMetaLine(item, meta, dots = false)
+                        if (!trailerVisible) HeroMetaLine(item, meta, dots = false)
                         // Tracks of the file read from its header (T-033, issue #24); series: first episode of the shown season
-                        if (showActions && item.kind != Kind.LIVE && !DemoMode.active) playUrl?.let { ProbeLine(it) }
+                        if (showActions && item.kind != Kind.LIVE && !DemoMode.active && !trailerVisible) playUrl?.let { ProbeLine(it) }
                         // Movie started: small progress bar with remaining time
-                        if (item.kind != Kind.SERIES && resume != null && resume.dur > 0 && !ResumeLogic.finished(resume.pos, resume.dur)) {
+                        if (!trailerVisible && item.kind != Kind.SERIES && resume != null && resume.dur > 0 && !ResumeLogic.finished(resume.pos, resume.dur)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(10))) {
                                 Box(Modifier.width(dpx(180)).height(dpx(4)).clip(RoundedCornerShape(50)).background(Color(0x40FFFFFF))) {
                                     Box(Modifier.fillMaxWidth((resume.pos.toFloat() / resume.dur).coerceIn(0f, 1f)).fillMaxHeight().background(Accent2))
@@ -465,6 +486,7 @@ private fun DetailScreenFull(
                                 Text("noch " + ((resume.dur - resume.pos) / 60000).coerceAtLeast(1) + " Min", color = Muted, fontSize = spx(14))
                             }
                         }
+                        if (!trailerVisible) {
                         if (meta?.overview == null && !metaDone) {
                             // Loading skeleton instead of briefly "No description found."
                             val sk = shimmerColor()
@@ -487,6 +509,7 @@ private fun DetailScreenFull(
                         if (showActions && (descOverflow || descExpanded) && (descExpanded || (meta?.overview?.length ?: 0) > FULL_TEXT_CHARS)) {
                             DetailPill(if (descExpanded) "Weniger" else "Mehr lesen", Modifier.onFocusChanged { topMoreFocused = it.isFocused }, trailing = if (descExpanded) AIcon.Up else AIcon.Down) { descExpanded = !descExpanded }
                         }
+                        }
                         if (showActions) {
                         Spacer(Modifier.height(4.dp))
                         // Buttons in the style of the big picture, smaller (round 15). Padding: the enlarged button would otherwise be cut off.
@@ -498,6 +521,7 @@ private fun DetailScreenFull(
                         ) {
                             val bh = 44
                             Row(Modifier.onFocusChanged { topRowFocused = it.hasFocus }, horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
+                                if (trailerVisible) HeroButton(if (trailerPaused) "Trailer weiter" else "Trailer stoppen", if (trailerPaused) AIcon.Play else AIcon.Close, false, Modifier, bh) { trailerPaused = !trailerPaused }
                                 if (resume != null) {
                                     val oneSeason = seasons.size <= 1
                                     val label = when {
@@ -520,16 +544,22 @@ private fun DetailScreenFull(
                                     }
                                 }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
+                            if (!trailerVisible) Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
                                 val inList = Library.isWatch(item.id)
                                 HeroButton(if (inList) "In Meiner Liste" else "Meine Liste", if (inList) AIcon.Check else AIcon.Plus, false, Modifier, bh) { Library.toggleWatch(ctx, item.id) }
                                 // Round 14: movies and series as favorites (appear under "Favorites")
                                 val fav = Library.isFav(item.id)
                                 HeroButton(if (fav) "Favorit" else "Zu Favoriten", if (fav) AIcon.HeartFilled else AIcon.Heart, false, Modifier, bh) { Library.toggleFav(ctx, item.id) }
+                                if (trailerOk) HeroButton(if (trailerPaused) "Trailer weiter" else "Trailer stoppen", if (trailerPaused) AIcon.Play else AIcon.Close, false, Modifier, bh) { trailerPaused = !trailerPaused }
                                 HeroButton("Trailer", AIcon.Play, false, Modifier, bh) {
-                                    // T-032: opens YouTube at once (the in-app player showed no picture on test devices)
-                                    openTrailer(ctx, meta?.trailerKey, item.title)
+                                    // T-032: with the automatic trailer on, YouTube opens at once; otherwise the user chooses (T-080)
+                                    if (General.trailerPreview) openTrailer(ctx, meta?.trailerKey, item.title) else trailerMenu = true
                                 }
+                                if (trailerMenu) OptionPopup(listOf("In der App abspielen", "Mit YouTube öffnen"), -1, { trailerMenu = false }) { i ->
+                                    trailerMenu = false
+                                    if (i == 0) trailerInApp = true else openTrailer(ctx, meta?.trailerKey, item.title)
+                                }
+                                if (trailerInApp) TrailerDialog(meta?.trailerKey, onClose = { trailerInApp = false }, onOpenExternal = { openTrailer(ctx, meta?.trailerKey, item.title) })
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
                                 // T-052a: download of a movie file (step 1)
                                 playUrl?.let { VodDownloadButton(item, it, bh) }
@@ -538,7 +568,7 @@ private fun DetailScreenFull(
                                 if (item.kind == Kind.SERIES && eps.isNotEmpty()) SeasonDownloadButton(item, eps, { ep -> pick(ep).url }, bh)
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)
-                            Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
+                            if (!trailerVisible) Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
                                 // Own row for the episode picker: the top row is already full and cut off the button
                                 if (item.kind == Kind.SERIES && eps.isNotEmpty()) EpisodePickButton(item, eps, { ep -> pick(ep).url }, bh)
                                 // A finished resume point would otherwise keep offering "Continue"
@@ -590,7 +620,7 @@ private fun DetailScreenFull(
                                 }
                             }
                         }
-                        if (item.kind == Kind.MOVIE && movieAlts.size > 1) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (!trailerVisible && item.kind == Kind.MOVIE && movieAlts.size > 1) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             // Choose the source explicitly (takes precedence over quality) or automatically to suit the device
                             val so = listOf("Automatisch") + movieVars.map { it.label }
                             DropdownPill("Quelle", prefLabel ?: "Automatisch", so, so.indexOf(prefLabel).coerceAtLeast(0), active = prefLabel != null) {
@@ -610,7 +640,7 @@ private fun DetailScreenFull(
                             else "Diese Quelle war zuletzt nicht erreichbar.",
                             DS.Gold, 14.sp, iconSize = 16.dp, maxLines = 3
                         )
-                        if (multi) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (!trailerVisible && multi) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             if (qualities.size > 1) {
                                 val qo = listOf("Automatisch (passend zum Gerät)") + qualities
                                 DropdownPill("Qualität", prefQ ?: "Automatisch", qo, qo.indexOf(prefQ).coerceAtLeast(0), active = prefQ != null) {
@@ -632,7 +662,7 @@ private fun DetailScreenFull(
                             Text("gilt für alle Folgen", color = Muted, fontSize = 13.sp)
                         }
                         credits?.directors?.takeIf { it.isNotEmpty() }?.let { ds ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (!trailerVisible) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("Regie", color = Muted, fontSize = 14.sp)
                                 ds.take(3).forEach { d -> DetailPill(d.name) { onPerson(PersonRef(d.id, d.name, d.photo, item.id)) } }
                             }

@@ -89,9 +89,16 @@ object Profiles {
 
     fun scopedName(name: String, id: Int) = if (id == 0) name else name + "_p" + id
 
-    /** Settings files that are read before or with the first frame (see MainActivity.onCreate and AppContent). */
-    private val START_SCOPED = listOf("ipvio_settings", "ipvio_general", "ipvio_lib", "ipvio_quality", "ipvio_hist", "ipvio_watch", "ipvio_chlists")
-    private val START_PLAIN = listOf("ipvio_general", "ipvio_keys", "ipvio_playback", "ipvio_dead")
+    /**
+     * Settings files that are read before or with the first frame (see MainActivity.onCreate and AppContent).
+     * T-069: the second line of each list adds the other files read on that path (boomer mode, sidebar, home layout,
+     * private categories, A/V sync, sound levelling, language filter, category favorites, episode progress, category order; TLS hosts, DNS, Live TV,
+     * phone layout, playlists, reminders, Drive). Opening them only starts the read earlier; names and contents stay as they are.
+     */
+    private val START_SCOPED = listOf("ipvio_settings", "ipvio_general", "ipvio_lib", "ipvio_quality", "ipvio_hist", "ipvio_watch", "ipvio_chlists",
+        "ipvio_boomer", "ipvio_side", "ipvio_homelayout", "ipvio_boomerlayout", "ipvio_privatecats", "ipvio_sync", "ipvio_audio", "ipvio_lang", "ipvio_catfavs", "ipvio_eprog", "ipvio_catorder")
+    private val START_PLAIN = listOf("ipvio_general", "ipvio_keys", "ipvio_playback", "ipvio_dead",
+        "ipvio_tls", "ipvio_dns", "ipvio_livetv", "ipvio_mobile", "ipvio", "ipvio_reminders", "ipvio_drive")
 
     /**
      * Opens the settings files of the start-up path. Android begins to read each file on its own background thread as soon

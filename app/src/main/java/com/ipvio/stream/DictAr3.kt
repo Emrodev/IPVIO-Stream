@@ -22,7 +22,7 @@ Keine Erinnerungen¦لا توجد تذكيرات
 Live¦مباشر
 Nächste Sendungen¦البرامج القادمة
 Sendungen aus dem Archiv deines Anbieters¦برامج من أرشيف مزود الخدمة
-Suche nach Sendern, Filmen, Serien …¦ابحث عن قنوات وأفلام ومسلسلات…
+Suche nach Sendern, Filmen, Serien …¦بحث...
 Home¦الرئيسية
 EPG¦دليل البرامج
 TV-Programm¦برامج التلفزيون

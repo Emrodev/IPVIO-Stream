@@ -39,7 +39,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
-import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
@@ -48,6 +47,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.animateScrollBy
 
 private class Cat(val icon: AIcon, val title: String, val sub: String)
 
@@ -101,6 +102,11 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
     }
     val cardFocus = remember { List(CATS.size) { if (it == 0) ContentFocus.req else FocusRequester() } }
     val backFocus = remember { FocusRequester() }
+    // T-077: the page scrolls in edge mode while the settings are open (see SmoothSpec in MainActivity)
+    DisposableEffect(Unit) {
+        FocusScrollMode.edgeOnly = true
+        onDispose { FocusScrollMode.edgeOnly = false }
+    }
     BackHandler(enabled = page >= 0) { page = -1 }
     LaunchedEffect(page) {
         runCatching { if (page < 0) cardFocus[last].requestFocus() else backFocus.requestFocus() }
@@ -129,14 +135,12 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 SettingsBack(Modifier.focusRequester(backFocus)) { page = -1 }
                 Text(CATS[page].title, color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold)
             }
-            // Below the last selectable element there are often still hints: Down at the end brings them into view
+            // T-077: Down at the last control goes to the Back arrow (no wrap, no page jump); the page only moves when a control is cut off
             val fm = LocalFocusManager.current
-            val endReq = remember { BringIntoViewRequester() }
-            val endScope = rememberCoroutineScope()
             Column(
                 Modifier.onKeyEvent { e ->
                     if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) {
-                        if (!fm.moveFocus(FocusDirection.Down)) endScope.launch { runCatching { endReq.bringIntoView() } }
+                        if (!fm.moveFocus(FocusDirection.Down)) runCatching { backFocus.requestFocus() }
                         true
                     } else false
                 }.fillMaxWidth().clip(RoundedCornerShape(dpx(18))).background(Color(0x0DFFFFFF))
@@ -176,7 +180,7 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 }
                 Hint("Setzt nur die Einstellungen dieser Seite auf die Standardwerte zurück. Alle anderen Seiten bleiben unverändert. Um alles auf einmal zurückzusetzen, nutze Einstellungen > Alles zurücksetzen.")
             }
-            Spacer(Modifier.height(8.dp).bringIntoViewRequester(endReq))
+            Spacer(Modifier.height(8.dp))
             }
         }
     }
@@ -519,6 +523,12 @@ private fun GeneralPage(ctx: Context) {
     ToggleRow("Beenden bestätigen", "Auf der Startseite muss „Zurück“ zweimal gedrückt werden, damit die App nicht aus Versehen schließt.", General.confirmExit) { General.setConfirmExit(ctx, it) }
     // #95: the device's screensaver or sleep timer is blocked while the app is open (window flag, see ScreenAwake)
     ToggleRow("Bildschirm beim Stöbern wach halten", "An: Der Fernseher geht nicht in den Bildschirmschoner oder Ruhezustand, solange die App offen ist. Aus: nur während der Wiedergabe.", General.keepAwakeBrowse) { General.setKeepAwakeBrowse(ctx, it) }
+    // T-070: device performance (Automatic / Weak device / Strong device), see DevicePerfLogic
+    val perfNames = listOf("Automatisch", "Schwaches Gerät", "Starkes Gerät")
+    SelectRow("Geräteleistung", perfNames[DevicePerf.mode], perfNames, DevicePerf.mode) { DevicePerf.set(ctx, it) }
+    Hint("Schwaches Gerät: keine Animationen, kein Hintergrundbild, keine Vorschau, kleinere Bilder und weniger Arbeit im Hintergrund – für Sticks und Boxen, die ruckeln. Starkes Gerät: alles an, auch bei wenig Arbeitsspeicher. Automatisch: spart bei wenig Arbeitsspeicher nur, was man nicht sieht.")
+    ToggleRow("Trailer automatisch abspielen", "Auf der Detailseite startet der Trailer nach 2 Sekunden hinter dem Titel, solange die Knöpfe oben ausgewählt sind. Braucht einen TMDB-Schlüssel.", General.trailerPreview) { General.setTrailerPreview(ctx, it) }
+    ToggleRow("Trailer auf der Startseite", "Auf der Startseite startet der Trailer des ausgewählten Titels nach 2 Sekunden hinter dem großen Bild. Braucht einen TMDB-Schlüssel.", General.trailerHome) { General.setTrailerHome(ctx, it) }
     // Phone/tablet: landscape (the UI is built for the TV)
     if (MobilePrefs.isMobile(ctx)) {
         val act = generateSequence<Context>(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()
@@ -769,7 +779,7 @@ private fun PlayerPage(ctx: Context) {
 
 @Composable
 private fun DesignPage(ctx: Context) {
-    fun save(accent: Int = Look.accentIdx, custom: Int = Look.custom, bg: Int = Look.bgIdx, motion: Int = Look.motion, scale: Int = Look.uiScale, custom2: Int = Look.custom2) =
+    fun save(accent: Int = Look.accentIdx, custom: Int = Look.custom, bg: Int = Look.bgIdx, motion: Int = Look.motionChoice, scale: Int = Look.uiScale, custom2: Int = Look.custom2) =
         AppSettings.setLook(ctx, accent, custom, bg, motion, scale, custom2)
     fun col(rgb: Int) = Color(0xFF000000.toInt() or rgb)
     // Show the preview at the top right (fixed, does not scroll along); show highlighted colors only there
@@ -867,9 +877,11 @@ private fun DesignPage(ctx: Context) {
     SectionTitle("Animationen")
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Look.MOTION.forEachIndexed { i, n ->
-            ChoiceChip(n, Look.motion == i, onFocus = { hover(it, Lang.tr(n)) { DesignPreview.motion = i } }) { save(motion = i) }
+            ChoiceChip(n, Look.motionChoice == i, onFocus = { hover(it, Lang.tr(n)) { DesignPreview.motion = i } }) { save(motion = i) }
         }
     }
+    // T-070: the choice is kept, but "Weak device" switches the animations off
+    if (DevicePerf.reduceVisuals) Hint("Aus, solange bei „Geräteleistung“ „Schwaches Gerät“ gewählt ist (Einstellungen > Allgemein).")
     }
     if (tab == 3) {
     Look.SCALES.indices.chunked(3).forEach { row ->
@@ -951,26 +963,73 @@ internal fun diagReportLines(ctx: Context): List<Pair<String, String>> {
 @Composable
 private fun DiagPage(ctx: Context, reload: () -> Unit) {
     val lines = diagReportLines(ctx)
-    // T-055: the buttons sit at the top. Below a long list the remote used to jump past every entry to the last button.
+    val shown = lines.filter { it.first != "Log" || it.second.isNotEmpty() }
+    // T-079: the report to the phone uses the transfer page of "Auf ein anderes Gerät übertragen" (its report entry shows the whole report)
+    var serving by remember { mutableStateOf(false) }
+    val ip = remember { PhoneImport.localIp() }
+    val server = remember { PhoneImport { }.apply { crash = { phoneDiagReport(ctx) } } }
+    DisposableEffect(Unit) { onDispose { server.stop() } }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PillButton("Bericht kopieren") {
-            val text = lines.filter { it.first != "Log" || it.second.isNotEmpty() }.joinToString("\n") { it.first + ": " + it.second }
+            val text = shown.joinToString("\n") { it.first + ": " + it.second }
             runCatching {
                 val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
                 cm?.setPrimaryClip(android.content.ClipData.newPlainText("IPVIO Diagnose", text))
             }
         }
+        if (!serving) PillButton("Am Handy öffnen", light = true, icon = AIcon.Phone) { serving = server.start() }
+        else PillButton("Am Handy beenden", light = true) { server.stop(); serving = false }
         PillButton("Playlist neu laden", light = true, icon = AIcon.Refresh) { reload() }
     }
-    Hint("Der Bericht enthält keine Adressen, Benutzernamen oder Passwörter. Er wird nur in die Zwischenablage kopiert und nirgendwohin gesendet.")
-    Hint("Auf dem Fernseher lässt sich die Zwischenablage oft nicht nutzen: Unter Einstellungen > Speicher > „Übertragung im WLAN starten“ kannst du den Bericht am Handy öffnen (Seite „Letzten Absturzbericht anzeigen“) und dort kopieren.")
-    // T-055: every line of every entry is its own focusable row, so the remote steps through the log one entry at a time
-    lines.filter { it.first != "Log" || it.second.isNotEmpty() }.forEach { (k, v) ->
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                v.split("\n").forEach { line ->
-                    Text(line, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp).focusable())
+    if (serving) {
+        Column(
+            Modifier.clip(RoundedCornerShape(DS.RadiusM)).background(Color(0x14FFFFFF)).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (ip == null) Text("Das Gerät ist nicht mit einem WLAN verbunden.", color = Color(0xFFFFB86B), fontSize = 16.sp)
+            else {
+                Text("Am Handy (im selben WLAN) öffnen:", color = Muted, fontSize = 15.sp)
+                val addr = "http://$ip:${server.port}/transfer"
+                Text(addr, color = Accent2, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                QrWithLabel(addr)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Code", color = Muted, fontSize = 16.sp)
+                    Text(server.code, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                }
+                Text("Auf dem Handy: „Letzten Absturzbericht anzeigen“ öffnen. Dort steht der ganze Bericht als Text und lässt sich markieren und kopieren.", color = Muted, fontSize = 14.sp)
+            }
+        }
+    }
+    Hint("Der Bericht enthält keine Adressen, Benutzernamen oder Passwörter. „Bericht kopieren“ legt ihn nur in die Zwischenablage des Fernsehers. Zum Schicken am Handy nutze „Am Handy öffnen“.")
+    // T-079: the whole report is one focus stop. Up and Down scroll it; at the top or the bottom the focus leaves the box.
+    // Before, every line was a focus stop, so the remote needed many presses to get to the end.
+    val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    var logFocused by remember { mutableStateOf(false) }
+    Box(
+        Modifier.fillMaxWidth().height(380.dp)
+            .clip(RoundedCornerShape(DS.RadiusM))
+            .background(Color(0x0DFFFFFF))
+            .border(2.dp, if (logFocused) Color.White else Color.Transparent, RoundedCornerShape(DS.RadiusM))
+            .padding(16.dp)
+            .onFocusChanged { logFocused = it.isFocused }
+            .focusable()
+            .onPreviewKeyEvent { e ->
+                if (e.type != KeyEventType.KeyDown || (e.key != Key.DirectionDown && e.key != Key.DirectionUp)) return@onPreviewKeyEvent false
+                val down = e.key == Key.DirectionDown
+                if (down && scroll.value >= scroll.maxValue) false
+                else if (!down && scroll.value <= 0) false
+                else { scope.launch { scroll.animateScrollBy(if (down) 160f else -160f) }; true }
+            }
+            .verticalScroll(scroll)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            shown.forEach { (k, v) ->
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(k, color = Muted, fontSize = 16.sp, modifier = Modifier.width(170.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        v.split("\n").forEach { line -> Text(line, color = Color.White, fontSize = 16.sp, modifier = Modifier.widthIn(max = 640.dp)) }
+                    }
                 }
             }
         }
@@ -1457,6 +1516,11 @@ private fun ProfilesPage(ctx: Context, onExit: () -> Unit) {
     }
     Text("Aktiv: " + Profiles.activeName(), color = Accent2, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     Hint("Jedes Profil hat eigenen Verlauf, eigene Favoriten, Ansicht, Player-Einstellungen und eigenen Jugendschutz. Playlist, Sprache und Aktualisierung sind für alle gleich.")
+    // T-079: PIN flow of one profile: 0 = current PIN (change only), 1 = new PIN, 2 = repeat it
+    var pinFor by remember { mutableIntStateOf(-1) }
+    var pinStep by remember { mutableIntStateOf(1) }
+    var firstPin by remember { mutableStateOf<String?>(null) }
+    var pinMsg by remember { mutableStateOf<String?>(null) }
     Profiles.list.toList().forEach { p ->
         val isActive = p.id == Profiles.active
         Row(
@@ -1469,8 +1533,12 @@ private fun ProfilesPage(ctx: Context, onExit: () -> Unit) {
                 style = androidx.compose.ui.text.TextStyle(color = if (isActive) Accent2 else Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1, overflow = TextOverflow.Ellipsis
             )
+            if (Parental.hasPinFor(ctx, p.id)) AppIcon(AIcon.Lock, Accent2, size = 22.dp)
             if (!isActive) SmallPill("Wechseln") { Profiles.switchTo(ctx, p.id) }
             SmallPill("Umbenennen") { editing = p.id; name = p.name }
+            SmallPill(if (Parental.hasPinFor(ctx, p.id)) "PIN ändern" else "PIN hinzufügen") {
+                pinFor = p.id; pinStep = if (Parental.hasPinFor(ctx, p.id)) 0 else 1; firstPin = null; pinMsg = null
+            }
             if (!isActive && p.id != 0) ConfirmPill("Löschen") { Profiles.remove(ctx, p.id) }
         }
     }
@@ -1478,7 +1546,31 @@ private fun ProfilesPage(ctx: Context, onExit: () -> Unit) {
         Field(name, { name = it }, "Name des Profils")
         PillButton("Name speichern", light = true) { Profiles.rename(ctx, editing, name); editing = -1 }
     }
+    // T-079: the PIN is set per profile with its own button (not right after "Add profile")
     if (Profiles.list.size < Profiles.MAX) PillButton("Profil hinzufügen") { Profiles.add(ctx) }
+    Hint("Ein Profil mit PIN lässt sich nur mit dieser PIN öffnen. Die PIN setzt du bei dem Profil mit „PIN hinzufügen“. Das Schloss zeigt, welche Profile eine PIN haben.")
+    if (pinFor >= 0) {
+        val pinName = Profiles.list.firstOrNull { it.id == pinFor }?.let { Profiles.displayName(it) } ?: ""
+        val title = when (pinStep) {
+            0 -> Lang.tr("Aktuelle PIN für „{0}“").replace("{0}", pinName)
+            2 -> Lang.tr("PIN wiederholen")
+            else -> Lang.tr("Neue PIN für „{0}“").replace("{0}", pinName)
+        }
+        PinPad(title, Lang.tr("4 Ziffern. Ein Profil mit PIN öffnest du nur mit dieser PIN."), pinMsg,
+            { p ->
+                if (pinStep == 0) {
+                    if (Parental.verifyFor(ctx, pinFor, p)) { pinStep = 1; pinMsg = null } else { pinMsg = Parental.pinError() }
+                } else if (pinStep == 1) {
+                    firstPin = p; pinStep = 2; pinMsg = null
+                } else {
+                    if (ParentalLogic.confirmed(firstPin.orEmpty(), p)) {
+                        Parental.setPinFor(ctx, pinFor, p); pinFor = -1; pinMsg = null
+                    } else { pinStep = 1; pinMsg = Lang.tr("Die PINs stimmen nicht überein") }
+                }
+            },
+            { pinFor = -1; pinMsg = null }
+        )
+    }
     ToggleRow("Beim Start fragen: Wer schaut?", "Zeigt beim Öffnen der App die Profilauswahl, sobald es mehr als ein Profil gibt.", Profiles.askAtStart) { Profiles.setAsk(ctx, it) }
     Hint("Beim Wechseln startet die App kurz neu.")
 }

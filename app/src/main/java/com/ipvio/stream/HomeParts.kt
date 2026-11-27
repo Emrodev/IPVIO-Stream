@@ -119,6 +119,9 @@ fun cardGrid(contentW: Dp, size: Int = General.cardSize, perRow: Int = 0): CardG
 /** Landscape image from TMDB in a suitable size for cards (w780 instead of w1280). */
 fun cardBackdrop(url: String): String = url.replace("/t/p/w1280/", "/t/p/w780/")
 
+/** T-070: landscape image of a small card (landscape card, tile): w780, with "Weak device" w300. Large pictures use [cardBackdrop]. */
+fun smallBackdrop(url: String): String = DevicePerfLogic.smallBackdrop(url, DevicePerf.profile.smallImages)
+
 /** "2016 | Abenteuer | 1h 47min | ★ 7.6" as in the design draft. */
 @Composable
 fun HeroMetaLine(item: Item, m: Meta?, dots: Boolean = false) {
@@ -360,7 +363,7 @@ private fun QuickTileCard(t: QuickTile, modifier: Modifier) {
             .clickable(onClick = t.onClick)
     ) {
         // Motif on the right (drawn, matching the area), softly blended into the gradient
-        if (t.image != null) AsyncImage(cardBackdrop(t.image), null, Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(0.72f), contentScale = ContentScale.Crop)
+        if (t.image != null) AsyncImage(smallBackdrop(t.image), null, Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(0.72f), contentScale = ContentScale.Crop)
         else if (t.logos.isNotEmpty()) Row(
             Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(end = dpx(46)),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(8))
@@ -544,7 +547,7 @@ fun LandscapeCard(item: Item, modifier: Modifier, reorder: List<Item>? = null, o
     val shape = RoundedCornerShape(dpx(8))
     val rowF = LocalRowFocus.current
     val dimA by animateFloatAsState(if (rowF && !f) 0.5f else 1f, tween(if (Look.motion == 0) 0 else 320), label = "dim")
-    val img = m?.backdrop?.let { cardBackdrop(it) } ?: m?.poster?.let { cardPoster(it) } ?: item.logo
+    val img = m?.backdrop?.let { smallBackdrop(it) } ?: m?.poster?.let { cardPoster(it) } ?: item.logo
     Box(
         modifier.then(reorderMod).aspectRatio(1.3f).graphicsLayer { scaleX = s; scaleY = s }.focusGlow(f, shape).clip(shape)
             .background(Brush.linearGradient(listOf(colorFor(item).copy(alpha = .75f), Surf2)))
@@ -672,7 +675,8 @@ fun RowPosterCard(item: Item, baseW: Dp, modifier: Modifier, overlay: Int = 0, a
     // Even with animation "Off" the preview expands (then without motion, see snap below)
     // Preview style (View > Preview on highlight): info on the poster (default) or wide scene image
     val wide = General.previewStyle == 1
-    val canOpen = expand && (if (wide) m?.backdrop != null else m != null)
+    // T-070: no preview with "Weak device"
+    val canOpen = expand && !DevicePerf.reduceVisuals && (if (wide) m?.backdrop != null else m != null)
     // View settings live preview: one card shows its highlighted state so the preview style can be judged on a real title
     val demo = ViewLive.active && ViewLive.tab == 0 && ViewLive.demoId == item.id
     val fx = f || demo

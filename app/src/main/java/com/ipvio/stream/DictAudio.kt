@@ -23,6 +23,7 @@ fun loadAudioLevelTexts() {
     audioTextsLoaded = true
     I18nCore.load(DictAudio)
     I18nCore.loadColumn(I18nCore.CODES.indexOf("nl"), DictNlAudio)
+    I18nCore.loadColumn(I18nCore.CODES.indexOf("pl"), DictPlAudio)
 }
 
 // Dutch column for the rows above
@@ -37,4 +38,18 @@ Dialoge hervorheben¦Dialogen versterken
 Stark¦Sterk
 Viele Sender sind leiser gemischt als YouTube oder Netflix (Fernsehnorm −23 LUFS statt etwa −16). „Standard“ hebt leise Sender automatisch an, gleicht laute und leise Stellen an und macht Dialoge etwas deutlicher – ohne Übersteuern.¦Veel zenders zijn zachter gemixt dan YouTube of Netflix (tv-norm −23 LUFS in plaats van ongeveer −16). „Standaard” versterkt zachte zenders automatisch, trekt harde en zachte passages gelijk en maakt dialogen iets duidelijker – zonder vervorming.
 „Klare Sprache“ hebt Stimmen stärker hervor. „Nachtmodus“ dämpft laute Stellen stark – gut zum leisen Hören. Wird der Ton unverändert an einen Receiver durchgeleitet (Dolby, DTS), bleibt er unbearbeitet.¦„Heldere spraak” zet stemmen sterker naar voren. „Nachtmodus” dempt harde passages sterk – goed om zacht te luisteren. Geluid dat ongewijzigd naar een receiver gaat (Dolby, DTS) wordt niet bewerkt.
+"""
+
+// Polish column for the rows above
+val DictPlAudio = """
+Ton angleichen¦Wyrównywanie dźwięku
+Klare Sprache¦Wyraźna mowa
+Nachtmodus¦Tryb nocny
+Eigene Einstellung¦Własne ustawienie
+Maximale Anhebung¦Maksymalne wzmocnienie
+Dynamik angleichen¦Wyrównaj głośne i ciche
+Dialoge hervorheben¦Wyróżnij dialogi
+Stark¦Mocno
+Viele Sender sind leiser gemischt als YouTube oder Netflix (Fernsehnorm −23 LUFS statt etwa −16). „Standard“ hebt leise Sender automatisch an, gleicht laute und leise Stellen an und macht Dialoge etwas deutlicher – ohne Übersteuern.¦Wiele kanałów jest zmiksowanych ciszej niż YouTube czy Netflix (norma telewizyjna −23 LUFS zamiast około −16). „Domyślnie” automatycznie podgłaśnia ciche kanały, wyrównuje głośne i ciche fragmenty i nieco wyraźniej podaje dialogi – bez przesterowania.
+„Klare Sprache“ hebt Stimmen stärker hervor. „Nachtmodus“ dämpft laute Stellen stark – gut zum leisen Hören. Wird der Ton unverändert an einen Receiver durchgeleitet (Dolby, DTS), bleibt er unbearbeitet.¦„Wyraźna mowa” mocniej wyróżnia głosy. „Tryb nocny” mocno wycisza głośne fragmenty – dobre do cichego słuchania. Dźwięk przekazywany bez zmian do amplitunera (Dolby, DTS) nie jest przetwarzany.
 """

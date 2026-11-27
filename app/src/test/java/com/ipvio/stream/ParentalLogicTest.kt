@@ -26,4 +26,11 @@ class ParentalLogicTest {
         assertTrue(ParentalLogic.validPin("0000"))
         assertFalse(ParentalLogic.validPin("123"))
     }
+
+    @Test fun newPinNeedsTwoEqualValidEntries() {
+        assertTrue(ParentalLogic.confirmed("1234", "1234"))
+        assertFalse(ParentalLogic.confirmed("1234", "1235"))
+        assertFalse(ParentalLogic.confirmed("123", "123"))
+        assertFalse(ParentalLogic.confirmed("12a4", "12a4"))
+    }
 }

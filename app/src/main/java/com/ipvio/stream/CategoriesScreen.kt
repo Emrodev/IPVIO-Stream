@@ -59,6 +59,30 @@ fun folderLabel(prefix: String) = "$prefix  ›"
 
 private fun sortFor(name: String, sort: Int) = if (isTopEntry(name)) 8 else sort
 
+/**
+ * #96: provider categories with a shared pattern ("FR - SPORTS", "FR - AMAZON") and the view with one folder row per pattern
+ * (at the place of the folder's first category, holding the titles of all its categories). Without folders the view is [provider] itself.
+ */
+private fun folderViewOf(provider: Map<String, List<Item>>): Pair<List<GroupPatternLogic.Folder>, Map<String, List<Item>>> {
+    val folders = if (provider.isEmpty()) emptyList() else GroupPatternLogic.analyze(provider.keys.toList()).first
+    if (folders.isEmpty()) return folders to provider
+    val firstOf = HashMap<String, GroupPatternLogic.Folder>()
+    val member = HashSet<String>()
+    for (f in folders) { firstOf[f.subs.first().second] = f; f.subs.forEach { member.add(it.second) } }
+    val m = LinkedHashMap<String, List<Item>>()
+    for ((k, v) in provider) {
+        val f = firstOf[k]
+        if (f != null) m[folderLabel(f.prefix)] = f.subs.flatMap { provider[it.second].orEmpty() }
+        else if (k !in member) m[k] = v
+    }
+    return folders to m
+}
+
+/** T-069: folder views of the last category pages (movies and series), found again by the category map; emptied by [ScreenCaches]. */
+internal object CatFolderCache {
+    val v = LastResults<Pair<List<GroupPatternLogic.Folder>, Map<String, List<Item>>>>(max = 2)
+}
+
 object CatPrefs {
     var listView by mutableStateOf(true)
     private var inited = false
@@ -104,22 +128,12 @@ fun CategoriesScreen(
     BackHandler(enabled = folder != null) { folder = null }
 
     // #96: provider categories with a shared pattern ("FR - SPORTS", "FR - AMAZON") are shown as one folder row
-    val folders = remember(req.provider) { if (req.provider.isEmpty()) emptyList() else GroupPatternLogic.analyze(req.provider.keys.toList()).first }
+    // T-069: folders and the folder view are kept per category map (CatFolderCache), so the way back from a title list
+    // does not repeat the pattern pass over all category names and the copy of every folder's titles
+    val folderView = remember(req.provider) { CatFolderCache.v.get(req.provider) { folderViewOf(req.provider) } }
+    val folders = folderView.first
     val folderByLabel = remember(folders) { folders.associateBy { folderLabel(it.prefix) } }
-    val providerView: Map<String, List<Item>> = remember(req.provider, folders) {
-        if (folders.isEmpty()) req.provider else {
-            val firstOf = HashMap<String, GroupPatternLogic.Folder>()
-            val member = HashSet<String>()
-            for (f in folders) { firstOf[f.subs.first().second] = f; f.subs.forEach { member.add(it.second) } }
-            val m = LinkedHashMap<String, List<Item>>()
-            for ((k, v) in req.provider) {
-                val f = firstOf[k]
-                if (f != null) m[folderLabel(f.prefix)] = f.subs.flatMap { req.provider[it.second].orEmpty() }
-                else if (k !in member) m[k] = v
-            }
-            m
-        }
-    }
+    val providerView: Map<String, List<Item>> = folderView.second
     val openFolder = folder?.let { p -> folders.firstOrNull { it.prefix == p } }
     val map = if (mode == 0) req.ipvio else if (openFolder != null) openFolder.subs.associate { it.second to req.provider[it.second].orEmpty() } else providerView
     // A folder row opens the folder; every other row works as before
@@ -247,9 +261,11 @@ private fun ListMode(
     val more = cur?.let { StalkerMore.added[it.first] }
     val prev = remember(cur?.first, cur?.second, more) {
         val c = cur
+        // T-076: the same film from several entries (e.g. German and English title) is shown once
+        val unique = { l: List<Item> -> TopRatedLogic.collapse(l, { it.tmdb }, { MetaRepo.cached(it)?.tmdbId ?: 0 }, { it.kind == Kind.SERIES }) }
         if (c == null) emptyList<Item>()
-        else if (isTopEntry(c.first)) c.second.take(40)
-        else StalkerMore.withAdded(c.first, c.second).takeLast(40).reversed()
+        else if (isTopEntry(c.first)) unique(c.second).take(40)
+        else unique(StalkerMore.withAdded(c.first, c.second)).takeLast(40).reversed()
     }
     val ctx = LocalContext.current
     // Stayed on the category briefly: fetch the next portion from the portal (not while scrolling quickly)
@@ -307,6 +323,15 @@ private fun ListMode(
             previewState.scrollToItem(0)
             withFrameNanos { }
             runCatching { firstPreview.requestFocus() }
+        }
+    }
+    // Left from the first column of the grid goes back to the SAME category (the one whose titles are shown).
+    // Without this, the focus search picks the row at the same height, which can be another category.
+    fun backToCategory() {
+        scope.launch {
+            catState.scrollToItem(maxOf(sel - 3, 0))
+            withFrameNanos { }
+            runCatching { firstFocus.requestFocus() }
         }
     }
     Row(Modifier.fillMaxSize()) {
@@ -379,6 +404,8 @@ private fun ListMode(
                             Modifier.onPreviewKeyEvent { ev ->
                                 if (ev.type == KeyEventType.KeyDown && ev.key == Key.DirectionUp && i < cols) {
                                     runCatching { pillFocus.requestFocus() }; true
+                                } else if (ev.type == KeyEventType.KeyDown && ev.key == Key.DirectionLeft && i % cols == 0 && ev.nativeKeyEvent.repeatCount == 0) {
+                                    backToCategory(); true
                                 } else false
                             }.onFocusChanged {
                                 if (it.hasFocus) {
@@ -490,7 +517,9 @@ private fun CatTile(name: String, items: List<Item>, modifier: Modifier, onClick
 private fun AutoGenresOff() {
     val all = PlaylistStore.channels
     val n = remember(all) { all.count { it.kind != Kind.LIVE } }
-    val nf = java.text.NumberFormat.getIntegerInstance()
+    // Plain digits: the translated text is found by a pattern that reads digits, dots and commas only (not the space
+    // some locales use as thousands separator), otherwise the German text stays
+    val nf = java.text.NumberFormat.getIntegerInstance(java.util.Locale.GERMANY)
     val shape = RoundedCornerShape(DS.RadiusL)
     Column(
         Modifier.widthIn(max = 720.dp).clip(shape).background(Surf).padding(24.dp),

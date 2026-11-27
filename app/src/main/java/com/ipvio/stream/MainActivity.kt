@@ -26,12 +26,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Density
 import coil.Coil
-import coil.ImageLoader
-import coil.memory.MemoryCache
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,14 +64,9 @@ class MainActivity : ComponentActivity() {
         val app = applicationContext
         Thread({ runCatching { Updater.apply(app) } }, "updater-apply").start()
         CrashLog.install(this)
-        Coil.setImageLoader(
-            ImageLoader.Builder(this)
-                .memoryCache { MemoryCache.Builder(this).maxSizePercent(Mem.imageCachePercent(Mem.tier(this))).build() }
-                .allowRgb565(true)
-                .bitmapFactoryMaxParallelism(Mem.imageDecoders(Mem.tier(this)))
-                .crossfade(false)
-                .build()
-        )
+        // T-070: image cache size and decoder count follow "Device performance" (Automatic: the detected memory, as before)
+        DevicePerf.init(this)
+        Coil.setImageLoader(DevicePerf.imageLoader(this))
         ScreenAwake.attach(this)
         intent?.getStringExtra(Reminders.EXTRA_CH)?.let { AppNav.openChannel = it }
         setContent { App(pick) }
@@ -144,20 +139,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** T-077: set by the settings page while it is open (read by [SmoothSpec] on every focus step). */
+object FocusScrollMode {
+    var edgeOnly = false
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 val SmoothSpec = object : BringIntoViewSpec {
-    override val scrollAnimationSpec = tween<Float>(280, easing = FastOutSlowInEasing)
-    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-        val peek = 90f
-        val leading = offset
-        val trailing = offset + size
-        return when {
-            leading >= 0f && trailing <= containerSize -> 0f
-            leading < 0f && trailing > containerSize -> 0f
-            leading < 0f -> leading - peek
-            else -> trailing - containerSize + peek
-        }
-    }
+    // T-070 (device performance): shorter with "Weak device"
+    override val scrollAnimationSpec get() = tween<Float>(ThemeMath.scrollMs(DevicePerf.reduceVisuals), easing = FastOutSlowInEasing)
+    // T-074 (focus): focused item kept in the middle; at the end of a list the scroll stops and the focus moves on
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
+        // T-077: on the settings page the page moves only when a control is cut off (edge mode), no centring
+        if (FocusScrollMode.edgeOnly) FocusCenterLogic.edgeDistance(offset, size, containerSize)
+        else FocusCenterLogic.scrollDistance(offset, size, containerSize)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -206,6 +201,29 @@ fun Modifier.fitScreenInset(on: Boolean): Modifier = if (!on || (General.fitX ==
 
 private val SE_RE = Regex("""S(\d+)E(\d+)""")
 
+/**
+ * T-069b: like a Box around [content]; with [hidden] the content stays composed (state, rows, images) but is neither
+ * measured, placed nor drawn. Not placed content gets no focus by D-pad and no touch, the same way Compose treats list
+ * items that are composed ahead but not placed.
+ */
+@Composable
+private fun KeepAliveBox(hidden: Boolean, modifier: Modifier, content: @Composable () -> Unit) {
+    // One policy object per state, so recompositions do not ask for a new measure pass
+    val policy = remember(hidden) {
+        androidx.compose.ui.layout.MeasurePolicy { measurables, constraints ->
+            if (hidden) layout(constraints.minWidth, constraints.minHeight) {}
+            else {
+                val loose = constraints.copy(minWidth = 0, minHeight = 0)
+                val placeables = measurables.map { it.measure(loose) }
+                val w = maxOf(constraints.minWidth, placeables.maxOfOrNull { it.width } ?: 0)
+                val h = maxOf(constraints.minHeight, placeables.maxOfOrNull { it.height } ?: 0)
+                layout(w, h) { placeables.forEach { it.placeRelative(0, 0) } }
+            }
+        }
+    }
+    androidx.compose.ui.layout.Layout(content, modifier, policy)
+}
+
 @Composable
 private fun AppContent() {
     val ctx = LocalContext.current
@@ -246,6 +264,10 @@ private fun AppContent() {
     // so opening the search does not wait for it. Same list object as the search screen uses, so the cache is hit.
     val searchList = PlaylistStore.channels
     LaunchedEffect(searchList) {
+        // T-070: "Weak device" builds the index only when the search opens (saves memory); low memory in "Automatic": later
+        val perf = DevicePerf.profile
+        if (perf.searchOnDemand) return@LaunchedEffect
+        delay(perf.searchDelayMs)   // T-069: the home rows and the first scrolling get the CPU first
         withContext(Dispatchers.Default) { runCatching { SearchCache.build(PrivateCats.visible(searchList)) } }
     }
     // T-031: Trakt history and watchlist into the app once the playlist is there (at most every 6 hours, needs a sign-in).
@@ -300,9 +322,20 @@ private fun AppContent() {
     // Do not fall into the screensaver while downloading and parsing the playlist
     KeepScreenOn("playlist", PlaylistStore.loading)
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)
-    LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); if (!DemoMode.active) Classifier.restart(ctx, all) }
+    // T-070: 30 s instead of 8 s on weak devices and with little memory (DevicePerfLogic)
+    LaunchedEffect(all) { kotlinx.coroutines.delay(DevicePerf.profile.genreDelayMs); if (!DemoMode.active) Classifier.restart(ctx, all) }
     // Private categories (T-028): ids of their titles, so history and resume can skip them
     LaunchedEffect(all) { PrivateCats.reload(all) }   // after the first screen is up, and debounced while the list is still changing
+    // T-069: lists kept for the next screen visit belong to one playlist; a new list must not keep the old titles in memory.
+    // T-069c: then the movie source index for Play is built for the new list in the background.
+    LaunchedEffect(all) {
+        ScreenCaches.clear()
+        if (all.isEmpty()) return@LaunchedEffect
+        delay(StartupLogic.SOURCES_INDEX_DELAY_MS)
+        // Assigned only if this list is still the current one (a list change cancels the effect, and the result is dropped)
+        val idx = withContext(Dispatchers.Default) { runCatching { Sources.buildIndex(all) }.getOrNull() } ?: return@LaunchedEffect
+        Sources.use(idx)
+    }
 
     fun start(item: Item, title: String, url: String, startMs: Long = 0L) {
         if (DemoMode.active) return   // sample entries have no stream address
@@ -360,10 +393,11 @@ private fun AppContent() {
     LaunchedEffect(jumpTick) {
         if (jumpTick == 0) return@LaunchedEffect
         val id = tab
-        delay(150)
-        repeat(20) {
+        // T-069d: from the next frame on, every 40 ms (before: first try after 150 ms, then every 120 ms); same 2.4 s in total
+        withFrameNanos { }
+        repeat(60) {
             if (ContentFocus.tab == id && runCatching { ContentFocus.req.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
-            delay(120)
+            delay(40)
         }
     }
     fun goTab(id: Int) {
@@ -447,7 +481,9 @@ private fun AppContent() {
         }
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(Bg).fitScreenInset(playing == null)) {
+    BoxWithConstraints(Modifier.fillMaxSize().holeBackground(Bg).fitScreenInset(playing == null)) {
+        val focusManager = LocalFocusManager.current
+        val homeFocus = remember { BooleanArray(1) }
         // Scale of the design from the available width (see Design)
         val dk = maxWidth.value / Design.WIDTH
         SideEffect { if (Design.k != dk) Design.k = dk }
@@ -468,6 +504,34 @@ private fun AppContent() {
             else -> "Tab $tab"
         }
         ScreenTimer(shownName)
+        // T-069b: the home screen is drawn first and stays composed, hidden and not laid out, under a detail or person page
+        // opened from it, so Back shows it at once (rows, scroll positions, images). Every other screen replaces it as before.
+        val homeBase = HomeKeepLogic.homeIsBase(p != null, b != null, c != null, adding, Boomer.enabled, tab == 4 && all.isNotEmpty(), tab == MenuLogic.DOWNLOADS)
+        val pageOnTop = personTop != null || d != null
+        // Checked when a page opens and again when Android reports low memory (then the hidden home screen is let go)
+        val heapTight = remember(top, Mem.trimTick) { Mem.heapTight(HomeKeepLogic.HEAP_LIMIT) }
+        // T-070: not with "Weak device" (saves the memory of the kept screen)
+        val homeHidden = HomeKeepLogic.keepHidden(homeBase, pageOnTop, heapTight, HomeKeepLogic.ENABLED && DevicePerf.profile.keepHome)
+        // The focus must not stay on a hidden card (keys would go there until the page takes the focus)
+        LaunchedEffect(homeHidden) { if (homeHidden && homeFocus[0]) runCatching { focusManager.clearFocus(force = true) } }
+        if (HomeKeepLogic.composeHome(homeBase, pageOnTop, homeHidden)) {
+            KeepAliveBox(homeHidden, Modifier.fillMaxSize().onFocusChanged { homeFocus[0] = it.hasFocus }.screenEnter(tab)) { HomeScreen(
+                tab = tab, onTab = { goTab(it) }, states = states,
+                onOpen = open,
+                onPlayNow = { i -> LastFocus.pending = i.id; if (i.kind == Kind.SERIES) pushTop(i) else { if (i.kind != Kind.LIVE && !i.id.startsWith("rec:")) pushTop(i); start(i, i.title, i.url) } },
+                onResume = { e, i ->
+                    LastFocus.pending = i.id
+                    if (i.kind != Kind.LIVE) pushTop(i)
+                    // current address from the loaded playlist instead of the stored one (providers change addresses)
+                    val t = WatchStore.target(ctx, i, e)
+                    start(i, t.first, t.second, e.pos)
+                },
+                onBrowse = { browse = BrowseState(it) },
+                onCategories = { cats = it },
+                onAdd = { DemoMode.exit(); adding = true },
+                hidden = homeHidden
+            ) }
+        }
         when {
             p != null -> {
                 val zap = if (p.live || p.archive != null) {
@@ -553,21 +617,8 @@ private fun AppContent() {
             ) }
             tab == MenuLogic.DOWNLOADS -> Box(Modifier.fillMaxSize().screenEnter(tab)) { DownloadsTab(tab = tab, onTab = { goTab(it) },
                 onPlay = { e -> start(Item(e.id, Kind.MOVIE, e.title, null, e.url, null, "Downloads"), e.title, e.url, 0L) }) }
-            else -> Box(Modifier.fillMaxSize().screenEnter(tab)) { HomeScreen(
-                tab = tab, onTab = { goTab(it) }, states = states,
-                onOpen = open,
-                onPlayNow = { i -> LastFocus.pending = i.id; if (i.kind == Kind.SERIES) pushTop(i) else { if (i.kind != Kind.LIVE && !i.id.startsWith("rec:")) pushTop(i); start(i, i.title, i.url) } },
-                onResume = { e, i ->
-                    LastFocus.pending = i.id
-                    if (i.kind != Kind.LIVE) pushTop(i)
-                    // current address from the loaded playlist instead of the stored one (providers change addresses)
-                    val t = WatchStore.target(ctx, i, e)
-                    start(i, t.first, t.second, e.pos)
-                },
-                onBrowse = { browse = BrowseState(it) },
-                onCategories = { cats = it },
-                onAdd = { DemoMode.exit(); adding = true }
-            ) }
+            // Home screen: drawn above the screens (T-069b)
+            else -> {}
         }
         if (RemoteUi.show) RemoteOverlay(Modifier.align(Alignment.Center))
         // W-004: not over the player or the add screen, and not at the same time as the update dialog

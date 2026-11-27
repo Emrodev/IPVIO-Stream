@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
@@ -26,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
@@ -80,7 +83,7 @@ val LocalRowFocus = compositionLocalOf { false }
 @OptIn(ExperimentalFoundationApi::class)
 class PivotSpec(private val pivot: Float, private val list: () -> androidx.compose.foundation.lazy.LazyListState) : BringIntoViewSpec {
     @Suppress("OVERRIDE_DEPRECATION")
-    override val scrollAnimationSpec = tween<Float>(if (Look.motion == 0) 1 else 380, easing = FastOutSlowInEasing)
+    override val scrollAnimationSpec = tween<Float>(ThemeMath.pivotScrollMs(Look.motion), easing = FastOutSlowInEasing)
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
         if (size >= containerSize * 0.45f) return SmoothSpec.calculateScrollDistance(offset, size, containerSize)
         val d = offset - containerSize * pivot
@@ -95,16 +98,25 @@ class PivotSpec(private val pivot: Float, private val list: () -> androidx.compo
 
 /** Full-screen background with the scene image of the title; without an image a gradient from the title color. */
 @Composable
-fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier, dim: Float = 0f) {
-    Box(modifier.background(Bg)) {
+fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier, dim: Float = 0f, trailerOn: Boolean = false) {
+    // While a trailer plays under the page (TrailerPreview), the background leaves a hole and the picture steps aside
+    val hole = trailerOn && TrailerHole.rect != null
+    Box(modifier.holeBackground(Bg)) {
         // 17c: calm picture (no constant zoom), medium image size (w780) instead of full resolution – saves memory and computing time
         Crossfade(item, animationSpec = tween(if (Look.motion == 0) 0 else 600), label = "bb") { it0 ->
             if (it0 != null) {
                 val m = rememberMeta(it0)
-                val url = m?.backdrop?.let { b -> cardBackdrop(b) } ?: m?.poster?.let { p -> cardPoster(p) }
-                if (url != null) AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.TopEnd)
+                // Full-screen picture: the poster fallback keeps the card size w342 also with "Weak device" (T-070)
+                val url = m?.backdrop?.let { b -> cardBackdrop(b) } ?: m?.poster?.let { p -> DevicePerfLogic.cardPoster(p, false) }
+                if (url != null) AsyncImage(url, null, Modifier.fillMaxSize().graphicsLayer { alpha = if (hole) 0f else 1f }, contentScale = ContentScale.Crop, alignment = Alignment.TopEnd)
                 else ArtPlaceholder(it0, Modifier.fillMaxSize(), showTitle = false)
             }
+        }
+        // Home screen option: the selected title's trailer after 2 s behind the picture (not for live channels)
+        if (trailerOn && item != null && item.kind != Kind.LIVE) {
+            val m = rememberFullMeta(item, rememberMeta(item))
+            TrailerPreview(m?.trailerKey, active = true, trailerLang = m?.trailerLang,
+                modifier = Modifier.align(Alignment.TopEnd).fillMaxWidth(0.72f).aspectRatio(16f / 9f))
         }
         // Gradients: strong on the left (text), at the bottom into the background (rows), subtle at the top
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Bg, 0.24f to Bg.copy(alpha = .94f), 0.48f to Bg.copy(alpha = .5f), 0.72f to Color.Transparent)))
@@ -120,7 +132,8 @@ fun BillboardInfo(item: Item, modifier: Modifier = Modifier) {
     Crossfade(item, animationSpec = tween(if (Look.motion == 0) 0 else 450), label = "bbi", modifier = modifier) { c ->
         val m = rememberFullMeta(c, rememberMeta(c))
         Column(Modifier.widthIn(max = dpx(980)), verticalArrangement = Arrangement.spacedBy(dpx(14))) {
-            Kicker(Lang.tr(kindLabel(c.kind)) + (qualityOf(c)?.let { q -> "  ·  " + q.uppercase() } ?: ""))
+            // Only the picture quality: the filter above already says movie or series
+            qualityOf(c)?.let { Kicker(it.uppercase()) }
             // The info block must fit into the space above the selected row: title always single-line (long titles smaller),
             // description at most two lines. Otherwise it runs into the row title.
             val tsz = if (c.title.length <= 24) 84 else if (c.title.length <= 34) 66 else 54

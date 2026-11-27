@@ -269,6 +269,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
     val triedUrls = remember { HashSet<String>() }
     var stalls by remember { mutableStateOf(emptyList<Long>()) }
     var readyOnce by remember { mutableStateOf(false) }
+    // T-069e: first "ready" of this player and whether stutter raised the buffer meanwhile (clean playbacks lower it again)
+    val bufSession = remember { LongArray(2) }   // [0] = time of the first ready (0 = never), [1] = 1 after stutter
     var lastSeekT by remember { mutableLongStateOf(0L) }
     // Notice at the top (source switched, device/quality) for a few seconds
     var notice by remember { mutableStateOf(req.note) }
@@ -766,6 +768,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     msg = null; retries = 0; boomerFail = false
                     if (player.duration > 0 && player.currentPosition < player.duration - 3000) endGuard = ""
                     if (!readyOnce) { readyOnce = true; DeadLinks.ok(ctx, cur.url) }
+                    if (bufSession[0] == 0L) bufSession[0] = System.currentTimeMillis()
                 }
                 // Stutter: rebuffering in the middle of playback, not right after seeking
                 if (state == Player.STATE_BUFFERING && readyOnce && player.playWhenReady &&
@@ -774,6 +777,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     val now = System.currentTimeMillis()
                     stalls = StallLogic.add(stalls, now)
                     if (StallLogic.tooMany(stalls, now)) {
+                        bufSession[1] = 1L
                         // Automatic: enlarge the buffer for the next playback (slow internet)
                         val before = AppSettings.bufferLearned
                         AppSettings.learnBuffer(ctx)
@@ -814,6 +818,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         RemoteHub.player = player
         onDispose {
             AppNav.playing = false
+            // T-069e: count this playback for the automatic buffer (clean = long enough, no stutter)
+            runCatching { AppSettings.bufferPlayback(ctx, BufferLogic.isClean(bufSession[0], System.currentTimeMillis(), bufSession[1] != 0L)) }
             if (RemoteHub.player === player) RemoteHub.player = null
             // Detail page remembers the last played episode (also after "Next episode")
             if (!cur.live && cur.archive == null) DetailReturn.set(cur.itemId, cur.season, cur.episode)

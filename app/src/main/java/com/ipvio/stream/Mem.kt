@@ -2,6 +2,8 @@ package com.ipvio.stream
 
 import android.app.ActivityManager
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.media3.exoplayer.DefaultLoadControl
 import coil.Coil
 
@@ -42,10 +44,12 @@ object Mem {
 
     /** Buffer sizes for the player: (min ms, max ms, start ms, rebuffer ms, byte limit). */
     fun bufferPlan(tier: Int): IntArray = when (tier) {
-        // After a stall playback resumes only with a few seconds in the buffer (rebuffer ms); too little means stall, play 1 s, stall again
-        0 -> intArrayOf(10_000, 25_000, 1_500, 5_000, 14 * 1024 * 1024)
-        1 -> intArrayOf(20_000, 40_000, 2_000, 6_000, 28 * 1024 * 1024)
-        else -> intArrayOf(30_000, 60_000, 2_500, 8_000, -1)
+        // After a stall playback resumes only with a few seconds in the buffer (rebuffer ms); too little means stall, play 1 s, stall again.
+        // T-069e: start ms 1,000 / 1,250 / 1,500 (before 1,500 / 2,000 / 2,500): the picture comes sooner after Play and zapping.
+        // On a slow line the automatic buffer mode raises it again (+2 s per level) and lowers it after clean playbacks.
+        0 -> intArrayOf(10_000, 25_000, 1_000, 5_000, 14 * 1024 * 1024)
+        1 -> intArrayOf(20_000, 40_000, 1_250, 6_000, 28 * 1024 * 1024)
+        else -> intArrayOf(30_000, 60_000, 1_500, 8_000, -1)
     }
 
     fun loadControl(ctx: Context): DefaultLoadControl {
@@ -62,11 +66,31 @@ object Mem {
         return r.totalMemory() - r.freeMemory() > r.maxMemory() * limit
     }
 
+    /** T-069b: counts [trim] calls; the home screen kept under a detail page checks the memory again on each one. */
+    var trimTick by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+
     /** On memory shortage: empty everything that can be reloaded. */
     fun trim(ctx: Context) {
+        trimTick++
         runCatching { Coil.imageLoader(ctx).memoryCache?.clear() }
         runCatching { MetaRepo.trim() }
         runCatching { Epg.trim(); EpgFull.trim(); CreditsRepo.trim() }
+        runCatching { ScreenCaches.clear() }
+    }
+}
+
+/**
+ * T-069: lists kept for the next visit of Live TV, the player's channel list and the category pages, and the index of movie
+ * sources for Play (T-069c). Emptied when memory is low ([Mem.trim]) and whenever the playlist changes (MainActivity), so
+ * they never keep the titles of a previous playlist alive. They are rebuilt on the next visit.
+ */
+object ScreenCaches {
+    fun clear() {
+        LiveListCache.clear()
+        ChannelOverlayCache.clear()
+        CatFolderCache.v.clear()
+        Sources.clearIndex()
     }
 }
 

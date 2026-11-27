@@ -137,7 +137,7 @@ Alle {#0}¦كل {#0}
 Alle {0}¦كل {0}
 Keine {0} in dieser Playlist¦لا توجد {0} في قائمة التشغيل هذه
 Weitere Kategorien findest du unter „Kategorien“ oben.¦ستجد المزيد من الفئات في «الفئات» أعلاه.
-Filme, Serien oder Sender suchen…¦ابحث عن أفلام أو مسلسلات أو قنوات…
+Filme, Serien oder Sender suchen…¦بحث...
 Letzte Suchanfragen¦عمليات البحث الأخيرة
 Verlauf löschen¦مسح السجل
 Keine Treffer für „{0}“¦لا توجد نتائج لـ «{0}»

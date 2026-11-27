@@ -166,7 +166,8 @@ fun buttonColors(focused: Boolean, primary: Boolean): ButtonColors = when {
 /** Soft glow in the highlight color around focused cards (colored on Android 9+, neutral below). */
 fun Modifier.focusGlow(focused: Boolean, shape: androidx.compose.ui.graphics.Shape): Modifier =
     // Round 14 (user's wish): no colored glow around selected fields any more, only a subtle dark shadow
-    if (!focused) this else this.shadow(10.dp, shape, clip = false, ambientColor = Tok.Lift, spotColor = Tok.Lift)
+    // T-070: no shadow with "Weak device" (a shadow is drawn on every frame of the focus animation)
+    if (!focused || DevicePerf.reduceVisuals) this else this.shadow(10.dp, shape, clip = false, ambientColor = Tok.Lift, spotColor = Tok.Lift)
 
 @Composable
 fun FocusButton(text: String, modifier: Modifier = Modifier, primary: Boolean = false, compact: Boolean = false, onClick: () -> Unit) {

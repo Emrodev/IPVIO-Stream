@@ -21,6 +21,9 @@ jobs:
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
       - name: Build debug APK
+        env:
+          # Trakt sign-in (T-031): the public client ID is built in, so the debug APK can sign in too
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
         run: ./gradlew --no-daemon assembleDebug
       - uses: actions/upload-artifact@v7
         with:
