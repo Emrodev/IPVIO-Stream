@@ -1,5 +1,6 @@
 package com.ipvio.stream
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -100,5 +101,44 @@ class TrailerLogicTest {
         assertTrue(TrailerLogic.externalUrl("dQw4w9WgXcQ", "X") == "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         assertTrue(TrailerLogic.externalUrl(null, "Avatar 2") == "https://www.youtube.com/results?search_query=Avatar+2+Trailer")
         assertTrue(TrailerLogic.externalUrl("bad id&x=1", "A").startsWith("https://www.youtube.com/results?search_query="))
+    }
+
+    @Test
+    fun previewPage_hidesControls_dialogPageKeepsThem() {
+        val pv = TrailerLogic.attempt(0, "dQw4w9WgXcQ", preview = true)!!.html
+        assertTrue(pv.contains("controls=0") && pv.contains("fs=0") && pv.contains("iv_load_policy=3"))
+        val dlg = TrailerLogic.attempt(0, "dQw4w9WgXcQ")!!.html
+        assertFalse(dlg.contains("controls=0"))
+        assertNull(TrailerLogic.attempt(0, "bad id!", preview = true))
+    }
+
+    @Test
+    fun endedState_isRecognised() {
+        assertTrue(TrailerLogic.isEnded("IPVIO_TRAILER_STATE 0"))
+        assertFalse(TrailerLogic.isEnded("IPVIO_TRAILER_STATE 1"))
+        assertFalse(TrailerLogic.isEnded(null))
+        assertTrue(TrailerLogic.PREVIEW_DELAY_MS == 2_000L)
+    }
+
+
+    @Test
+    fun pick_prefersAppLanguageThenEnglish() {
+        fun v(k: String, l: String?, t: String = "Trailer", o: Boolean = true, site: String = "YouTube") = TrailerLogic.Video(k, site, t, l, o)
+        val list = listOf(v("enTrailer01", "en"), v("plTeaser001", "pl", "Teaser"), v("plTrailer01", "pl", o = false), v("plTrailer02", "pl"), v("vimeoPL0001", "pl", site = "Vimeo"))
+        assertEquals("plTrailer02", TrailerLogic.pick(list, "pl")!!.key)
+        assertEquals("enTrailer01", TrailerLogic.pick(list, "de")!!.key)
+        assertEquals("plTeaser001", TrailerLogic.pick(listOf(v("plTeaser001", "pl", "Teaser"), v("clip0000001", "pl", "Clip")), "pl")!!.key)
+        assertNull(TrailerLogic.pick(emptyList(), "pl"))
+    }
+
+    @Test
+    fun langParams_andCaptions() {
+        assertEquals("&hl=pl", TrailerLogic.langParams("pl", false))
+        assertEquals("&hl=pl&cc_load_policy=1&cc_lang_pref=pl", TrailerLogic.langParams("pl", true))
+        assertEquals("", TrailerLogic.langParams("p\"l", true))
+        assertFalse(TrailerLogic.wantCaptions("pl", "pl"))
+        assertTrue(TrailerLogic.wantCaptions("en", "pl"))
+        assertTrue(TrailerLogic.wantCaptions(null, "pl"))
+        assertTrue(TrailerLogic.attempt(0, "dQw4w9WgXcQ", preview = true, lang = "&hl=pl")!!.html.contains("&hl=pl"))
     }
 }

@@ -31,19 +31,53 @@ object TrailerLogic {
      * 0: as before (origin and embed host youtube-nocookie.com); 1: origin of the app, embed host nocookie;
      * 2: origin of the app, embed host youtube.com.
      */
-    fun attempt(n: Int, key: String?): Attempt? = when (n) {
-        0 -> embedHtml(key, NOCOOKIE, NOCOOKIE)?.let { Attempt(NOCOOKIE, it) }
-        1 -> embedHtml(key, NOCOOKIE, APP_ORIGIN)?.let { Attempt(APP_ORIGIN, it) }
-        2 -> embedHtml(key, YOUTUBE, APP_ORIGIN)?.let { Attempt(APP_ORIGIN, it) }
+    fun attempt(n: Int, key: String?, preview: Boolean = false, lang: String = ""): Attempt? = when (n) {
+        0 -> embedHtml(key, NOCOOKIE, NOCOOKIE, preview, lang)?.let { Attempt(NOCOOKIE, it) }
+        1 -> embedHtml(key, NOCOOKIE, APP_ORIGIN, preview, lang)?.let { Attempt(APP_ORIGIN, it) }
+        2 -> embedHtml(key, YOUTUBE, APP_ORIGIN, preview, lang)?.let { Attempt(APP_ORIGIN, it) }
         else -> null
     }
 
-    /** Page for the WebView, or null if the id is not valid. Default: the privacy-enhanced embed host (way 0). */
-    fun embedHtml(key: String?, host: String = NOCOOKIE, origin: String = host): String? {
+    /** Delay before the trailer starts behind the detail page header, like Prime Video. */
+    const val PREVIEW_DELAY_MS = 2_000L
+
+    /**
+     * Page for the WebView, or null if the id is not valid. Default: the privacy-enhanced embed host (way 0).
+     * [preview]: background trailer of the detail page: no player controls, no keyboard, no fullscreen, no annotations.
+     */
+    /** A video of a title from TMDB (only the fields the choice needs). */
+    class Video(val key: String, val site: String, val type: String, val lang: String?, val official: Boolean)
+
+    /**
+     * The trailer to play: YouTube only, a trailer before a teaser, then the language (app language, English, any other),
+     * then official before fan uploads, then TMDB's order. Returns the video or null.
+     */
+    fun pick(videos: List<Video>, ui: String): Video? {
+        val yt = videos.filter { it.site.equals("YouTube", true) && validKey(it.key) && (it.type == "Trailer" || it.type == "Teaser") }
+        fun langRank(v: Video) = when (v.lang?.lowercase()) { ui.lowercase() -> 0; "en" -> 1; else -> 2 }
+        return yt.withIndex().minWithOrNull(compareBy<IndexedValue<Video>>(
+            { if (it.value.type == "Trailer") 0 else 1 }, { langRank(it.value) }, { if (it.value.official) 0 else 1 }, { it.index }
+        ))?.value
+    }
+
+    /**
+     * Player language and subtitles: the YouTube interface in the app language ([ui]); with [captions] subtitles are switched
+     * on with the app language preferred (shown only if the video has such a track, possibly an automatic one).
+     */
+    fun langParams(ui: String?, captions: Boolean): String {
+        val l = ui?.lowercase()?.takeIf { Regex("^[a-z]{2}$").matches(it) } ?: return ""
+        return "&hl=$l" + if (captions) "&cc_load_policy=1&cc_lang_pref=$l" else ""
+    }
+
+    /** Subtitles are wanted when the trailer is not in the app language (unknown language counts as foreign). */
+    fun wantCaptions(trailerLang: String?, ui: String): Boolean = !trailerLang.equals(ui, ignoreCase = true)
+
+    fun embedHtml(key: String?, host: String = NOCOOKIE, origin: String = host, preview: Boolean = false, lang: String = ""): String? {
         if (!validKey(key)) return null
+        val extra = (if (preview) "&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1" else "") + lang
         return "<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
             "<style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style></head>" +
-            "<body><iframe id=\"yt\" src=\"$host/embed/$key?autoplay=1&playsinline=1&rel=0" +
+            "<body><iframe id=\"yt\" src=\"$host/embed/$key?autoplay=1&playsinline=1&rel=0$extra" +
             "&enablejsapi=1&origin=$origin\" " +
             "allow=\"autoplay; encrypted-media; picture-in-picture\" allowfullscreen></iframe>" +
             "<script>$DIAG_SCRIPT</script></body></html>"
@@ -51,6 +85,9 @@ object TrailerLogic {
 
     /** The player reports "playing" (state 1). */
     fun isPlaying(console: String?): Boolean = console == "IPVIO_TRAILER_STATE 1"
+
+    /** The player reports "ended" (state 0). */
+    fun isEnded(console: String?): Boolean = console == "IPVIO_TRAILER_STATE 0"
 
     /** YouTube player error code of a console line, or null. */
     fun playerError(console: String?): Int? =

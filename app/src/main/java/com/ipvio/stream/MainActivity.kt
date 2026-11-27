@@ -447,7 +447,7 @@ private fun AppContent() {
         }
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(Bg).fitScreenInset(playing == null)) {
+    BoxWithConstraints(Modifier.fillMaxSize().holeBackground(Bg).fitScreenInset(playing == null)) {
         // Scale of the design from the available width (see Design)
         val dk = maxWidth.value / Design.WIDTH
         SideEffect { if (Design.k != dk) Design.k = dk }

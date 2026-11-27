@@ -980,7 +980,8 @@ private fun Hero(
     // Picture across the full width (also behind the header), faded into the background at the left and bottom.
     // Round 14: without arrows; the description has more width (up to about the middle of the picture) and is no longer cut off (max. 250 characters).
     // Round 17c: parallax while scrolling (the constant zoom was removed for performance)
-    Box(Modifier.fillMaxWidth().height(heroH).background(Bg).clipToBounds().onFocusChanged { if (it.hasFocus) Billboard.cardFocus = false }) {
+    // Hidden while a home screen trailer plays under the page (it would cover the video)
+    Box(Modifier.fillMaxWidth().height(heroH).graphicsLayer { alpha = if (TrailerHole.rect != null) 0f else 1f }.background(Bg).clipToBounds().onFocusChanged { if (it.hasFocus) Billboard.cardFocus = false }) {
         Crossfade(item, animationSpec = tween(1100), label = "heroBg") { c ->
             val m = rememberMeta(c)
             // 17c: calm picture (no constant zoom any more, which made the Fire TV redraw constantly); only slight parallax while scrolling
@@ -1069,7 +1070,9 @@ private fun BillboardLayer(fade: () -> Float, item: State<Item?>, infoMod: Modif
     val shown by remember { derivedStateOf { fade() > 0.01f } }
     if (!shown) return
     val bi = item.value
-    BillboardBackdrop(bi, Modifier.fillMaxSize().graphicsLayer { alpha = fade() })
+    // Trailer only while the picture is fully there (not while it fades in or out)
+    val full by remember { derivedStateOf { fade() > 0.95f } }
+    BillboardBackdrop(bi, Modifier.fillMaxSize().graphicsLayer { alpha = fade() }, trailerOn = General.trailerHome && full)
     bi?.let { BillboardInfo(it, infoMod.graphicsLayer { alpha = fade(); translationY = (1f - fade()) * 20.dp.toPx() }) }
 }
 
