@@ -22,9 +22,6 @@ internal fun SportSettingsPage(ctx: Context) {
     Hint("Wähle, was der Sports Hub zeigt. Ausgeschaltete Sportarten und Wettbewerbe erscheinen nicht und werden nicht abgefragt. Die Ergebnisse kommen von ESPN (inoffizielle Quelle).")
     ToggleRow("Live-Ergebnisse", "Ergebnisse, Tabellen und Spielpläne von ESPN", General.sportLive) { General.setSportLive(ctx, it) }
 
-    Hint("Wähle, was der Sports Hub zeigt. Ausgeschaltete Sportarten und Wettbewerbe erscheinen nicht und werden nicht abgefragt. Die Ergebnisse kommen von ESPN (inoffizielle Quelle).")
-    ToggleRow("Live-Ergebnisse", "Ergebnisse, Tabellen und Spielpläne von ESPN", General.sportLive) { General.setSportLive(ctx, it) }
-
     SettingsTabs(listOf("Sportarten", "Wettbewerbe", "Hinweise", "Bereiche des Sports Hub"), "sportsettings") { tab ->
         when (tab) {
             0 -> {

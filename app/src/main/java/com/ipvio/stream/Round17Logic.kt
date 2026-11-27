@@ -130,6 +130,27 @@ object BufferLogic {
     /** Only the automatic mode learns; one level per call, at most 2. */
     fun bump(mode: Int, learned: Int): Int = if (mode == 0) (learned + 1).coerceAtMost(2) else learned
 
+    /** T-069e: clean playbacks in a row after which the automatic mode steps one level down again. */
+    const val RELAX_AFTER = 5
+
+    /** T-069e: a playback counts as clean when it ran at least this long without the stutter that raises the level. */
+    const val CLEAN_MS = 120_000L
+
+    /**
+     * T-069e: (learned level, clean count) after a playback ended. Before, the learned level only grew, so after one bad evening
+     * every start kept waiting 2 or 4 s longer. Now [RELAX_AFTER] clean playbacks in a row lower it by one level. Short
+     * playbacks (zapping) are not counted and do not reset the count; stutter resets it ([bump] is called then).
+     */
+    fun afterPlayback(mode: Int, learned: Int, cleanCount: Int, clean: Boolean): IntArray {
+        if (mode != 0 || learned <= 0) return intArrayOf(learned.coerceAtLeast(0), 0)
+        if (!clean) return intArrayOf(learned, cleanCount)
+        val n = cleanCount + 1
+        return if (n >= RELAX_AFTER) intArrayOf(learned - 1, 0) else intArrayOf(learned, n)
+    }
+
+    /** T-069e: whether a playback was clean: ready at [readyAtMs] (0 = never ready), no stutter, ran at least [CLEAN_MS]. */
+    fun isClean(readyAtMs: Long, endMs: Long, stutter: Boolean): Boolean = readyAtMs > 0 && !stutter && endMs - readyAtMs >= CLEAN_MS
+
     /**
      * Byte limit of the buffer. The time targets (20-60 s) only work if the byte limit leaves room for them: a 4K movie
      * with 40 Mbit/s is 5 MB per second, so 14 MB hold barely 3 s and the player stalls on every small network hiccup.

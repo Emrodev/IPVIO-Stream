@@ -43,11 +43,16 @@ object TraktSync {
     fun lastSyncMs(c: Context): Long = prefs(c).getLong(LAST, 0L)
     fun lastSummary(c: Context): String = prefs(c).getString(SUMMARY, "") ?: ""
 
-    /** App start: sync when connected, a playlist is loaded and the last sync is older than 6 hours. */
+    /** T-075: automatic sync interval in ms (see [TraktSyncLogic.INTERVAL_CHOICES]); default 6 hours. */
+    private const val INTERVAL = "autoInterval"
+    fun autoInterval(c: Context): Long = prefs(c).getLong(INTERVAL, TraktSyncLogic.AUTO_INTERVAL_MS)
+    fun setAutoInterval(c: Context, ms: Long) { prefs(c).edit().putLong(INTERVAL, ms).apply() }
+
+    /** App start: sync when connected, a playlist is loaded and the interval setting says it is due. */
     fun autoSync(c: Context) {
         val app = c.applicationContext
         if (running || !TraktAuth.isConnected(app)) return
-        if (!TraktSyncLogic.autoDue(System.currentTimeMillis(), lastSyncMs(app))) return
+        if (!TraktSyncLogic.autoDue(System.currentTimeMillis(), lastSyncMs(app), autoInterval(app))) return
         if (PlaylistStore.channels.isEmpty()) return
         syncAsync(app)
     }

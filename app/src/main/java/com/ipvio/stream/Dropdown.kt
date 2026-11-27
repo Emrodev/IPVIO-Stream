@@ -33,6 +33,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 
 @Composable
 fun FilterPill(text: String, active: Boolean, modifier: Modifier = Modifier, icon: FIcon? = null, caret: Boolean = false, aicon: AIcon? = null, raw: Boolean = false, onClick: () -> Unit) {
@@ -88,7 +94,7 @@ fun DropdownPill(
 }
 
 @Composable
-fun OptionPopup(options: List<String>, selected: Int, onDismiss: () -> Unit, icons: List<AIcon?>? = null, onPick: (Int) -> Unit) {
+fun OptionPopup(options: List<String>, selected: Int, onDismiss: () -> Unit, icons: List<AIcon?>? = null, closeOnSide: Boolean = false, onPick: (Int) -> Unit) {
     Popup(popupPositionProvider = belowAnchor, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
         val fr = remember { FocusRequester() }
         val state = rememberLazyListState(maxOf(selected - 2, 0))
@@ -97,6 +103,10 @@ fun OptionPopup(options: List<String>, selected: Int, onDismiss: () -> Unit, ico
         Column(
             Modifier.width(300.dp).heightIn(max = 340.dp).clip(shape)
                 .background(Surf.copy(alpha = 0.97f)).border(1.dp, DS.Overlay3, shape).padding(8.dp)
+                // Playlist lists: Left or Right closes them, like Back (T-077)
+                .then(if (closeOnSide) Modifier.onPreviewKeyEvent { e: KeyEvent ->
+                    if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight)) { onDismiss(); true } else false
+                } else Modifier)
         ) {
             LazyColumn(state = state) {
                 itemsIndexed(options) { i, o ->

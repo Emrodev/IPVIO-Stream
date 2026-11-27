@@ -24,8 +24,17 @@ object TraktSyncLogic {
     const val PAGE_LIMIT = 1000
     /** Pages read at most per list (safety stop against a broken page count). */
     const val MAX_PAGES = 20
-    /** Automatic sync at most this often (app start); "Sync now" ignores it. */
+    /** Automatic sync at most this often (app start); "Sync now" ignores it. Default, as before the setting existed. */
     const val AUTO_INTERVAL_MS = 6 * 3600_000L
+    /** T-075: interval "at every app start" (no waiting time). */
+    const val INTERVAL_START_MS = -1L
+    /** T-075: interval "only when I tap Sync now" (no automatic sync). */
+    const val INTERVAL_MANUAL_MS = 0L
+    private const val HOUR_MS = 3600_000L
+    /** T-075: choices of the automatic sync setting, in the order shown. */
+    val INTERVAL_CHOICES = listOf(
+        INTERVAL_START_MS, 6 * HOUR_MS, 12 * HOUR_MS, 24 * HOUR_MS, 7 * 24 * HOUR_MS, INTERVAL_MANUAL_MS
+    )
 
     fun watchedPath(shows: Boolean, page: Int) = "/sync/watched/" + (if (shows) "shows" else "movies") + "?page=$page&limit=$PAGE_LIMIT"
     fun watchlistPath(shows: Boolean, page: Int) = "/sync/watchlist/" + (if (shows) "shows" else "movies") + "?page=$page&limit=$PAGE_LIMIT"
@@ -180,5 +189,10 @@ object TraktSyncLogic {
     }
 
     /** Is an automatic sync due? Never before the first successful sync of a connection is wanted again too early. */
-    fun autoDue(nowMs: Long, lastSyncMs: Long): Boolean = lastSyncMs <= 0L || nowMs - lastSyncMs >= AUTO_INTERVAL_MS
+    /** T-075: due at app start. Manual never; "every start" always; otherwise when the interval has passed since the last sync. */
+    fun autoDue(nowMs: Long, lastSyncMs: Long, intervalMs: Long = AUTO_INTERVAL_MS): Boolean = when (intervalMs) {
+        INTERVAL_MANUAL_MS -> false
+        INTERVAL_START_MS -> true
+        else -> lastSyncMs <= 0L || nowMs - lastSyncMs >= intervalMs
+    }
 }

@@ -20,6 +20,9 @@ object ParentalLogic {
     fun validPin(pin: String): Boolean = pin.length == 4 && pin.all { it in '0'..'9' }
 
     fun check(pin: String, salt: String, expected: String): Boolean = validPin(pin) && hash(pin, salt) == expected
+
+    /** T-078: a new PIN is confirmed when both entries are valid and equal. */
+    fun confirmed(first: String, second: String): Boolean = validPin(first) && first == second
 }
 
 /** Protection against guessing the PIN: after [maxFails] failed attempts, input is locked for [lockMs]. */

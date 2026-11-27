@@ -147,6 +147,13 @@ fun LiveBanner(item: Item?, title: String, number: Int, epg: List<EpgEntry>, mod
     }
 }
 
+/** T-069: channels by id and by category of the last channel list opened in the player; emptied by [ScreenCaches]. */
+internal object ChannelOverlayCache {
+    val byId = LastResults<Map<String, Item>>(max = 1)
+    val groups = LastResults<Map<String, List<Item>>>(max = 1)
+    fun clear() { byId.clear(); groups.clear() }
+}
+
 /**
  * Channel list (Left in the live player): optional category column, channel column and on the right an info window
  * as a flat bar at the bottom of the picture. The behavior is exactly as before – only moved out and redesigned.
@@ -162,8 +169,9 @@ fun ChannelOverlay(
     onClose: () -> Unit, onPick: (Item, List<Item>) -> Unit
 ) {
     val ctx = LocalContext.current
-    val byId = remember(liveAll) { liveAll.associateBy { it.id } }
-    val groups = remember(liveAll) { liveAll.groupBy { it.group } }
+    // T-069: built once per channel list and kept (ChannelOverlayCache): Left in the player opens the list without a pass over all channels
+    val byId = remember(liveAll) { ChannelOverlayCache.byId.get(liveAll) { liveAll.associateBy { it.id } } }
+    val groups = remember(liveAll) { ChannelOverlayCache.groups.get(liveAll) { liveAll.groupBy { it.group } } }
     // Remembered: the overlay recomposes on every focus step (focusedCh), the lists only change with their sources
     val favItems = remember(byId, Library.favs.size) { Library.favs.mapNotNull { byId[it] } }
     val favCats = remember(groups, CatFavs.list.size) { CatFavs.list.filter { it in groups } }

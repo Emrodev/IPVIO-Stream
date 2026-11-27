@@ -94,6 +94,28 @@ object Parental {
         pinSet = true
     }
 
+    /**
+     * T-078: sets the PIN of a new profile (not only the active one). A PIN makes the profile locked only together with
+     * "adult content hidden", so that is switched on there as well.
+     */
+    fun setPinFor(c: Context, profileId: Int, pin: String): Boolean {
+        if (!ParentalLogic.validPin(pin)) return false
+        val salt = ByteArray(8).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
+        prefsOf(c, profileId).edit().putString("parental_salt", salt).putString("parental_hash", ParentalLogic.hash(pin, salt))
+            .putBoolean("parental_hide", true).apply()
+        if (profileId == Profiles.active) init(c)
+        return true
+    }
+
+    /** T-079: whether a profile has a PIN (for the lock icon and the "change PIN" action). */
+    fun hasPinFor(c: Context, profileId: Int): Boolean = !prefsOf(c, profileId).getString("parental_hash", null).isNullOrEmpty()
+
+    /** T-079: removes the PIN of a profile; its "adult content hidden" setting stays as it is. */
+    fun removePinFor(c: Context, profileId: Int) {
+        prefsOf(c, profileId).edit().remove("parental_salt").remove("parental_hash").apply()
+        if (profileId == Profiles.active) init(c)
+    }
+
     fun clearPin(c: Context) {
         prefs(c).edit().remove("parental_salt").remove("parental_hash").apply()
         pinSet = false

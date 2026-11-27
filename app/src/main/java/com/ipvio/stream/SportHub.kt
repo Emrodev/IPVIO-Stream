@@ -45,6 +45,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -432,9 +433,19 @@ private fun HubSchedule(hub: HubCtx, sport: String?, onSport: (String?) -> Unit)
     val games by produceState<List<SportData.Game>?>(null, day, leaguesKey, retry) {
         value = null
         val ymd = SportData.ymd(day, General.zone())
-        val r = coroutineScope {
-            SportLeagues.enabled().map { l -> async { SportData.fetch(l, ymd, if (day == 0) 40_000 else 300_000) } }.awaitAll()
-        }.flatten().distinctBy { it.key }
+        // T-077: each league shows its games as soon as it answers (before: all leagues had to answer first, up to 12 s)
+        val got = LinkedHashMap<String, List<SportData.Game>>()
+        coroutineScope {
+            SportLeagues.enabled().map { l ->
+                launch {
+                    val part = SportData.fetch(l, ymd, if (day == 0) 40_000 else 300_000)
+                    got[l.path] = part
+                    val all = got.values.flatten().distinctBy { it.key }
+                    if (all.isNotEmpty()) value = all
+                }
+            }.joinAll()
+        }
+        val r = got.values.flatten().distinctBy { it.key }
         SportFeed.put(r)
         value = r
     }

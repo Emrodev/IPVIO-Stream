@@ -26,6 +26,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import kotlinx.coroutines.delay
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 
 /**
  * Playlist selection of one section (T-051): the pill shows the choice, the popup has a checkbox per playlist.
@@ -78,6 +84,10 @@ fun SectionPlaylistPopup(tab: Int, onChanged: () -> Unit = {}, onDismiss: () -> 
         Column(
             Modifier.width(320.dp).heightIn(max = 400.dp).clip(shape)
                 .background(Surf.copy(alpha = 0.97f)).border(1.dp, DS.Overlay3, shape).padding(8.dp)
+                // Left or Right closes the list, like Back (T-077)
+                .onPreviewKeyEvent { e: KeyEvent ->
+                    if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight)) { onDismiss(); true } else false
+                }
         ) {
             LazyColumn(Modifier.weight(1f, fill = false)) {
                 item {

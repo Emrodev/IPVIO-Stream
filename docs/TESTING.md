@@ -35,6 +35,8 @@ Automatic checks:
 | T12 | Same-name series split (year, country, placeholders in different categories), parse report (T-067) | exists (`SeriesSplitTest`) |
 | T13 | Guide matching by normalized tvg-id and channel name (T-067) | exists (`EpgMatchLogicTest`) |
 | T14 | Partial `get.php` movie/series categories, playlist switch memory rule (T-067, T-068) | exists (`LoadLogicTest`, `SwitchLogicTest`) |
+| T15 | Screen caches found again by list identity, id lookup in one pass, start delays, home screen kept under a page, movie source index equal to the full pass, fade-in and scroll times, automatic buffer stepping down (T-069) | exists (`ScreenCacheLogicTest`, `StartupLogicTest`, `HomeKeepLogicTest`, `MovieSourcesLogicTest`, `MotionTimingTest`, `BufferRelaxTest`) |
+| T16 | What "Device performance" switches, card image sizes, translations of its texts (T-070) | exists (`DevicePerfLogicTest`, `DictT070Test`) |
 
 Manual checks on a device or Fire TV, for each release:
 

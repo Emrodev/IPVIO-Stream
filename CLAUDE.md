@@ -66,6 +66,7 @@ Working rules for AI-assisted changes to this repository. Read this file first i
 - **Plan:** list affected files and the reason for each change.
 - **Implement:** keep unrelated code untouched.
 - **Validate:** run what is possible (section 3); list the rest as test steps.
+- **Behaviour check (mandatory, section 7a):** before reporting a change as done, run `.claude/scripts/behaviour-check.sh` and go through the test steps of every entry in `docs/BEHAVIOUR-REGISTER.md` that the change touches.
 - **Document:** update the affected file under `docs/` and `CHANGELOG.md`.
 - **Report:** what changed, which files, why, which checks ran and passed, what remains open, what the risks are.
 
@@ -152,6 +153,16 @@ The status list lives only in `docs/tasks/WORK_STATE.md` and `docs/REFACTORING-P
 - The test list (planned and existing checks) is in `docs/TESTING.md`.
 - CI warns when `app/src/main` changes without a change under `app/src/test`. The warning does not block.
 - Claude cannot run Gradle here. Report a test as passed only when CI or the maintainer shows it.
+
+## 7a. Behaviour register (mandatory)
+
+`docs/BEHAVIOUR-REGISTER.md` lists the user-visible behaviours that must survive code changes. It was created after a
+regression: a Left-key change silently broke the category memory of Movies and Series.
+
+- **Every new feature or changed behaviour** gets an entry (expected behaviour, code markers, device test steps) in the same change.
+- **Every change** is checked against the register: run `.claude/scripts/behaviour-check.sh` (fails when a marker is gone) and go through the test steps of the entries the change touches. Report which ones were checked and which were not.
+- **Removing a behaviour** needs approval (section 6). Its entry is removed in the same change, and the CHANGELOG says so.
+- A passing marker check is not a device test. Entries without a device test are marked **not device tested**.
 
 ## 18. Release notes
 

@@ -7,7 +7,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -94,6 +96,9 @@ internal fun ListImportPage(ctx: Context) {
     }
 }
 
+/** T-075: labels of [TraktSyncLogic.INTERVAL_CHOICES], same order. */
+private val TRAKT_INTERVAL_LABELS = listOf("Bei jedem Start", "Alle 6 Stunden", "Alle 12 Stunden", "Täglich", "Wöchentlich", "Nur manuell")
+
 /**
  * T-031 steps 4 and 5: Trakt is connected. Shows when it last synced and what was found, "Sync now" and "Disconnect".
  * The sync only reads from Trakt: watched titles get their check mark, history and watchlist become two categories.
@@ -115,6 +120,19 @@ private fun TraktSyncPanel(ctx: android.content.Context, onDisconnected: () -> U
             last > 0 -> Text(summary, color = Muted, fontSize = 15.sp)
         }
         if (last > 0 && !running) Text("Zuletzt synchronisiert: {0}".replace("{0}", dayLabel(last / 1000) + " " + hhmm(last / 1000)), color = Muted, fontSize = 14.sp)
+        // T-075: how often the app reads Trakt on its own (checked at app start)
+        var interval by remember { mutableStateOf(TraktSync.autoInterval(ctx)) }
+        Text("Automatisch synchronisieren", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text("Die App liest deine Trakt-Daten beim Start, sobald die gewählte Zeit abgelaufen ist. Wenn die App nicht geöffnet wird, gibt es keine Abfrage.", color = Muted, fontSize = 14.sp)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            TRAKT_INTERVAL_LABELS.forEachIndexed { i, label ->
+                val ms = TraktSyncLogic.INTERVAL_CHOICES[i]
+                ChoiceChip(label, selected = interval == ms) {
+                    interval = ms
+                    TraktSync.setAutoInterval(ctx, ms)
+                }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PillButton("Jetzt synchronisieren", icon = AIcon.Refresh) { TraktSync.syncAsync(ctx) }
             PillButton("Trakt trennen", light = false) { TraktSync.disconnect(ctx); onDisconnected() }

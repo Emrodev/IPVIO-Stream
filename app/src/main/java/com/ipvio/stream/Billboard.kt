@@ -83,7 +83,7 @@ val LocalRowFocus = compositionLocalOf { false }
 @OptIn(ExperimentalFoundationApi::class)
 class PivotSpec(private val pivot: Float, private val list: () -> androidx.compose.foundation.lazy.LazyListState) : BringIntoViewSpec {
     @Suppress("OVERRIDE_DEPRECATION")
-    override val scrollAnimationSpec = tween<Float>(if (Look.motion == 0) 1 else 380, easing = FastOutSlowInEasing)
+    override val scrollAnimationSpec = tween<Float>(ThemeMath.pivotScrollMs(Look.motion), easing = FastOutSlowInEasing)
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
         if (size >= containerSize * 0.45f) return SmoothSpec.calculateScrollDistance(offset, size, containerSize)
         val d = offset - containerSize * pivot
@@ -106,7 +106,8 @@ fun BillboardBackdrop(item: Item?, modifier: Modifier = Modifier, dim: Float = 0
         Crossfade(item, animationSpec = tween(if (Look.motion == 0) 0 else 600), label = "bb") { it0 ->
             if (it0 != null) {
                 val m = rememberMeta(it0)
-                val url = m?.backdrop?.let { b -> cardBackdrop(b) } ?: m?.poster?.let { p -> cardPoster(p) }
+                // Full-screen picture: the poster fallback keeps the card size w342 also with "Weak device" (T-070)
+                val url = m?.backdrop?.let { b -> cardBackdrop(b) } ?: m?.poster?.let { p -> DevicePerfLogic.cardPoster(p, false) }
                 if (url != null) AsyncImage(url, null, Modifier.fillMaxSize().graphicsLayer { alpha = if (hole) 0f else 1f }, contentScale = ContentScale.Crop, alignment = Alignment.TopEnd)
                 else ArtPlaceholder(it0, Modifier.fillMaxSize(), showTitle = false)
             }
@@ -131,7 +132,8 @@ fun BillboardInfo(item: Item, modifier: Modifier = Modifier) {
     Crossfade(item, animationSpec = tween(if (Look.motion == 0) 0 else 450), label = "bbi", modifier = modifier) { c ->
         val m = rememberFullMeta(c, rememberMeta(c))
         Column(Modifier.widthIn(max = dpx(980)), verticalArrangement = Arrangement.spacedBy(dpx(14))) {
-            Kicker(Lang.tr(kindLabel(c.kind)) + (qualityOf(c)?.let { q -> "  ·  " + q.uppercase() } ?: ""))
+            // Only the picture quality: the filter above already says movie or series
+            qualityOf(c)?.let { Kicker(it.uppercase()) }
             // The info block must fit into the space above the selected row: title always single-line (long titles smaller),
             // description at most two lines. Otherwise it runs into the row title.
             val tsz = if (c.title.length <= 24) 84 else if (c.title.length <= 34) 66 else 54

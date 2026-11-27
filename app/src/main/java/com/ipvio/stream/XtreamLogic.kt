@@ -96,6 +96,8 @@ object XtreamLogic {
         sb.append(" group-title=\"").append(attr(group(f, cats))).append('"')
         // #22: the provider's "added" date (Unix seconds) for "Neu hinzugefügt"; only digits are written
         f["added"]?.trim()?.takeIf { it.isNotEmpty() && it.all { ch -> ch.isDigit() } }?.let { sb.append(" added=\"").append(it).append('"') }
+        // T-076: the provider's TMDB id (digits only) so that the same film from several entries can be shown once
+        (f["tmdb"] ?: f["tmdb_id"])?.trim()?.takeIf { it.isNotEmpty() && it.all { ch -> ch.isDigit() } }?.let { sb.append(" tmdb=\"").append(it).append('"') }
         return sb.append(',').append(n).append('\n').append(movieUrl(a, id, f["container_extension"])).toString()
     }
 

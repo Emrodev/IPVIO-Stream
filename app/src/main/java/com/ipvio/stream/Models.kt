@@ -138,7 +138,9 @@ data class Item(
     /** Source with several playlists shown at once: 0 = main playlist, 1 … = further ones (see [MultiLogic]). */
     val src: Int = 0,
     /** #22: date the provider added the title (Unix seconds, 0 = unknown, e.g. older caches or M3U). */
-    val added: Long = 0L
+    val added: Long = 0L,
+    /** T-076: TMDB id the provider sends with the title (Xtream "tmdb"); 0 = unknown, e.g. older caches or M3U. */
+    val tmdb: Int = 0
 ) {
     // Key for the metadata cache: computed once per title instead of anew on every sort comparison.
     // Own field instead of "by lazy": saves two helper objects per title with 100,000+ titles.
@@ -542,7 +544,8 @@ object M3uParser {
                     val year = YEAR.find(e.name)?.groupValues?.get(1)?.toIntOrNull()
                     out.add(Item(e.url.hashCode().toString(), Kind.MOVIE, TitleText.title(clean(e.name)), year, e.url,
                         attr(e.info, "tvg-logo")?.ifBlank { null }, group, quality = q, lang = kd.lang,
-                        added = attr(e.info, "added")?.toLongOrNull() ?: 0L))
+                        added = attr(e.info, "added")?.toLongOrNull() ?: 0L,
+                        tmdb = attr(e.info, "tmdb")?.toIntOrNull()?.takeIf { it > 0 } ?: 0))
                 }
                 Kind.LIVE -> {
                     val id = e.url.hashCode().toString()
