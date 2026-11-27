@@ -140,7 +140,7 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 
 - Expected: "Add profile" asks for an optional 4-digit PIN, entered twice. With a PIN the new profile is locked: it asks for the PIN
   when it is opened from the picker, and adult content is hidden there. Back leaves it without a PIN.
-- Marker: `Parental.setPinFor(ctx, newPinFor, p)` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
+- Marker: `Parental.setPinFor(ctx, pinFor, p)` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
 - Marker: `fun confirmed(first: String, second: String): Boolean` in `app/src/main/java/com/ipvio/stream/ParentalLogic.kt`
 - Test steps: Settings > Profiles > Add profile: enter 1234, then 1235: "PINs do not match". Enter 1234 twice. Back to the picker, open the new profile: the PIN is asked. Wrong PIN refused. Add another profile and press Back at the PIN step: it opens without asking.
 - Status: JVM tests of the check pass (`ParentalLogicTest`, `DictT078Test`). Not device tested.
