@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 1.5.2 (versionCode 18)
 - Profiles: "Add profile" asks for an optional 4-digit PIN (entered twice). A profile with a PIN is locked: its PIN is asked when it is opened, and adult content is hidden there (B-018, T-078). Not device tested yet
 - Sports Hub: the games of each league appear as soon as that league answers, instead of waiting for all leagues (B-017, T-077). Not device tested yet
 - Live TV: genre rows (Sport, Movies, Documentaries, Kids, News, Music) can be moved up and down like the provider categories; the default order is unchanged (B-015, T-077). Not device tested yet
