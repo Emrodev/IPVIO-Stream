@@ -136,7 +136,7 @@ Alle {#0}¦Alle {#0}
 Alle {0}¦Alle {0}
 Keine {0} in dieser Playlist¦Geen {0} in deze playlist
 Weitere Kategorien findest du unter „Kategorien“ oben.¦Meer categorieën vind je bovenaan onder „Categorieën”.
-Filme, Serien oder Sender suchen…¦Films, series of zenders zoeken…
+Filme, Serien oder Sender suchen…¦Zoeken...
 Letzte Suchanfragen¦Recente zoekopdrachten
 Verlauf löschen¦Geschiedenis wissen
 Keine Treffer für „{0}“¦Geen resultaten voor „{0}”

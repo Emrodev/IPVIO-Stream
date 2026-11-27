@@ -342,7 +342,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     val ml = ChannelLists.byKey(n)
                     if (n == "GUIDE") {
                         // TV guide as in the design: starts the last watched (otherwise first) channel of the selection and opens the guide
-                        CatRow("TV-Guide", -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Grid) {
+                        CatRow("TV-Guide", -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Grid) {
                             val src = list.ifEmpty { live }
                             val ch = History.ids.firstNotNullOfOrNull { id -> src.firstOrNull { it.id == id && !ParentalLogic.isAdult(it.group, it.title) } } ?: src.firstOrNull()
                             if (ch != null) { ZapContext.list = src; ZapContext.key = sel; AppNav.openGuide = true; onOpen(ch) }
@@ -350,14 +350,14 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "MULTI") {
-                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
+                        CatRow(Lang.tr("Mehrfachansicht"), -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Layers, raw = true) { showMulti = true }
                         return@itemsIndexed
                     }
                     if (n == "SEARCH") {
                         CatRow(
                             Lang.tr("Sender suchen") + if (query.isNotBlank()) ": $query" else "", -1, hot == "SEARCH",
                             if (hot == "SEARCH") Modifier.focusRequester(ContentFocus.req) else Modifier,
-                            onFocus = { hot = "SEARCH"; sel = "SEARCH" },
+                            onFocus = { hot = "SEARCH"; sel = "SEARCH"; catFocusIdx = i },
                             onRight = { runCatching { kbFirst.requestFocus() } },
                             onFav = {}, icon = AIcon.Edit, raw = true
                         ) { hot = "SEARCH"; sel = "SEARCH"; runCatching { kbFirst.requestFocus() } }   // touch: no focus change on tap
@@ -368,7 +368,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         var plChanged by remember { mutableStateOf(false) }
                         val lbl = Lang.tr("Playlist") + ": " + sectionPlaylistValue(ctx, SectionSourceLogic.SECTION_LIVE, AreaSource.selectedKeys(ctx, SectionSourceLogic.SECTION_LIVE))
                         Box {
-                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Download, raw = true) { plChanged = false; plOpen = true }
+                            CatRow(lbl, -1, false, Modifier.focusRequester(plFocus), onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Download, raw = true) { plChanged = false; plOpen = true }
                             if (plOpen) SectionPlaylistPopup(SectionSourceLogic.SECTION_LIVE, onChanged = { plChanged = true }) {
                                 plOpen = false; plBack = true
                                 // The chosen category may not exist in the new selection: then "All channels"
@@ -379,7 +379,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                     }
                     if (n == "SRC") {
                         val lbl = Lang.tr("Quelle") + ": " + (if (srcK.isEmpty()) Lang.tr("Alle") else srcK.sorted().mapNotNull { srcNames.getOrNull(it) }.joinToString(", ").ifEmpty { Lang.tr("Keine Playlist") })
-                        CatRow(lbl, -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Sliders, raw = true) {
+                        CatRow(lbl, -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Sliders, raw = true) {
                             // One press: All -> first shown playlist -> next -> ... -> All (same order as before)
                             val cur = if (srcK.size == 1) srcK.first() else -1
                             val next = cur + 1
@@ -393,7 +393,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         var hidMenu by remember { mutableStateOf(false) }
                         val hid = HiddenCats.list.filter { it in groups || it in genres }
                         Box {
-                            CatRow(Lang.tr("Ausgeblendete") + " (" + hid.size + ")", -1, false, Modifier, onFocus = {}, onRight = {}, onFav = {}, icon = AIcon.Sliders, raw = true) { hidMenu = true }
+                            CatRow(Lang.tr("Ausgeblendete") + " (" + hid.size + ")", -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = {}, onFav = {}, icon = AIcon.Sliders, raw = true) { hidMenu = true }
                             if (hidMenu) OptionPopup(listOf("Alle wieder einblenden") + hid.map { LiveGenre.byKey(it)?.label ?: it }, -1, { hidMenu = false }) { i ->
                                 hidMenu = false
                                 if (i == 0) HiddenCats.showAll(ctx) else HiddenCats.show(ctx, hid[i - 1])
@@ -402,7 +402,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
                         return@itemsIndexed
                     }
                     if (n == "NEW") {
-                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = {}, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Plus) { newList(null) }
+                        CatRow("Neue Senderliste", -1, false, Modifier, onFocus = { catFocusIdx = i }, onRight = { enterChannels() }, onFav = {}, icon = AIcon.Plus) { newList(null) }
                         return@itemsIndexed
                     }
                     val label = when {

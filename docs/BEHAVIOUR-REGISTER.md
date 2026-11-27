@@ -39,6 +39,7 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 - Expected (wrap, 25 Nov 2026): Up on the first category ("Playlist" or "Home") goes to the last category; Down on the last goes to the first. Same as the channel list and TV guide.
 - Marker: `backToCategory()` in `app/src/main/java/com/ipvio/stream/LiveTab.kt`
 - Marker: `GuideWrapLogic.wrapTarget(catFocusIdx, names.size` in `app/src/main/java/com/ipvio/stream/LiveTab.kt`
+- Marker: `onFocus = { catFocusIdx = i }, onRight` in `app/src/main/java/com/ipvio/stream/LiveTab.kt`
 - Test steps: Live TV, category "Sport", Down, Left. Expect "Sport". Wrap: on the first category press Up, expect the last one; on the last press Down, expect the first. Not device tested.
 
 ### B-004 Search: picking a recent search keeps the focus in the search screen
@@ -91,6 +92,16 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 - Test steps: reload the Xtream playlist once (the cache is rewritten in version 7). A category with a film in German and English
   shows it once. Old caches (version 6) still load; the titles are then shown as before until the playlist is reloaded.
 - Status: JVM tests of the logic pass (T-076). Not device tested.
+
+### B-013 Search: Up from the number row goes to the recent searches; no kind word on result covers (T-077)
+
+- Expected: pressing Up on the on-screen number row (the keyboard's top row) focuses the first recent search, not the category tiles.
+  Result covers under a category heading show no "Movie"/"Series" word (the heading already says it).
+- Marker: `onUp: () -> Boolean = { false }` in `app/src/main/java/com/ipvio/stream/SearchScreen.kt`
+- Marker: `PosterCard(x, { onOpen(x) }, Modifier.width(sk(168)).restoreFocus(x.id).then(fr), kindBadge = false)` in `app/src/main/java/com/ipvio/stream/SearchScreen.kt`
+- Marker: `else if (kindBadge) Badge(kindLabel(item.kind), DS.Scrim)` in `app/src/main/java/com/ipvio/stream/Components.kt`
+- Test steps: Search with recent searches; on "1" press Up: the first recent search is focused. Open a category (e.g. Movies) with hits: the covers show no kind word.
+- Status: not device tested.
 
 ### B-010 Trakt sign-in on the phone: the login link opens in its own tab
 

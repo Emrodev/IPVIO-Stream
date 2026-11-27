@@ -151,7 +151,8 @@ fun cardPoster(url: String): String = DevicePerfLogic.cardPoster(url, DevicePerf
 fun PosterCard(
     item: Item, onClick: () -> Unit, modifier: Modifier = Modifier,
     progress: Float? = null, subtitle: String? = null,
-    fixedPosterHeight: Dp? = null, onFocus: () -> Unit = {}, titleLines: Int = 1
+    fixedPosterHeight: Dp? = null, onFocus: () -> Unit = {}, titleLines: Int = 1,
+    kindBadge: Boolean = true
 ) {
     val st = rememberMetaState(item)
     val m = st.meta
@@ -191,7 +192,8 @@ fun PosterCard(
             )
             Box(Modifier.align(Alignment.TopStart).padding(8.dp)) {
                 // Broken (on playback "no longer available" or failed several times): warning icon instead of artwork
-                if (item.kind != Kind.SERIES && DeadLinks.isDead(item.url)) Badge("Gestört", DS.Scrim, DS.Gold, AIcon.Warning) else Badge(kindLabel(item.kind), DS.Scrim)
+                // kindBadge = false inside a list whose heading already names the kind (search results)
+                if (item.kind != Kind.SERIES && DeadLinks.isDead(item.url)) Badge("Gestört", DS.Scrim, DS.Gold, AIcon.Warning) else if (kindBadge) Badge(kindLabel(item.kind), DS.Scrim)
             }
             qualityOf(item)?.let { Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) { QualityBadge(it) } }
             m?.rating?.let {

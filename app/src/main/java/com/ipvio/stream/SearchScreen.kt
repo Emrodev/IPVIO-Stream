@@ -404,7 +404,8 @@ fun SearchScreen(
                     onVoice = if (canVoice) ({ runCatching { voice.launch(VoiceSearch.intent()) }.onFailure { canVoice = false } }) else null,
                     firstKey = ContentFocus.req,
                     onFocusChange = { fieldFocused = it },
-                    onRight = { runCatching { tilesFirst.requestFocus() }.isSuccess }
+                    onRight = { runCatching { tilesFirst.requestFocus() }.isSuccess },
+                    onUp = { runCatching { firstHistory.requestFocus() }.isSuccess }
                 )
                 }
             }
@@ -717,7 +718,7 @@ private fun SearchRow(
                 itemsIndexed(list.take(60)) { i, x ->
                     val fr = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier).onFocusChanged { if (it.hasFocus) { report(x); showRow() } }
                     if (x.kind == Kind.LIVE) LiveCard(x, { onOpen(x) }, Modifier.width(sk(300)).then(fr))
-                    else PosterCard(x, { onOpen(x) }, Modifier.width(sk(168)).restoreFocus(x.id).then(fr))
+                    else PosterCard(x, { onOpen(x) }, Modifier.width(sk(168)).restoreFocus(x.id).then(fr), kindBadge = false)
                 }
             }
         }
@@ -885,7 +886,8 @@ private fun KbKey(label: String, modifier: Modifier, onFocusChange: (Boolean) ->
 private fun SketchKeyboard(
     modifier: Modifier, onKey: (String) -> Unit, onSpace: () -> Unit, onDelete: () -> Unit, onClear: () -> Unit,
     onPhone: (() -> Unit)?, onVoice: (() -> Unit)?,
-    firstKey: FocusRequester, onFocusChange: (Boolean) -> Unit, onRight: () -> Boolean
+    firstKey: FocusRequester, onFocusChange: (Boolean) -> Unit, onRight: () -> Boolean,
+    onUp: () -> Boolean = { false }
 ) {
     var symbols by remember { mutableStateOf(false) }
     var special by remember { mutableStateOf(false) }
@@ -894,7 +896,10 @@ private fun SketchKeyboard(
     val gap = sk(9)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(sk(10))) {
         // Number row (always visible)
-        Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
+        // Up from the number row goes to the first recent search (the keyboard sits left, the recent searches right)
+        Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth().onPreviewKeyEvent { e ->
+            e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && onUp()
+        }) {
             KB_DIGITS.forEachIndexed { c, k ->
                 SketchKey(k.toString(), Modifier.weight(1f).then(if (c == 0) Modifier.focusRequester(firstKey) else Modifier), onFocusChange, if (c == KB_DIGITS.lastIndex) onRight else null) { onKey(k.toString()) }
             }

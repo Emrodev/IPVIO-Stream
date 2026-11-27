@@ -137,7 +137,7 @@ Alle {#0}¦全部 {#0}
 Alle {0}¦全部 {0}
 Keine {0} in dieser Playlist¦此播放列表没有{0}
 Weitere Kategorien findest du unter „Kategorien“ oben.¦更多分类在上方的「分类」里。
-Filme, Serien oder Sender suchen…¦搜索电影、剧集或频道…
+Filme, Serien oder Sender suchen…¦搜索...
 Letzte Suchanfragen¦最近搜索
 Verlauf löschen¦清除历史
 Keine Treffer für „{0}“¦没有「{0}」的结果
