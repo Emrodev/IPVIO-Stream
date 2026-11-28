@@ -109,9 +109,10 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 
 - Expected: on a settings page the page does not move while the focused control is visible; Down at the last control moves
   the focus to the Back arrow next to the page title (no wrap, no jump of the page, cursor stays visible).
+- Expected (28 Nov 2026): holding Down stops at the last control and does not jump on; a new press of Down (after releasing the key) goes to the Back arrow.
 - Marker: `if (FocusScrollMode.edgeOnly) FocusCenterLogic.edgeDistance(offset, size, containerSize)` in `app/src/main/java/com/ipvio/stream/MainActivity.kt`
-- Marker: `if (!fm.moveFocus(FocusDirection.Down)) runCatching { backFocus.requestFocus() }` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
-- Test steps: Settings > General: press Down to the last control: the page stops moving before it, the Back arrow gets the focus on the next Down. Same on Design > Colors and Sports Hub.
+- Marker: `e.nativeKeyEvent.repeatCount == 0) runCatching { backFocus.requestFocus() }` in `app/src/main/java/com/ipvio/stream/SettingsHub.kt`
+- Test steps: Settings > General: press Down to the last control: the page stops moving before it, the Back arrow gets the focus on the next Down. Hold Down at the end of the list: it stops and does not jump to the top; release and press Down once more: the Back arrow gets the focus. Same on Design > Colors and Sports Hub.
 - Status: not device tested. Known limit: the hints under the last control are no longer scrolled into view by Down.
 
 ### B-015 Live TV: genre rows (Sport, Movies, Documentaries, Kids, News, Music) can be moved (T-077)

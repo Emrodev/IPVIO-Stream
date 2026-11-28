@@ -140,7 +140,8 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
             Column(
                 Modifier.onKeyEvent { e ->
                     if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) {
-                        if (!fm.moveFocus(FocusDirection.Down)) runCatching { backFocus.requestFocus() }
+                        // Holding Down stops at the last control (key repeat); a new press goes on to the Back arrow
+                        if (!fm.moveFocus(FocusDirection.Down) && e.nativeKeyEvent.repeatCount == 0) runCatching { backFocus.requestFocus() }
                         true
                     } else false
                 }.fillMaxWidth().clip(RoundedCornerShape(dpx(18))).background(Color(0x0DFFFFFF))
