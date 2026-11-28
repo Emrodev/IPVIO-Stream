@@ -329,7 +329,10 @@ private fun ListMode(
     // Without this, the focus search picks the row at the same height, which can be another category.
     fun backToCategory() {
         scope.launch {
-            catState.scrollToItem(maxOf(sel - 3, 0))
+            // Scroll only when the category is not on screen: an unneeded scroll here moves the list, and the focus
+            // then centres it again (a visible jump). A visible category keeps the list still.
+            val visible = catState.layoutInfo.visibleItemsInfo.any { it.index == sel }
+            if (!visible) catState.scrollToItem(maxOf(sel - 3, 0))
             withFrameNanos { }
             runCatching { firstFocus.requestFocus() }
         }

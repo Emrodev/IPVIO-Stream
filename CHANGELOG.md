@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Detail pages of movies and series: the page no longer moves to keep the focused button or episode in the middle (the T-074 centring is switched off there; lists elsewhere are unchanged). Not device tested yet (B-007)
+- Movies and Series, list view: going back from the titles grid to the category list no longer makes the list jump once when the category is on screen (B-001). Not device tested yet
 
 ## 1.5.2 (versionCode 18)
 - Profiles: "Add profile" asks for an optional 4-digit PIN (entered twice). A profile with a PIN is locked: its PIN is asked when it is opened, and adult content is hidden there (B-018, T-078). Not device tested yet

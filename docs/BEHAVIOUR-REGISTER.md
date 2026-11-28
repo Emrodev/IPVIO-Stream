@@ -24,7 +24,8 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
   search picked the row at the same height).
 - Marker: `fun backToCategory()` in `app/src/main/java/com/ipvio/stream/CategoriesScreen.kt`
 - Marker: `ev.key == Key.DirectionLeft && i % cols == 0` in `app/src/main/java/com/ipvio/stream/CategoriesScreen.kt`
-- Test steps: Movies > Categories (list view). Move to "Romance", Down into the grid, Left. Expect "Romance". Repeat with Series and with a category that is not first.
+- Expected (28 Nov 2026): going back from the grid to the category list does not move the list when the category is on screen (no jump).
+- Test steps: Movies > Categories (list view). Move to "Romance", Down into the grid, Left. Expect "Romance", and the category list stays still. Repeat with Series, with a category that is not first, and after moving Down through the list so the category is in the middle.
 - Status: fixed 25 Nov 2026, not device tested.
 
 ### B-002 Movies and Series: the selected category is remembered by name
