@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.DefaultBringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -142,6 +143,8 @@ class MainActivity : ComponentActivity() {
 /** T-077: set by the settings page while it is open (read by [SmoothSpec] on every focus step). */
 object FocusScrollMode {
     var edgeOnly = false
+    /** Detail page of a movie or series (full page, not embedded): no centring, Compose's default scroll (before T-074). */
+    var off = false
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -150,8 +153,10 @@ val SmoothSpec = object : BringIntoViewSpec {
     override val scrollAnimationSpec get() = tween<Float>(ThemeMath.scrollMs(DevicePerf.reduceVisuals), easing = FastOutSlowInEasing)
     // T-074 (focus): focused item kept in the middle; at the end of a list the scroll stops and the focus moves on
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
+        // Detail pages of movies and series: stock Compose scrolling, no centring (switched off by DetailScreen)
+        if (FocusScrollMode.off) DefaultBringIntoViewSpec.calculateScrollDistance(offset, size, containerSize)
         // T-077: on the settings page the page moves only when a control is cut off (edge mode), no centring
-        if (FocusScrollMode.edgeOnly) FocusCenterLogic.edgeDistance(offset, size, containerSize)
+        else if (FocusScrollMode.edgeOnly) FocusCenterLogic.edgeDistance(offset, size, containerSize)
         else FocusCenterLogic.scrollDistance(offset, size, containerSize)
 }
 

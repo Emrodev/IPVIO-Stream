@@ -90,6 +90,11 @@ fun DetailScreen(
     showActions: Boolean = true
 ) {
     val ctx = LocalContext.current
+    // Full detail page of a movie or series: no focus centring, the page does not jump while moving (see SmoothSpec)
+    DisposableEffect(embedded) {
+        if (!embedded) FocusScrollMode.off = true
+        onDispose { if (!embedded) FocusScrollMode.off = false }
+    }
     var tryNo by remember(item.id) { mutableIntStateOf(0) }
     // Cinema preview without buttons (info only) does not need the episodes
     val need = LazySeries.isStub(item) && showActions

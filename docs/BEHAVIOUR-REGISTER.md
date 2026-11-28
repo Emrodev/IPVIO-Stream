@@ -62,9 +62,10 @@ Format used by `behaviour-check.sh`: one line `- Marker: \`text\` in \`path\`` p
 
 ### B-007 Lists: the focused row stays in the middle of the screen
 
-- Expected: moving Up/Down keeps the focused row centred until the list ends (T-074).
+- Expected: moving Up/Down keeps the focused row centred until the list ends (T-074). Not on the full detail pages of movies and series: there the page keeps Compose's default scrolling (switched off by `DetailScreen`, 28 Nov 2026).
 - Marker: `FocusCenterLogic.scrollDistance` in `app/src/main/java/com/ipvio/stream/MainActivity.kt`
-- Test steps: any long vertical list; move Down and Up; no row jumps or is cut off.
+- Marker: `FocusScrollMode.off = true` in `app/src/main/java/com/ipvio/stream/DetailScreen.kt`
+- Test steps: any long vertical list; move Down and Up; no row jumps or is cut off. Movie and series detail page: move Up and Down through the buttons and episodes; the picture must not jump.
 
 ### B-008 Home and Billboard: the kicker above the title shows only the picture quality
 
